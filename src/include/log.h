@@ -12,9 +12,12 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
+#include <stdio.h>
 #include <syslog.h>
 
-/* change your syslog destination here */
+#ifndef TSS_LOG_STDERR
+
+/* log to syslog -- change your syslog destination here */
 #define TSS_SYSLOG_LVL	LOG_LOCAL5
 
 #define LogMessage(priority, layer, fmt, ...) \
@@ -51,6 +54,40 @@
 /* Info Logging */
 #define LogInfo(fmt, ...)	LogMessage(LOG_INFO, APPID, fmt, ##__VA_ARGS__)
 #define LogInfo1(data)		LogMessage1(LOG_INFO, APPID, data)
+
+#else
+
+/* log to stdout */
+#define LogMessage(priority, layer, fmt, ...) \
+	fprintf(stderr, "%s %s %s:%d " fmt "\n", priority, layer, __FILE__, __LINE__, ## __VA_ARGS__);
+
+#define LogMessage1(priority, layer, data) \
+	fprintf(stderr, "%s %s %s:%d %s\n", priority, layer, __FILE__, __LINE__, data);
+
+/* Debug logging */
+#ifdef TSS_DEBUG
+#define LogDebug(fmt, ...)	LogMessage("LOG_DEBUG", APPID, fmt, ##__VA_ARGS__)
+#define LogDebug1(data)		LogMessage1("LOG_DEBUG", APPID, data)
+#define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
+#else
+#define LogDebug(fmt, ...)
+#define LogDebug1(data)
+#define LogBlob(sz,blb)
+#endif
+
+/* Error logging */
+#define LogError(fmt, ...)	LogMessage("LOG_ERR", APPID, "ERROR: " fmt, ##__VA_ARGS__)
+#define LogError1(data)		LogMessage1("LOG_ERR", APPID, "ERROR: " data)
+
+/* Warn logging */
+#define LogWarn(fmt, ...)	LogMessage("LOG_WARNING", APPID, "WARNING: " fmt, ##__VA_ARGS__)
+#define LogWarn1(data)		LogMessage1("LOG_WARNING", APPID, "WARNING: " data)
+
+/* Info Logging */
+#define LogInfo(fmt, ...)	LogMessage("LOG_INFO", APPID, fmt, ##__VA_ARGS__)
+#define LogInfo1(data)		LogMessage1("LOG_INFO", APPID, data)
+
+#endif
 
 void LogBlobData(char *appid, unsigned long sizeOfBlob, unsigned char *blob);
 
