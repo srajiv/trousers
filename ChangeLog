@@ -1,8 +1,18 @@
 
+ - added compatibility with openssh-askpass for the popup dialog box.
+   Now either gtk2-devel OR openssh-askpass must be installed to build
+   trousers. Using openssh-askpass reduces the size of libtspi.so by
+   about 40K and reduces the number of dependencies from 26 to 6!
  - Bugfixes
    - The entityType field was being passed between the TCSD and
    TSP as a UINT32 instead of UINT16. This was keeping Tspi_ChangeAuth
    from working as advertised.
+   - Secrets were being hashed incorrectly when secret mode was PLAIN
+   and the secret data length was 0. Now, when secret mode is plain, the
+   passed in data is always hashed, even if its 0 length.
+   - Popups are hopefully being handled more correctly now. Previously
+   the dialog popped up at the time SetSecret was called, but now its
+   just when the secret is actually needed.
 
 * TROUSERS_0_1_9
 
