@@ -145,8 +145,8 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 				result = TCS_E_FAIL;
 				break;
 		}
+		free(resp);
 	}
-	free(resp);
 
 	return result;
 }
