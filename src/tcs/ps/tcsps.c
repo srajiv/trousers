@@ -233,7 +233,7 @@ ps_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return -2;
+        return TSS_E_PS_KEY_NOTFOUND;
 }
 
 TSS_RESULT
@@ -356,7 +356,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return -2;
+        return TSS_E_PS_KEY_NOTFOUND;
 }
 
 TSS_RESULT
