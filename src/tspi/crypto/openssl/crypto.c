@@ -103,6 +103,7 @@ out:
 	return rv;
 }
 
+/* XXX int set to unsigned int values */
 int
 TSS_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 		unsigned int dataToEncryptLen,  /* in */
