@@ -1462,6 +1462,10 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
 				pulRespDataLength, prgbRespData);
+
+		if (*pulRespDataLength == sizeof(UINT32)) {
+			*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
+		}
 	}
 
 	return result;
