@@ -1,4 +1,8 @@
 
+ - Connected up Tspi_TPM_SetStatus and Tspi_TPM_SelfTestFull to
+   TCSP_SetTempDeactivated, TCSP_SelfTestFull, TCSP_SetOwnerInstall,
+   TCSP_OwnerSetDisable and TCSP_PhysicalDisable.
+
 * TROUSERS_0_1_7
 
  - Fixed the logging up so that if tcsd -f is specified, all logs go the
