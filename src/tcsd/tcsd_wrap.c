@@ -2865,6 +2865,56 @@ tcs_wrap_SelfTestFull(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_GetTestResult(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TSS_RESULT result;
+	UINT32 resultDataSize;
+	BYTE *resultData = NULL;
+
+	LogDebug("tcs_wrap_GetTestResult");
+	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x servicing a %s request", (UINT32)pthread_self(), __FUNCTION__);
+
+	result = TCSP_GetTestResult_Internal(hContext, &resultDataSize, &resultData);
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(UINT32) + resultDataSize);
+		if (*hdr == NULL) {
+			free(resultData);
+			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + resultDataSize);
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &resultDataSize, 0, *hdr)) {
+			free(*hdr);
+			free(resultData);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, resultData, resultDataSize, *hdr)) {
+			free(*hdr);
+			free(resultData);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		free(resultData);
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+
+	LogDebug("tcs_wrap_GetTestResult exit");
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_SetOwnerInstall(struct tcsd_thread_data *data,
 		     struct tsp_packet *tsp_data,
 		     struct tcsd_packet_hdr **hdr)
@@ -3096,7 +3146,7 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_SelfTestFull}, /* 53 */
 	{tcs_wrap_Error}, /* 54 */
 	{tcs_wrap_Error}, /* 55 */
-	{tcs_wrap_Error}, /* 56 */
+	{tcs_wrap_GetTestResult}, /* 56 */
 	{tcs_wrap_OwnerSetDisable}, /* 57 */
 	{tcs_wrap_Error}, /* 58 */
 	{tcs_wrap_Error}, /* 59 */

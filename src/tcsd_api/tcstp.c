@@ -2555,7 +2555,48 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 				  UINT32 * outDataSize,	/* out */
 				  BYTE ** outData	/* out */
     ) {
-	return TSS_E_NOTIMPL;
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_GETTESTRESULT;
+
+	LogDebug1("TCSP_GetTestResult_TP");
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS) 
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		LogDebug1("sendTCSDPacket succeeded");
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, outDataSize, 0, hdr)) {
+			result = TSS_E_INTERNAL_ERROR;
+			goto done;
+		}
+
+		*outData = malloc(*outDataSize);
+		if (*outData == NULL) {
+			LogError("malloc of %d bytes failed.", outDataSize);
+			result = TSS_E_OUTOFMEMORY;
+			goto done;
+		}
+
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *outData, *outDataSize, hdr)) {
+			free(*outData);
+			*outData = NULL;
+			result = TSS_E_INTERNAL_ERROR;
+		}
+	}
+	LogDebug1("TCSP_GetTestResult_TP exit");
+
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
