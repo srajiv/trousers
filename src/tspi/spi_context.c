@@ -80,6 +80,7 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/*  out */
 	if ((result = setObject(hObject, object, objectSize)))
 		return TSS_E_INTERNAL_ERROR;
 
+	/* sanity checking */
 	anObject = getAnObjectByHandle(hObject);
 	if (anObject == NULL) {
 		LogError("No object found with handle matching 0x%x", hObject);
@@ -177,6 +178,9 @@ ConnectGuts(TSS_HCONTEXT hContext, UNICODE *wszDestination, TCS_CONTEXT_HANDLE t
 		return TSS_E_INTERNAL_ERROR;
 	}
 
+	/* setObject creates a copy of this for us, so we can free it here */
+	free(tpmObject);
+
 	return TSS_SUCCESS;
 }
 
@@ -228,7 +232,6 @@ Tspi_Context_Connect(TSS_HCONTEXT hContext,	/*  in */
 	UNICODE wMachineName[256];
 	AnObject *anObject;
 	TCPA_CONTEXT_OBJECT *object;
-	/* XXX According to the man page, wcsnlen is a GNU extension */
 	int string_len = 0;
 
 	LogDebug1("Tspi_Context_Connect");
@@ -238,6 +241,7 @@ Tspi_Context_Connect(TSS_HCONTEXT hContext,	/*  in */
 	if (wszDestination == NULL) {
 		internal_GetMachineName(wMachineName, 256);
 	} else {
+		/* XXX According to the man page, wcsnlen is a GNU extension */
 		string_len = wcsnlen(wszDestination, 256);
 		if (string_len >= 256 || string_len < 1) {
 			LogError1("Invalid hostname.");
@@ -278,22 +282,14 @@ Tspi_Context_FreeMemory(TSS_HCONTEXT hContext,	/*  in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	LogDebug1("Tspi_Context_FreeMemory");
 	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
 		return result;
 
-	/* ---  this will see if it's SPI memory */
-	result = free_tspi(tcsContext, rgbMemory);
-	if (!result) {
-		/* ---  Free the Tcs memory */
-		LogDebug1("Wasn't in TSPI memory, try the TCS");
-		return TCS_FreeMemory(tcsContext, rgbMemory);
-	}
+	free_tspi(tcsContext, rgbMemory);
 
-	LogDebug1("Leaving Tspi_Context_FreeMemory");
 	return TSS_SUCCESS;
 }
 
@@ -728,6 +724,8 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 		return TSS_E_INTERNAL_ERROR;
 	}
 
+	free(object);
+
 	LogDebug1("Done creating Object");
 
 	return TSS_SUCCESS;
@@ -1113,7 +1111,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 			   TSS_HKEY * phKey	/*  out */
     )
 {
-	TCS_LOADKEY_INFO pLoadKeyInfo;
 	TSS_RESULT result;
 	TSS_UUID parentUUID;
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1145,7 +1142,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 			LogDebug1("PS type SYSTEM");
 			if ((result = TCSP_LoadKeyByUUID(tcsContext,
 							uuidData,
-							&pLoadKeyInfo,
+							NULL,
 							&tcsKeyHandle)) == TCS_E_KM_LOADFAILED) {
 				break;
 			}
@@ -1179,7 +1176,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 			if (parentPSType == TSS_PS_TYPE_SYSTEM) {
 				LogDebug1("Parent is PS SYSTEM");
 				if ((result = TCSP_LoadKeyByUUID(tcsContext, parentUUID,
-							       &pLoadKeyInfo, &parentTCSKeyHandle)))
+							       NULL, &parentTCSKeyHandle)))
 					break;
 /* 					return TSS_E_INTERNAL_ERROR; */
 			} else if (parentPSType == TSS_PS_TYPE_USER) {
@@ -1218,7 +1215,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 			/* ---  Dont' care about keySlot */
 
 		} else {
-/* 			return TSS_E_BAD_PARAMETER; */
 			LogDebug1("Invalid PS TYPE");
 			result = TSS_E_BAD_PARAMETER;
 			break;
