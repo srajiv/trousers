@@ -40,7 +40,7 @@ fill_key_info(struct key_disk_cache *d,
 	BYTE tmp_blob[2048];
 	UINT16 tmp_blob_size = 2048;
 	TCPA_KEY tmp_key;
-	UINT32 offset;
+	UINT16 offset;
 	TSS_RESULT result;
 
 	if (m == NULL) {
