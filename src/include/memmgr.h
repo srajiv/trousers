@@ -11,19 +11,27 @@
 #ifndef _MEMMGR_H_
 #define _MEMMGR_H_
 
-typedef struct tdMemSlot {
-	void *memPointer;
-	struct tdMemSlot *next;
-} MemSlot;
+/*
+ * For each TSP context, there is one memTable, which holds a list of memEntry's,
+ * each of which holds a pointer to some malloc'd memory that's been returned to
+ * the user. The memTable also can point to other memTable's which would be
+ * created if multiple TSP contexts were opened.
+ *
+ */
 
-typedef struct tdContextMemSlot {
-	TCS_CONTEXT_HANDLE tcsContext;
-	MemSlot *memSlots;
-	struct tdContextMemSlot *next;
-} ContextMemSlot;
+struct memEntry {
+	void *memPointer;
+	struct memEntry *nextEntry;
+};
+
+struct memTable {
+	TSS_HCONTEXT tspContext;
+	struct memEntry *entries;
+	struct memTable *nextTable;
+};
 
 pthread_mutex_t memtable_lock = PTHREAD_MUTEX_INITIALIZER;
 
-ContextMemSlot *SpiMemoryTable = NULL;
+struct memTable *SpiMemoryTable = NULL;
 
 #endif
