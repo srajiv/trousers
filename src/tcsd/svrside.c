@@ -203,7 +203,8 @@ main(int argc, char **argv)
 	TSS_RESULT result;
 	socklen_t size;
 	int sd, newsd, c, option_index = 0, client_len;
-	char hostname[80];
+	char *hostname = NULL;
+	struct hostent *client_hostent = NULL;
 	struct option long_options[] = {
 		{"help", 0, NULL, 'h'},
 		{"foreground", 0, NULL, 'f'},
@@ -265,16 +266,18 @@ main(int argc, char **argv)
 			break;
 		}
 
-		/* Resolve the TSP's hostname and spawn a thread to service it */
-		if ((getnameinfo(&client_addr, client_len, hostname, 80, NULL, 0, 0))) {
-			LogError1("Connecting hostname could not be resolved.");
-			tcsd_thread_create(newsd, NULL);
+		if ((client_hostent = gethostbyaddr((char *) &client_addr.sin_addr,
+						sizeof(client_addr.sin_addr),
+						AF_INET)) == NULL) {
+			LogError("Connecting hostname could not be resolved");
 		} else {
-			LogInfo("Connection accepted from %s", hostname);
-
-			tcsd_thread_create(newsd, hostname);
+			hostname = strdup(client_hostent->h_name);
+			LogInfo("Connection accepted from %s", client_hostent->h_name);
 		}
+
+		tcsd_thread_create(newsd, hostname);
+		hostname = NULL;
 	} while (1);
 
-	return 0;
+	return -1;
 }
