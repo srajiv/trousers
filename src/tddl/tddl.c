@@ -18,14 +18,14 @@
 
 #include "tss/tss.h"
 #include "linux/tpm.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tddl.h"
 
 int tpm_fd = TDDL_UNINITIALIZED;
 
 BYTE txBuffer[TDDL_TXBUF_SIZE];
 
-#undef	TPM_IOCTL
+#define	TPM_IOCTL
 
 TSS_RESULT
 Tddli_Open()

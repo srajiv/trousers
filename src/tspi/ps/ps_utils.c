@@ -26,7 +26,7 @@
 #include "spi_utils.h"
 #include "tspps.h"
 #include "tcs_tsp.h"
-#include "log.h"
+#include "tsplog.h"
 
 struct key_disk_cache *key_disk_cache_head = NULL;
 
