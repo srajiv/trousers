@@ -147,10 +147,6 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 
-#if 0
-		/*---	Wipe out the keyfile */
-		destroyKeyFile();
-#endif
 		/* Once the key file is created, it stays forever. There could be
 		 * migratable keys in the hierarchy that are still useful to someone.
 		 */
