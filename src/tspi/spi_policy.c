@@ -16,7 +16,7 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "log.h"
-
+#include "obj.h"
 
 TSS_RESULT
 Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/*  in */
@@ -26,18 +26,22 @@ Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/*  in */
     )
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	//TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	AnObject *anObject;
 
-	if ((result = internal_CheckObjectType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_checkType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
+#if 0
+	/* No reason to be connected to set an attribute of an object */
 	if ((result = internal_CheckContext_1(hPolicy, &tcsContext)))
 		return result;
 
 	if ((result = internal_GetContextObjectForContext(tcsContext, &tspContext)))
 		return result;
+#endif
+	tspContext = obj_getTspContext(hPolicy);
 
 	anObject = getAnObjectByHandle(tspContext);
 	if (anObject == NULL || anObject->memPointer == NULL)
@@ -62,7 +66,7 @@ Tspi_Policy_FlushSecret(TSS_HPOLICY hPolicy	/*  in */
     )
 {
 	TSS_RESULT result;
-	if ((result = internal_CheckObjectType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_checkType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
 	return internal_FlushSecret(hPolicy);
@@ -79,7 +83,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 	TSS_RESULT result;
 	TCPA_POLICY_OBJECT *policyObject;
 
-	if ((result = internal_CheckObjectType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_checkType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
 	object = getAnObjectByHandle(hPolicy);

@@ -21,6 +21,15 @@
 #include "log.h"
 #include "obj.h"
 
+AnObject *objectList = NULL;
+UINT32 nextObjectHandle = 0xC0000000;
+
+TCSKeyHandleContainer *glKeyHandleManager = NULL;
+
+pthread_mutex_t objectlist_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t keylist_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t handle_lock = PTHREAD_MUTEX_INITIALIZER;
+
 TSS_HOBJECT
 getNextObjectHandle()
 {
@@ -93,11 +102,12 @@ addObject(UINT32 contextHandle, UINT32 objectType)
 	}
 	object->objectHandle = getNextObjectHandle();
 	if (objectType == TSS_OBJECT_TYPE_CONTEXT) {
-		object->tcsContext = contextHandle;
+		/* tcsContext will be set by obj_connectContext() */
+		object->tcsContext = 0;
 		object->tspContext = object->objectHandle;
 	} else {
 		object->tspContext = contextHandle;
-		internal_GetContextForContextObject(contextHandle, &object->tcsContext);
+		object->tcsContext = obj_getTcsContext(contextHandle);
 	}
 	object->objectType = objectType;
 
@@ -236,7 +246,7 @@ getObjectTypeByHandle(TSS_HOBJECT objectHandle)
 }
 
 TSS_RESULT
-obj_getTpmObject(TCS_CONTEXT_HANDLE tcsContext, TSS_HOBJECT * out)
+obj_getTpmObject(TSS_HCONTEXT tspContext, TSS_HOBJECT *out)
 {
 	AnObject *index;
 	TSS_RESULT result = TSS_E_INVALID_HANDLE;
@@ -244,7 +254,7 @@ obj_getTpmObject(TCS_CONTEXT_HANDLE tcsContext, TSS_HOBJECT * out)
 	pthread_mutex_lock(&objectlist_lock);
 
 	for (index = objectList; index; next(index)) {
-		if (index->tcsContext == tcsContext && index->objectType == TSS_OBJECT_TYPE_TPM) {
+		if (index->tspContext == tspContext && index->objectType == TSS_OBJECT_TYPE_TPM) {
 			*out = index->objectHandle;
 			result = TSS_SUCCESS;
 			break;
@@ -257,13 +267,230 @@ obj_getTpmObject(TCS_CONTEXT_HANDLE tcsContext, TSS_HOBJECT * out)
 }
 
 TCS_CONTEXT_HANDLE
-obj_getContextForObject(TSS_HOBJECT objectHandle)
+obj_getTcsContext(TSS_HOBJECT objectHandle)
 {
 	AnObject *object = NULL;
 	object = getAnObjectByHandle(objectHandle);
 	if (object == NULL)
 		return 0;
 	return object->tcsContext;
+}
+
+TSS_HCONTEXT
+obj_getTspContext(TSS_HOBJECT objectHandle)
+{
+	AnObject *object = NULL;
+	object = getAnObjectByHandle(objectHandle);
+	if (object == NULL)
+		return 0;
+	return object->tspContext;
+}
+
+/* go through the object list and mark all objects with TSP handle tspContext
+ * as being connected to the TCS with handle tcsContext
+ */
+TSS_RESULT
+obj_connectContext(TSS_HCONTEXT tspContext, TCS_CONTEXT_HANDLE tcsContext)
+{
+	AnObject *tmp;
+
+	pthread_mutex_lock(&objectlist_lock);
+
+	for (tmp = objectList; tmp; tmp = tmp->next) {
+		if (tmp->tspContext == tspContext) {
+			if (tmp->tcsContext != 0) {
+				LogDebug("%s: tagging an already connected tcsContext! OBJECT TYPE: %x",
+						__FUNCTION__, getObjectTypeByHandle(tmp->objectType));
+			}
+			tmp->tcsContext = tcsContext;
+		}
+	}
+
+	pthread_mutex_unlock(&objectlist_lock);
+
+	return TSS_SUCCESS;
+}
+
+/* make sure object handle is has a session */
+TSS_RESULT
+obj_checkSession_1(TSS_HOBJECT objHandle1)
+{
+	TSS_HCONTEXT tspContext1;
+
+	tspContext1 = obj_getTspContext(objHandle1);
+
+	if (tspContext1 == 0) {
+		return TSS_E_INVALID_HANDLE;
+	}
+
+	return TSS_SUCCESS;
+}
+
+/* make sure 2 object handles are from the same session */
+TSS_RESULT
+obj_checkSession_2(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2)
+{
+	TSS_HCONTEXT tspContext1, tspContext2;
+
+	tspContext1 = obj_getTspContext(objHandle1);
+	tspContext2 = obj_getTspContext(objHandle2);
+
+	if (tspContext1 != tspContext2 || tspContext1 == 0 || tspContext2 == 0) {
+		return TSS_E_INVALID_HANDLE;
+	}
+
+	return TSS_SUCCESS;
+}
+
+/* make sure 3 object handles are from the same session */
+TSS_RESULT
+obj_checkSession_3(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2, TSS_HOBJECT objHandle3)
+{
+	TSS_HCONTEXT tspContext1, tspContext2, tspContext3;
+
+	tspContext1 = obj_getTspContext(objHandle1);
+	tspContext2 = obj_getTspContext(objHandle2);
+	tspContext3 = obj_getTspContext(objHandle3);
+
+	if (tspContext1 != tspContext2 ||
+	    tspContext1 != tspContext3) {
+		return TSS_E_INVALID_HANDLE;
+	}
+
+	return TSS_SUCCESS;
+}
+
+/* Check the object list for objHandle, if it exists and is connected to a TCS,
+ * return the handle of the TCS.
+ */
+TSS_RESULT
+obj_isConnected_1(TSS_HOBJECT objHandle, TCS_CONTEXT_HANDLE *tcsContext)
+{
+	TCS_CONTEXT_HANDLE tcsContext1;
+
+	tcsContext1 = obj_getTcsContext(objHandle);
+	if (tcsContext1 == 0) {
+		return TSS_E_NO_CONNECTION;
+	}
+
+	*tcsContext = tcsContext1;
+
+	return TSS_SUCCESS;
+}
+
+/* Check the object list for objHandles, if they exist and are connected to the
+ * same TCS, return the handle of the TCS.
+ */
+TSS_RESULT
+obj_isConnected_2(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2,
+		  TCS_CONTEXT_HANDLE *tcsContext)
+{
+	TCS_CONTEXT_HANDLE tcsContext1, tcsContext2;
+
+	tcsContext1 = obj_getTcsContext(objHandle1);
+	tcsContext2 = obj_getTcsContext(objHandle2);
+
+	/* return invalid handle before the connection check */
+	if (tcsContext2 != tcsContext1) {
+		return TSS_E_INVALID_HANDLE;
+	}
+
+	if (tcsContext1 == 0 || tcsContext2 == 0) {
+		return TSS_E_NO_CONNECTION;
+	}
+
+	*tcsContext = tcsContext1;
+
+	return TSS_SUCCESS;
+}
+
+/* Check the object list for objHandles, if they exist and are connected to the
+ * same TCS, return the handle of the TCS.
+ */
+TSS_RESULT
+obj_isConnected_3(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2,
+		  TSS_HOBJECT objHandle3, TCS_CONTEXT_HANDLE *tcsContext)
+{
+	TCS_CONTEXT_HANDLE tcsContext1, tcsContext2, tcsContext3;
+
+	tcsContext1 = obj_getTcsContext(objHandle1);
+	tcsContext2 = obj_getTcsContext(objHandle2);
+	tcsContext3 = obj_getTcsContext(objHandle3);
+
+	/* return invalid handle before the connection check */
+	if (tcsContext2 != tcsContext1 || tcsContext2 != tcsContext3) {
+		return TSS_E_INVALID_HANDLE;
+	}
+
+	if (tcsContext1 == 0 || tcsContext2 == 0 || tcsContext3 == 0) {
+		return TSS_E_NO_CONNECTION;
+	}
+
+	*tcsContext = tcsContext1;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_checkType_1(TSS_HOBJECT object, UINT32 objectType)
+{
+        AnObject *anObject;
+
+        anObject = getAnObjectByHandle(object);
+        if (anObject == NULL) {
+                return TSS_E_INVALID_HANDLE;
+        }
+
+        if (anObject->objectType != objectType) {
+		return TSS_E_INVALID_HANDLE;
+        }
+
+        return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_checkType_2(TSS_HOBJECT object1, UINT32 objectType1,
+		TSS_HOBJECT object2, UINT32 objectType2)
+{
+        AnObject *anObject1, *anObject2;
+
+        anObject1 = getAnObjectByHandle(object1);
+        anObject2 = getAnObjectByHandle(object2);
+
+        if (anObject1 == NULL || anObject2 == NULL) {
+                return TSS_E_INVALID_HANDLE;
+        }
+
+        if (anObject1->objectType != objectType1 ||
+	    anObject2->objectType != objectType2) {
+		return TSS_E_INVALID_HANDLE;
+        }
+
+        return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_checkType_3(TSS_HOBJECT object1, UINT32 objectType1,
+		TSS_HOBJECT object2, UINT32 objectType2,
+		TSS_HOBJECT object3, UINT32 objectType3)
+{
+        AnObject *anObject1, *anObject2, *anObject3;
+
+        anObject1 = getAnObjectByHandle(object1);
+        anObject2 = getAnObjectByHandle(object2);
+        anObject3 = getAnObjectByHandle(object3);
+
+        if (anObject1 == NULL || anObject2 == NULL || anObject3 == NULL) {
+                return TSS_E_INVALID_HANDLE;
+        }
+
+        if (anObject1->objectType != objectType1 ||
+	    anObject2->objectType != objectType2 ||
+	    anObject3->objectType != objectType3) {
+		return TSS_E_INVALID_HANDLE;
+        }
+
+        return TSS_SUCCESS;
 }
 
 #if 0
@@ -298,7 +525,6 @@ obj_GetPolicyOfObject(TSS_HOBJECT objectHandle, UINT32 policyType)
 
 	return ret;
 }
-#endif
 
 TSS_RESULT
 internal_GetContextForContextObject(TSS_HCONTEXT hContext, TCS_CONTEXT_HANDLE * handleOut)
@@ -345,6 +571,7 @@ internal_GetContextObjectForContext(TCS_CONTEXT_HANDLE tcsContext, TSS_HCONTEXT 
 
 	return result;
 }
+#endif
 
 BOOL
 anyPopupPolicies(TSS_HCONTEXT context)

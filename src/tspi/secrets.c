@@ -21,7 +21,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
-#include "log.h"
+#include "obj.h"
 
 extern AnObject *objectList;
 
@@ -196,7 +196,7 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 		return TSS_SUCCESS;
 	}
 
-	hContext = obj_getContextForObject(hPolicy);
+	hContext = obj_getTcsContext(hPolicy);
 	if (hContext == 0)
 		return TSS_E_INVALID_HANDLE;
 
@@ -355,7 +355,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 /* 	TCPA_SECRET encSecret; */
 	TCPA_SECRET usageSecret;
 	TCPA_SECRET migSecret;
-	TCS_CONTEXT_HANDLE hContext = obj_getContextForObject(hPolicy);
+	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
 
 	if (hContext == 0)
 		return TSS_E_INVALID_HANDLE;
@@ -506,7 +506,7 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	AnObject *object;
 
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE hContext = obj_getContextForObject(hPolicy);
+	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
 
 	if (hContext == 0)
 		return TSS_E_INVALID_HANDLE;
@@ -604,7 +604,7 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	AnObject *object;
 
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE hContext = obj_getContextForObject(hPolicy);
+	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
 
 	if (hContext == 0)
 		return TSS_E_INVALID_HANDLE;
@@ -696,7 +696,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	TSP_INTERNAL_POLICY_OBJECT *srkPolicy;
 	TCS_CONTEXT_HANDLE hContext;
 
-	hContext = obj_getContextForObject(hTPM);
+	hContext = obj_getTcsContext(hTPM);
 	if (hContext == 0)
 		return TSS_E_INVALID_HANDLE;
 

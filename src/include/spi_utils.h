@@ -52,7 +52,7 @@ void keyreg_SetUUIDOfKeyObject(TSS_HKEY hKey, TSS_UUID uuid, TSS_FLAG psType);
 BOOL keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE * keyBlob);
 TSS_RESULT keyreg_WriteKeyToFile(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
 TSS_RESULT keyreg_RemoveKey(TCS_CONTEXT_HANDLE, TSS_UUID *);
-TSS_RESULT keyreg_GetKeyByUUID(TCS_CONTEXT_HANDLE, TSS_UUID *, UINT32 *, BYTE **);
+TSS_RESULT keyreg_GetKeyByUUID(TSS_UUID *, UINT32 *, BYTE **);
 TSS_RESULT keyreg_GetParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT keyreg_GetParentPSTypeByUUID(TSS_UUID *, UINT32 *);
 TSS_RESULT keyreg_replaceEncData_PS(BYTE *, BYTE *);
@@ -108,9 +108,6 @@ short get_port(void);
 void removeObject(UINT32 objectHandle);
 /*void destroyObject( AnObject* object ); */
 UINT32 getObjectTypeByHandle(TSS_HOBJECT objectHandle);
-TSS_RESULT obj_getTpmObject(UINT32 context, TSS_HOBJECT * out);
-TCS_CONTEXT_HANDLE obj_getContextForObject(UINT32 objectHandle);
-TSS_HOBJECT obj_GetPolicyOfObject(UINT32 objectHandle, UINT32 policyType);
 TSS_RESULT setObject(UINT32 objectHandle, void *buffer, UINT32 sizeOfBuffer);
 TSS_RESULT getObject(UINT32 objectHandle, void **outBuffer, UINT32 * outSize);
 TSS_HOBJECT addObject(UINT32 context, UINT32 objectType);
@@ -119,8 +116,9 @@ void destroyObjectsByContext(UINT32 contextHandle);
 AnObject *getAnObjectByHandle(UINT32 oHandle);
 BOOL anyPopupPolicies(TSS_HCONTEXT context);
 
-TSS_RESULT internal_GetContextForContextObject(TSS_HCONTEXT hContext, TCS_CONTEXT_HANDLE * tcsContext);
+#if 0
 TSS_RESULT internal_GetContextObjectForContext(TCS_CONTEXT_HANDLE tcsContext, TSS_HCONTEXT * tspContext);
+TSS_RESULT internal_GetContextForContextObject(TSS_HCONTEXT hContext, TCS_CONTEXT_HANDLE * tcsContext);
 TSS_RESULT internal_CheckContext_1(TSS_HOBJECT object1, TCS_CONTEXT_HANDLE * tcsContext);
 TSS_RESULT internal_CheckContext_2(TSS_HOBJECT object1, TSS_HOBJECT object2,
 				   TCS_CONTEXT_HANDLE * tcsContext);
@@ -131,7 +129,7 @@ TSS_RESULT internal_CheckObjectType_2(TSS_HOBJECT object1, UINT32 objectType1, T
 				      UINT32 objectType2);
 TSS_RESULT internal_CheckObjectType_3(TSS_HOBJECT object1, UINT32 objectType1, TSS_HOBJECT object2,
 				      UINT32 objectType2, TSS_HOBJECT object3, UINT32 objectType3);
-
+#endif
 /*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
 
 void addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle);

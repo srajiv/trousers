@@ -18,16 +18,16 @@
 #include "capabilities.h"
 #include "tss_crypto.h"
 #include "log.h"
-
+#include "obj.h"
 
 TSS_RESULT
 Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
 			      UINT32 ulPcrIndex,	/*  in */
-			      UINT32 ulPcrValueLength,	/*  out */
-			      BYTE * rgbPcrValue	/*  out */
+			      UINT32 ulPcrValueLength,	/*  in */
+			      BYTE * rgbPcrValue	/*  in */
     )
 {
-	TCS_CONTEXT_HANDLE hContext;
+	//TCS_CONTEXT_HANDLE hContext;
 	UINT32 numPCRs;
 	AnObject *anObject = NULL;
 	TCPA_PCR_OBJECT *pcrObject = NULL;
@@ -36,9 +36,11 @@ Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
 	if (ulPcrValueLength == 0 || rgbPcrValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
+	if ((result = obj_checkType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 		return result;
 
+#if 0
+	/* no need to be connected to set a pcr value inside an object */
 	if ((result = internal_CheckContext_1(hPcrComposite, &hContext)))
 		return result;
 
@@ -49,7 +51,7 @@ Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
 
 	if (ulPcrIndex >= numPCRs)
 		return TSS_E_BAD_PARAMETER;
-
+#endif
 	anObject = getAnObjectByHandle(hPcrComposite);
 	if (anObject == NULL)
 		return TSS_E_INVALID_HANDLE;
@@ -60,13 +62,13 @@ Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
 	}
 
 	pcrObject = anObject->memPointer;
-/*
+#if 0
 	pcrValue = getPcrFromComposite( pcrObject->pcrComposite, ulPcrIndex );
 	if( pcrValue == NULL )
 		return TSS_E_INTERNAL_ERROR;
 
 	memcpy( pcrValue->digest, rgbPcrValue, 20 );
-*/
+#endif
 
 	memcpy(pcrObject->pcrs[ulPcrIndex].digest, rgbPcrValue, ulPcrValueLength);
 	calcCompositeHash(pcrObject->select, pcrObject->pcrs, &pcrObject->compositeHash);
@@ -83,25 +85,24 @@ Tspi_PcrComposite_GetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
     )
 {
 	TCPA_PCR_OBJECT *object;
-	TCS_CONTEXT_HANDLE hContext;
+	//TCS_CONTEXT_HANDLE hContext;
 	AnObject *anObject = NULL;
 	TSS_RESULT result;
 
 	if (pulPcrValueLength == NULL || prgbPcrValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
+	if ((result = obj_checkType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hPcrComposite ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
+#if 0
+	/* no need to be connected to set a pcr value inside an object */
 	if ((result = internal_CheckContext_1(hPcrComposite, &hContext)))
 		return result;
 
 	if (ulPcrIndex >= getMaxPCRs(hContext))
 		return TSS_E_BAD_PARAMETER;
-
+#endif
 	/* ===  Get the PCRObject */
 	anObject = getAnObjectByHandle(hPcrComposite);
 	if (anObject == NULL)
@@ -124,7 +125,7 @@ Tspi_PcrComposite_GetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
 
 /* 	if( val == NULL ) */
 /* 		return TSS_E_BAD_PARAMETER; */
-	*prgbPcrValue = calloc_tspi(hContext, 20);
+	*prgbPcrValue = calloc_tspi(obj_getTspContext(hPcrComposite), 20);
 	if (*prgbPcrValue == NULL) {
 		LogError("malloc of %d bytes failed.", 20);
 		return TSS_E_OUTOFMEMORY;
@@ -145,7 +146,7 @@ Tspi_PcrComposite_SelectPcrIndex(TSS_HPCRS hPcrComposite,	/*  in */
 	TCPA_PCR_OBJECT *object;
 	AnObject *anObject = NULL;
 	BYTE mask;
-	TCS_CONTEXT_HANDLE hContext;
+	//TCS_CONTEXT_HANDLE hContext;
 	UINT32 numPCRs;
 	TSS_RESULT result;
 #if 0
@@ -154,13 +155,11 @@ Tspi_PcrComposite_SelectPcrIndex(TSS_HPCRS hPcrComposite,	/*  in */
 //      UINT32 i, j;
 //      BYTE buffer[1024];
 #endif
-	if ((result = internal_CheckObjectType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
+	if ((result = obj_checkType_1(hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 		return result;
 
-	/* ---  Get the Context */
-/* 	hContext = obj_getContextForObject( hPcrComposite ); */
-/* /	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
+#if 0
+	/* no need to be connected to set an attribute of an object */
 	if ((result = internal_CheckContext_1(hPcrComposite, &hContext)))
 		return result;
 
@@ -172,7 +171,7 @@ Tspi_PcrComposite_SelectPcrIndex(TSS_HPCRS hPcrComposite,	/*  in */
 	/* ===  Check the parms */
 	if (ulPcrIndex >= getMaxPCRs(hContext))
 		return TSS_E_BAD_PARAMETER;
-
+#endif
 	/* ===  Get the PCRObject */
 	anObject = getAnObjectByHandle(hPcrComposite);
 	if (anObject == NULL)

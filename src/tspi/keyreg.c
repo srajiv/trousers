@@ -107,8 +107,7 @@ keyreg_RemoveKey(TCS_CONTEXT_HANDLE tcs_handle, TSS_UUID *uuid)
 }
 
 TSS_RESULT
-keyreg_GetKeyByUUID(TCS_CONTEXT_HANDLE tcsContext, TSS_UUID *uuid,
-		    UINT32 * blobSizeOut, BYTE ** blob)
+keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 {
 	BYTE tempBlob[2048];
 	UINT16 tempBlobSize = sizeof (tempBlob);

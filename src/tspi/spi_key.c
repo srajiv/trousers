@@ -19,6 +19,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
+#include "obj.h"
 
 TSS_RESULT
 Tspi_Key_UnloadKey(TSS_HKEY hKey)	/*  in */
@@ -26,10 +27,10 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/*  in */
 	TSS_HCONTEXT hContext;
 	TSS_RESULT result;
 
-	if ((result = internal_CheckObjectType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_checkType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hKey, &hContext)))
+	if ((result = obj_isConnected_1(hKey, &hContext)))
 		return result;
 
 	return TSS_E_NOTIMPL;
@@ -58,11 +59,11 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 
 	LogDebug1("Tspi_Key_LoadKey");
 	for (;;) {
-		if ((result = internal_CheckObjectType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
+		if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hUnwrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = internal_CheckContext_2(hKey, hUnwrappingKey, &hContext)))
+		if ((result = obj_isConnected_2(hKey, hUnwrappingKey, &hContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetAttribData(hKey,
@@ -163,10 +164,10 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 
 	LogDebug1("Tspi_Key_GetPubKey");
 	for (;;) {
-		if ((result = internal_CheckObjectType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
+		if ((result = obj_checkType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = internal_CheckContext_1(hKey, &hContext)))
+		if ((result = obj_isConnected_1(hKey, &hContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -274,11 +275,11 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 
 	for (;;) {
 
-		if ((result = internal_CheckObjectType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
+		if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hCertifyingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = internal_CheckContext_2(hKey, hCertifyingKey, &hContext)))
+		if ((result = obj_isConnected_2(hKey, hCertifyingKey, &hContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -508,20 +509,20 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 	LogDebug1("Tspi_Key_CreateKey");
 	for (;;) {
 		if (hPcrComposite == 0) {
-			if ((result = internal_CheckObjectType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
+			if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 						       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 				break;	/* return result; */
-			if ((result = internal_CheckContext_2(hKey, hWrappingKey, &hContext)))
+			if ((result = obj_isConnected_2(hKey, hWrappingKey, &hContext)))
 				break;	/* return result; */
 		} else {
 			if ((result =
-			    internal_CheckObjectType_3(hKey,
+			    obj_checkType_3(hKey,
 						       TSS_OBJECT_TYPE_RSAKEY,
 						       hWrappingKey,
 						       TSS_OBJECT_TYPE_RSAKEY,
 						       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 				break;	/* return result; */
-			if ((result = internal_CheckContext_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
+			if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
 				break;	/* return result; */
 		}
 
@@ -742,20 +743,20 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	void *keyObject;
 
 	if (hPcrComposite == 0) {
-		if ((result = internal_CheckObjectType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
+		if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			return result;
-		if ((result = internal_CheckContext_2(hKey, hWrappingKey, &hContext)))
+		if ((result = obj_isConnected_2(hKey, hWrappingKey, &hContext)))
 			return result;
 
 	} else {
 		if ((result =
-		    internal_CheckObjectType_3(hKey, TSS_OBJECT_TYPE_RSAKEY,
+		    obj_checkType_3(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hWrappingKey,
 					       TSS_OBJECT_TYPE_RSAKEY,
 					       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 			return result;
-		if ((result = internal_CheckContext_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
+		if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
 			return result;
 	}
 
@@ -919,11 +920,11 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 		return TSS_E_INVALID_HANDLE;
 
 	result =
-	    internal_CheckObjectType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
+	    obj_checkType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
 				       hParentKey, TSS_OBJECT_TYPE_RSAKEY);
 	if (result) {
 		result =
-		    internal_CheckObjectType_2(hKeyToMigrate,
+		    obj_checkType_2(hKeyToMigrate,
 					       TSS_OBJECT_TYPE_ENCDATA,
 					       hParentKey, TSS_OBJECT_TYPE_RSAKEY);
 		if (result)
@@ -935,7 +936,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 //              return TSS_E_INVALID_HANDLE;
 #endif
 
-	if ((result = internal_CheckContext_2(hKeyToMigrate, hParentKey, &hContext)))
+	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetAttribData(hParentKey,
@@ -1143,11 +1144,11 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	BYTE *blob;
 	TCPA_KEY keyContainer;
 
-	if ((result = internal_CheckObjectType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
+	if ((result = obj_checkType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
 				       hParentKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hKeyToMigrate, hParentKey, &hContext)))
+	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &hContext)))
 		return result;
 
 /* 	hContext = obj_getContextForObject( hKeyToMigrate ); */

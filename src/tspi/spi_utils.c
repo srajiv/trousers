@@ -23,6 +23,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
+#include "obj.h"
 
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
@@ -94,6 +95,7 @@ check_flagset_collision(TSS_FLAG flagset, UINT32 flags)
 	return (one_bits > 1 ? TRUE : FALSE);
 }
 
+#if 0
 TSS_RESULT
 internal_CheckContext_1(TSS_HOBJECT object1, TCS_CONTEXT_HANDLE * tcsContext)
 {
@@ -282,7 +284,6 @@ internal_CheckObjectType_3(TSS_HOBJECT object1, UINT32 objectType1,
 	return TSS_SUCCESS;
 }
 
-#if 0
 /* ---	Converts true unicode to a TSS defined byte array of unicode data */
 UINT32
 UnicodeToArray(BYTE * bytes, UNICODE * wchars)
@@ -511,11 +512,16 @@ getMaxPCRs(TCS_CONTEXT_HANDLE hContext)
 	return ret;
 }
 
-BOOL firstVersionCheck = 1;
+//BOOL firstVersionCheck = 1;
 TCPA_VERSION *
 getCurrentVersion(TSS_HCONTEXT hContext)
 {
-	static TCPA_VERSION version;
+	static TCPA_VERSION version = { 1, 1, 0, 0 };
+#if 0
+	/* No use case for getCurrentVersion has convinced me that the version
+	 * info from the TCS is the right answer. Just return a 1.1.0.0
+	 * answer all the time. - KEY
+	 */
 	/* TCS_CONTEXT_HANDLE hContext; */
 	TCPA_CAPABILITY_AREA capArea = TCPA_CAP_VERSION;
 	UINT32 respSize;
@@ -523,19 +529,11 @@ getCurrentVersion(TSS_HCONTEXT hContext)
 	TCPA_RESULT result = 0;
 	UINT16 offset;
 	TCS_CONTEXT_HANDLE tcsContext;
-#if 0
-	AnObject *anObject;
-#endif
 
 	if (firstVersionCheck) {
-		if ((result = internal_CheckContext_1(hContext, &tcsContext)))
-			return NULL;
-#if 0
-		/* call getCap and fill the version */
-		anObject = getAnObjectByHandle(hContext);
-		if (anObject == NULL)
-			return NULL;
-#endif
+		if ((result = obj_isConnected_1(hContext, &tcsContext)))
+			return &version;
+
 		result = TCSP_GetCapability(tcsContext,	/*  in */
 					    capArea,	/*  in */
 					    0,	/*  in */
@@ -549,11 +547,8 @@ getCurrentVersion(TSS_HCONTEXT hContext)
 			firstVersionCheck = 0;
 		}
 	}
-
-	if (!result)
-		return &version;
-	else
-		return NULL;
+#endif
+	return &version;
 }
 
 TSS_RESULT

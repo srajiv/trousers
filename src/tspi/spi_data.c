@@ -19,7 +19,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
-
+#include "obj.h"
 
 TSS_RESULT
 Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
@@ -49,12 +49,12 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 
 	LogDebug1("Tspi_Data_Bind");
 
-	if ((result = internal_CheckObjectType_2(hEncData,
+	if ((result = obj_checkType_2(hEncData,
 					TSS_OBJECT_TYPE_ENCDATA, hEncKey,
 					TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hEncData, hEncKey, &hContext)))
+	if ((result = obj_checkSession_2(hEncData, hEncKey)))
 		return result;
 
 	if ((result = Tspi_GetAttribData(hEncKey, TSS_TSPATTRIB_KEY_BLOB,
@@ -188,12 +188,12 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 
 	LogDebug1("Tspi_Data_Unbind");
 
-	if ((result = internal_CheckObjectType_2(hEncData,
+	if ((result = obj_checkType_2(hEncData,
 					TSS_OBJECT_TYPE_ENCDATA, hKey,
 					TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hEncData, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hEncData, hKey, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -284,16 +284,16 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	for (;;) {
-		if ((rc = internal_CheckObjectType_2(hEncData,
+		if ((rc = obj_checkType_2(hEncData,
 					       TSS_OBJECT_TYPE_ENCDATA, hEncKey,
 					       TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return rc; */
 
 		if (hPcrComposite == 0) {
-			if ((rc = internal_CheckContext_2(hEncData, hEncData, &hContext)))
+			if ((rc = obj_isConnected_2(hEncData, hEncData, &hContext)))
 				break;	/* return rc; */
 		} else {
-			if ((rc = internal_CheckContext_3(hEncData, hEncData, hPcrComposite, &hContext)))
+			if ((rc = obj_isConnected_3(hEncData, hEncData, hPcrComposite, &hContext)))
 				break;	/* return rc; */
 		}
 
@@ -434,12 +434,12 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	for (;;) {
-		if ((result = internal_CheckObjectType_2(hEncData,
+		if ((result = obj_checkType_2(hEncData,
 					       TSS_OBJECT_TYPE_ENCDATA, hKey,
 					       TSS_OBJECT_TYPE_RSAKEY)))
 			break;
 
-		if ((result = internal_CheckContext_2(hEncData, hKey, &hContext)))
+		if ((result = obj_isConnected_2(hEncData, hKey, &hContext)))
 			break;
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))

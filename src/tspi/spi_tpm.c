@@ -18,7 +18,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
-
+#include "obj.h"
 
 TSS_UUID SRK_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 1 } };
 
@@ -46,13 +46,10 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	BYTE *newEK;
 
 
-	if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_2(hTPM, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hTPM, hKey, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetAttribData(hKey,
@@ -156,14 +153,14 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	if (phEndorsementPubKey == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
-	if ((result = internal_GetContextObjectForContext(hContext, &tspContext))) {
-		LogError1("unable to get TSP handle from TCS context");
+	if ((tspContext = obj_getTspContext(hTPM)) == 0) {
+		LogError1("Unable to get TSP handle from TCS context");
 		return TSS_E_INTERNAL_ERROR;
 	}
 
@@ -258,12 +255,12 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 
 	/* ---  Get context */
 	if ((rc =
-	    internal_CheckObjectType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
+	    obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
 				       TSS_OBJECT_TYPE_RSAKEY,
 				       hEndorsementPubKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return rc;
 
-	if ((rc = internal_CheckContext_3(hTPM, hKeySRK, hEndorsementPubKey, &hContext)))
+	if ((rc = obj_isConnected_3(hTPM, hKeySRK, hEndorsementPubKey, &hContext)))
 		return rc;
 
 	/* ---  Get the srkKeyData */
@@ -395,12 +392,12 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 
 	LogDebug1("SM DEBUG 1");
 
-	if ((result = internal_CheckObjectType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
+	if ((result = obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
 				       TSS_OBJECT_TYPE_RSAKEY, hCAPubKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
 	/* ---        Get and verify the context */
-	if ((result = internal_CheckContext_3(hTPM, hKeySRK, hCAPubKey, &hContext)))
+	if ((result = obj_isConnected_3(hTPM, hKeySRK, hCAPubKey, &hContext)))
 		return result;
 
 	/* ---        Get Policies */
@@ -564,8 +561,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 				)))
 		return result;
 
-	if ((result = internal_GetContextObjectForContext(hContext, &hSPIContext)))
-		return result;
+	if ((hSPIContext = obj_getTspContext(hContext)) == 0)
+		return TSS_E_INTERNAL_ERROR;
 
 	LogDebug1("SM DEBUG 5 <<<<<<<<<<<<<<<<<<<<<<<<<<<");
 
@@ -657,11 +654,11 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM, hIdentKey,
+	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hIdentKey,
 				       TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hTPM, hIdentKey, &hContext)))
+	if ((result = obj_isConnected_2(hTPM, hIdentKey, &hContext)))
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
@@ -737,10 +734,10 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 	UINT16 offset;
 	TSS_HPOLICY hPolicy;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if (fForcedClear) {	/*  TPM_OwnerClear */
@@ -801,10 +798,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_HPOLICY hPolicy;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
@@ -975,10 +972,10 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	for (;;) {
-		if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+		if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 			break;	/* return result; */
 
-		if ((result = internal_CheckContext_1(hTPM, &hContext)))
+		if ((result = obj_isConnected_1(hTPM, &hContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
@@ -1079,13 +1076,10 @@ Tspi_TPM_SelfTestFull(TSS_HTPM hTPM	/*  in */
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE hContext;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	/*      TCS_CONTEXT_HANDLE hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	return TCSP_SelfTestFull(hContext);
@@ -1117,13 +1111,10 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 	BOOL useAuth;
 
 
-	if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hKey ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_2(hTPM, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hTPM, hKey, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -1263,13 +1254,10 @@ Tspi_TPM_GetTestResult(TSS_HTPM hTPM,	/*  in */
 	if (pulTestResultLength == NULL || prgbTestResult == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	return TCSP_GetTestResult(hContext, pulTestResultLength, prgbTestResult);
@@ -1293,10 +1281,10 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	/* Verify the caps and subcaps */
@@ -1385,13 +1373,10 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	/* ===  Get context */
-	if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hKey);
@@ -1640,10 +1625,10 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 	if (prgbRandomData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	index = 0;
@@ -1700,10 +1685,10 @@ Tspi_TPM_StirRandom(TSS_HTPM hTPM,	/*  in */
 	if (ulEntropyDataLength > 0 && rgbEntropyData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = TCSP_StirRandom(hContext, ulEntropyDataLength, rgbEntropyData)))
@@ -1736,11 +1721,11 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 	if (pulMigTicketLength == NULL || prgbMigTicket == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM, hMigrationKey,
+	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hMigrationKey,
 				       TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	/*  get the tpm Policy */
@@ -1817,10 +1802,10 @@ Tspi_TPM_GetEvent(TSS_HTPM hTPM,	/*  in */
 	if (pPcrEvent == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = TCS_GetPcrEvent(hContext, ulPcrIndex, &ulEventNumber, &event)))
@@ -1848,10 +1833,10 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,	/*  in */
 	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = TCS_GetPcrEventsByPcr(hContext, ulPcrIndex, ulStartNumber, pulEventNumber, &events)))
@@ -1874,10 +1859,10 @@ Tspi_TPM_GetEventLog(TSS_HTPM hTPM,	/*  in */
 	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	return TCS_GetPcrEventLog(hContext, pulEventNumber, prgbPcrEvents);
@@ -1920,18 +1905,18 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 
 
 	if (hPcrComposite == 0) {
-		if ((result = internal_CheckObjectType_2(hTPM, TSS_OBJECT_TYPE_TPM,
+		if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM,
 					       hIdentKey, TSS_OBJECT_TYPE_RSAKEY)))
 			return result;
-		if ((result = internal_CheckContext_2(hTPM, hIdentKey, &hContext)))
+		if ((result = obj_isConnected_2(hTPM, hIdentKey, &hContext)))
 			return result;
 	} else {
-		if ((result = internal_CheckObjectType_3(hTPM, TSS_OBJECT_TYPE_TPM,
+		if ((result = obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM,
 					       hIdentKey,
 					       TSS_OBJECT_TYPE_RSAKEY,
 					       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 			return result;
-		if ((result = internal_CheckContext_3(hTPM, hIdentKey, hPcrComposite, &hContext)))
+		if ((result = obj_isConnected_3(hTPM, hIdentKey, hPcrComposite, &hContext)))
 			return result;
 	}
 	if (pValidationData == NULL)
@@ -2122,10 +2107,10 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
 	if (ulPcrDataLength > 0 && pbPcrData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	inDigest = malloc(TPM_DIGEST_SIZE);
@@ -2189,10 +2174,10 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,	/*  in */
 	if (pulPcrValueLength == NULL || prgbPcrValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = TCSP_PcrRead(hContext, ulPcrIndex, &outDigest)))
@@ -2228,10 +2213,10 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	if (rgbDirData == NULL && ulDirDataLength != 0)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
@@ -2289,13 +2274,10 @@ Tspi_TPM_DirRead(TSS_HTPM hTPM,	/*  in */
 	if (pulDirDataLength == NULL || prgbDirData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
-	if ((result = internal_CheckContext_1(hTPM, &hContext)))
+	if ((result = obj_isConnected_1(hTPM, &hContext)))
 		return result;
 
 	if ((result = TCSP_DirRead(hContext,	/*  in */

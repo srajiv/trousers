@@ -11,19 +11,27 @@
 #ifndef _OBJ_H_
 #define _OBJ_H_
 
-AnObject *objectList = NULL;
-UINT32 nextObjectHandle = 0xC0000000;
-
-TCSKeyHandleContainer *glKeyHandleManager = NULL;
-
 /* prototypes */
 TSS_HOBJECT getNextObjectHandle();
 AnObject *createNewObject();
 AnObject *concatObjects(AnObject ** first, AnObject * second);
 AnObject *getAnObjectByHandle(UINT32 oHandle);
 
-pthread_mutex_t objectlist_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t keylist_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t handle_lock = PTHREAD_MUTEX_INITIALIZER;
+TSS_RESULT obj_connectContext(TSS_HCONTEXT, TCS_CONTEXT_HANDLE);
+TSS_RESULT obj_checkSession_1(TSS_HOBJECT);
+TSS_RESULT obj_checkSession_2(TSS_HOBJECT, TSS_HOBJECT);
+TSS_RESULT obj_checkSession_3(TSS_HOBJECT, TSS_HOBJECT, TSS_HOBJECT);
+TSS_RESULT obj_isConnected_1(TSS_HOBJECT, TCS_CONTEXT_HANDLE *);
+TSS_RESULT obj_isConnected_2(TSS_HOBJECT, TSS_HOBJECT, TCS_CONTEXT_HANDLE *);
+TSS_RESULT obj_isConnected_3(TSS_HOBJECT, TSS_HOBJECT, TSS_HOBJECT, TCS_CONTEXT_HANDLE *);
+TSS_RESULT obj_checkType_1(TSS_HOBJECT, UINT32);
+TSS_RESULT obj_checkType_2(TSS_HOBJECT, UINT32, TSS_HOBJECT, UINT32);
+TSS_RESULT obj_checkType_3(TSS_HOBJECT, UINT32, TSS_HOBJECT, UINT32, TSS_HOBJECT, UINT32);
+
+TSS_HCONTEXT obj_getTspContext(TSS_HOBJECT);
+
+TSS_RESULT obj_getTpmObject(UINT32, TSS_HOBJECT *);
+TSS_HOBJECT obj_GetPolicyOfObject(UINT32, UINT32);
+TCS_CONTEXT_HANDLE obj_getTcsHandle(TSS_HOBJECT);
 
 #endif

@@ -19,7 +19,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
-
+#include "obj.h"
 
 TSS_RESULT
 Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
@@ -45,10 +45,10 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		return TSS_E_BAD_PARAMETER;
 
 	LogDebug1("Entering Tspi_Hash_Sign");
-	if ((result = internal_CheckObjectType_2(hHash, TSS_OBJECT_TYPE_HASH, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_checkType_2(hHash, TSS_OBJECT_TYPE_HASH, hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hHash, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hHash, hKey, &hContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -120,7 +120,6 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 	UINT32 hashDataSize;
 	TCPA_KEY keyContainer;
 	UINT16 offset;
-	TCS_CONTEXT_HANDLE hContext;
 
 	LogDebug1("Tspi_hash_VerifySignature");
 
@@ -128,11 +127,11 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 		return TSS_E_BAD_PARAMETER;
 
 	for (;;) {
-		if ((result = internal_CheckObjectType_2(hHash, TSS_OBJECT_TYPE_HASH,
+		if ((result = obj_checkType_2(hHash, TSS_OBJECT_TYPE_HASH,
 					       hKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;
 
-		if ((result = internal_CheckContext_2(hHash, hKey, &hContext)))
+		if ((result = obj_checkSession_2(hHash, hKey)))
 			break;
 
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
@@ -143,7 +142,7 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 			break;
 
 		offset = 0;
-		UnloadBlob_KEY(hContext, &offset, keyData, &keyContainer);
+		UnloadBlob_KEY(0, &offset, keyData, &keyContainer);
 
 		if ((result = TSS_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
@@ -170,7 +169,7 @@ Tspi_Hash_SetHashValue(TSS_HHASH hHash,	/* in */
 	if (ulHashValueLength == 0 || rgbHashValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hHash, TSS_OBJECT_TYPE_HASH)))
+	if ((result = obj_checkType_1(hHash, TSS_OBJECT_TYPE_HASH)))
 		return result;
 
 	object = getAnObjectByHandle(hHash);
@@ -213,15 +212,11 @@ Tspi_Hash_GetHashValue(TSS_HHASH hHash,	/* in */
 	AnObject *object = NULL;
 	TSS_RESULT result = TSS_SUCCESS;
 	TCPA_HASH_OBJECT *hashObject = NULL;
-	TCS_CONTEXT_HANDLE hContext;
 
 	if (pulHashValueLength == NULL || prgbHashValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hHash, TSS_OBJECT_TYPE_HASH)))
-		return result;
-
-	if ((result = internal_CheckContext_1(hHash, &hContext)))
+	if ((result = obj_checkType_1(hHash, TSS_OBJECT_TYPE_HASH)))
 		return result;
 
 	object = getAnObjectByHandle(hHash);
@@ -245,7 +240,7 @@ Tspi_Hash_GetHashValue(TSS_HHASH hHash,	/* in */
 	*pulHashValueLength = hashObject->hashSize;
 
 	/*---	The data */
-	*prgbHashValue = calloc_tspi(hContext, *pulHashValueLength);
+	*prgbHashValue = calloc_tspi(obj_getTspContext(hHash), *pulHashValueLength);
 	if (*prgbHashValue == NULL) {
 		LogError("malloc of %d bytes failed.", *pulHashValueLength);
 		return TSS_E_OUTOFMEMORY;
@@ -271,7 +266,7 @@ Tspi_Hash_UpdateHashValue(TSS_HHASH hHash,	/* in */
 	if (rgbData == NULL && ulDataLength != 0)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hHash, TSS_OBJECT_TYPE_HASH)))
+	if ((result = obj_checkType_1(hHash, TSS_OBJECT_TYPE_HASH)))
 		return result;
 
 	object = getAnObjectByHandle(hHash);

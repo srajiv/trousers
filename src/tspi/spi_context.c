@@ -22,6 +22,9 @@
 #include "tspps.h"
 #include "tss_crypto.h"
 #include "hosttable.h"
+#include "tcsd_wrap.h"
+#include "tcsd.h"
+#include "obj.h"
 
 char *tss_layers[] = { "tpm", "tddl", "tcs", "tsp" };
 
@@ -58,12 +61,7 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/*  out */
 	if (phContext == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	/* ---  First get the handle from the TCS */
-#if 0
-//      if( result = TCS_OpenContext( &tcsHandle ))
-//              return result;
-#endif
-	/* ---  Now create a new context object with default settings */
+	/* Create a new context object with default settings */
 	hObject = addObject(0, TSS_OBJECT_TYPE_CONTEXT);
 	if (hObject == 0)
 		return TSS_E_INTERNAL_ERROR;
@@ -89,7 +87,7 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/*  out */
 
 	free(object);
 
-	/* ---  Return the new objectHandle to the context */
+	/* Return the new objectHandle to the context */
 	*phContext = hObject;
 
 	LogDebug1("Leaving Context Create");
@@ -103,11 +101,11 @@ Tspi_Context_Close(TSS_HCONTEXT hContext)	/*  in */
 	TSS_RESULT result;
 
 	LogDebug1("Tspi_Context_Close");
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	/* Get the TCS context, if we're connected */
-	result = internal_CheckContext_1(hContext, &tcsContext);
+	result = obj_isConnected_1(hContext, &tcsContext);
 	if (result == TSS_SUCCESS) {
 		/* ---  Destroy all objects */
 		destroyObjectsByContext(tcsContext);
@@ -115,13 +113,13 @@ Tspi_Context_Close(TSS_HCONTEXT hContext)	/*  in */
 		/* free all context related memory */
 		free_tspi(tcsContext, NULL);
 
-		/* Assume 1 TSPi context per process. Is there a reason to open more than 1? */
-		destroy_ps();
-
 		LogDebug1("Leaving Context Close");
 		/* ---  Have the TCS do its thing */
 		return TCS_CloseContext(tcsContext);
 	}
+
+	/* Assume 1 TSPi context per process. Is there a reason to open more than 1? */
+	destroy_ps();
 
 	/* We're not a connected context, so just exit */
 	return TSS_SUCCESS;
@@ -144,8 +142,11 @@ ConnectGuts(TSS_HCONTEXT hContext, UNICODE *wszDestination, TCS_CONTEXT_HANDLE t
 
 	object = anObject->memPointer;
 
+#if 0
+	/* handled by obj_connectContext below */
 	object->tcsHandle = tcsHandle;
 	anObject->tcsContext = tcsHandle;
+#endif
 
 	/* this length was checked to be in bounds in Tspi_Context_Connect() */
 	object->machineNameLength = wcslen(wszDestination);
@@ -184,7 +185,7 @@ ConnectGuts(TSS_HCONTEXT hContext, UNICODE *wszDestination, TCS_CONTEXT_HANDLE t
 	/* setObject creates a copy of this for us, so we can free it here */
 	free(tpmObject);
 
-	return TSS_SUCCESS;
+	return obj_connectContext(hContext, tcsHandle);
 }
 
 #if 0
@@ -238,7 +239,7 @@ Tspi_Context_Connect(TSS_HCONTEXT hContext,	/*  in */
 	int string_len = 0;
 
 	LogDebug1("Tspi_Context_Connect");
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	if (wszDestination == NULL) {
@@ -285,11 +286,11 @@ Tspi_Context_FreeMemory(TSS_HCONTEXT hContext,	/*  in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 #if 0
-	/* we don't need this, you should be able to free memory on an unconnected context */
+	/* you should be able to free memory on an unconnected context */
 	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
 		return result;
 #endif
@@ -311,7 +312,7 @@ Tspi_Context_GetDefaultPolicy(TSS_HCONTEXT hContext,	/*  in */
 	if (phPolicy == NULL )
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	object = getAnObjectByHandle(hContext);
@@ -339,9 +340,6 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 {
 	UINT32 objectSize = 0;
 	void *object;
-	UINT16 numPCRs;
-	UINT16 sizeOfSelect;
-	UINT16 i;
 	TCPA_VERSION *version;
 	TCPA_RSA_KEY_PARMS rsaKeyParms;
 	UINT16 zero;
@@ -351,18 +349,20 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 	TCPA_PCR_OBJECT *pcrObj;
 	TCPA_ENCDATA_OBJECT *encDataObj;
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 
 	LogDebug("Tspi_Context_CreateObject of type %.8X", objectType);
 
 	if (phObject == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
+#if 0
+	/* you should be able to create an object with an unconnected context */
 	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
 		return result;
+#endif
 
 	switch (objectType) {
 	case TSS_OBJECT_TYPE_POLICY:
@@ -651,32 +651,29 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 			return TSS_E_INVALID_OBJECT_INIT_FLAG;
 
 		objectSize = sizeof (TCPA_PCR_OBJECT);
-		*phObject = addObject(hContext, objectType);
-		if (*phObject == 0)
-			return TSS_E_INTERNAL_ERROR;
 		object = calloc(1, objectSize);
 		if (object == NULL) {
 			LogError("calloc of %d bytes failed.", objectSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 
-		numPCRs = getMaxPCRs(tcsContext);
-		sizeOfSelect = (((numPCRs - 1) >> 3) + 1);
-
 		pcrObj = (TCPA_PCR_OBJECT *)object;
 
-		pcrObj->select.sizeOfSelect = sizeOfSelect;
-		pcrObj->select.pcrSelect = malloc(sizeOfSelect);
+		/* allocate the max number of supported PCR's bits for the mask */
+		pcrObj->select.sizeOfSelect = TCSD_MAX_PCRS / 8;
+		pcrObj->select.pcrSelect = calloc(1, pcrObj->select.sizeOfSelect);
 		if (pcrObj->select.pcrSelect == NULL) {
-			LogError("malloc of %d bytes failed.", sizeOfSelect);
+			LogError("malloc of %d bytes failed.", pcrObj->select.sizeOfSelect);
 			free(object);
 			return TSS_E_OUTOFMEMORY;
 		}
-/* 		pcrObj->pcrComposite.select.sizeOfSelect = sizeOfSelect; */
-/* 		pcrObj->pcrComposite.select.pcrSelect = malloc( sizeOfSelect ); */
-		for (i = 0; i < sizeOfSelect; i++)
-/* 			pcrObj->pcrComposite.select.pcrSelect[i] = 0x00; */
-			pcrObj->select.pcrSelect[i] = 0;
+
+		*phObject = addObject(hContext, objectType);
+		if (*phObject == 0) {
+			free(pcrObj->select.pcrSelect);
+			free(object);
+			return TSS_E_INTERNAL_ERROR;
+		}
 		break;
 	case TSS_OBJECT_TYPE_HASH:
 		LogDebug1("Hash Object");
@@ -747,15 +744,21 @@ Tspi_Context_CloseObject(TSS_HCONTEXT hContext,	/*  in */
 	TCPA_RSAKEY_OBJECT *rsaObj;
 	TCS_CONTEXT_HANDLE tcsContext;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
+	if ((result = obj_checkSession_2(hContext, hObject)))
+		return result;
+
+#if 0
+	/* you should be able to close an object with an unconnected context */
 	if ((result = internal_CheckContext_2(hContext, hObject, &tcsContext)))
 		return result;
+#endif
 
-	switch (getObjectTypeByHandle(hObject)) {	/* using policy object to derefference first element */
+	switch (getObjectTypeByHandle(hObject)) {	/* using policy object to dereference first element */
 	case 0:
-		result = TSS_E_INTERNAL_ERROR;
+		result = TSS_E_INVALID_HANDLE;
 		break;
 	case TSS_OBJECT_TYPE_RSAKEY:
 
@@ -784,11 +787,10 @@ Tspi_Context_CloseObject(TSS_HCONTEXT hContext,	/*  in */
 	default:		/* ---  Everything else...just continue */
 		break;
 	}
-	/* ---  All objects do this */
-	removeObject(hObject);
 
-/* 	if( objectBuffer != NULL ) */
-/* 		free( objectBuffer ); */
+	if (result == TSS_SUCCESS)
+		removeObject(hObject);
+
 	return result;
 }
 
@@ -798,25 +800,21 @@ Tspi_Context_GetTpmObject(TSS_HCONTEXT hContext,	/*  in */
     )
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
-
-	LogDebug1("Tspi_GetTpmObject");
 
 	if (phTPM == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	for (;;) {
-		if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
-			break;	/* return result; */
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+		return result;
 
-		if ((result = internal_CheckContext_1(hContext, &tcsContext)))
-			break;	/* return result; */
+#if 0
+	/* we shouldn't have to do be connected to get the TPM object */
+	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+		return result;
+#endif
 
-		result = obj_getTpmObject(tcsContext, phTPM);
+	result = obj_getTpmObject(hContext, phTPM);
 
-		break;
-	}
-	LogDebug("Leaving GetTpmObject with result %.8X", result);
 	return result;
 }
 
@@ -906,10 +904,7 @@ Tspi_Context_GetCapability(TSS_HCONTEXT hContext,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	LogDebug1("Tspi_Context_GetCap");
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
-		return result;
-
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	switch (capArea) {
@@ -929,6 +924,10 @@ Tspi_Context_GetCapability(TSS_HCONTEXT hContext,	/*  in */
 		case TSS_TCSCAP_VERSION:
 		case TSS_TCSCAP_CACHING:
 		case TSS_TCSCAP_PERSSTORAGE:
+			/* make sure we're connected to a TCS first */
+			if ((result = obj_isConnected_1(hContext, &tcsContext)))
+				return result;
+
 			LogDebug1("Dectected to be TCS query");
 			if (capArea == TSS_TCSCAP_ALG) {
 				if (ulSubCapLength != sizeof(UINT32) && rgbSubCap)
@@ -985,12 +984,13 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT hContext,	/*  in */
 
 	/* ------------------------------------- */
 	for (;;) {
-		if ((result = internal_CheckObjectType_2(hContext,
+		if ((result = obj_checkType_2(hContext,
 					       TSS_OBJECT_TYPE_CONTEXT,
 					       hUnwrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = internal_CheckContext_2(hContext, hUnwrappingKey, &tcsContext)))
+		/* Loading a key always requires us to be connected to a TCS */
+		if ((result = obj_isConnected_2(hContext, hUnwrappingKey, &tcsContext)))
 			break;	/* return result; */
 
 		/* ---  Get the Parent Handle */
@@ -1134,10 +1134,11 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 	if (phKey == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	/* Loading a key always requires us to be connected to a TCS */
+	if ((result = obj_isConnected_1(hContext, &tcsContext)))
 		return result;
 
 	*phKey = 0;
@@ -1160,7 +1161,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 		else if (persistentStorageType == TSS_PS_TYPE_USER) {
 			LogDebug1("USER PS TYPE");
 			/* ---  Get my KeyBlob */
-			if ((result = keyreg_GetKeyByUUID(tcsContext, &uuidData, &keyBlobSize, &keyBlob)))
+			if ((result = keyreg_GetKeyByUUID(&uuidData, &keyBlobSize, &keyBlob)))
 				break;	/* return TSS_E_INTERNAL_ERROR; */
 
 			/* ---  Get my Parent's UUID */
@@ -1284,23 +1285,28 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT hContext,	/*  in  */
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 
-	if ((result = internal_CheckObjectType_2(hContext, TSS_OBJECT_TYPE_CONTEXT, hKey,
+	if ((result = obj_checkType_2(hContext, TSS_OBJECT_TYPE_CONTEXT, hKey,
 				       TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = internal_CheckContext_2(hContext, hKey, &tcsContext)))
+	if ((result = obj_checkSession_2(hContext, hKey)))
 		return result;
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		if (persistentStorageTypeParent == TSS_PS_TYPE_USER)
+		/* make sure we're connected to a TCS */
+		if ((result = obj_isConnected_2(hContext, hKey, &tcsContext))) {
+			return result;
+		}
+
+		if (persistentStorageTypeParent == TSS_PS_TYPE_USER) {
 			return TSS_E_NOTIMPL;
-		else if (persistentStorageTypeParent == TSS_PS_TYPE_SYSTEM) {
+		} else if (persistentStorageTypeParent == TSS_PS_TYPE_SYSTEM) {
 			if ((result = Tspi_GetAttribData(hKey,
 							TSS_TSPATTRIB_KEY_BLOB,
 							TSS_TSPATTRIB_KEYBLOB_BLOB,
-							&keyBlobSize, &keyBlob)))
+							&keyBlobSize, &keyBlob))) {
 				return result;
-
+			}
 
 			if ((result = TCS_RegisterKey(tcsContext,
 						     uuidParentKey,
@@ -1310,14 +1316,14 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT hContext,	/*  in  */
 						     0,
 						     NULL))) {
 				/* convert a TCS return to a TSP return */
-				if (result == TCS_E_KEY_NOT_REGISTERED)
+				if (result == TCS_E_KEY_NOT_REGISTERED) {
 					result = TSS_E_PS_KEY_NOTFOUND;
-
+				}
 				return result;
 			}
-		} else
+		} else {
 			return TSS_E_BAD_PARAMETER;
-
+		}
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		if ((result = Tspi_GetAttribData(hKey,
 						TSS_TSPATTRIB_KEY_BLOB,
@@ -1330,8 +1336,9 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT hContext,	/*  in  */
 		if ((result = keyreg_WriteKeyToFile(&uuidKey, &uuidParentKey,
 					  persistentStorageTypeParent, keyBlobSize, keyBlob)))
 			return result;
-	} else
+	} else {
 		return TSS_E_BAD_PARAMETER;
+	}
 
 	keyreg_SetUUIDOfKeyObject(hKey, uuidKey, persistentStorageType);
 	return TSS_SUCCESS;
@@ -1363,11 +1370,12 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT hContext,		/* in */
 	if (phKey == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+		/* make sure we're connected to a TCS first */
+		if ((result = obj_isConnected_1(hContext, &tcsContext)))
 			return result;
 
 		/* get the key first, so it doesn't disappear when we unregister it */
@@ -1416,32 +1424,36 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 	if (phKey == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
-		return result;
-
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	*phKey = 0;
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+		/* make sure we're connected to a TCS first */
+		if ((result = obj_isConnected_1(hContext, &tcsContext)))
+			return result;
+
 		if ((result = TCS_GetRegisteredKeyBlob(tcsContext, uuidData, &keyBlobSize, &keyBlob))) {
 			/* convert TCS return to a TSS return */
 			if (result == TCS_E_KEY_NOT_REGISTERED)
 				result = TSS_E_PS_KEY_NOTFOUND;
 			return result;
 		}
+
+		offset = 0;
+		UnloadBlob_KEY(tcsContext, &offset, keyBlob, &theKey);
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-		if ((result = keyreg_GetKeyByUUID(tcsContext, &uuidData, &keyBlobSize, &keyBlob))) {
+		if ((result = keyreg_GetKeyByUUID(&uuidData, &keyBlobSize, &keyBlob))) {
 			/* convert TCS return to a TSS return */
 			if (result == TCS_E_KEY_NOT_REGISTERED)
 				result = TSS_E_PS_KEY_NOTFOUND;
 			return result;
 		}
+
+		offset = 0;
+		UnloadBlob_KEY(0, &offset, keyBlob, &theKey);
 	} else
 		return TSS_E_BAD_PARAMETER;
-
-	offset = 0;
-	UnloadBlob_KEY(tcsContext, &offset, keyBlob, &theKey);
 
 	if (theKey.pubKey.keyLength == 0x100)
 		initFlag |= TSS_KEY_SIZE_2048;
@@ -1456,6 +1468,9 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 	if ((result = Tspi_SetAttribData(*phKey, TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB,
 				keyBlobSize, keyBlob)))
 		return result;
+
+	if (persistentStorageType == TSS_PS_TYPE_USER)
+		destroy_key_refs(&theKey);
 
 	return TSS_SUCCESS;
 }
@@ -1482,13 +1497,14 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT hContext,	/*  in */
 	if (phKey == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
-		return result;
-
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+		/* make sure we're connected to a TCS */
+		if ((result = obj_isConnected_1(hContext, &tcsContext)))
+			return result;
+
 		if (algID == TSS_ALG_RSA)
 			tcsAlgID = TCPA_ALG_RSA;
 		else {
@@ -1590,13 +1606,14 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT hContext,	/*  in */
 	if (pulKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
-		return result;
-
-	if ((result = internal_CheckContext_1(hContext, &tcs_context)))
+	if ((result = obj_checkType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+		/* make sure we're connected to a TCS */
+		if ((result = obj_isConnected_1(hContext, &tcs_context)))
+			return result;
+
 		return TCS_EnumRegisteredKeys(tcs_context,
 							pUuidData,
 							pulKeyHierarchySize,

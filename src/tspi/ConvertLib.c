@@ -19,6 +19,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
+#include "obj.h"
 
 #include "atmel.h"
 
@@ -111,7 +112,7 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 	UINT32 sizeState;
 	BYTE stateValue[128];
 
-	if ((result = internal_CheckContext_1(hTPM, &tcsContext)))
+	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
 		return result;
 
 	/* ---  Convert the stateData to something meaningful */
@@ -186,7 +187,7 @@ Atmel_Tspi_GetState(TSS_HCONTEXT hContext, BYTE stateID, UINT32 * sizeState, BYT
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(hContext, &tcsContext)))
 		return result;
 
 	return Atmel_TPM_GetState(tcsContext, stateID, sizeState, stateValue);
@@ -215,7 +216,7 @@ internal_getChipVendor(TSS_HCONTEXT hContext)
 	if (firstVendorCheck == 0)
 		return vendor;
 
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(hContext, &tcsContext)))
 		return result;
 
 	UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, subCap);
@@ -255,7 +256,7 @@ internal_getTCSVendor(TSS_HCONTEXT hContext)
 		return vendor;
 	}
 
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(hContext, &tcsContext)))
 		return result;
 
 /* 	UINT32ToArray( TSS_TCSCAP_MANUFACTURER, subCap ); */
@@ -302,7 +303,7 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT hContext, BOOL * hasOwner)
 	if (internal_getTCSVendor(hContext) != TCS_VENDOR_IBM)
 		return TSS_E_NOTIMPL;
 
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(hContext, &tcsContext)))
 		return result;
 
 	/* ---  First check for an owner in the chip */
@@ -372,11 +373,11 @@ IBM_Tspi_CheckSystemStorage(TSS_HKEY hSRK)
 /* 	TCPA_KEY keyContainer; */
 /* 	UINT16 offset; */
 
-	if ((result = internal_CheckContext_1(hSRK, &tcsContext)))
+	if ((result = obj_isConnected_1(hSRK, &tcsContext)))
 		return result;
 
-	if ((result = internal_GetContextObjectForContext(tcsContext, &hContext)))
-		return result;
+	if ((hContext = obj_getTspContext(tcsContext)) == 0)
+		return TSS_E_INTERNAL_ERROR;
 
 	if (internal_getTCSVendor(hContext) != TCS_VENDOR_IBM)
 		return TSS_E_INTERNAL_ERROR;

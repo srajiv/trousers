@@ -21,7 +21,7 @@
 #include "capabilities.h"
 #include "log.h"
 #include "tss_crypto.h"
-
+#include "obj.h"
 
 TSS_RESULT
 Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
@@ -68,17 +68,17 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 	/* If the ObjectToChange is the SRK, then the parent must be the TPM Object */
 
 	LogDebug1("Tspi_ChangeAuth");
-	if ((result = internal_CheckObjectType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
 /* 	hContext = obj_getContextForObject( hObjectToChange ); */
 /* 	if( hContext == 0 ) */
 /* 		return TSS_E_INVALID_HANDLE; */
 	if (hParentObject == 0) {
-		if ((result = internal_CheckContext_2(hObjectToChange, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_2(hObjectToChange, hNewPolicy, &hContext)))
 			return result;
 	} else {
-		if ((result = internal_CheckContext_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
 			return result;
 	}
 	/* what is the object type? */
@@ -474,13 +474,13 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	TCS_AUTH *pAuth;
 	BYTE dataBlob[1024];
 
-	if ((result = internal_CheckObjectType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
 	if (hParentObject == 0) {
 		return TSS_E_BAD_PARAMETER;
 	} else {
-		if ((result = internal_CheckContext_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
 			return result;
 	}
 
@@ -1257,9 +1257,10 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 			/* ---  Need to add stuff to free old key components */
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
 			LogDebug1("TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY");
-			if ((result = internal_CheckContext_1(hObject, &tcsContext)))
-				return result;
 #if 0
+			if ((result = obj_isConnected_1(hObject, &tcsContext)))
+				return result;
+
 			/* why was this Decode_UINT32() in here? -KEY */
 			rsaObj->privateKey.Privlen = Decode_UINT32(rgbAttribData);
 #else
@@ -1345,7 +1346,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 	TCPA_CONTEXT_OBJECT *ctxObj;
 	TSP_INTERNAL_POLICY_OBJECT *pObj;
 	BYTE tempBuf[1024];
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE hContext = 0;
 	TSS_RESULT result;
 	UINT32 size;
 
@@ -1354,8 +1355,15 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 
 	LogDebug1("Tspi_GetAttribData");
 
-	if ((result = internal_CheckContext_1(hObject, &hContext)))
+	if ((result = obj_checkSession_1(hObject)))
 		return result;
+
+	/* Don't check the return code here, allow failure. We don't _have_ to
+	 * be connected to a TCS to get Attrib data, but if we are, this will
+	 * let us account for it in the mem tables and free it up later.
+	 * FIXME
+	 */
+	obj_isConnected_1(hObject, &hContext);
 
 	switch (getObjectTypeByHandle(hObject)) {
 	case 0:
