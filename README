@@ -91,7 +91,7 @@ you'll need to do the following to create a device node:
 
   If you're using the device driver in the -mm tree and have udev enabled, you
 don't need to do any of the above stuff, just load the device driver with
-  # modprobe tpm_atml
+  # modprobe tpm_atmel
   or,
   # modprobe tpm_natl
 
