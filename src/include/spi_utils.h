@@ -129,8 +129,7 @@ TSS_RESULT OSAP_Calc(TCS_CONTEXT_HANDLE hContext, UINT16 EntityType, UINT32 Enti
 		     TCS_AUTH * auth);
 
 TSS_RESULT internal_GetSecret(TSS_HPOLICY, TCPA_SECRET *, BOOL);
-TSS_RESULT internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data,
-			      BOOL hashDataForMe);
+TSS_RESULT internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data);
 TSS_RESULT internal_FlushSecret(TSS_HPOLICY hPolicy);
 TSS_RESULT internal_CopySecrets(TSS_HPOLICY dest, TSS_HPOLICY source);
 
