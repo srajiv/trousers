@@ -51,9 +51,9 @@ extern struct tpm_properties tpm_metrics;
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
 #ifdef TSS_DEBUG
-#define DBG_ASSERT	assert
+#define DBG_ASSERT(x)	assert(x)
 #else
-#define DBG_ASSERT
+#define DBG_ASSERT(x)
 #endif
 
 TSS_RESULT get_tpm_metrics(struct tpm_properties *);
