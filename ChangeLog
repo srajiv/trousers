@@ -2,6 +2,8 @@
  - Connected up Tspi_TPM_SetStatus and Tspi_TPM_SelfTestFull to
    TCSP_SetTempDeactivated, TCSP_SelfTestFull, TCSP_SetOwnerInstall,
    TCSP_OwnerSetDisable and TCSP_PhysicalDisable.
+ - Bugfixes
+   - tcsem.c:507, error in calculating number of PCR events to copy out.
 
 * TROUSERS_0_1_7
 
