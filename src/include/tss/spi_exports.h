@@ -171,6 +171,7 @@ TSS_RESULT Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/* in */
 
 TSS_RESULT Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/* in */
 					 BOOL fOwnerAuthorized,	/* in */
+					 TSS_VALIDATION *pValidationData, /* in, out */
 					 TSS_HKEY * phEndorsementPubKey	/* out */
     );
 
