@@ -1,4 +1,6 @@
 
+ - updated README with info on device file stuff
+ - added a usage function and long options to tcsd
  - added an error message when incorrect params are passed to tcsd on
    the command line.
  - added -lcrypto and -lpthread to the build of libtspi.so, so that app
