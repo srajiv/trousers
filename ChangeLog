@@ -1,4 +1,19 @@
 
+ - updated Tspi_TPM_GetCapability manpage.
+ - added manpage for Tspi_TPM_GetPubEndorsementKey
+ - Bugfixes
+    - Allow validating the entire TCPA_PUBKEY structure in
+    Tspi_TPM_GetPubEndorsementKey, as National chips do this.
+    - Added support for TSS_TPMCAP_ORD and TSS_TPMCAP_FLAG in
+    Tspi_TPM_GetCapability, which required a call to
+    TCSP_GetCapabilityOwner to fetch the TPM's internal flags. Added
+    tcg/highlevel/tpm/Tspi_TPM_GetCapability0{4,5}.c to test.
+ - Feature Requests
+    - sf.net RFE #1122608 completed. Several different device locations
+    are now supported by default.  If /dev/tpm is created its assumed that
+    the IBM Research device driver is being used and therefore ioctl's are
+    sent to the driver, all others get read/write's. Updated README.
+
 * TROUSERS_0_1_8
 
  - added a manpage for Tspi_TPM_PcrExtend
@@ -20,7 +35,7 @@
    - sf.net bug #1113313 fixed. Tspi_TPM_TakeOwnership now allows a NULL
    pub endorsement key handle and a testcase,
    tcg/highlevel/tpm/Tspi_TPM_TakeOwnership03.c, exists to test this.
-   - In Tspi_SetAattribData, set the TCPA_KEY's privkey, not the wrapper
+   - In Tspi_SetAttribData, set the TCPA_KEY's privkey, not the wrapper
    object on a TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY.
 
 * TROUSERS_0_1_7
