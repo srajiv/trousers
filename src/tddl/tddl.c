@@ -22,9 +22,9 @@
 #include "tddl.h"
 
 struct tpm_device_node tpm_device_nodes[] = {
-	{"/dev/tpm", 1, TDDL_UNINITIALIZED},
 	{"/dev/tpm0", 0, TDDL_UNINITIALIZED},
 	{"/udev/tpm0", 0, TDDL_UNINITIALIZED},
+	{"/dev/tpm", 1, TDDL_UNINITIALIZED},
 	{NULL, 0, TDDL_UNINITIALIZED}
 };
 
