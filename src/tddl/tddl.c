@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -21,43 +21,70 @@
 #include "tcslog.h"
 #include "tddl.h"
 
-int tpm_fd = TDDL_UNINITIALIZED;
+struct tpm_device_node tpm_device_nodes[] = {
+	{"/dev/tpm", 1, TDDL_UNINITIALIZED},
+	{"/dev/tpm0", 0, TDDL_UNINITIALIZED},
+	{"/udev/tpm0", 0, TDDL_UNINITIALIZED},
+	{NULL, 0, TDDL_UNINITIALIZED}
+};
+
+struct tpm_device_node *opened_device = NULL;
 
 BYTE txBuffer[TDDL_TXBUF_SIZE];
+
+int
+open_device(void)
+{
+	int i;
+
+	/* tpm_device_paths is filled out in tddl.h */
+	for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
+		if ((tpm_device_nodes[i].fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0) {
+			continue;
+		}
+
+		opened_device = &(tpm_device_nodes[i]);
+		return opened_device->fd;
+	}
+
+	return -1;
+}
 
 TSS_RESULT
 Tddli_Open()
 {
-	if (tpm_fd != TDDL_UNINITIALIZED) {
+	int rc;
+
+	if (opened_device != NULL) {
 		LogDebug1("attempted to re-open the TPM driver!");
 		return TDDL_E_ALREADY_OPENED;
 	}
 
-	tpm_fd = open(TPM_DEVICE_PATH, O_RDWR);
-	if (tpm_fd < 0) {
+	rc = open_device();
+	if (rc < 0) {
+		LogError("Could not find a device to open!");
 		if (errno == ENOENT) {
-			tpm_fd = TDDL_UNINITIALIZED;
-			LogError("device file %s does not exist!", TPM_DEVICE_PATH);
 			/* File DNE */
 			return TDDL_E_COMPONENT_NOT_FOUND;
 		}
-		LogError("Open of %s failed: (errno: %d) %s", TPM_DEVICE_PATH, errno, strerror(errno));
+
 		return TDDL_E_FAIL;
 	}
-	LogDebug("Leaving %s", __FUNCTION__);
+
 	return TDDL_SUCCESS;
 }
 
 TSS_RESULT
 Tddli_Close()
 {
-	if (tpm_fd == TDDL_UNINITIALIZED) {
+	if (opened_device != NULL) {
 		LogDebug1("attempted to re-close the TPM driver!");
 		return TDDL_E_ALREADY_CLOSED;
 	}
-	close(tpm_fd);
-	tpm_fd = TDDL_UNINITIALIZED;
-	LogDebug("Leaving %s", __FUNCTION__);
+
+	close(opened_device->fd);
+	opened_device->fd = TDDL_UNINITIALIZED;
+
 	return TDDL_SUCCESS;
 }
 
@@ -74,43 +101,42 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
 	LogDebug1("Calling write to driver");
-#ifdef TPM_IOCTL
-	if ((sizeResult = ioctl(tpm_fd, TPMIOC_TRANSMIT, txBuffer)) == -1) {
-		LogError("ioctl: (%d) %s", errno, strerror(errno));
-		return TDDL_E_FAIL;
-	}
-#else
-	if ((sizeResult = write(tpm_fd, txBuffer, TransmitBufLen)) < 0) {
-		LogError("write to device %s failed: %s", TPM_DEVICE_PATH, strerror(errno));
-		return TDDL_E_IOERROR;
-	} else if (sizeResult < TransmitBufLen) {
-		LogError("wrote %d bytes to %s (tried to write %d)", sizeResult, TPM_DEVICE_PATH,
-				TransmitBufLen);
-		return TDDL_E_IOERROR;
+
+	if (opened_device->ioctl) {
+		if ((sizeResult = ioctl(opened_device->fd, TPMIOC_TRANSMIT, txBuffer)) == -1) {
+			LogError("ioctl: (%d) %s", errno, strerror(errno));
+			return TDDL_E_FAIL;
+		}
+	} else {
+		if ((sizeResult = write(opened_device->fd, txBuffer, TransmitBufLen)) < 0) {
+			LogError("write to device %s failed: %s", opened_device->path, strerror(errno));
+			return TDDL_E_IOERROR;
+		} else if (sizeResult < TransmitBufLen) {
+			LogError("wrote %d bytes to %s (tried to write %d)", sizeResult,
+					opened_device->path, TransmitBufLen);
+			return TDDL_E_IOERROR;
+		}
+
+		sizeResult = read(opened_device->fd, txBuffer, TDDL_TXBUF_SIZE);
 	}
 
-	sizeResult = read(tpm_fd, txBuffer, TDDL_TXBUF_SIZE);
-#endif
 	if (sizeResult < 0) {
-		LogError("read from device %s failed: %s", TPM_DEVICE_PATH, strerror(errno));
+		LogError("read from device %s failed: %s", opened_device->path, strerror(errno));
 		return TDDL_E_IOERROR;
 	} else if (sizeResult == 0) {
-		LogError("Zero bytes read from device %s", TPM_DEVICE_PATH);
+		LogError("Zero bytes read from device %s", opened_device->path);
 		return TDDL_E_IOERROR;
 	}
 
 	if ((unsigned)sizeResult > *pReceiveBufLen) {
-		LogError("read %d bytes from device %s, (only room for %d)", sizeResult, TPM_DEVICE_PATH,
-				*pReceiveBufLen);
+		LogError("read %d bytes from device %s, (only room for %d)", sizeResult,
+				opened_device->path, *pReceiveBufLen);
 		return TDDL_E_INSUFFICIENT_BUFFER;
 	}
 
 	*pReceiveBufLen = sizeResult;
 
 	memcpy(pReceiveBuf, txBuffer, *pReceiveBufLen);
-#if 0
-	LogDebug("Leaving %s ", __FUNCTION__);
-#endif
 	return TDDL_SUCCESS;
 }
 
@@ -136,19 +162,19 @@ Tddli_GetCapability(UINT32 CapArea, UINT32 SubCap,
 
 TSS_RESULT Tddli_Cancel(void)
 {
-#ifdef TPM_IOCTL
 	int rc;
 
-	if ((rc = ioctl(tpm_fd, TPMIOC_CANCEL, NULL)) == -1) {
-		LogError("ioctl: (%d) %s", errno, strerror(errno));
-		return TDDL_E_FAIL;
-	} else if (rc == -EIO) {
-		/* The driver timed out while trying to tell the chip to cancel */
-		return TDDL_COMMAND_COMPLETED;
-	}
+	if (opened_device->ioctl) {
+		if ((rc = ioctl(opened_device->fd, TPMIOC_CANCEL, NULL)) == -1) {
+			LogError("ioctl: (%d) %s", errno, strerror(errno));
+			return TDDL_E_FAIL;
+		} else if (rc == -EIO) {
+			/* The driver timed out while trying to tell the chip to cancel */
+			return TDDL_COMMAND_COMPLETED;
+		}
 
-	return TDDL_SUCCESS;
-#else
-	return TSS_E_NOTIMPL;
-#endif
+		return TDDL_SUCCESS;
+	} else {
+		return TSS_E_NOTIMPL;
+	}
 }
