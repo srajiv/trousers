@@ -148,25 +148,6 @@ TCPA_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext, TCP
 	return TSS_E_INTERNAL_ERROR;
 }
 
-#if 0
-TCPA_RESULT
-TSC_PhysicalPresence(UINT16 physPres)
-{
-	TSS_RESULT result;
-	struct host_table_entry *entry = get_table_entry(hContext);
-
-	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
-
-	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
-		return result;
-	}
-
-	return TSS_E_INTERNAL_ERROR;
-}
-#endif
-
 TCPA_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE hContext	/*  in */
     ) {
 	TSS_RESULT result;
@@ -1577,6 +1558,24 @@ TCPA_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		result =
 		    TCSP_PhysicalSetDeactivated_TP(entry, hContext,
 						   state);
+		return result;
+	}
+
+	return TSS_E_INTERNAL_ERROR;
+}
+
+TCPA_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,	/*  in */
+				TCPA_PHYSICAL_PRESENCE fPhysicalPresence	/*  in */
+    ) {
+	TSS_RESULT result;
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSS_E_NO_CONNECTION;
+
+	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
+		result =
+		    TCSP_PhysicalPresence_TP(entry, hContext, fPhysicalPresence);
 		return result;
 	}
 

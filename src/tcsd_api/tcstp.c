@@ -2710,6 +2710,32 @@ TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE 
 }
 
 TSS_RESULT
+TCSP_PhysicalPresence_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+				TCPA_PHYSICAL_PRESENCE fPhysicalPresence	/* in */
+    ) {
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_PHYSICALPRESENCE;
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &fPhysicalPresence, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	free(hdr);
+	return result;
+}
+
+TSS_RESULT
 TCSP_SetTempDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
     ) {
 	TSS_RESULT result;
