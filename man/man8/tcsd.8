@@ -54,7 +54,7 @@ daemon's socket itself and access to specific commands internal to the
 administrator using firewall rules.  If using iptables, the following rule
 will allow a specific host access to the tcsd:
 
-# iptables -A INPUT -s $IP_ADDRESS --dport @TCSD_DEFAULT_PORT@ -j ACCEPT
+# iptables -A INPUT -s $IP_ADDRESS --dport 30003 -j ACCEPT
 
 Access to individual commands internal to the tcsd is configured by the
 \fBtcsd\fR configuration file's "remote_ops" directive. Each function call
@@ -62,8 +62,8 @@ in the TCS API is reachable by a unique ordinal.  Each labeled "remote op"
 actually defines a set of ordinals (usually more than one) necessary to
 accomplish the operation. So, for example, the "random" operation enables
 the ordinals for opening and closing a context, calling TCS_StirRandom
-and TCS_GetRandom, as well as TCS_FreeMemory.
-
+and TCS_GetRandom, as well as TCS_FreeMemory. By default, connections from
+localhost will allow any ordinals.
 
 .SH "DATA FILES"
 .PP

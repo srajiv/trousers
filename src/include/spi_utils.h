@@ -90,7 +90,6 @@ TSS_RESULT DisplayNewPINWindow(char *, UNICODE *);
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
 
-#define TCSD_DEFAULT_PORT	30003
 short get_port(void);
 
 #define AUTH_RETRY_NANOSECS	500000000

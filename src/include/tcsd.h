@@ -34,7 +34,6 @@ struct tcsd_config
 #define TSS_USER_NAME		"tss"
 #define TSS_GROUP_NAME		"tss"
 
-#define TCSD_DEFAULT_PORT		30003
 #define TCSD_DEFAULT_MAX_THREADS	10
 #define TCSD_DEFAULT_SYSTEM_PS_FILE	VAR_PREFIX "/tpm/system.data"
 #define TCSD_DEFAULT_SYSTEM_PS_DIR	VAR_PREFIX "/tpm"

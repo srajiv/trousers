@@ -67,8 +67,9 @@ AC_DISABLE_STATIC
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
+AC_SUBST(TCSD_DEFAULT_PORT, 30003)
 
-CFLAGS="$CFLAGS -I../include -W -Wall"
+CFLAGS="$CFLAGS -I../include -W -Wall -DTCSD_DEFAULT_PORT=${TCSD_DEFAULT_PORT}"
 #CFLAGS="$CFLAGS -I../include -std=c99 -pedantic -W -Wall"
 KERNEL_VERSION=`uname -r`
 AC_SUBST(CFLAGS)
@@ -96,6 +97,7 @@ AC_OUTPUT(dist/tcsd.conf \
 	  src/tspi/Makefile \
 	  src/trspi/Makefile \
 	  src/tcsd/Makefile \
+	  man/man8/tcsd.8 \
 	  dist/Makefile \
 	  man/Makefile \
 	  man/man3/Makefile \
