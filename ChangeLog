@@ -1,4 +1,5 @@
 
+ - TCP/IP server-side fixes in svrside.c
  - various compile warnings fixed
  - moved commonly used utility functions to trspi/trousers.c and
    exported these functions in the header file tss/trousers.h.
