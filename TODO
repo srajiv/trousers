@@ -40,6 +40,11 @@ These are now prioritized, in order of decreasing priority...
    TCS GetRegisteredKeyBlob
    TCS SetOwnerInstall
 
+  Name ps functions rationally so that we can audit ps cache checking functions vs. functions
+    that need to actually open the ps file on disk.
+
+  Check for locking sanity. PS functions specifically with flock and disk_cache_lock.
+
   i18n work
 
   Get rid of magic numbers.
