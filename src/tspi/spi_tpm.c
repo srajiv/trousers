@@ -210,28 +210,40 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		if ((result = TCSP_ReadPubek(tcsContext, antiReplay, &pubEKSize, &pubEK, &checkSum)))
 			return result;
 
-		/* unload the pubEK for validation hashing */
-		offset = 0;
-		UnloadBlob_PUBKEY(tspContext, &offset, pubEK, &pubKey);
-
 		/* validate the returned hash, or set up the return so that the user can */
 		if (pValidationData == NULL) {
 			offset = 0;
-			LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
+			LoadBlob(&offset, pubEKSize, hashblob, pubEK);
 			LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
 			TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-			if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE))
-				return TSS_E_VALIDATION_FAILED;
+			/* check validation of the entire pubkey structure */
+			if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE)) {
+				/* validation failed, unload the pubEK in order to hash
+				 * just the pubKey portion of the pubEK. This is done on
+				 * Atmel chips specifically.
+				 */
+				offset = 0;
+				UnloadBlob_PUBKEY(tspContext, &offset, pubEK, &pubKey);
+
+				offset = 0;
+				LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
+				LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
+				TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+
+				if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE))
+					return TSS_E_VALIDATION_FAILED;
+			}
 		} else {
-			pValidationData->ulDataLength = pubKey.pubKey.keyLength + SHA1_HASH_SIZE;
+			/* validate the entire TCPA_PUBKEY structure */
+			pValidationData->ulDataLength = pubEKSize + SHA1_HASH_SIZE;
 			pValidationData->rgbData = calloc_tspi(tspContext, pValidationData->ulDataLength);
 			if (pValidationData->rgbData == NULL) {
 				LogError("malloc of %d bytes failed.", pValidationData->ulDataLength);
 				return TSS_E_OUTOFMEMORY;
 			}
 
-			memcpy(pValidationData->rgbData, pubKey.pubKey.key, pValidationData->ulDataLength);
+			memcpy(pValidationData->rgbData, pubEK, pValidationData->ulDataLength);
 			memcpy(&(pValidationData->rgbData[pValidationData->ulDataLength]),
 					antiReplay.nonce, SHA1_HASH_SIZE);
 
@@ -1036,7 +1048,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 			break;	/* return result; */
 
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, 4, hashBlob, digest.digest);
+		TSS_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
 			break;	/* return result; */
@@ -1330,10 +1342,19 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TCPA_CAPABILITY_AREA tcsCapArea;
 	UINT32 tcsSubCap;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
+	UINT32 nonVolFlags, volFlags, respLen;
+	TCPA_VERSION version;
+	TCPA_DIGEST digest;
+	BYTE hashBlob[128], *respData;
+	UINT16 offset;
+	TSS_HPOLICY hPolicy;
+	TCS_AUTH auth;
+	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
 		return TSS_E_BAD_PARAMETER;
@@ -1344,8 +1365,21 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
 		return result;
 
+	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
+
 	/* Verify the caps and subcaps */
 	switch (capArea) {
+	case TSS_TPMCAP_ORD:
+		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
+			return TSS_E_BAD_PARAMETER;
+
+		tcsCapArea = TCPA_CAP_ORD;
+		tcsSubCap = *(UINT32 *)rgbSubCap;
+		break;
+	case TSS_TPMCAP_FLAG:
+		fOwnerAuth = TRUE;
+		break;
 	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
 		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
 			return TSS_E_BAD_PARAMETER;
@@ -1379,13 +1413,58 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		break;
 	}
 
-	tcsSubCap = endian32(tcsSubCap);
+	if (fOwnerAuth) {
+		/* do an owner authorized get capability call */
+		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
+		TSS_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
-	if ((result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
-			       pulRespDataLength, prgbRespData)))
-		return result;
+		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+			return result;
 
-	return TSS_SUCCESS;
+		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
+			return result;
+
+		if ((result = TCSP_GetCapabilityOwner(tcsContext,       /*  in */
+						&auth,     /*  out */
+						&version,  /*  out */
+						&nonVolFlags,      /*  out */
+						&volFlags  /*  out */
+						)))
+			return result;
+
+		offset = 0;
+		LoadBlob_UINT32(&offset, result, hashBlob);
+		LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
+		LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
+		LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
+		LoadBlob_UINT32(&offset, volFlags, hashBlob);
+
+		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
+			return result;
+
+		respLen = 2 * sizeof(UINT32);
+		respData = calloc_tspi(tspContext, respLen);
+		if (respData == NULL) {
+			LogError("malloc of %d bytes failed.", respLen);
+			return TSS_E_OUTOFMEMORY;
+		}
+
+		offset = 0;
+		LoadBlob_UINT32(&offset, nonVolFlags, respData);
+		LoadBlob_UINT32(&offset, volFlags, respData);
+
+		*pulRespDataLength = respLen;
+		*prgbRespData = respData;
+	} else {
+		tcsSubCap = endian32(tcsSubCap);
+
+		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
+				pulRespDataLength, prgbRespData);
+	}
+
+	return result;
 }
 
 TSS_RESULT
