@@ -2970,6 +2970,37 @@ tcs_wrap_PhysicalDisable(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_PhysicalPresence(struct tcsd_thread_data *data,
+		     struct tsp_packet *tsp_data,
+		     struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	TCPA_PHYSICAL_PRESENCE phyPresFlags;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_UINT16, 1, &phyPresFlags, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_PhysicalPresence_Internal(hContext, phyPresFlags);
+
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data,
 		     struct tsp_packet *tsp_data,
 		     struct tcsd_packet_hdr **hdr)
@@ -3008,7 +3039,7 @@ typedef struct tdDispatchTable {
 } DispatchTable;
 
 /* 2004-06-09 Seiji Munetoh update ORDs and table */
-DispatchTable table[HOW_MANY_ORDINALS] = {
+DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Error},   /* 0 */
 	{tcs_wrap_OpenContext}, /*  1 */
 	{tcs_wrap_CloseContext}, /*  2 */
@@ -3075,7 +3106,7 @@ DispatchTable table[HOW_MANY_ORDINALS] = {
 	{tcs_wrap_PhysicalEnable}, /* 63 */
 	{tcs_wrap_PhysicalSetDeactivated}, /* 64 */
 	{tcs_wrap_SetTempDeactivated}, /* 65 */
-	{tcs_wrap_Error}, /* 66 */
+	{tcs_wrap_PhysicalPresence}, /* 66 */
 	{tcs_wrap_Error}, /* 67 */
 	{tcs_wrap_Error}, /* 68 */
 	{tcs_wrap_Error}, /* 69 */
@@ -3088,16 +3119,54 @@ DispatchTable table[HOW_MANY_ORDINALS] = {
 	{tcs_wrap_Error}  /* 76  last */ /* tcs_wrap_Atmel_GetState */
 };
 
+int
+access_control(struct tcsd_thread_data *thread_data, struct tsp_packet *tsp_data)
+{
+	int i = 0;
+
+	/* if the request comes from localhost, or is in the accepted ops list,
+	 * approve it */
+	if (!strcmp(thread_data->hostname, "localhost")) {
+		return 0;
+	} else {
+		while (tcsd_options.remote_ops[i]) {
+			if (tcsd_options.remote_ops[i] == tsp_data->ordinal) {
+				return 0;
+			}
+			i++;
+		}
+	}
+
+	return 1;
+}
+
 TSS_RESULT
 dispatchCommand(struct tcsd_thread_data *data,
 		struct tsp_packet *tsp_data,
 		struct tcsd_packet_hdr **hdr)
 {
 	/* ---  First, check the ordinal bounds */
-	if (tsp_data->ordinal >= HOW_MANY_ORDINALS) {
+	if (tsp_data->ordinal >= TCSD_MAX_NUM_ORDS) {
 		LogError1("Illegal TCSD Ordinal");
 		return TCS_E_FAIL;
 	}
+
+	if (access_control(data, tsp_data)) {
+		*hdr = calloc(1, sizeof(struct tcsd_packet_hdr));
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.",
+					sizeof(struct tcsd_packet_hdr));
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->result = TSS_E_CONNECTION_FAILED;
+		(*hdr)->packet_size = sizeof(struct tcsd_packet_hdr);
+
+		LogInfo("Access to ordinal %d from host %s denied.",
+				tsp_data->ordinal, data->hostname);
+
+		return TSS_SUCCESS;
+	}
+
 	/* --   Now, dispatch */
 	return table[tsp_data->ordinal].Func(data, tsp_data, hdr);
 }
