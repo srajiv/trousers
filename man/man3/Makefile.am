@@ -55,6 +55,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_TPM_GetEvent.3 \
 	    Tspi_TPM_GetEventLog.3 \
 	    Tspi_TPM_GetEvents.3 \
+	    Tspi_TPM_GetPubEndorsementKey.3 \
 	    Tspi_TPM_GetRandom.3 \
 	    Tspi_TPM_GetStatus.3 \
 	    Tspi_TPM_GetTestResult.3 \
