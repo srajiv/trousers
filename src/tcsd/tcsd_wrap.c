@@ -2838,6 +2838,164 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 	return TCS_SUCCESS;
 }
 
+TSS_RESULT
+tcs_wrap_SelfTestFull(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TSS_RESULT result;
+
+	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x servicing a %s request", (UINT32)pthread_self(), __FUNCTION__);
+
+	result = TCSP_SelfTestFull_Internal(hContext);
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_SetOwnerInstall(struct tcsd_thread_data *data,
+		     struct tsp_packet *tsp_data,
+		     struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	BOOL state;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_SetOwnerInstall_Internal(hContext, state);
+
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_OwnerSetDisable(struct tcsd_thread_data *data,
+		     struct tsp_packet *tsp_data,
+		     struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	BOOL disableState;
+	TCS_AUTH ownerAuth;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &disableState, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 2, &ownerAuth, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_OwnerSetDisable_Internal(hContext, disableState, &ownerAuth);
+
+	if( result == TSS_SUCCESS ) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH));
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_PhysicalDisable(struct tcsd_thread_data *data,
+		     struct tsp_packet *tsp_data,
+		     struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	result = TCSP_PhysicalDisable_Internal(hContext);
+
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data,
+		     struct tsp_packet *tsp_data,
+		     struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	result = TCSP_SetTempDeactivated_Internal(hContext);
+
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
 
 
 /* -------------------- */
@@ -2872,7 +3030,7 @@ DispatchTable table[HOW_MANY_ORDINALS] = {
 	{tcs_wrap_GetPcrEvent}, /* 18 */
 	{tcs_wrap_GetPcrEventsByPcr}, /* 19 */
 	{tcs_wrap_GetPcrEventLog}, /* 20 */
-	{tcs_wrap_Error}, /* 21 */
+	{tcs_wrap_SetOwnerInstall}, /* 21 */
 	{tcs_wrap_TakeOwnership}, /* 22 */
 	{tcs_wrap_OIAP}, /* 23 */
 	{tcs_wrap_OSAP}, /* 24 */
@@ -2904,19 +3062,19 @@ DispatchTable table[HOW_MANY_ORDINALS] = {
 	{tcs_wrap_ReadPubek}, /* 50 */
 	{tcs_wrap_Error}, /* 51 */
 	{tcs_wrap_Error}, /* 52 */
-	{tcs_wrap_Error}, /* 53 */
+	{tcs_wrap_SelfTestFull}, /* 53 */
 	{tcs_wrap_Error}, /* 54 */
 	{tcs_wrap_Error}, /* 55 */
 	{tcs_wrap_Error}, /* 56 */
-	{tcs_wrap_Error}, /* 57 */
+	{tcs_wrap_OwnerSetDisable}, /* 57 */
 	{tcs_wrap_Error}, /* 58 */
 	{tcs_wrap_Error}, /* 59 */
 	{tcs_wrap_ForceClear}, /* 60 */
 	{tcs_wrap_Error}, /* 61 */
-	{tcs_wrap_Error}, /* 62 */
+	{tcs_wrap_PhysicalDisable}, /* 62 */
 	{tcs_wrap_PhysicalEnable}, /* 63 */
 	{tcs_wrap_PhysicalSetDeactivated}, /* 64 */
-	{tcs_wrap_Error}, /* 65 */
+	{tcs_wrap_SetTempDeactivated}, /* 65 */
 	{tcs_wrap_Error}, /* 66 */
 	{tcs_wrap_Error}, /* 67 */
 	{tcs_wrap_Error}, /* 68 */

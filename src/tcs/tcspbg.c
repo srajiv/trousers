@@ -2745,6 +2745,7 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
+	/* XXX ooh, magic */
 	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
 			TPM_ORD_PhysicalDisable, txBlob);
 
