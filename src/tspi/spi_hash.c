@@ -67,7 +67,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		return TSS_E_NOTIMPL;
 
 	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == 0) {
+	if (tcsKeyHandle == NULL_HKEY) {
 		return TSS_E_KEY_NOT_LOADED;
 	}
 

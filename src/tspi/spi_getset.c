@@ -75,7 +75,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
 		return TSS_E_INTERNAL_ERROR;
 
-	if (hParentObject == 0) {
+	if (hParentObject == NULL_HOBJECT) {
 		if ((result = obj_isConnected_2(hObjectToChange, hNewPolicy, &tcsContext)))
 			return result;
 	} else {
@@ -134,7 +134,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 		LogDebug1("Object Type RSAKEY");
 
 		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
-		if (keyToChangeHandle == 0)
+		if (keyToChangeHandle == NULL_HKEY)
 			return TSS_E_KEY_NOT_LOADED;
 
 		if (keyToChangeHandle == FIXED_SRK_KEY_HANDLE) {
@@ -213,10 +213,10 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange);
 
 			keyHandle = getTCSKeyHandle(hParentObject);
-			if (keyHandle == 0)
+			if (keyHandle == NULL_HKEY)
 				return TSS_E_KEY_NOT_LOADED;
 
-			if (keyHandle == 0x40000000) {
+			if (keyHandle == FIXED_SRK_KEY_HANDLE) {
 				if ((result =
 				    secret_PerformXOR_OSAP(hParentPolicy,
 							   hNewPolicy,
@@ -332,7 +332,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			return result;
 
 		keyHandle = getTCSKeyHandle(hParentObject);
-		if (keyHandle == 0)
+		if (keyHandle == NULL_HKEY)
 			return TSS_E_KEY_NOT_LOADED;
 
 		if ((result =
@@ -482,7 +482,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
 		return TSS_E_INTERNAL_ERROR;
 
-	if (hParentObject == 0) {
+	if (hParentObject == NULL_HOBJECT) {
 		return TSS_E_BAD_PARAMETER;
 	} else {
 		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &tcsContext)))
@@ -493,7 +493,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	/*  grab all of the needed handles */
 
 	idHandle = getTCSKeyHandle(hIdentKey);
-	if (idHandle == 0)
+	if (idHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	/*  get the secret for the parent */
@@ -514,7 +514,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	}
 
 	keyHandle = getTCSKeyHandle(hParentObject);
-	if (keyHandle == 0)
+	if (keyHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	/* ////////////////////////////////////////////////////////////////////// */

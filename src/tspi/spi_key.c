@@ -72,7 +72,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 			break;	/* return result; */
 
 		parentTCSKeyHandle = getTCSKeyHandle(hUnwrappingKey);
-		if (parentTCSKeyHandle == 0) {
+		if (parentTCSKeyHandle == NULL_HKEY) {
 			result = TSS_E_KEY_NOT_LOADED;
 			break;
 		}
@@ -177,7 +177,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 			break;	/* return result; */
 
 		tcsKeyHandle = getTCSKeyHandle(hKey);
-		if (tcsKeyHandle == 0) {
+		if (tcsKeyHandle == NULL_HKEY) {
 			result = TSS_E_KEY_NOT_LOADED;
 			break;
 		}
@@ -301,14 +301,14 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 			break;	/* return result; */
 
 		certifyTCSKeyHandle = getTCSKeyHandle(hCertifyingKey);
-		if (certifyTCSKeyHandle == 0) {
+		if (certifyTCSKeyHandle == NULL_HKEY) {
 			LogDebug1("Failed to get tcs key handle for cert");
 			result = TSS_E_KEY_NOT_LOADED;
 			break;
 		}
 
 		keyTCSKeyHandle = getTCSKeyHandle(hKey);
-		if (keyTCSKeyHandle == 0) {
+		if (keyTCSKeyHandle == NULL_HKEY) {
 			result = TSS_E_KEY_NOT_LOADED;
 			break;
 		}
@@ -521,7 +521,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 
 	LogDebug1("Tspi_Key_CreateKey");
 	for (;;) {
-		if (hPcrComposite == 0) {
+		if (hPcrComposite == NULL_HPCRS) {
 			if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 						       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 				break;	/* return result; */
@@ -633,7 +633,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 		}
 
 		parentTCSKeyHandle = getTCSKeyHandle(hWrappingKey);
-		if (parentTCSKeyHandle == 0) {
+		if (parentTCSKeyHandle == NULL_HKEY) {
 			return TSS_E_KEY_NOT_LOADED;
 		}
 
@@ -716,14 +716,11 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
     )
 {
 
-/* 	TCPA_RSAKEY_OBJECT				*keyObject; */
 	AnObject *anObject;
-/* 	TCPA_RSAKEY_OBJECT				*wrappingKeyObject; */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
 	TCPA_SECRET secret;
 	TSS_RESULT result;
-/* 	TSS_HPOLICY						hKeyPolicy; */
 	TCPA_POLICY_OBJECT *myKeyPolicy;
 	UINT32 myPrivLength;
 	BYTE *myPriv = NULL;
@@ -737,13 +734,11 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	BYTE *myKeyBlob;
 	BYTE hashBlob[1024];
 	TCPA_DIGEST digest;
-/* 	UINT32	encDataSize; */
-/* 	BYTE	encData[256]; */
 	TCPA_NONCE seed;	/* nice container */
 	void *keyObject;
 	TSS_HCONTEXT tspContext;
 
-	if (hPcrComposite == 0) {
+	if (hPcrComposite == NULL_HPCRS) {
 		if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			return result;
@@ -786,24 +781,30 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 		LogError("malloc of %d bytes failed.", myPrivLength);
 		return TSS_E_OUTOFMEMORY;
 	}
+
+	/* get the key to be wrapped's private key */
 	memcpy(myPriv, ((TCPA_RSAKEY_OBJECT *) keyObject)->privateKey.Privkey, myPrivLength);
 
+	/* get the key to be wrapped's blob */
 	if ((result = Tspi_GetAttribData(hKey,
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, &myKeyBlobLength, &myKeyBlob)))
 		goto done;
 
+	/* get the wrapping key's blob */
 	if ((result = Tspi_GetAttribData(hWrappingKey,
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, &wrapLength, &wrap)))
 		goto done;
 
+	/* unload the wrapping key */
 	offset = 0;
 	UnloadBlob_KEY(tspContext, &offset, wrap, &keyContainer);
 	offset = 0;
 	LoadBlob_STORE_PUBKEY(&offset, pubKey, &keyContainer.pubKey);
 	pubKeySize = offset;
 
+	/* get the key to be wrapped's usage policy */
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
 		goto done;
 
@@ -815,6 +816,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 
 	myKeyPolicy = &((TSP_INTERNAL_POLICY_OBJECT *)anObject->memPointer)->p;
 
+	/* why is this a problem? Shouldn't popup secret be ok? */
 	if (myKeyPolicy->SecretMode != TSS_SECRET_MODE_SHA1 &&
 	    myKeyPolicy->SecretMode != TSS_SECRET_MODE_PLAIN) {
 		LogError("Key policy 0x%x is not secret mode SHA1 or PLAIN", hPolicy);
@@ -823,7 +825,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	}
 
 	memcpy(secret.secret, myKeyPolicy->Secret, myKeyPolicy->SecretSize);
-	/* --------------------------- */
+	/* unload the wrapping key */
 	offset = 0;
 	UnloadBlob_KEY(tspContext, &offset, myKeyBlob, &keyContainer);
 
@@ -1015,7 +1017,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	}
 
 	parentHandle = getTCSKeyHandle(hParentKey);
-	if (parentHandle == 0)
+	if (parentHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 	if (anObject->objectType == TSS_OBJECT_TYPE_RSAKEY) {
 		if ((result = TCSP_CreateMigrationBlob(tcsContext,
@@ -1161,7 +1163,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	/*  Get the parent Key */
 
 	parentHandle = getTCSKeyHandle(hParentKey);
-	if (parentHandle == 0)
+	if (parentHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	/* ////////////////////////////////////////////////////////////////////////////// */

@@ -199,7 +199,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == 0) {
+	if (tcsKeyHandle == NULL_HKEY) {
 		result = TSS_E_KEY_NOT_LOADED;
 		return result;
 	}
@@ -288,7 +288,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
 			return TSS_E_INTERNAL_ERROR;
 
-		if (hPcrComposite == 0) {
+		if (hPcrComposite == NULL_HPCRS) {
 			if ((rc = obj_isConnected_2(hEncData, hEncData, &tcsContext)))
 				break;	/* return rc; */
 		} else {
@@ -311,7 +311,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 			break;	/* return rc; */
 
 		tcsKeyHandle = getTCSKeyHandle(hEncKey);
-		if (tcsKeyHandle == 0) {
+		if (tcsKeyHandle == NULL_HKEY) {
 			rc = TSS_E_KEY_NOT_LOADED;
 			break;
 		}
@@ -460,7 +460,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 		encObject = anObject->memPointer;
 
 		tcsKeyHandle = getTCSKeyHandle(hKey);
-		if (tcsKeyHandle == 0) {
+		if (tcsKeyHandle == NULL_HKEY) {
 			result = TSS_E_KEY_NOT_LOADED;
 			break;
 		}

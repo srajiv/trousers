@@ -666,7 +666,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
-	if (tcsKeyHandle == 0)
+	if (tcsKeyHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	if ((result = Tspi_GetPolicyObject(hIdentKey, TSS_POLICY_USAGE, &hIDPolicy)))
@@ -1127,7 +1127,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	keyTCSKeyHandle = getTCSKeyHandle(hKey);
-	if (keyTCSKeyHandle == 0)
+	if (keyTCSKeyHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	if (pValidationData == NULL)
@@ -1385,7 +1385,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == 0)
+	if (tcsKeyHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -1914,7 +1914,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	UINT32 usesAuth;
 	TSS_HCONTEXT tspContext;
 
-	if (hPcrComposite == 0) {
+	if (hPcrComposite == NULL_HPCRS) {
 		if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM,
 					       hIdentKey, TSS_OBJECT_TYPE_RSAKEY)))
 			return result;
@@ -1938,7 +1938,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 
 	/*  get the Identity TCS keyHandle */
 	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
-	if (tcsKeyHandle == 0)
+	if (tcsKeyHandle == NULL_HKEY)
 		return TSS_E_KEY_NOT_LOADED;
 
 	/*  get the PCR data */
