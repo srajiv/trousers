@@ -10,5 +10,5 @@ libtcs.a: $(AM_OBJS)
 	ar -r libtcs.a $(AM_OBJS) ../tddl/libtddl.a
 
 clean:
-	rm -rf *.o *.lo *.so *.0 *.a ps/*.o
+	rm -rf *.o *.lo *.so *.0 *.a ps/*.o ../log/*.o
 
