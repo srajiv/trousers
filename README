@@ -6,6 +6,54 @@ License. Trousers aims to be compliant with the current (1.1b) and upcoming (1.2
 TSS specifications available from the Trusted Computing Group website:
 http://www.trustedcomputinggroup.org.
 
+BUILD REQUIREMENTS
+
+  Currently this software is BETA quality and will build, however it is not
+fully functional.
+
+  Packages needed to build:
+
+  automake
+  autoconf
+  pkgconfig
+  gtk2-devel
+  openssl-0.9.7 or newer
+  openssl-devel-0.9.7 or newer
+  pthreads library (glibc-devel)
+
+BUILDING the TSS
+
+  02/01/05: Right now there are 2 ways to get the TSS up and running:
+
+  A Grab the source code for an older version of the TPM device driver from here:
+    http://www.research.ibm.com/gsal/tcpa/TPM-2.0.tar.gz, configure, make, make
+    install in the tpm-2.0 directory of that archive. Once that device driver is
+    installed and loaded, change one line in src/include/tddl.h of the trousers
+    source code:
+
+    #undef TPM_IOCTL
+
+    to
+
+    #define TPM_IOCTL
+
+    Then build and install trousers. or,
+
+  B Build and install a very recent -mm kernel with the latest TPM device driver
+    either compiled in or loaded as a module. If you are doing this, trousers
+    should just work after a vanilla build. Follow the build instructions below
+    and don't worry about the device file changes in the RUNNING section below.
+
+  To build trousers after you have the device driver installed:
+
+  $ sh bootstrap.sh
+  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] [--enable-gcov]
+  $ make
+  $ make install
+
+  By default the build will place everything in /usr/local. To install in a
+slightly more predictable place, use `./configure --prefix=/usr`.
+
 ARCHITECTURE
 
   This TSS implementation has several components.
@@ -32,52 +80,6 @@ ARCHITECTURE
   system PS file is initially created when ownership of the TPM is first taken.
 
   D) A config file. By default located in $prefix/etc/tcsd.conf.
-
-BUILD REQUIREMENTS
-
-  Currently this software is BETA quality and will build, however it is not
-fully functional.
-
-  Packages needed to build:
-
-  automake
-  autoconf
-  pkgconfig
-  gtk2-devel
-  openssl-0.9.7 or newer
-  openssl-devel-0.9.7 or newer
-  pthreads library (glibc-devel)
-
-BUILDING the TSS
-
-  02/01/05: Right now there are 2 ways to get the TSS up and running:
-
-  A Build and install a very recent -mm kernel with the latest TPM device driver
-    either compiled in, or loaded as a module. If you are doing this, the TSS
-    should just work. Follow the build instructions below and skip the RUNNING
-    section.  That, or
-
-  B Grab the source code for an older version of the TPM device driver from here:
-    http://www.research.ibm.com/gsal/tcpa/TPM-2.0.tar.gz, compile it and install.
-    Now unpack the trousers source and change one line in src/tddl/tddl.c:
-
-    #undef TPM_IOCTL
-
-    to
-
-    #define TPM_IOCTL
-
-    Then build and install trousers.
-
-  To build:
-
-  $ sh bootstrap.sh
-  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] [--enable-gcov]
-  $ make
-  $ make install
-
-  By default the build will place everything in /usr/local. To install in a
-slightly more predictable place, use `./configure --prefix=/usr`.
 
 RUNNING the TSS
 
