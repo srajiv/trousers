@@ -564,6 +564,33 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	return TSS_SUCCESS;
 }
 
+/* caller must lock the mem cache before calling! */
+TSS_RESULT
+remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
+{
+	struct key_mem_cache *cur;
+
+	for (cur = key_mem_cache_head; cur; cur = cur->next) {
+		if (cur->tcs_handle == tcs_handle) {
+			free(cur->blob->pubKey.key);
+			free(cur->blob->algorithmParms.parms);
+			free(cur->blob);
+			if (cur->prev != NULL)
+				cur->prev->next = cur->next;
+			if (cur->next != NULL)
+				cur->next->prev = cur->prev;
+
+			if (cur == key_mem_cache_head)
+				key_mem_cache_head = cur->next;
+			free(cur);
+
+			return TSS_SUCCESS;
+		}
+	}
+
+	return TCS_E_FAIL;
+}
+
 /* custom add mem cache entry function called only at take ownership time, since
  * that's the only non init-time instance where we need to create a mem cache
  * entry from outside a load key path
@@ -822,33 +849,6 @@ key_mgr_ref_count()
 	}
 
 	pthread_mutex_unlock(&mem_cache_lock);
-}
-
-/* caller must lock the mem cache before calling! */
-TSS_RESULT
-remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
-{
-	struct key_mem_cache *cur;
-
-	for (cur = key_mem_cache_head; cur; cur = cur->next) {
-		if (cur->tcs_handle == tcs_handle) {
-			free(cur->blob->pubKey.key);
-			free(cur->blob->algorithmParms.parms);
-			free(cur->blob);
-			if (cur->prev != NULL)
-				cur->prev->next = cur->next;
-			if (cur->next != NULL)
-				cur->next->prev = cur->prev;
-
-			if (cur == key_mem_cache_head)
-				key_mem_cache_head = cur->next;
-			free(cur);
-
-			return TSS_SUCCESS;
-		}
-	}
-
-	return TCS_E_FAIL;
 }
 
 #if 0
