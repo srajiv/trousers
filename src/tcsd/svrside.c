@@ -202,6 +202,8 @@ main(int argc, char **argv)
 				foreground = 1;
 				break;
 			default:
+				LogError("invalid option: %s", optarg);
+				return -1;
 				break;
 		}
 	}
