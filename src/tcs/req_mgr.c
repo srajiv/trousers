@@ -41,11 +41,12 @@ req_mgr_submit_req(BYTE *blob)
 		result = Tddli_TransmitData(blob, Decode_UINT32(&blob[2]), loc_buf, &size);
 	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_RETRY));
 
-	memcpy(blob, loc_buf, Decode_UINT32(&loc_buf[2]));
+	if (!result)
+		memcpy(blob, loc_buf, Decode_UINT32(&loc_buf[2]));
 
 	pthread_mutex_unlock(&(trm->queue_lock));
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
