@@ -55,9 +55,9 @@ Handle of the PCR Composite object specifying the PCRs which are part of the sea
 .PP
 \fBTspi_Data_Unseal\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
 .TP
-.SM TSS_E_INVALID_HANDLE - Can't find the TPM.
+.SM TSS_E_INVALID_HANDLE - Either \fBhEncData\fR or \fBhKey\fR is not a valid handle.
 .TP
-.SM TSS_E_INTERNAL_ERROR - The command failed.
+.SM TSS_E_INTERNAL_ERROR - An error occurred internal to the TSS.
 
 .SH "CONFORMING TO"
 

@@ -56,10 +56,10 @@ Recieves a pointer to thememory block containing the migration ticket blob.
 \fBTspi_TPM_AuthorizeMigrationTicket\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
 .TP
 .SM TSS_E_INVALID_HANDLE
-Can't find the TPM.
+Either \fBhTPM\fR or \fBhMigrationKey\fR is not a valid handle.
 .TP
 .SM TSS_E_INTERNAL_ERROR
-The command failed.
+An error occurred internal to the TSS.
 
 .SH "CONFORMING TO"
 

@@ -73,13 +73,13 @@ Pointer to the memory block containing the certicficate request structure.
 \fBTspi_TPM_CollateIdentityRequest\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
 .TP
 .SM TSS_E_INVALID_HANDLE
-Can't find the TPM
+Either \fBhTPM\fR or \fBhKeySRK\fR or \fBhCAPubKey\fR is not a valid handle.
 .TP
 .SM TSS_E_BAD_PARAMETER
 
 .TP
 .SM TSS_E_INTERNAL_ERROR
-The command failed
+An error occurred internal to the TSS.
 .SH "CONFORMING TO"
 
 .PP
