@@ -1,4 +1,11 @@
 
+ - Lots of 0's replaced with non-magic #define's in the TSP code
+ - In spi_getset.c: removed unimportant debugging stmts; make
+   Tspi_{Get|Set}AttribData set the correct public and private key data
+   when asked to.
+ - Lots of manpage verbage changes.
+ - added new manpages for: Tspi_TPM_TakeOwnership, Tspi_Key_LoadKey,
+   Tspi_Context_Create and Tspi_TPM_ClearOwner.
  - Bugfixes
    - cxt.c: when destroying a context object, release the tcs_ctx_lock before
      calling ctx_ref_count_keys(). This prevents a deadlock.
