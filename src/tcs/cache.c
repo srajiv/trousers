@@ -420,6 +420,7 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 			tmp_enc_data = (BYTE *)malloc(tmp->blob->encSize);
 			if (tmp_enc_data == NULL) {
 				LogError("malloc of %d bytes failed.", tmp->blob->encSize);
+				pthread_mutex_unlock(&mem_cache_lock);
 				return TSS_E_OUTOFMEMORY;
 			}
 
