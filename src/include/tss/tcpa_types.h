@@ -417,7 +417,7 @@ typedef struct tdTSS_VALIDATION {
 	UINT32 ulDataLength;	/* out */
 	BYTE *rgbData;		/* out */
 	UINT32 ulValidationLength;	/* out */
-	BYTE *rgbValdationData;	/* out  */
+	BYTE *rgbValidationData;	/* out  */
 } TSS_VALIDATION;
 
 #if 0
