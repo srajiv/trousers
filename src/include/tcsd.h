@@ -25,6 +25,7 @@ struct tcsd_config
 	char *kernel_log_file;	/* the name of the kernel PCR event file */
 	unsigned int kernel_pcrs;	/* bitmask of PCRs the kernel controls */
 	unsigned int firmware_pcrs;	/* bitmask of PCRs the firmware controls */
+	int remote_ops[TCSD_MAX_NUM_ORDS];	/* array of integer ordinals allow to be used by external hosts */
 	unsigned int unset;	/* bitmask of options which are still unset */
 };
 
@@ -58,6 +59,7 @@ struct tcsd_config
 #define TCSD_OPTION_SYSTEM_PSFILE	0x0010
 #define TCSD_OPTION_KERNEL_LOGFILE	0x0020
 #define TCSD_OPTION_FIRMWARE_LOGFILE	0x0040
+#define TCSD_OPTION_REMOTE_OPS		0x0080
 
 enum tcsd_config_option_code {
 	opt_port = 1,
@@ -66,7 +68,8 @@ enum tcsd_config_option_code {
 	opt_firmware_log,
 	opt_kernel_log,
 	opt_firmware_pcrs,
-	opt_kernel_pcrs
+	opt_kernel_pcrs,
+	opt_remote_ops
 };
 
 struct tcsd_config_options {
