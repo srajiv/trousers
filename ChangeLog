@@ -1,4 +1,21 @@
 
+* TROUSERS_0_1_6
+
+ - Logging functionality changes only, for bug #1106301
+   - TCSD:
+     - Logs now go to stdout/stderr until a successful startup
+     - After a successful startup, cmdline args are parsed
+     - if -f is specified, logging continues to stdout/stderr and daemon runs
+       in the foreground, killable by ctrl-c.
+     - If -f is not specified, logs go to syslog and the tcsd forks into the
+       background
+   - TSP library
+     - If compiled w/o debugging, there is no logging of any kind
+     - If compiled w/ debugging, all logs go to stdout/stderr, unless the
+       environment variable TSS_DEBUG_OFF is set, then, there is no logging of
+       any kind
+ - There is no longer a --enable-stderrlog option to the configure script
+
 * TROUSERS_0_1_5
 
  - Complete memory management overhaul. calloc_tspi is now used to clean up
