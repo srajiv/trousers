@@ -153,6 +153,7 @@ TSS_RESULT EncryptStoreAsymKey(TCS_CONTEXT_HANDLE hContext, TCPA_PAYLOAD_TYPE pa
 TSS_RESULT popup_GetSecret(UINT32, UNICODE *, void *);
 
 BOOL check_flagset_collision(TSS_FLAG, UINT32);
+TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
 
 void LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
 void UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
