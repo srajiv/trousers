@@ -311,7 +311,8 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* are the maximum number of auth sessions open? */
 	if (auth_mgr_req_new(hContext) == FALSE)
-		auth_mgr_swap_out(hContext);
+		if ((result = auth_mgr_swap_out(hContext)))
+			goto done;
 
 	result = TCSP_OSAP_Internal(hContext, entityType, entityValue,nonceOddOSAP,
 					authHandle, nonceEven, nonceEvenOSAP);
@@ -321,6 +322,7 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 		result = auth_mgr_add(hContext, *authHandle);
 	}
 
+done:
 	pthread_mutex_unlock(&auth_mgr_lock);
 
 	return result;
