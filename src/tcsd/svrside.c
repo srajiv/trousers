@@ -52,6 +52,7 @@ tcsd_shutdown()
 	auth_mgr_final();
 	(void)req_mgr_final();
 	conf_file_final(&tcsd_options);
+	event_log_final();
 }
 
 void
