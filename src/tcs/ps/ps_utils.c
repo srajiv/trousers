@@ -27,7 +27,7 @@
 #include "tcs_utils.h"
 #include "tcsps.h"
 #include "tcs_tsp.h"
-#include "log.h"
+#include "tcslog.h"
 
 struct key_disk_cache *key_disk_cache_head = NULL;
 
