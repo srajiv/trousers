@@ -1,4 +1,6 @@
-
+ - enabled Tspi_TPM_GetTestResult functionality
+ - added selftest as an option to the list of remote ops for the access 
+   control
  - added compatibility with openssh-askpass for the popup dialog box.
    Now either gtk2-devel OR openssh-askpass must be installed to build
    trousers. Using openssh-askpass reduces the size of libtspi.so by
