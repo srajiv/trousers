@@ -4,13 +4,18 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
 
 #ifndef _TSS_CRYPTO_H_
 #define _TSS_CRYPTO_H_
+
+#include <openssl/sha.h>
+
+/* pulled from openssl/sha.h */
+#define SHA1_HASH_SIZE	SHA_DIGEST_LENGTH
 
 TCPA_RESULT
 TSS_Hash(UINT32 HashType, UINT32 BufSize, BYTE * Buf, BYTE * Digest);
