@@ -16,7 +16,11 @@ fully functional.
   automake
   autoconf
   pkgconfig
-  gtk2-devel
+  gtk2-devel OR openssh-askpass
+    Using gtk2-devel builds a native GTK2 popup into trousers, using openssh-askpass
+    calls the ssh-askpass program externally to grab secrets from your GUI. The
+    askpass method makes libtspi.so 40K smaller and reduces the number of dynamic libs
+    from 26 to 6!
   openssl-0.9.7 or newer
   openssl-devel-0.9.7 or newer
   pthreads library (glibc-devel)
@@ -32,10 +36,10 @@ BUILDING the TSS
 
     or,
 
-  B Build and install a very recent -mm kernel with the latest TPM device driver
+  B Build and install the latest TPM device driver from sf.net/projects/tpmdd
     either compiled in or loaded as a module. If you are doing this, trousers
     should just work after a vanilla build. Follow the build instructions below
-    and don't worry about the device file changes in the RUNNING section below.
+    and read RUNNING The TSS, below.
 
   To build trousers after you have the device driver installed:
 
@@ -89,14 +93,23 @@ you'll need to do the following to create a device node:
   3) load the tpm device driver:
   # modprobe tpm
 
-  If you're using the device driver in the -mm tree and have udev enabled, you
-don't need to do any of the above stuff, just load the device driver with
+  If you're using the device driver from the tpmdd project and have udev enabled, you
+need to add the following line to your udev.permissions file (usually in /etc/udev
+somewhere):
+
+  tpm[0-9]:tss:tss:0600
+
+  and then just load the device driver with:
   # modprobe tpm_atmel
   or,
   # modprobe tpm_natl
 
   start the TCS Core Services daemon, by default /usr/local/sbin/tcsd.
   # startproc -u tss /usr/local/sbin/tcsd
+
+  You can really just ignore this RUNNING section and run everything as root, with
+a root owned device and so on, but the exploitability of the tcsd at this point is
+still in question, considering its reachable over the internet.
 
   At this point your apps should be ready to run!
 
