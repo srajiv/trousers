@@ -24,7 +24,7 @@
 #include "tss/tss.h"
 #include "tcs_utils.h"
 #include "tcsps.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 

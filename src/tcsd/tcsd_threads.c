@@ -24,7 +24,7 @@
 #include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
-#include "log.h"
+#include "tcslog.h"
 
 struct tcsd_thread_mgr *tm = NULL;
 

@@ -30,7 +30,7 @@
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsps.h"
 #include "tspps.h"
@@ -188,16 +188,40 @@ tcsd_startup()
 }
 
 int
-main()
+main(int argc, char **argv)
 {
 	struct sockaddr_in addr;
 	TSS_RESULT result;
 	socklen_t size;
-	int sd;
+	int sd, c;
 	char hostname[80];
 
+	/* log startup messages to the foreground in case something goes wrong,
+	 * then switch to background after a successful startup. If the user
+	 * specifies -f, foreground logging will be re-enabled below.
+	 */
 	if ((result = tcsd_startup()))
 		return (int)result;
+
+	foreground = 0;
+
+	while ((c = getopt(argc, argv, "f")) != -1) {
+		switch (c) {
+			case 'f':
+				foreground = 1;
+				break;
+			default:
+				break;
+		}
+	}
+
+	if (!foreground) {
+		if (daemon(0, 0) == -1) {
+			perror("daemon");
+			tcsd_shutdown();
+			return -1;
+		}
+	}
 
 	sd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sd < 0) {
