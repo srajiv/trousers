@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -12,17 +12,14 @@
 #ifndef _TDDL_H_
 #define _TDDL_H_
 
-#undef TPM_IOCTL
-
-#ifdef TPM_IOCTL
-#define TPM_DEVICE_PATH		"/dev/tpm"
-#else
-#define TPM_DEVICE_PATH		"/dev/tpm0"
-#endif
+struct tpm_device_node {
+	char *path;
+	int ioctl;
+	int fd;
+};
 
 #define TDDL_TXBUF_SIZE		2048
 #define TDDL_UNINITIALIZED	-1
-
 
 TSS_RESULT Tddli_Open(void);
 
