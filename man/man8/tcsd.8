@@ -46,11 +46,29 @@ resources and handles requests from TSP's both local and remote.
 \fB\-f\fR
 run the daemon in the foreground
 
+.SH "ACCESS CONTROL"
+.PP
+There are two types of access control for the \fBtcsd\fR, access to the
+daemon's socket itself and access to specific commands internal to the
+\fBtcsd\fR. Access to the \fBtcsd\fR's port should be controlled by the system
+administrator using firewall rules.  If using iptables, the following rule
+will allow a specific host access to the tcsd:
+
+# iptables -A INPUT -s $IP_ADDRESS --dport @TCSD_DEFAULT_PORT@ -j ACCEPT
+
+Access to individual commands internal to the tcsd is configured by the
+\fBtcsd\fR configuration file's "remote_ops" directive. Each function call
+in the TCS API is reachable by a unique ordinal.  Each labeled "remote op"
+actually defines a set of ordinals (usually more than one) necessary to
+accomplish the operation. So, for example, the "random" operation enables
+the ordinals for opening and closing a context, calling TCS_StirRandom
+and TCS_GetRandom, as well as TCS_FreeMemory.
+
 
 .SH "DATA FILES"
 .PP
-\fBtcsd\fR maintains 2 different kinds of 'persistant' storage. 'User' 
-persistant storage has the lifetime of that of the application  using it 
+TSS applications have access to 2 different kinds of 'persistant' storage. 'User' 
+persistant storage has the lifetime of that of the application using it 
 and therefore is destroyed when an application exits.  User PS is controlled 
 by the TSP of the application.  'System' persistent storage is controlled by 
 the TCS and stays valid across application lifetimes, \fBtcsd\fR restarts and 
