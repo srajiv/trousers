@@ -190,10 +190,11 @@
 #define	TSS_ALG_AES				(TCPA_ALG_AES)
 
 /* TPM capability flag definitions */
-#define TSS_TPMCAP_ALG				(TCPA_CAP_ALG)
-#define TSS_TPMCAP_FLAG				(TCPA_CAP_FLAG)
-#define TSS_TPMCAP_PROPERTY			(TCPA_CAP_PROPERTY)
-#define TSS_TPMCAP_VERSION			(TCPA_CAP_VERSION)
+#define TSS_TPMCAP_ORD				(0x10)
+#define TSS_TPMCAP_ALG				(0x11)
+#define TSS_TPMCAP_FLAG				(0x12)
+#define TSS_TPMCAP_PROPERTY			(0x13)
+#define TSS_TPMCAP_VERSION			(0x14)
 
 /* TCS capability flag definitions */
 #define TSS_TCSCAP_ALG				(0x10000001)
