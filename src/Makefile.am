@@ -1,1 +1,1 @@
-SUBDIRS = tddl tcs tspi tcsd include
+SUBDIRS = trspi tddl tcs tspi tcsd include
