@@ -69,35 +69,50 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 {
 	int sizeResult;
 
-	if (TransmitBufLen > TDDL_TXBUF_SIZE)
+	if (TransmitBufLen > TDDL_TXBUF_SIZE) {
+		LogError("buffer size handed to TDDL is too large! (%u bytes)", TransmitBufLen);
 		return TDDL_E_FAIL;
+	}
 
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
-	LogDebug1("Calling write to driver ");
+	LogDebug1("Calling write to driver");
 #ifdef TPM_IOCTL
 	if ((sizeResult = ioctl(tpm_fd, TPMIOC_TRANSMIT, txBuffer)) == -1) {
 		LogError("ioctl: (%d) %s", errno, strerror(errno));
 		return TDDL_E_FAIL;
 	}
 #else
-	if (write(tpm_fd, txBuffer, TransmitBufLen) == 0)
+	if ((sizeResult = write(tpm_fd, txBuffer, TransmitBufLen)) < 0) {
+		LogError("write to device %s failed: %s", TPM_DEVICE_PATH, strerror(errno));
 		return TDDL_E_IOERROR;
-#if 0
-	LogDebug1("Passed Write");
+	} else if (sizeResult < TransmitBufLen) {
+		LogError("wrote %d bytes to %s (tried to write %d)", sizeResult, TPM_DEVICE_PATH,
+				TransmitBufLen);
+		return TDDL_E_IOERROR;
+	}
 
-	LogDebug1("Calling Read");
-#endif
 	sizeResult = read(tpm_fd, txBuffer, TDDL_TXBUF_SIZE);
 #endif
-	if (sizeResult <= 0)
+	if (sizeResult < 0) {
+		LogError("read from device %s failed: %s", TPM_DEVICE_PATH, strerror(errno));
 		return TDDL_E_IOERROR;
-	if ((unsigned)sizeResult > *pReceiveBufLen)
+	} else if (sizeResult == 0) {
+		LogError("Zero bytes read from device %s", TPM_DEVICE_PATH);
+		return TDDL_E_IOERROR;
+	}
+
+	if ((unsigned)sizeResult > *pReceiveBufLen) {
+		LogError("read %d bytes from device %s, (only room for %d)", sizeResult, TPM_DEVICE_PATH,
+				*pReceiveBufLen);
 		return TDDL_E_INSUFFICIENT_BUFFER;
+	}
 
 	*pReceiveBufLen = sizeResult;
 
 	memcpy(pReceiveBuf, txBuffer, *pReceiveBufLen);
+#if 0
 	LogDebug("Leaving %s ", __FUNCTION__);
+#endif
 	return TDDL_SUCCESS;
 }
 
