@@ -485,6 +485,10 @@ TSS_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/* in */
 					BOOL state	/* in */
     );
 
+TSS_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,  /*  in */
+		TCPA_PHYSICAL_PRESENCE fPhysicalPresence        /*  in */
+    );
+
 TSS_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE hContext	/* in */
     );
 
