@@ -109,7 +109,7 @@ TCS_CONTEXT_HANDLE obj_getContextForObject(UINT32 objectHandle);
 TSS_HOBJECT obj_GetPolicyOfObject(UINT32 objectHandle, UINT32 policyType);
 TSS_RESULT setObject(UINT32 objectHandle, void *buffer, UINT32 sizeOfBuffer);
 TSS_RESULT getObject(UINT32 objectHandle, void **outBuffer, UINT32 * outSize);
-TSS_HOBJECT addNewObject(UINT32 context, UINT32 objectType);
+TSS_HOBJECT addObject(UINT32 context, UINT32 objectType);
 void destroyObjectsByContext(UINT32 contextHandle);
 
 AnObject *getAnObjectByHandle(UINT32 oHandle);
@@ -130,7 +130,7 @@ TSS_RESULT internal_CheckObjectType_3(TSS_HOBJECT object1, UINT32 objectType1, T
 
 /*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
 
-void addNewKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle);
+void addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle);
 void removeTSPKeyHandle(TSS_HKEY tspHandle);
 void removeTCSKeyHandle(TCS_KEY_HANDLE tcsHandle);
 TCS_KEY_HANDLE getTCSKeyHandle(TSS_HKEY tspHandle);
