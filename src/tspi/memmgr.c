@@ -20,57 +20,61 @@
 #include "memmgr.h"
 #include "log.h"
 
-MemSlot *
-createMemSlot()
-{
-	return calloc(1, sizeof(MemSlot));
-}
-
+/* caller needs to lock memtable lock */
 ContextMemSlot *
-createNewContextMemSlot()
-{
-	return calloc(1, sizeof(ContextMemSlot));
-}
-
-MemSlot *
-concatMemSlot(MemSlot **first, MemSlot *second)
-{
-	MemSlot *index;
-	if (*first == NULL)
-		*first = second;
-	else {
-		for (index = *first; index->next; next(index)) ;
-		index->next = second;
-	}
-	return *first;
-}
-
-#if 0
-ContextMemSlot *
-concatContextMemSlot(ContextMemSlot ** first, ContextMemSlot * second)
+getContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
 {
 	ContextMemSlot *index;
-	if (*first == NULL)
-		*first = second;
-	else {
-		for (index = *first; index->next; next(index)) ;
-		index->next = second;
-	}
-	return *first;
-}
-#endif
 
-ContextMemSlot *
-getContextMemSlotByContext(TCS_CONTEXT_HANDLE tcsContext)
-{
-	ContextMemSlot *index;
-	for (index = SpiMemoryTable; index; next(index))
+	for (index = SpiMemoryTable; index; index = index->next)
 		if (index->tcsContext == tcsContext)
 			return index;
 
 	return NULL;
 }
 
+/* caller needs to lock memtable lock and be sure the context mem slot for
+ * @tcsContext exists before calling.
+ */
+void
+concatMemSlot(TCS_CONTEXT_HANDLE tcsContext, MemSlot *new)
+{
+	ContextMemSlot *tmp = getContextMemSlot(tcsContext);
+	MemSlot *tmp_slot = tmp->memSlots;
+
+	if (tmp->memSlots == NULL) {
+		tmp->memSlots = new;
+		return;
+	}
+
+	/* else tack @new onto the end */
+	for (; tmp_slot; tmp_slot = tmp_slot->next)
+		if (tmp_slot->next == NULL) {
+			tmp_slot->next = new;
+			break;
+		}
+}
+
+/* caller needs to lock memtable lock */
+void
+concatContextMemSlot(ContextMemSlot *new)
+{
+	ContextMemSlot *tmp = SpiMemoryTable;
+
+	if (SpiMemoryTable == NULL) {
+		SpiMemoryTable = new;
+		return;
+	}
+
+	/* else tack @new onto the end */
+	for (; tmp; tmp = tmp->next)
+		if (tmp->next == NULL) {
+			tmp->next = new;
+			break;
+		}
+}
+
+/* caller needs to lock memtable lock */
 TSS_RESULT
 freeContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
 {
@@ -88,9 +92,13 @@ freeContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
 
 			if (prev != NULL)
 				prev->next = next;
+			else
+				SpiMemoryTable = NULL;
 
 			free(index);
+			break;
 		}
+		prev = index;
 	}
 
 	return TSS_SUCCESS;
@@ -129,30 +137,36 @@ void *
 calloc_tspi(TCS_CONTEXT_HANDLE tcsContext, UINT32 howMuch)
 {
 
-	ContextMemSlot *index;
+	ContextMemSlot *ctx_slot;
 	MemSlot *newSlot;
 
 	pthread_mutex_lock(&memtable_lock);
 
-	index = getContextMemSlotByContext(tcsContext);
-	if (index == NULL) {
-		index = createNewContextMemSlot();
-		if (index == NULL) {
+	ctx_slot = getContextMemSlot(tcsContext);
+	if (ctx_slot == NULL) {
+		/* no table has yet been created to hold the memory allocations of
+		 * this context, so we need to create one
+		 */
+		ctx_slot = calloc(1, sizeof(ContextMemSlot));
+		if (ctx_slot == NULL) {
 			pthread_mutex_unlock(&memtable_lock);
-			return index;
+			return NULL;
 		}
-		index->tcsContext = tcsContext;
+		ctx_slot->tcsContext = tcsContext;
+		concatContextMemSlot(ctx_slot);
 	}
-	newSlot = createMemSlot();
+	newSlot = calloc(1, sizeof(MemSlot));
 	newSlot->memPointer = calloc(1, howMuch);
 	if (newSlot->memPointer == NULL) {
-		free(index);
 		LogError("malloc of %d bytes failed.", howMuch);
 		pthread_mutex_unlock(&memtable_lock);
 		return NULL;
 	}
 
-	concatMemSlot(&index->memSlots, newSlot);
+	/* this call must happen inside the lock or else another thread could
+	 * remove the context mem slot, causing a segfault
+	 */
+	concatMemSlot(tcsContext, newSlot);
 
 	pthread_mutex_unlock(&memtable_lock);
 
@@ -177,7 +191,7 @@ free_tspi(TCS_CONTEXT_HANDLE tcsContext, void *memPointer)
 		return result;
 	}
 
-	index = getContextMemSlotByContext(tcsContext);
+	index = getContextMemSlot(tcsContext);
 	if (index == NULL) {
 		pthread_mutex_unlock(&memtable_lock);
 		return TSS_E_INVALID_HANDLE;
