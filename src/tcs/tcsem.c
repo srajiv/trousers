@@ -498,12 +498,13 @@ TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 		return TSS_E_OUTOFMEMORY;
 	}
 
+	numEvents = 0;
 	for (i = 0; i < tpm_metrics.num_pcrs; i++) {
 		pcrEvents = get_num_events(i);
 
 		tmp = tcs_event_log->lists[i];
 		for (j = 0; j < pcrEvents; j++) {
-			copy_pcr_event(&((*ppEvents)[i + j]), &(tmp->event));
+			copy_pcr_event(&((*ppEvents)[numEvents++]), &(tmp->event));
 			tmp = tmp->next;
 		}
 	}
