@@ -14,7 +14,7 @@
 #include <string.h>
 
 #include "tss/tss.h"
-#include "log.h"
+#include "tsplog.h"
 #include "hosttable.h"
 
 struct host_table *ht = NULL;

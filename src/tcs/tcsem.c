@@ -23,7 +23,7 @@
 #include "capabilities.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tcsem.h"
 
 #ifdef EVLOG_SOURCE_IMA

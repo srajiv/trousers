@@ -19,7 +19,7 @@
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tcslog.h"
 
 
 TSS_RESULT

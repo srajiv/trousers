@@ -24,7 +24,7 @@
 #include "tcsd.h"
 #include "tddl.h"
 #include "req_mgr.h"
-#include "log.h"
+#include "tcslog.h"
 
 static struct tpm_req_mgr *trm;
 

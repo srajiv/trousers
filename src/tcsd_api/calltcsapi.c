@@ -15,7 +15,7 @@
 
 #include "tss/tss.h"
 #include "hosttable.h"
-#include "log.h"
+#include "tsplog.h"
 #include "trpctp.h"
 
 TSS_RESULT

@@ -20,7 +20,7 @@
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "auth_mgr.h"

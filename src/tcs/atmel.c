@@ -19,7 +19,7 @@
 #include "tcs_utils.h"
 #include "capabilities.h"
 #include "req_mgr.h"
-#include "log.h"
+#include "tcslog.h"
 
 #include "atmel.h"
 

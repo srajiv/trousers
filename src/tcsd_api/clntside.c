@@ -28,7 +28,7 @@
 #include "tcs_int_literals.h"
 #include "tcsd_wrap.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tsplog.h"
 #include "hosttable.h"
 
 short get_port();

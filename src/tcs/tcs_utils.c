@@ -21,7 +21,7 @@
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcsps.h"
-#include "log.h"
+#include "tcslog.h"
 #include "tddl.h"
 #include "req_mgr.h"
 

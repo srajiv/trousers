@@ -22,7 +22,7 @@
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tcslog.h"
 
 
 unsigned long nextContextHandle = 0xA0000000;
