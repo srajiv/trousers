@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "tss/tss.h"
+#include "tss/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
@@ -22,117 +23,6 @@
 
 TSS_RESULT send_init(struct host_table_entry *, BYTE *, int, struct tcsd_packet_hdr **);
 TSS_RESULT sendit(struct host_table_entry *, BYTE *data, int, struct tcsd_packet_hdr **);
-
-void
-LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
-{
-	LoadBlob_UINT32(offset, auth->AuthHandle, blob);
-	LoadBlob(offset, 20, blob, auth->NonceOdd.nonce);
-	LoadBlob_BOOL(offset, auth->fContinueAuthSession, blob);
-	LoadBlob(offset, 20, blob, auth->HMAC);
-}
-
-void
-UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
-{
-	UnloadBlob(offset, 20, blob, auth->NonceEven.nonce);
-	UnloadBlob_BOOL(offset, &auth->fContinueAuthSession, blob);
-	UnloadBlob(offset, 20, blob, auth->HMAC);
-}
-
-void
-UnloadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
-{
-	UnloadBlob_BYTE(offset, &out->major, blob);
-	UnloadBlob_BYTE(offset, &out->minor, blob);
-	UnloadBlob_BYTE(offset, &out->revMajor, blob);
-	UnloadBlob_BYTE(offset, &out->revMinor, blob);
-}
-
-void
-UnloadBlob_KM_KEYINFO(UINT16 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
-{
-	UnloadBlob_VERSION( offset, blob, &info->versionInfo);
-	UnloadBlob_UUID( offset, blob, &info->keyUUID);
-	UnloadBlob_UUID( offset, blob, &info->parentKeyUUID);
-	UnloadBlob_BYTE( offset, &info->bAuthDataUsage, blob);
-	UnloadBlob_BOOL( offset, &info->fIsLoaded, blob);
-	UnloadBlob_UINT32( offset, &info->ulVendorDataLength, blob);
-	UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
-}
-
-void
-LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
-{
-	LoadBlob_UUID(offset, blob, info->keyUUID);
-	LoadBlob_UUID(offset, blob, info->parentKeyUUID);
-	LoadBlob(offset, TPM_DIGEST_SIZE, blob, info->paramDigest.digest);
-	LoadBlob_AUTH(offset, blob, &info->authData);
-}
-
-void
-UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
-{
-	UnloadBlob_UUID(offset, blob, &info->keyUUID);
-	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
-	UnloadBlob(offset, TPM_DIGEST_SIZE, info->paramDigest.digest, blob);
-	UnloadBlob_AUTH(offset, blob, &info->authData);
-}
-
-void
-LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
-{
-	LoadBlob_TCPA_VERSION(offset, blob, *(TCPA_VERSION *)(&event->versionInfo));
-	LoadBlob_UINT32(offset, event->ulPcrIndex, blob);
-	LoadBlob_UINT32(offset, event->eventType, blob);
-
-	LoadBlob_UINT32(offset, event->ulPcrValueLength, blob);
-	if (event->ulPcrValueLength > 0)
-		LoadBlob(offset, event->ulPcrValueLength, blob, event->rgbPcrValue);
-
-	LoadBlob_UINT32(offset, event->ulEventLength, blob);
-	if (event->ulEventLength > 0)
-		LoadBlob(offset, event->ulEventLength, blob, event->rgbEvent);
-
-}
-
-TSS_RESULT
-UnloadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
-{
-	UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(event->versionInfo));
-	UnloadBlob_UINT32(offset, &event->ulPcrIndex, blob);
-	UnloadBlob_UINT32(offset, &event->eventType, blob);
-
-	/* XXX These malloc calls should be calloc_tspi() calls!! */
-
-	UnloadBlob_UINT32(offset, &event->ulPcrValueLength, blob);
-	if (event->ulPcrValueLength > 0) {
-		event->rgbPcrValue = malloc(event->ulPcrValueLength);
-		if (event->rgbPcrValue == NULL) {
-			LogError("malloc of %d bytes failed.", event->ulPcrValueLength);
-			return TSS_E_OUTOFMEMORY;
-		}
-
-		UnloadBlob(offset, event->ulPcrValueLength, blob, event->rgbPcrValue);
-	} else {
-		event->rgbPcrValue = NULL;
-	}
-
-	UnloadBlob_UINT32(offset, &event->ulEventLength, blob);
-	if (event->ulEventLength > 0) {
-		event->rgbEvent = malloc(event->ulEventLength);
-		if (event->rgbEvent == NULL) {
-			LogError("malloc of %d bytes failed.", event->ulEventLength);
-			return TSS_E_OUTOFMEMORY;
-		}
-
-		UnloadBlob(offset, event->ulEventLength, blob, event->rgbEvent);
-	} else {
-		event->rgbEvent = NULL;
-	}
-
-	return TSS_SUCCESS;
-}
 
 int
 setData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_packet *packet)
@@ -148,43 +38,43 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 		return -1;
 	switch (dataType) {
 	case TCSD_PACKET_TYPE_BYTE:
-		LoadBlob_BYTE(&offset, *((BYTE *) (theData)), packet->dataBuffer);
+		Trspi_LoadBlob_BYTE(&offset, *((BYTE *) (theData)), packet->dataBuffer);
 		break;
 	case TCSD_PACKET_TYPE_BOOL:
-		LoadBlob_BOOL(&offset, *((BOOL *) (theData)), packet->dataBuffer);
+		Trspi_LoadBlob_BOOL(&offset, *((BOOL *) (theData)), packet->dataBuffer);
 		break;
 	case TCSD_PACKET_TYPE_UINT16:
-		LoadBlob_UINT16(&offset, *((UINT16 *) (theData)), packet->dataBuffer);
+		Trspi_LoadBlob_UINT16(&offset, *((UINT16 *) (theData)), packet->dataBuffer);
 		break;
 	case TCSD_PACKET_TYPE_UINT32:
-		LoadBlob_UINT32(&offset, *((UINT32 *) (theData)), packet->dataBuffer);
+		Trspi_LoadBlob_UINT32(&offset, *((UINT32 *) (theData)), packet->dataBuffer);
 		break;
 	case TCSD_PACKET_TYPE_PBYTE:
-		LoadBlob(&offset, theDataSize, packet->dataBuffer, (BYTE *)theData);
+		Trspi_LoadBlob(&offset, theDataSize, packet->dataBuffer, (BYTE *)theData);
 		break;
 	case TCSD_PACKET_TYPE_NONCE:
-		LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_NONCE *)theData)->nonce);
+		Trspi_LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_NONCE *)theData)->nonce);
 		break;
 	case TCSD_PACKET_TYPE_DIGEST:
-		LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_DIGEST *)theData)->digest);
+		Trspi_LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_DIGEST *)theData)->digest);
 		break;
 	case TCSD_PACKET_TYPE_AUTH:
 		LoadBlob_AUTH(&offset, packet->dataBuffer, ((TCS_AUTH *)theData));
 		break;
 	case TCSD_PACKET_TYPE_UUID:
-		LoadBlob_UUID(&offset, packet->dataBuffer, *((TSS_UUID *)theData));
+		Trspi_LoadBlob_UUID(&offset, packet->dataBuffer, *((TSS_UUID *)theData));
 		break;
 	case TCSD_PACKET_TYPE_ENCAUTH:
-		LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_ENCAUTH *)theData)->encauth);
+		Trspi_LoadBlob(&offset, 20, packet->dataBuffer, ((TCPA_ENCAUTH *)theData)->encauth);
 		break;
 	case TCSD_PACKET_TYPE_VERSION:
-		LoadBlob_TCPA_VERSION(&offset, packet->dataBuffer, *((TCPA_VERSION *)theData));
+		Trspi_LoadBlob_TCPA_VERSION(&offset, packet->dataBuffer, *((TCPA_VERSION *)theData));
 		break;
 	case TCSD_PACKET_TYPE_LOADKEY_INFO:
 		LoadBlob_LOADKEY_INFO(&offset, packet->dataBuffer, ((TCS_LOADKEY_INFO *)theData));
 		break;
 	case TCSD_PACKET_TYPE_PCR_EVENT:
-		LoadBlob_PCR_EVENT(&offset, packet->dataBuffer, ((TSS_PCR_EVENT *)theData));
+		Trspi_LoadBlob_PCR_EVENT(&offset, packet->dataBuffer, ((TSS_PCR_EVENT *)theData));
 		break;
 	default:
 		LogError1("Unknown TCSD packet type!");
@@ -218,46 +108,46 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_pa
 	}
 	switch (dataType) {
 	case TCSD_PACKET_TYPE_BYTE:
-		UnloadBlob_BYTE(&offset, (BYTE *)theData, (BYTE *)hdr);
+		Trspi_UnloadBlob_BYTE(&offset, (BYTE *)theData, (BYTE *)hdr);
 		break;
 	case TCSD_PACKET_TYPE_BOOL:
-		UnloadBlob_BOOL(&offset, (BOOL *)theData, (BYTE *)hdr);
+		Trspi_UnloadBlob_BOOL(&offset, (BOOL *)theData, (BYTE *)hdr);
 		break;
 	case TCSD_PACKET_TYPE_UINT16:
-		UnloadBlob_UINT16(&offset, (UINT16 *)theData, (BYTE *)hdr);
+		Trspi_UnloadBlob_UINT16(&offset, (UINT16 *)theData, (BYTE *)hdr);
 		break;
 	case TCSD_PACKET_TYPE_UINT32:
-		UnloadBlob_UINT32(&offset, (UINT32 *) (theData), (BYTE *)hdr);
+		Trspi_UnloadBlob_UINT32(&offset, (UINT32 *) (theData), (BYTE *)hdr);
 		break;
 	case TCSD_PACKET_TYPE_PBYTE:
-		UnloadBlob(&offset, theDataSize, (BYTE *)hdr, (BYTE *)theData);
+		Trspi_UnloadBlob(&offset, theDataSize, (BYTE *)hdr, (BYTE *)theData);
 		break;
 	case TCSD_PACKET_TYPE_NONCE:
-		UnloadBlob(&offset, sizeof(TCPA_NONCE), (BYTE *)hdr, ((TCPA_NONCE *)theData)->nonce);
+		Trspi_UnloadBlob(&offset, sizeof(TCPA_NONCE), (BYTE *)hdr, ((TCPA_NONCE *)theData)->nonce);
 		break;
 	case TCSD_PACKET_TYPE_DIGEST:
-		UnloadBlob(&offset, sizeof(TCPA_DIGEST), (BYTE *)hdr, ((TCPA_DIGEST *)theData)->digest);
+		Trspi_UnloadBlob(&offset, sizeof(TCPA_DIGEST), (BYTE *)hdr, ((TCPA_DIGEST *)theData)->digest);
 		break;
 	case TCSD_PACKET_TYPE_AUTH:
 		UnloadBlob_AUTH(&offset, (BYTE *)hdr, ((TCS_AUTH *)theData));
 		break;
 	case TCSD_PACKET_TYPE_UUID:
-		UnloadBlob_UUID(&offset, (BYTE *)hdr, ((TSS_UUID *)theData));
+		Trspi_UnloadBlob_UUID(&offset, (BYTE *)hdr, ((TSS_UUID *)theData));
 		break;
 	case TCSD_PACKET_TYPE_ENCAUTH:
-		UnloadBlob(&offset, sizeof(TCS_AUTH), (BYTE *)hdr, ((TCPA_ENCAUTH *)theData)->encauth);
+		Trspi_UnloadBlob(&offset, sizeof(TCS_AUTH), (BYTE *)hdr, ((TCPA_ENCAUTH *)theData)->encauth);
 		break;
 	case TCSD_PACKET_TYPE_VERSION:
-		UnloadBlob_TCPA_VERSION(&offset, (BYTE *)hdr, ((TCPA_VERSION *)theData));
+		Trspi_UnloadBlob_TCPA_VERSION(&offset, (BYTE *)hdr, ((TCPA_VERSION *)theData));
 		break;
 	case TCSD_PACKET_TYPE_KM_KEYINFO:
-		UnloadBlob_KM_KEYINFO( &offset,	(BYTE *)hdr, ((TSS_KM_KEYINFO *)theData ) );
+		Trspi_UnloadBlob_KM_KEYINFO( &offset,	(BYTE *)hdr, ((TSS_KM_KEYINFO *)theData ) );
 		break;
 	case TCSD_PACKET_TYPE_LOADKEY_INFO:
 		UnloadBlob_LOADKEY_INFO(&offset, (BYTE *)hdr, ((TCS_LOADKEY_INFO *)theData));
 		break;
 	case TCSD_PACKET_TYPE_PCR_EVENT:
-		UnloadBlob_PCR_EVENT(&offset, (BYTE *)hdr, ((TSS_PCR_EVENT *)theData));
+		Trspi_UnloadBlob_PCR_EVENT(&offset, (BYTE *)hdr, ((TSS_PCR_EVENT *)theData));
 		break;
 	default:
 		LogError("unknown data type (%d) in TCSD packet!", dataType);
@@ -301,11 +191,11 @@ sendTCSDPacket(struct host_table_entry *hte,
 	struct tcsd_packet_hdr *tmp_hdr;
 
 	LogDebug1("sendTCSDPacket");
-	LoadBlob_UINT32(&offset, dataToSend->ordinal, transmitBuffer);
+	Trspi_LoadBlob_UINT32(&offset, dataToSend->ordinal, transmitBuffer);
 	offset += sizeof(UINT32);		/* skip the size */
-	LoadBlob_UINT16(&offset, dataToSend->numParms, transmitBuffer);
-	LoadBlob(&offset, dataToSend->numParms, transmitBuffer, dataToSend->types);
-	LoadBlob(&offset, dataToSend->dataSize, transmitBuffer, dataToSend->dataBuffer);
+	Trspi_LoadBlob_UINT16(&offset, dataToSend->numParms, transmitBuffer);
+	Trspi_LoadBlob(&offset, dataToSend->numParms, transmitBuffer, dataToSend->types);
+	Trspi_LoadBlob(&offset, dataToSend->dataSize, transmitBuffer, dataToSend->dataBuffer);
 	UINT32ToArray(offset, &transmitBuffer[4]);
 
 #if 0
@@ -330,7 +220,7 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	/* ---  Get the result */
 	offset = sizeof(UINT32);
-	UnloadBlob_UINT32(&offset, &totalSize, *hdr);
+	Trspi_UnloadBlob_UINT32(&offset, &totalSize, (BYTE *)(*hdr));
 
 	tmp_hdr = calloc(1, totalSize);
 	if (tmp_hdr == NULL) {
@@ -340,13 +230,13 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	offset = 0;
 
-	UnloadBlob_UINT32(&offset, &tmp_hdr->result, *hdr);
+	Trspi_UnloadBlob_UINT32(&offset, &tmp_hdr->result, (BYTE *)(*hdr));
 
 	if (tmp_hdr->result == 0) {
-		UnloadBlob_UINT32(&offset, &tmp_hdr->packet_size, *hdr);
-		UnloadBlob_UINT16(&offset, &tmp_hdr->num_parms, *hdr);
-		UnloadBlob(&offset, TCSD_MAX_NUM_PARMS, *hdr, tmp_hdr->parm_types);
-		UnloadBlob(&offset, tmp_hdr->packet_size - offset, *hdr, &tmp_hdr->data);
+		Trspi_UnloadBlob_UINT32(&offset, &tmp_hdr->packet_size, (BYTE *)(*hdr));
+		Trspi_UnloadBlob_UINT16(&offset, &tmp_hdr->num_parms, (BYTE *)(*hdr));
+		Trspi_UnloadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)(*hdr), tmp_hdr->parm_types);
+		Trspi_UnloadBlob(&offset, tmp_hdr->packet_size - offset, (BYTE *)(*hdr), &tmp_hdr->data);
 	}
 
 	free(*hdr);
