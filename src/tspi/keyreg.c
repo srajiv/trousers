@@ -22,7 +22,7 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tspps.h"
-#include "log.h"
+#include "tsplog.h"
 
 
 void

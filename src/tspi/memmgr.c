@@ -18,7 +18,7 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "memmgr.h"
-#include "log.h"
+#include "tsplog.h"
 
 /* caller needs to lock memtable lock */
 struct memTable *

@@ -21,7 +21,7 @@
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
-#include "log.h"
+#include "tsplog.h"
 #include "tss_crypto.h"
 #include "obj.h"
 

@@ -17,7 +17,7 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tss_crypto.h"
-#include "log.h"
+#include "tsplog.h"
 #include "obj.h"
 
 TSS_RESULT
