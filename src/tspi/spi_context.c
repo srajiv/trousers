@@ -19,11 +19,11 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "tspps.h"
-#include "tss_crypto.h"
 #include "hosttable.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 char *tss_layers[] = { "tpm", "tddl", "tcs", "tsp" };
 
@@ -546,7 +546,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 		}
 #endif
 		zero = 0;
-		LoadBlob_RSA_KEY_PARMS(&zero, rsaObj->tcpaKey.algorithmParms.parms, &rsaKeyParms);
+		Trspi_LoadBlob_RSA_KEY_PARMS(&zero, rsaObj->tcpaKey.algorithmParms.parms, &rsaKeyParms);
 
 		break;
 	case TSS_OBJECT_TYPE_ENCDATA:
@@ -760,7 +760,7 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 
 	if (capArea == TSS_TSPCAP_VERSION) {
 		*respData = calloc_tspi(tspContext, 4);
-		LoadBlob_TSS_VERSION(&offset, *respData, version);
+		Trspi_LoadBlob_TSS_VERSION(&offset, *respData, version);
 		*respSize = offset;
 	} else if (capArea == TSS_TSPCAP_ALG) {
 		*respSize = 1;
@@ -933,7 +933,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, rgbBlobData, &keyContainer);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, rgbBlobData, &keyContainer);
 		realKeyBlobSize = offset;
 
 		if ((result = Tspi_GetPolicyObject(hUnwrappingKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -953,9 +953,9 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 
 		/* ---  Create the Authorization */
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob);
-		LoadBlob(&offset, ulBlobLength, blob, rgbBlobData);
-		TSS_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob);
+		Trspi_LoadBlob(&offset, ulBlobLength, blob, rgbBlobData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
 			return result;
@@ -978,10 +978,10 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 	if (useAuth) {
 		/* ---  Validate return auth */
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, blob);
-		LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob);
-		LoadBlob_UINT32(&offset, keyslot, blob);
-		TSS_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, blob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob);
+		Trspi_LoadBlob_UINT32(&offset, keyslot, blob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
 			return result;
@@ -1173,7 +1173,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 	LogDebug1("Key is loaded, create a new key object for the user");
 
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
 	initFlags = 0;
 
 	if (theKey.pubKey.keyLength == 0x100)
@@ -1376,7 +1376,7 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		if ((result = keyreg_GetKeyByUUID(&uuidData, &keyBlobSize, &keyBlob))) {
 			/* convert TCS return to a TSS return */
@@ -1386,7 +1386,7 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
 	} else
 		return TSS_E_BAD_PARAMETER;
 
@@ -1453,7 +1453,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/*  in */
 
 		// need to setup the init flags of the create object based on the size of the blob's pubkey
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
 		if (keyContainer.pubKey.keyLength == 0x100)
 			flag |= TSS_KEY_SIZE_2048;
 		else if (keyContainer.pubKey.keyLength == 0x80)

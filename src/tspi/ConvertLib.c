@@ -18,8 +18,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 #include "atmel.h"
 
@@ -41,7 +41,7 @@ ConvertLib_Blob_TcpaKey(TSS_HCONTEXT context, BYTE * blob, TCPA_KEY * key)
 		return TSS_E_INTERNAL_ERROR;
 
 	offset = 0;
-	UnloadBlob_KEY(tcsContext, &offset, blob, key);
+	Trspi_UnloadBlob_KEY(tcsContext, &offset, blob, key);
 
 	return TSS_SUCCESS;
 }
@@ -52,7 +52,7 @@ ConvertLib_TcpaKey_Blob(TCPA_KEY key, UINT32 * size, BYTE * blob)
 	UINT16 offset;
 
 	offset = 0;
-	LoadBlob_KEY(&offset, blob, &key);
+	Trspi_LoadBlob_KEY(&offset, blob, &key);
 	*size = offset;
 
 	return TSS_SUCCESS;
@@ -150,12 +150,12 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 
 		/* ---  Do theAuth */
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetState, hashBlob);
-		LoadBlob_BYTE(&offset, stateID, hashBlob);
-		LoadBlob_UINT32(&offset, sizeState, hashBlob);
-		LoadBlob(&offset, sizeState, hashBlob, stateValue);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetState, hashBlob);
+		Trspi_LoadBlob_BYTE(&offset, stateID, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, sizeState, hashBlob);
+		Trspi_LoadBlob(&offset, sizeState, hashBlob, stateValue);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, digest, &ownerAuth)))
 			return result;
@@ -166,10 +166,10 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 
 		/* ---  Validate Auth */
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetState, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetState, hashBlob);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &ownerAuth)))
 			return result;

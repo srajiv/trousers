@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #include "tss/tss.h"
+#include "tss/trousers.h"
 #include "tspps.h"
 #include "tcs_tsp.h"
 #include "spi_internal_types.h"
@@ -373,9 +374,9 @@ ps_write_key(int fd,
 		return rc;
 
 	offset = 0;
-	LoadBlob_STORE_PUBKEY((UINT16 *)&offset, pub_key, &key.pubKey);
+	Trspi_LoadBlob_STORE_PUBKEY((UINT16 *)&offset, pub_key, &key.pubKey);
 
-	/* offset is incremented sizeof(pub_key) bytes by LoadBlob_STORE_PUBKEY */
+	/* offset is incremented sizeof(pub_key) bytes by Trspi_LoadBlob_STORE_PUBKEY */
 	pub_key_size = offset;
         if ((rc = write_key_init(fd, pub_key_size, key_blob_size)) < 0)
                 return rc;

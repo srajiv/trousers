@@ -20,8 +20,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 extern AnObject *objectList;
 
@@ -63,7 +63,7 @@ popup_GetSecret(UINT32 new_pin, UNICODE *popup_str, void *auth_hash)
 		return TSS_E_INTERNAL_ERROR;
 
 	/* allow a 0 length password here, as spec'd by the TSSWG */
-	TSS_Hash(TSS_HASH_SHA1, strlen(secret), secret, (char *)auth_hash);
+	Trspi_Hash(TSS_HASH_SHA1, strlen(secret), secret, (char *)auth_hash);
 
 	/* zero, then unpin the memory */
 	memset(&secret, 0, UI_MAX_SECRET_STRING_LENGTH);
@@ -744,7 +744,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 		/* ---  now stick it in a Key Structure */
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
 
 		/* ---  Now get the secrets */
 		if (ownerPolicy->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
@@ -777,7 +777,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		memcpy(randomSeed, random, 20);
 		free_tspi(tspContext, random);
 
-		TSS_RSA_Encrypt(ownerSecret.secret,
+		Trspi_RSA_Encrypt(ownerSecret.secret,
 				       20,	/* sizeof(tpmObject->ownerAuth), //dataToEncryptLen,  //in */
 				       encOwnerAuth,	/* out */
 				       encOwnerAuthLength,	/* *encryptedDataLen, //out */
@@ -791,7 +791,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		memcpy(randomSeed, random, 20);
 		free_tspi(tspContext, random);
 
-		TSS_RSA_Encrypt(srkSecret.secret,
+		Trspi_RSA_Encrypt(srkSecret.secret,
 				       20,	/* sizeof(tpmObject->SRKAuth), //dataToEncryptLen,  //in */
 				       encSRKAuth,	/* out */
 				       encSRKAuthLength,	/* *encryptedDataLen, //out */
@@ -816,15 +816,15 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 /* ===	Hash first the following: */
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
-	LoadBlob_UINT16(&offset, TCPA_PID_OWNER, hashblob);
-	LoadBlob_UINT32(&offset, *encOwnerAuthLength, hashblob);
-	LoadBlob(&offset, *encOwnerAuthLength, hashblob, encOwnerAuth);
-	LoadBlob_UINT32(&offset, *encSRKAuthLength, hashblob);
-	LoadBlob(&offset, *encSRKAuthLength, hashblob, encSRKAuth);
-	LoadBlob(&offset, srkKeyBlobLength, hashblob, srkKeyBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
+	Trspi_LoadBlob_UINT16(&offset, TCPA_PID_OWNER, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, *encOwnerAuthLength, hashblob);
+	Trspi_LoadBlob(&offset, *encOwnerAuthLength, hashblob, encOwnerAuth);
+	Trspi_LoadBlob_UINT32(&offset, *encSRKAuthLength, hashblob);
+	Trspi_LoadBlob(&offset, *encSRKAuthLength, hashblob, encSRKAuth);
+	Trspi_LoadBlob(&offset, srkKeyBlobLength, hashblob, srkKeyBlob);
 
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	/* ===  HMAC for the final digest */
 

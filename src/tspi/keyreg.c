@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include "tss/tss.h"
+#include "tss/trousers.h"
 #include "spi_internal_types.h"
 #include "tcs_tsp.h"
 #include "spi_utils.h"
@@ -48,7 +49,7 @@ keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT tspContext, UINT32 keyBlobSize, BYTE 
 	BOOL answer;
 
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, keyBlob, &key);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &key);
 
 	if ((fd = get_file()) < 0)
 		return FALSE;

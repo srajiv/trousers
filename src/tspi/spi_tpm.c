@@ -17,8 +17,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 TSS_UUID SRK_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 1 } };
 
@@ -62,10 +62,10 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, ek, &dummyKey);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, ek, &dummyKey);
 
 	offset = 0;
-	LoadBlob_KEY_PARMS(&offset, ek, &dummyKey.algorithmParms);
+	Trspi_LoadBlob_KEY_PARMS(&offset, ek, &dummyKey.algorithmParms);
 	ekSize = offset;
 
 	if (pValidationData == NULL)
@@ -86,10 +86,10 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 
 	if (verifyInternally) {
 		offset = 0;
-		LoadBlob(&offset, newEKSize, hashBlob, newEK);
-		LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
+		Trspi_LoadBlob(&offset, newEKSize, hashBlob, newEK);
+		Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 
 		if (memcmp(hash.digest, digest.digest, 20)) {
 			LogError1("Internal verification failed");
@@ -122,9 +122,9 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	keyObject = anObject->memPointer;
 
 	offset = 0;
-	if ((result = UnloadBlob_KEY_PARMS(tspContext, &offset, newEK, &keyObject->tcpaKey.algorithmParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, newEK, &keyObject->tcpaKey.algorithmParms)))
 		return result;
-	if ((result = UnloadBlob_STORE_PUBKEY(tspContext, &offset, newEK, &keyObject->tcpaKey.pubKey)))
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, newEK, &keyObject->tcpaKey.pubKey)))
 		return result;
 
 	free(newEK);
@@ -176,8 +176,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 			return result;
 
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &ownerAuth)))
 			return result;
@@ -186,10 +186,10 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 			return result;
 
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashblob);
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
-		LoadBlob(&offset, pubEKSize, hashblob, pubEK);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
+		Trspi_LoadBlob(&offset, pubEKSize, hashblob, pubEK);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &ownerAuth)))
 			return result;
@@ -213,9 +213,9 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		/* validate the returned hash, or set up the return so that the user can */
 		if (pValidationData == NULL) {
 			offset = 0;
-			LoadBlob(&offset, pubEKSize, hashblob, pubEK);
-			LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+			Trspi_LoadBlob(&offset, pubEKSize, hashblob, pubEK);
+			Trspi_LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 			/* check validation of the entire pubkey structure */
 			if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE)) {
@@ -224,12 +224,12 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 				 * Atmel chips specifically.
 				 */
 				offset = 0;
-				UnloadBlob_PUBKEY(tspContext, &offset, pubEK, &pubKey);
+				Trspi_UnloadBlob_PUBKEY(tspContext, &offset, pubEK, &pubKey);
 
 				offset = 0;
-				LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
-				LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
-				TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+				Trspi_LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
+				Trspi_LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
+				Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 				if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE))
 					return TSS_E_VALIDATION_FAILED;
@@ -272,9 +272,9 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	}
 
 	offset = 0;
-	if ((result = UnloadBlob_KEY_PARMS(tspContext, &offset, pubEK, &keyObject->tcpaKey.algorithmParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, pubEK, &keyObject->tcpaKey.algorithmParms)))
 		return result;
-	if ((result = UnloadBlob_STORE_PUBKEY(tspContext, &offset, pubEK, &keyObject->tcpaKey.pubKey)))
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, pubEK, &keyObject->tcpaKey.pubKey)))
 		return result;
 
 	*phEndorsementPubKey = retKey;
@@ -383,10 +383,10 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 	 *******************************/
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, rc, hashblob);
-	LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
-	LoadBlob(&offset, newSrkBlobSize, hashblob, newSrkBlob);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, rc, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
+	Trspi_LoadBlob(&offset, newSrkBlobSize, hashblob, newSrkBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if ((rc = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
 		return rc;
@@ -490,7 +490,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	/*  Hash the label */
-	TSS_Hash(TSS_HASH_SHA1, ulIdentityLabelLength, rgbIdentityLabelData, chosenIDHash.digest);
+	Trspi_Hash(TSS_HASH_SHA1, ulIdentityLabelLength, rgbIdentityLabelData, chosenIDHash.digest);
 
 	/* ---        Get Key blobs */
 	if ((result = Tspi_GetAttribData(hIdentityKey,
@@ -505,15 +505,15 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 
 	/* ---        Take the PUBKEY portion out of the TCPA_KEY caPubKey and put it into 'pubkey' */
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, caKey, &keyContainer);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, caKey, &keyContainer);
 
 	offset = 0;
-	LoadBlob_KEY_PARMS(&offset, caPubKey, &keyContainer.algorithmParms);
-	LoadBlob_STORE_PUBKEY(&offset, caPubKey, &keyContainer.pubKey);
+	Trspi_LoadBlob_KEY_PARMS(&offset, caPubKey, &keyContainer.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, caPubKey, &keyContainer.pubKey);
 	caPubKeySize = offset;
 
 	offset = 0;
-	UnloadBlob_PUBKEY(tspContext, &offset, caPubKey, &pubkey);
+	Trspi_UnloadBlob_PUBKEY(tspContext, &offset, caPubKey, &pubkey);
 
 	/* ---        Start OSAP */
 	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
@@ -525,11 +525,11 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	/* ---        Hash the Auth data */
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
-	LoadBlob(&offset, 20, hashblob, encAuthUsage.encauth);
-	LoadBlob(&offset, 20, hashblob, chosenIDHash.digest);
-	LoadBlob(&offset, idKeySize, hashblob, idKey);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
+	Trspi_LoadBlob(&offset, 20, hashblob, encAuthUsage.encauth);
+	Trspi_LoadBlob(&offset, 20, hashblob, chosenIDHash.digest);
+	Trspi_LoadBlob(&offset, idKeySize, hashblob, idKey);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (((result = policy_UsesAuth(hSRKPolicy, &usesAuth))))
 		return result;
@@ -589,16 +589,16 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	}
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashblob);
-	LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
-	LoadBlob(&offset, idKeySize, hashblob, idKey);
-	LoadBlob_UINT32(&offset, pcIdentityBindingSize, hashblob);
-	LoadBlob(&offset, pcIdentityBindingSize, hashblob, prgbIdentityBinding);
-	/* LoadBlob( &offset, pcIdentityBindingSize, prgbIdentityBinding,hashblob ); */
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
+	Trspi_LoadBlob(&offset, idKeySize, hashblob, idKey);
+	Trspi_LoadBlob_UINT32(&offset, pcIdentityBindingSize, hashblob);
+	Trspi_LoadBlob(&offset, pcIdentityBindingSize, hashblob, prgbIdentityBinding);
+	/* Trspi_LoadBlob( &offset, pcIdentityBindingSize, prgbIdentityBinding,hashblob ); */
 
 	LogDebug1("SM DEBUG 3B2");
 
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	LogDebug1("SM DEBUG 3C");
 
@@ -663,7 +663,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	LogDebug1("SM DEBUG 5C <<<<<<<<<<<<<<<<<<<<<<<<<<<");
 
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, symKey, &keyContainer);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, symKey, &keyContainer);
 
 	keyContainer.encSize = tAESSIZE;
 	keyContainer.encData = malloc(tAESSIZE);
@@ -675,7 +675,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	memcpy(keyContainer.encData, tAESkey, tAESSIZE);
 
 	offset = 0;
-	LoadBlob_KEY(&offset, symKey, &keyContainer);
+	Trspi_LoadBlob_KEY(&offset, symKey, &keyContainer);
 
 	LogDebug1("SM DEBUG 6 <<<<<<<<<<<<<<<<<<<<<<<<<<<");
 
@@ -745,10 +745,10 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
-	LoadBlob_UINT32(&offset, ulAsymCAContentsBlobLength, hashblob);
-	LoadBlob(&offset, ulAsymCAContentsBlobLength, hashblob, rgbAsymCAContentsBlob);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, ulAsymCAContentsBlobLength, hashblob);
+	Trspi_LoadBlob(&offset, ulAsymCAContentsBlobLength, hashblob, rgbAsymCAContentsBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (usesAuth == 1) {
 		if ((result = secret_PerformAuth_OIAP(hIDPolicy, digest, &idKeyAuth)))
@@ -775,10 +775,10 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashblob);
-	LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
-	LoadBlob(&offset, *pulCredentialLength, hashblob, *prgbCredential);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
+	Trspi_LoadBlob(&offset, *pulCredentialLength, hashblob, *prgbCredential);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (usesAuth == 1) {
 		if ((result = secret_ValidateAuth_OIAP(hIDPolicy, digest, &idKeyAuth)))
@@ -821,8 +821,8 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", sizeof(UINT32));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 		/* ===  hashDigest now has the hash result       */
 
@@ -839,9 +839,9 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -885,8 +885,8 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -901,9 +901,9 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -920,9 +920,9 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
 		hashBlob[(offset++)] = fTpmState;
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -937,9 +937,9 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -965,8 +965,8 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -981,9 +981,9 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -1048,7 +1048,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 			break;	/* return result; */
 
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
 			break;	/* return result; */
@@ -1069,13 +1069,13 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashBlob);
-	LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
-	LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-	LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
-	LoadBlob_UINT32(&offset, volFlags, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
+	Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
+	Trspi_LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, volFlags, hashBlob);
 
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
 		return result;
@@ -1217,9 +1217,9 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
-		LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, hash, &keyAuth)))
@@ -1248,11 +1248,11 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", (3 * sizeof(UINT32)) + outDataSize);
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
-		LoadBlob_UINT32(&offset, outDataSize, hashBlob);
-		LoadBlob(&offset, outDataSize, hashBlob, outData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, outDataSize, hashBlob);
+		Trspi_LoadBlob(&offset, outDataSize, hashBlob, outData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hash, &keyAuth)))
@@ -1267,7 +1267,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
 
 		offset = 0;
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE) + strlen("Test Passed"));
@@ -1276,14 +1276,14 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 					+ strlen("Test Passed"));
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob(&offset, strlen("Test Passed"), hashBlob, "Test Passed");
-		LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
-		LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), hashBlob, "Test Passed");
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
-		if ((result = TSS_Verify(TSS_HASH_SHA1, hash.digest, 20,
+		if ((result = Trspi_Verify(TSS_HASH_SHA1, hash.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 outData, outDataSize)))
 			return TSS_E_VERIFICATION_FAILED;
@@ -1296,9 +1296,9 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		offset = 0;
-		LoadBlob(&offset, strlen("Test Passed"), pValidationData->rgbData, "Test Passed");
-		LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->rgbData, antiReplay.nonce);
-		LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->rgbData);
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->rgbData, "Test Passed");
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->rgbData, antiReplay.nonce);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->rgbData);
 		pValidationData->ulValidationLength = outDataSize;
 		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
 		if (pValidationData->rgbValidationData == NULL) {
@@ -1416,7 +1416,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	if (fOwnerAuth) {
 		/* do an owner authorized get capability call */
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
 		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
@@ -1433,13 +1433,13 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 			return result;
 
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
-		LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-		LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
-		LoadBlob_UINT32(&offset, volFlags, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
+		Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
+		Trspi_LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, volFlags, hashBlob);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
 			return result;
@@ -1452,8 +1452,8 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		}
 
 		offset = 0;
-		LoadBlob_UINT32(&offset, nonVolFlags, respData);
-		LoadBlob_UINT32(&offset, volFlags, respData);
+		Trspi_LoadBlob_UINT32(&offset, nonVolFlags, respData);
+		Trspi_LoadBlob_UINT32(&offset, volFlags, respData);
 
 		*pulRespDataLength = respLen;
 		*prgbRespData = respData;
@@ -1587,12 +1587,12 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 				+ ulSubCapLength);
 		return TSS_E_OUTOFMEMORY;
 	}
-	LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
-	LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
-	LoadBlob_UINT32(&offset, tcsCapArea, hashBlob);
-	LoadBlob_UINT32(&offset, ulSubCapLength, hashBlob);
-	LoadBlob(&offset, ulSubCapLength, hashBlob, rgbSubCap);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
+	Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
+	Trspi_LoadBlob_UINT32(&offset, tcsCapArea, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, ulSubCapLength, hashBlob);
+	Trspi_LoadBlob(&offset, ulSubCapLength, hashBlob, rgbSubCap);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 	free(hashBlob);
 	/* ===  hashDigest now has the hash result       */
 	/* ===  HMAC */
@@ -1621,14 +1621,14 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		free(sig);
 		return TSS_E_OUTOFMEMORY;
 	}
-	LoadBlob_UINT32(&offset, result, hashBlob);
-	LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
-	LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-	LoadBlob_UINT32(&offset, *pulRespDataLength, hashBlob);
-	LoadBlob(&offset, *pulRespDataLength, hashBlob, *prgbRespData);
-	LoadBlob_UINT32(&offset, sigSize, hashBlob);
-	LoadBlob(&offset, sigSize, hashBlob, sig);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
+	Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
+	Trspi_LoadBlob_UINT32(&offset, *pulRespDataLength, hashBlob);
+	Trspi_LoadBlob(&offset, *pulRespDataLength, hashBlob, *prgbRespData);
+	Trspi_LoadBlob_UINT32(&offset, sigSize, hashBlob);
+	Trspi_LoadBlob(&offset, sigSize, hashBlob, sig);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 	free(hashBlob);
 
 	if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth))) {
@@ -1647,7 +1647,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
 
 		offset = 0;
 		hashBlob = malloc(*pulRespDataLength + sizeof(TCPA_NONCE));
@@ -1657,13 +1657,13 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 			free(sig);
 			return TSS_E_OUTOFMEMORY;
 		}
-		LoadBlob(&offset, *pulRespDataLength, hashBlob, *prgbRespData);
-		LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
+		Trspi_LoadBlob(&offset, *pulRespDataLength, hashBlob, *prgbRespData);
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = TSS_Verify(TSS_HASH_SHA1, hashDigest.digest, 20,
+		if ((result = Trspi_Verify(TSS_HASH_SHA1, hashDigest.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 sig, sigSize))) {
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
@@ -1888,21 +1888,21 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 
 	/* ---  First, turn the keyBlob into a TCPA_KEY structure */
 	offset = 0;
-	UnloadBlob_KEY(tspContext, &offset, migrationKeyBlob, &tcpaKey);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, migrationKeyBlob, &tcpaKey);
 	free_tspi(tspContext, migrationKeyBlob);
 
 	/* ---  Then pull the _PUBKEY portion out of that struct into a blob */
 	offset = 0;
-	LoadBlob_KEY_PARMS(&offset, pubKeyBlob, &tcpaKey.algorithmParms);
-	LoadBlob_STORE_PUBKEY(&offset, pubKeyBlob, &tcpaKey.pubKey);
+	Trspi_LoadBlob_KEY_PARMS(&offset, pubKeyBlob, &tcpaKey.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, pubKeyBlob, &tcpaKey.pubKey);
 	pubKeySize = offset;
 
 	/* ---  Auth */
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_AuthorizeMigrationKey, hashblob);
-	LoadBlob_UINT16(&offset, migrationScheme, hashblob);
-	LoadBlob(&offset, pubKeySize, hashblob, pubKeyBlob);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_AuthorizeMigrationKey, hashblob);
+	Trspi_LoadBlob_UINT16(&offset, migrationScheme, hashblob);
+	Trspi_LoadBlob(&offset, pubKeySize, hashblob, pubKeyBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, digest, &ownerAuth)))
 		return result;
@@ -1922,10 +1922,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 
 	/* ---  Validate Auth */
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashblob);
-	LoadBlob_UINT32(&offset, TPM_ORD_AuthorizeMigrationKey, hashblob);
-	LoadBlob(&offset, *pulMigTicketLength, hashblob, *prgbMigTicket);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_AuthorizeMigrationKey, hashblob);
+	Trspi_LoadBlob(&offset, *pulMigTicketLength, hashblob, *prgbMigTicket);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if ((result = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &ownerAuth))) {
 		TCSP_TerminateHandle(tcsContext, ownerAuth.AuthHandle);
@@ -2104,16 +2104,16 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", 512);
 			return TSS_E_OUTOFMEMORY;
 		}
-/* 		LoadBlob_PCR_SELECTION( &offset, pcrData, pcrObject->pcrComposite.select ); */
-		LoadBlob_PCR_SELECTION(&offset, pcrData, pcrObject->select);
+/* 		Trspi_LoadBlob_PCR_SELECTION( &offset, pcrData, pcrObject->pcrComposite.select ); */
+		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, pcrObject->select);
 		pcrDataSize = offset;
 	}
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_Quote, hashBlob);
-	LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
-	LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Quote, hashBlob);
+	Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
+	Trspi_LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if ((result = policy_UsesAuth(hPolicy, &usesAuth))) {
 		return result;
@@ -2140,12 +2140,12 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashBlob);
-	LoadBlob_UINT32(&offset, TPM_ORD_Quote, hashBlob);
-	LoadBlob(&offset, pcrDataOutSize, hashBlob, pcrDataOut);
-	LoadBlob_UINT32(&offset, validationLength, hashBlob);
-	LoadBlob(&offset, validationLength, hashBlob, validationData);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Quote, hashBlob);
+	Trspi_LoadBlob(&offset, pcrDataOutSize, hashBlob, pcrDataOut);
+	Trspi_LoadBlob_UINT32(&offset, validationLength, hashBlob);
+	Trspi_LoadBlob(&offset, validationLength, hashBlob, validationData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if (usesAuth) {
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
@@ -2158,29 +2158,29 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 			return result;
 
 		offset = 0;
-		UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
 
 		/*  creating pcrCompositeHash */
-		TSS_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
 
 		/* generate Quote_info struct */
 		/* 1. add version */
 		offset = 0;
-		LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.ver);
+		Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.ver);
 		/* 2. add "QUOT" */
 		quoteinfo[offset++] = 'Q';
 		quoteinfo[offset++] = 'U';
 		quoteinfo[offset++] = 'O';
 		quoteinfo[offset++] = 'T';
 		/* 3. Composite Hash */
-		LoadBlob(&offset, 20, quoteinfo, digest.digest);
+		Trspi_LoadBlob(&offset, 20, quoteinfo, digest.digest);
 		/* 4. AntiReplay Nonce */
-		LoadBlob(&offset, 20, quoteinfo, antiReplay.nonce);
+		Trspi_LoadBlob(&offset, 20, quoteinfo, antiReplay.nonce);
 
 		/*  Hash 'em up good */
-		TSS_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest);
 
-		if ((result = TSS_Verify(TSS_HASH_SHA1, digest.digest, 20,
+		if ((result = Trspi_Verify(TSS_HASH_SHA1, digest.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 validationData, validationLength)))
 			return result;
@@ -2213,16 +2213,16 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	SigValid->SignatureLength = sigSize;
 	memcpy(SigValid->Signature, sig, sigSize);
 	offset = 0;
-	LoadBlob_PCR_COMPOSITE(&offset, pcrBlob, pcrComposite);
+	Trspi_LoadBlob_PCR_COMPOSITE(&offset, pcrBlob, pcrComposite);
 	LogArray("PCRBlob", pcrBlob, offset);
 
-	TSS_Hash(TSS_HASH_SHA1, offset, pcrBlob, digest.digest);
+	Trspi_Hash(TSS_HASH_SHA1, offset, pcrBlob, digest.digest);
 
 	offset = 0;
 	Create_QUOTE_INFO_BLOB(&offset, keyObject->tcpa_key.ver, digest,
 			       privAuth.NonceEven, quoteInfoBlob);
 
-	TSS_Hash(TSS_HASH_SHA1, offset, quoteInfoBlob, digest.digest);
+	Trspi_Hash(TSS_HASH_SHA1, offset, quoteInfoBlob, digest.digest);
 
 	SigValid->DataLength = 20;
 	memcpy(SigValid->Data, digest.digest, SigValid->DataLength);
@@ -2268,7 +2268,7 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
 		return TSS_E_OUTOFMEMORY;
 	}
 
-	if ((result = TSS_Hash(TSS_HASH_SHA1, ulPcrDataLength, pbPcrData, inDigest)))
+	if ((result = Trspi_Hash(TSS_HASH_SHA1, ulPcrDataLength, pbPcrData, inDigest)))
 		return result;
 
 	if ((result = TCSP_Extend(tcsContext, ulPcrIndex, *(TCPA_DIGEST *)inDigest, &outDigest)))
@@ -2379,15 +2379,15 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	memcpy(dirValue.digest, rgbDirData, ulDirDataLength);
 #else
 	/* hash the input data */
-	if ((result = TSS_Hash(TSS_HASH_SHA1, ulDirDataLength, rgbDirData, dirValue.digest)))
+	if ((result = Trspi_Hash(TSS_HASH_SHA1, ulDirDataLength, rgbDirData, dirValue.digest)))
 		return result;
 #endif
 	/* hash to be used for the OIAP calc */
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
-	LoadBlob_UINT32(&offset, ulDirIndex, hashBlob);
-	LoadBlob(&offset, sizeof(TCPA_DIGEST), hashBlob, (BYTE *)(&dirValue));
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, ulDirIndex, hashBlob);
+	Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), hashBlob, (BYTE *)(&dirValue));
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
 	/*  hashDigest now has the hash result       */
 	if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
@@ -2402,9 +2402,9 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	}
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashBlob);
-	LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
 	if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth))) {
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);

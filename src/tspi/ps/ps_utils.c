@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "tss/tss.h"
+#include "tss/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "tspps.h"
@@ -33,10 +34,10 @@ struct key_disk_cache *key_disk_cache_head = NULL;
 TSS_RESULT
 UnloadBlob_KEY_PARMS_PS( UINT16* offset, BYTE* blob, TCPA_KEY_PARMS* keyParms )
 {
-	UnloadBlob_UINT32( offset, &keyParms->algorithmID, blob );
-	UnloadBlob_UINT16( offset, &keyParms->encScheme, blob );
-	UnloadBlob_UINT16( offset, &keyParms->sigScheme, blob );
-	UnloadBlob_UINT32( offset, &keyParms->parmSize, blob );
+	Trspi_UnloadBlob_UINT32( offset, &keyParms->algorithmID, blob );
+	Trspi_UnloadBlob_UINT16( offset, &keyParms->encScheme, blob );
+	Trspi_UnloadBlob_UINT16( offset, &keyParms->sigScheme, blob );
+	Trspi_UnloadBlob_UINT32( offset, &keyParms->parmSize, blob );
 
 	if (keyParms->parmSize > 0) {
 		keyParms->parms = malloc(keyParms->parmSize);
@@ -44,7 +45,7 @@ UnloadBlob_KEY_PARMS_PS( UINT16* offset, BYTE* blob, TCPA_KEY_PARMS* keyParms )
 			LogError("malloc of %d bytes failed.", keyParms->parmSize);
 			return TSS_E_INTERNAL_ERROR;
 		}
-		UnloadBlob( offset, keyParms->parmSize, blob, keyParms->parms );
+		Trspi_UnloadBlob( offset, keyParms->parmSize, blob, keyParms->parms );
 	} else {
 		keyParms->parms = NULL;
 	}
@@ -55,7 +56,7 @@ UnloadBlob_KEY_PARMS_PS( UINT16* offset, BYTE* blob, TCPA_KEY_PARMS* keyParms )
 TSS_RESULT
 UnloadBlob_STORE_PUBKEY_PS( UINT16* offset, BYTE* blob, TCPA_STORE_PUBKEY* store )
 {
-	UnloadBlob_UINT32( offset, &store->keyLength, blob );
+	Trspi_UnloadBlob_UINT32( offset, &store->keyLength, blob );
 
 	if (store->keyLength > 0) {
 		store->key = malloc(store->keyLength);
@@ -63,7 +64,7 @@ UnloadBlob_STORE_PUBKEY_PS( UINT16* offset, BYTE* blob, TCPA_STORE_PUBKEY* store
 			LogError("malloc of %d bytes failed.", store->keyLength);
 			return TSS_E_INTERNAL_ERROR;
 		}
-		UnloadBlob(offset, store->keyLength, blob, store->key);
+		Trspi_UnloadBlob(offset, store->keyLength, blob, store->key);
 	} else {
 		store->key = NULL;
 	}
@@ -77,14 +78,14 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 	TSS_RESULT rc = TSS_SUCCESS;
 
 	memset( key, 0, sizeof( TCPA_KEY ));
-	UnloadBlob_TCPA_VERSION( offset, blob, &key->ver );
-	UnloadBlob_UINT16( offset, &key->keyUsage, blob );
-	UnloadBlob_KEY_FLAGS( offset, blob, &key->keyFlags );
-	UnloadBlob_BOOL( offset, &key->authDataUsage, blob );
+	Trspi_UnloadBlob_TCPA_VERSION( offset, blob, &key->ver );
+	Trspi_UnloadBlob_UINT16( offset, &key->keyUsage, blob );
+	Trspi_UnloadBlob_KEY_FLAGS( offset, blob, &key->keyFlags );
+	Trspi_UnloadBlob_BOOL( offset, &key->authDataUsage, blob );
 	if (UnloadBlob_KEY_PARMS_PS(offset, blob, &key->algorithmParms))
 		return rc;
 
-	UnloadBlob_UINT32( offset, &key->PCRInfoSize, blob );
+	Trspi_UnloadBlob_UINT32( offset, &key->PCRInfoSize, blob );
 
 	if (key->PCRInfoSize > 0) {
 		key->PCRInfo = malloc( key->PCRInfoSize );
@@ -92,14 +93,14 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
 			return TSS_E_INTERNAL_ERROR;
 		}
-		UnloadBlob( offset, key->PCRInfoSize, blob, key->PCRInfo );
+		Trspi_UnloadBlob( offset, key->PCRInfoSize, blob, key->PCRInfo );
 	} else {
 		key->PCRInfo = NULL;
 	}
 
 	if ((rc = UnloadBlob_STORE_PUBKEY_PS( offset, blob, &key->pubKey )))
 		return rc;
-	UnloadBlob_UINT32( offset, &key->encSize, blob );
+	Trspi_UnloadBlob_UINT32( offset, &key->encSize, blob );
 
 	if (key->encSize > 0) {
 		key->encData = malloc( key->encSize );
@@ -107,7 +108,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 			LogError("malloc of %d bytes failed.", key->encSize);
 			return TSS_E_INTERNAL_ERROR;
 		}
-		UnloadBlob( offset, key->encSize, blob, key->encData );
+		Trspi_UnloadBlob( offset, key->encSize, blob, key->encData );
 	} else {
 		key->encData = NULL;
 	}

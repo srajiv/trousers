@@ -50,8 +50,9 @@ createNewObject()
 {
 	AnObject *ret;
 	ret = calloc(1, sizeof(AnObject));
-	if (!ret)
+	if (!ret) {
 		LogError("calloc of %d bytes failed: %s", sizeof(AnObject), strerror(errno));
+	}
 	return ret;
 }
 

@@ -20,8 +20,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 TSS_RESULT
 Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
@@ -102,11 +102,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 		/* calculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
-		LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-		LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
-		LoadBlob_UINT16(&offset, TCPA_ET_OWNER, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+		Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
+		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+		Trspi_LoadBlob_UINT16(&offset, TCPA_ET_OWNER, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
 		    secret_PerformAuth_OSAP(hPolicy, hNewPolicy, hNewPolicy,
@@ -120,9 +120,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			return result;
 
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OSAP(hPolicy, hNewPolicy, hNewPolicy,
 					     sharedSecret, &auth1, digest.digest, nonceEvenOSAP)))
@@ -155,11 +155,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* calculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 			offset = 0;
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
-			LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-			LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
-			LoadBlob_UINT16(&offset, TCPA_ET_SRK, hashBlob);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+			Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
+			Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+			Trspi_LoadBlob_UINT16(&offset, TCPA_ET_SRK, hashBlob);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result =
 			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -175,9 +175,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* ---  Validate the Auth's */
 			offset = 0;
-			LoadBlob_UINT32(&offset, result, hashBlob);
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result =
 			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -210,7 +210,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 				return result;
 
 			offset = 0;
-			UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange);
+			Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange);
 
 			keyHandle = getTCSKeyHandle(hParentObject);
 			if (keyHandle == NULL_HKEY)
@@ -244,13 +244,13 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 			offset = 0;
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
-			LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-			LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
-			LoadBlob_UINT16(&offset, TCPA_ET_KEY, hashBlob);
-			LoadBlob_UINT32(&offset, keyToChange.encSize, hashBlob);
-			LoadBlob(&offset, keyToChange.encSize, hashBlob, keyToChange.encData);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+			Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
+			Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+			Trspi_LoadBlob_UINT16(&offset, TCPA_ET_KEY, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, keyToChange.encSize, hashBlob);
+			Trspi_LoadBlob(&offset, keyToChange.encSize, hashBlob, keyToChange.encData);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result =
 			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -279,11 +279,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* ---  Validate the Auth's */
 			offset = 0;
-			LoadBlob_UINT32(&offset, result, hashBlob);
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
-			LoadBlob_UINT32(&offset, newEncSize, hashBlob);
-			LoadBlob(&offset, newEncSize, hashBlob, newEncData);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, newEncSize, hashBlob);
+			Trspi_LoadBlob(&offset, newEncSize, hashBlob, newEncData);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result =
 			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -297,7 +297,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			memcpy(keyToChange.encData, newEncData, newEncSize);
 
 			offset = 0;
-			LoadBlob_KEY(&offset, keyBlob, &keyToChange);
+			Trspi_LoadBlob_KEY(&offset, keyBlob, &keyToChange);
 			objectLength = offset;
 
 			if ((result =
@@ -327,7 +327,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			return result;
 
 		offset = 0;
-		if ((result = UnloadBlob_STORED_DATA(tspContext, &offset, dataBlob, &storedData)))
+		if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset, dataBlob, &storedData)))
 			return result;
 
 		keyHandle = getTCSKeyHandle(hParentObject);
@@ -344,13 +344,13 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 		/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
-		LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-		LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
-		LoadBlob_UINT16(&offset, TCPA_ET_DATA, hashBlob);
-		LoadBlob_UINT32(&offset, storedData.encDataSize, hashBlob);
-		LoadBlob(&offset, storedData.encDataSize, hashBlob, storedData.encData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+		Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
+		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+		Trspi_LoadBlob_UINT16(&offset, TCPA_ET_DATA, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, storedData.encDataSize, hashBlob);
+		Trspi_LoadBlob(&offset, storedData.encDataSize, hashBlob, storedData.encData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
 		    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -375,11 +375,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 		/* ---  Validate the Auth's */
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
-		LoadBlob_UINT32(&offset, newEncSize, hashBlob);
-		LoadBlob(&offset, newEncSize, hashBlob, newEncData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, newEncSize, hashBlob);
+		Trspi_LoadBlob(&offset, newEncSize, hashBlob, newEncData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
 		    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
@@ -394,7 +394,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 		storedData.encDataSize = newEncSize;
 
 		offset = 0;
-		LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
+		Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
 		Tspi_SetAttribData(hObjectToChange, TSS_TSPATTRIB_ENCDATA_BLOB,
 				   TSS_TSPATTRIB_ENCDATABLOB_BLOB, offset, dataBlob);
 
@@ -543,7 +543,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			memcpy(keyParms.parms, ephParms, 12);
 
 			tempSize = 0;
-			LoadBlob_KEY_PARMS(&tempSize, tempKey, &keyParms);
+			Trspi_LoadBlob_KEY_PARMS(&tempSize, tempKey, &keyParms);
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
@@ -556,10 +556,10 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 			offset = 0;
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
-			LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
-			LoadBlob_KEY_PARMS(&offset, hashBlob, &keyParms);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
+			Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
+			Trspi_LoadBlob_KEY_PARMS(&offset, hashBlob, &keyParms);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result = policy_UsesAuth(hPolicy, &useAuth)))
 				return result;
@@ -592,14 +592,14 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* ---  Validate the Auth's */
 			offset = 0;
-			LoadBlob_UINT32(&offset, result, hashBlob);
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
-			LoadBlob(&offset, CertifyInfoSize, hashBlob, CertifyInfo);
-			LoadBlob_UINT32(&offset, sigSize, hashBlob);
-			LoadBlob(&offset, sigSize, hashBlob, sig);
-			LoadBlob_UINT32(&offset, ephHandle, hashBlob);
-			LoadBlob(&offset, KeySizeOut, hashBlob, KeyDataOut);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
+			Trspi_LoadBlob(&offset, CertifyInfoSize, hashBlob, CertifyInfo);
+			Trspi_LoadBlob_UINT32(&offset, sigSize, hashBlob);
+			Trspi_LoadBlob(&offset, sigSize, hashBlob, sig);
+			Trspi_LoadBlob_UINT32(&offset, ephHandle, hashBlob);
+			Trspi_LoadBlob(&offset, KeySizeOut, hashBlob, KeyDataOut);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if (useAuth) {
 				if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
@@ -644,20 +644,20 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			memcpy(caValidate.newAuthSecret.secret, newSecret.secret, 20);
 
 			offset = 0;
-			LoadBlob_CHANGEAUTH_VALIDATE(&offset, hashBlob, &caValidate);
+			Trspi_LoadBlob_CHANGEAUTH_VALIDATE(&offset, hashBlob, &caValidate);
 			caValidSize = offset;
 
 			offset = 0;
-			UnloadBlob_KEY(tspContext, &offset, KeyDataOut, &ephemeralKey);
+			Trspi_UnloadBlob_KEY(tspContext, &offset, KeyDataOut, &ephemeralKey);
 
-			TSS_RSA_Encrypt(hashBlob,	/* in */
+			Trspi_RSA_Encrypt(hashBlob,	/* in */
 				       caValidSize,	/* in */
 				       a1,	/* out */
 				       &a1Size,	/* out */
 				       ephemeralKey.pubKey.key,
 				       ephemeralKey.pubKey.keyLength);
 
-			TSS_HMAC(TSS_HASH_SHA1, 20, oldSecret.secret,	/* old secret */
+			Trspi_HMAC(TSS_HASH_SHA1, 20, oldSecret.secret,	/* old secret */
 				 20, newSecret.secret, newAuthLink.digest);
 
 			if (objectType == TSS_OBJECT_TYPE_RSAKEY) {
@@ -668,7 +668,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 					return result;
 
 				offset = 0;
-				UnloadBlob_KEY(tspContext, &offset, keyObject, &keyContainer);
+				Trspi_UnloadBlob_KEY(tspContext, &offset, keyObject, &keyContainer);
 
 				encObjectSize = keyContainer.encSize;
 				encObject = malloc(encObjectSize);
@@ -686,7 +686,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 					return result;
 
 				offset = 0;
-				if ((result = UnloadBlob_STORED_DATA(tspContext, &offset,
+				if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset,
 						       dataObject, &dataContainer)))
 					return result;
 
@@ -701,14 +701,14 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			}
 
 			offset = 0;
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
-			LoadBlob_UINT16(&offset, entityType, hashBlob);
-			LoadBlob(&offset, 20, hashBlob, newAuthLink.digest);
-			LoadBlob_UINT32(&offset, a1Size, hashBlob);
-			LoadBlob(&offset, a1Size, hashBlob, a1);
-			LoadBlob_UINT32(&offset, encObjectSize, hashBlob);
-			LoadBlob(&offset, encObjectSize, hashBlob, encObject);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
+			Trspi_LoadBlob_UINT16(&offset, entityType, hashBlob);
+			Trspi_LoadBlob(&offset, 20, hashBlob, newAuthLink.digest);
+			Trspi_LoadBlob_UINT32(&offset, a1Size, hashBlob);
+			Trspi_LoadBlob(&offset, a1Size, hashBlob, a1);
+			Trspi_LoadBlob_UINT32(&offset, encObjectSize, hashBlob);
+			Trspi_LoadBlob(&offset, encObjectSize, hashBlob, encObject);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if ((result = policy_UsesAuth(hParentPolicy, &useAuth))) {
 				free(encObject);
@@ -749,13 +749,13 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/* ---  Validate the Auth's */
 			offset = 0;
-			LoadBlob_UINT32(&offset, result, hashBlob);
-			LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
-			LoadBlob_UINT32(&offset, encDataSizeOut, hashBlob);
-			LoadBlob(&offset, encDataSizeOut, hashBlob, encDataOut);
-			LoadBlob(&offset, 20, hashBlob, saltNonce.nonce);
-			LoadBlob(&offset, 20, hashBlob, changeProof.digest);
-			TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, encDataSizeOut, hashBlob);
+			Trspi_LoadBlob(&offset, encDataSizeOut, hashBlob, encDataOut);
+			Trspi_LoadBlob(&offset, 20, hashBlob, saltNonce.nonce);
+			Trspi_LoadBlob(&offset, 20, hashBlob, changeProof.digest);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if (useAuth) {
 				if ((result = secret_ValidateAuth_OIAP(hParentPolicy, digest, &auth))) {
@@ -772,7 +772,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				keyContainer.encSize = encDataSizeOut;
 
 				offset = 0;
-				LoadBlob_KEY(&offset, keyObject, &keyContainer);
+				Trspi_LoadBlob_KEY(&offset, keyObject, &keyContainer);
 				Tspi_SetAttribData(hObjectToChange,
 						   TSS_TSPATTRIB_KEY_BLOB,
 						   TSS_TSPATTRIB_KEYBLOB_BLOB, offset, keyObject);
@@ -782,7 +782,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				dataContainer.encDataSize = encDataSizeOut;
 
 				offset = 0;
-				LoadBlob_STORED_DATA(&offset, dataBlob, &dataContainer);
+				Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &dataContainer);
 				Tspi_SetAttribData(hObjectToChange,
 						   TSS_TSPATTRIB_ENCDATA_BLOB,
 						   TSS_TSPATTRIB_ENCDATABLOB_BLOB,
@@ -1239,7 +1239,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
 			offset = 0;
-			UnloadBlob_KEY(tspContext, &offset, rgbAttribData, &rsaObj->tcpaKey);
+			Trspi_UnloadBlob_KEY(tspContext, &offset, rgbAttribData, &rsaObj->tcpaKey);
 
 			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
@@ -1370,7 +1370,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
 				LogDebug1("TSS_TSPATTRIB_KEYBLOB_BLOB");
 				offset = 0;
-				LoadBlob_KEY(&offset, tempBuf, &rsaObj->tcpaKey);
+				Trspi_LoadBlob_KEY(&offset, tempBuf, &rsaObj->tcpaKey);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
 				offset = rsaObj->tcpaKey.encSize;
 				memcpy(tempBuf, rsaObj->tcpaKey.encData, offset);
@@ -1387,7 +1387,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				return TSS_E_INVALID_ATTRIB_SUBFLAG;
 
 			offset = 0;
-			LoadBlob_TCPA_VERSION(&offset, tempBuf, rsaObj->tcpaKey.ver);
+			Trspi_LoadBlob_TCPA_VERSION(&offset, tempBuf, rsaObj->tcpaKey.ver);
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			LogDebug1("TSS_TSPATTRIB_RSAKEY_INFO");
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
@@ -1403,7 +1403,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				return TSS_E_INVALID_ATTRIB_SUBFLAG;
 
 			offset = 0;
-			LoadBlob_UUID(&offset, tempBuf, rsaObj->uuid);
+			Trspi_LoadBlob_UUID(&offset, tempBuf, rsaObj->uuid);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_PCR) {
 			LogDebug1("TSS_TSPATTRIB_KEY_PCR");
 			if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATCREATION) {
@@ -1477,7 +1477,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				memcpy(*prgbAttribData,	encDataObj->pcrInfo.digestAtRelease.digest, 20);
 			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_SELECTION) {
 				offset = 0;
-				LoadBlob_PCR_SELECTION(&offset, tempBuf, encDataObj->pcrInfo.pcrSelection);
+				Trspi_LoadBlob_PCR_SELECTION(&offset, tempBuf, encDataObj->pcrInfo.pcrSelection);
 				*pulAttribDataSize = offset;
 				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 				if (*prgbAttribData == NULL) {

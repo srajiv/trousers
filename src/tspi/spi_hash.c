@@ -18,8 +18,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 TSS_RESULT
 Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
@@ -75,10 +75,10 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		pPrivAuth = NULL;
 	} else {
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_Sign, hashblob);
-		LoadBlob_UINT32(&offset, hashObject->hashSize, hashblob);
-		LoadBlob(&offset, hashObject->hashSize, hashblob, hashObject->hashData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Sign, hashblob);
+		Trspi_LoadBlob_UINT32(&offset, hashObject->hashSize, hashblob);
+		Trspi_LoadBlob(&offset, hashObject->hashSize, hashblob, hashObject->hashData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 		pPrivAuth = &privAuth;
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &privAuth)))
@@ -93,11 +93,11 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 
 	if (usesAuth == TRUE) {
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashblob);
-		LoadBlob_UINT32(&offset, TPM_ORD_Sign, hashblob);
-		LoadBlob_UINT32(&offset, *pulSignatureLength, hashblob);
-		LoadBlob(&offset, *pulSignatureLength, hashblob, *prgbSignature);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Sign, hashblob);
+		Trspi_LoadBlob_UINT32(&offset, *pulSignatureLength, hashblob);
+		Trspi_LoadBlob(&offset, *pulSignatureLength, hashblob, *prgbSignature);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
 			return result;
@@ -142,9 +142,9 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 			break;
 
 		offset = 0;
-		UnloadBlob_KEY(0, &offset, keyData, &keyContainer);
+		Trspi_UnloadBlob_KEY(0, &offset, keyData, &keyContainer);
 
-		if ((result = TSS_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
+		if ((result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 rgbSignature, ulSignatureLength)))
 			result = TSS_E_FAIL;
@@ -327,7 +327,7 @@ Tspi_Hash_UpdateHashValue(TSS_HHASH hHash,	/* in */
 			return TSS_E_OUTOFMEMORY;
 		}
 	}
-	TSS_Hash(TSS_HASH_SHA1, hashObject->hashUpdateSize,
+	Trspi_Hash(TSS_HASH_SHA1, hashObject->hashUpdateSize,
 			hashObject->hashUpdateBuffer, hashObject->hashData);
 
 	return TSS_SUCCESS;

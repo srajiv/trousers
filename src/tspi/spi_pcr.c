@@ -16,9 +16,9 @@
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
-#include "tss_crypto.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 TSS_RESULT
 Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/*  in */
@@ -196,7 +196,7 @@ Tspi_PcrComposite_SelectPcrIndex(TSS_HPCRS hPcrComposite,	/*  in */
 //      {
 //              memcpy( object->pcrComposite.pcrValue[i].digest, &buffer[bufferOffset], 20 );
 //      }
-//              TSS_Hash( TSS_SHA1, object->pcrComposite.valueSize, object->pcrComposite.pcrValue, object->compositeHash.digest );
+//              Trspi_Hash( TSS_SHA1, object->pcrComposite.valueSize, object->pcrComposite.pcrValue, object->compositeHash.digest );
 //      calculateCompositeHash( object->pcrComposite, &object->compositeHash );
 #endif
 	calcCompositeHash(object->select, object->pcrs, &object->compositeHash);

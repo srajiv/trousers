@@ -18,8 +18,8 @@
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
-#include "tss_crypto.h"
 #include "obj.h"
+#include "tss/trousers.h"
 
 TSS_RESULT
 Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
@@ -65,7 +65,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	offset = 0;
-	if ((result = UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer)))
+	if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer)))
 		return result;
 
 	if (keyContainer.keyUsage != TSS_KEYUSAGE_BIND &&
@@ -76,7 +76,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 	if (keyContainer.algorithmParms.encScheme == TSS_ES_RSAESPKCSV15 &&
 	    keyContainer.keyUsage == TSS_KEYUSAGE_LEGACY) {
 
-		if ((result = TSS_RSA_PKCS15_Encrypt(rgbDataToBind,
+		if ((result = Trspi_RSA_PKCS15_Encrypt(rgbDataToBind,
 						   ulDataLength,
 						   encData,
 						   &encDataLength,
@@ -97,9 +97,9 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
 
 		offset = 0;
-		LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
+		Trspi_LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
 
-		if ((result = TSS_RSA_PKCS15_Encrypt(bdblob,
+		if ((result = Trspi_RSA_PKCS15_Encrypt(bdblob,
 							   offset,
 							   encData,
 							   &encDataLength,
@@ -121,7 +121,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
 
 		offset = 0;
-		LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
+		Trspi_LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
 
 		LogDebug("SM DEBUG Enc len = %d", offset);
 
@@ -133,7 +133,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		memcpy(encData, bdblob, offset);
 
 #else
-		if ((result = TSS_RSA_Encrypt(bdblob,	/* in */
+		if ((result = Trspi_RSA_Encrypt(bdblob,	/* in */
 					    offset,	/* in */
 					    encData,	/* encObject->encryptedData,   */
 					    &encDataLength,	/* &encObject->encryptedDataLength,  */
@@ -209,11 +209,11 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 
 	if (usesAuth) {
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_UnBind, hashBlob);
-		LoadBlob_UINT32(&offset, encDataSize, hashBlob);
-		LoadBlob(&offset, encDataSize, hashBlob, encData);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_UnBind, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, encDataSize, hashBlob);
+		Trspi_LoadBlob(&offset, encDataSize, hashBlob, encData);
 
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &privAuth)))
 			return result;
@@ -231,11 +231,11 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 
 	if (usesAuth) {
 		offset = 0;
-		LoadBlob_UINT32(&offset, result, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_UnBind, hashBlob);
-		LoadBlob_UINT32(&offset, *pulUnboundDataLength, hashBlob);
-		LoadBlob(&offset, *pulUnboundDataLength, hashBlob, *prgbUnboundData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_UnBind, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, *pulUnboundDataLength, hashBlob);
+		Trspi_LoadBlob(&offset, *pulUnboundDataLength, hashBlob, *prgbUnboundData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
 			return result;
@@ -338,11 +338,11 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 
 /* 		offset = pcrDataSize; */
 		offset = 0;
-/* 		LoadBlob_PCR_SELECTION( &offset, pcrData, pcrObject->pcrComposite.select ); */
-		LoadBlob_PCR_SELECTION(&offset, pcrData, pcrObject->select);
-		LoadBlob(&offset, 20, pcrData, digAtCreation.digest);
-/* 		LoadBlob( &offset, 20, pcrData, pcrObject->digAtRelease.digest ); */
-		LoadBlob(&offset, 20, pcrData, pcrObject->compositeHash.digest);
+/* 		Trspi_LoadBlob_PCR_SELECTION( &offset, pcrData, pcrObject->pcrComposite.select ); */
+		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, pcrObject->select);
+		Trspi_LoadBlob(&offset, 20, pcrData, digAtCreation.digest);
+/* 		Trspi_LoadBlob( &offset, 20, pcrData, pcrObject->digAtRelease.digest ); */
+		Trspi_LoadBlob(&offset, 20, pcrData, pcrObject->compositeHash.digest);
 		pcrDataSize = offset;
 
 	}
@@ -354,13 +354,13 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 
 	if (useAuth) {
 		offset = 0;
-		LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
-		LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
-		LoadBlob_UINT32(&offset, pcrDataSize, hashBlob);
-		LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
-		LoadBlob_UINT32(&offset, ulDataLength, hashBlob);
-		LoadBlob(&offset, ulDataLength, hashBlob, rgbDataToSeal);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
+		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+		Trspi_LoadBlob_UINT32(&offset, pcrDataSize, hashBlob);
+		Trspi_LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
+		Trspi_LoadBlob_UINT32(&offset, ulDataLength, hashBlob);
+		Trspi_LoadBlob(&offset, ulDataLength, hashBlob, rgbDataToSeal);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 		pAuth = &auth;
 	} else {
 		pAuth = NULL;
@@ -377,10 +377,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 
 	if (useAuth) {
 		offset = 0;
-		LoadBlob_UINT32(&offset, rc, hashBlob);
-		LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
-		LoadBlob(&offset, encDataSize, hashBlob, encData);
-		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+		Trspi_LoadBlob_UINT32(&offset, rc, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
+		Trspi_LoadBlob(&offset, encDataSize, hashBlob, encData);
+		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((rc = secret_ValidateAuth_OSAP(hPolicy, hEncPolicy, hEncPolicy,
 					     sharedSecret, &auth, digest.digest, nonceEvenOSAP)))
@@ -398,8 +398,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	memcpy(encObject->encryptedData, encData, encDataSize);
 	offset = 0;
 	if (pcrDataSize) {
-/* 			UnloadBlob_PCR_COMPOSITE( &offset, pcrData, &encObject->pcrComp ); */
-		if ((rc = UnloadBlob_PCR_INFO(tspContext, &offset, pcrData, &encObject->pcrInfo)))
+/* 			Trspi_UnloadBlob_PCR_COMPOSITE( &offset, pcrData, &encObject->pcrComp ); */
+		if ((rc = Trspi_UnloadBlob_PCR_INFO(tspContext, &offset, pcrData, &encObject->pcrInfo)))
 			return rc;
 		encObject->usePCRs = 1;
 	} else
@@ -472,9 +472,9 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 	}
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
-	LoadBlob(&offset, encObject->encryptedDataLength, hashblob, encObject->encryptedData);	/*      LoadBlob_STORED_DATA(&offset, hashblob, &encObject->storedData ); */
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
+	Trspi_LoadBlob(&offset, encObject->encryptedDataLength, hashblob, encObject->encryptedData);	/*      Trspi_LoadBlob_STORED_DATA(&offset, hashblob, &encObject->storedData ); */
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &privAuth)))
 			return result;
@@ -495,11 +495,11 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	offset = 0;
-	LoadBlob_UINT32(&offset, result, hashblob);
-	LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
-	LoadBlob_UINT32(&offset, *pulUnsealedDataLength, hashblob);
-	LoadBlob(&offset, *pulUnsealedDataLength, hashblob, *prgbUnsealedData);
-	TSS_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, *pulUnsealedDataLength, hashblob);
+	Trspi_LoadBlob(&offset, *pulUnsealedDataLength, hashblob, *prgbUnsealedData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
 			return result;
