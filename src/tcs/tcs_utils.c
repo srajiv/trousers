@@ -136,7 +136,7 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 				UnloadBlob_BYTE(&offset, (BYTE *)v, resp, NULL);
 				break;
 			case sizeof(UINT16):
-				UnloadBlob_UINT16(&offset, v, resp, NULL);
+				UnloadBlob_UINT16(&offset, (UINT16 *)v, resp, NULL);
 				break;
 			case sizeof(UINT32):
 				UnloadBlob_UINT32(&offset, v, resp, NULL);
@@ -162,7 +162,7 @@ get_max_auths(UINT32 *auths)
 	int i;
 
 	if (TPM_VERSION(1,2)) {
-		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, &subCap);
+		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, (BYTE *)(&subCap));
 		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
 	} else if (TPM_VERSION(1,1)) {
 		/* open auth sessions until we get a failure */
@@ -238,16 +238,8 @@ get_tpm_metrics(struct tpm_properties *p)
 					(UINT32 *)&p->manufacturer)))
 		return TSS_E_INTERNAL_ERROR;
 
-#if 0
-	if (TPM_VERSION(1,1)) {
-		result = get_max_auths(&(p->num_auths));
-	} else {
-		/* XXX query for a 1.2 TPM */
-		p->num_auths = 2;
-	}
-#else
 	result = get_max_auths(&(p->num_auths));
-#endif
+
 	return result;
 }
 
