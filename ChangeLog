@@ -1,4 +1,5 @@
 
+ - Changed an fprintf to LogError in gtk/support.c
  - TCP/IP server-side fixes in svrside.c
  - various compile warnings fixed
  - moved commonly used utility functions to trspi/trousers.c and
