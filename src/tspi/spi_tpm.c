@@ -866,6 +866,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 	TCPA_DIGEST hashDigest;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
+	UINT32 volFlags, nonVolFlags;
 
 	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
@@ -989,6 +990,24 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
 			return result;
 		break;
+#ifndef TSS_COMPLIANCE
+	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
+		/* set the lifetime lock bit */
+		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LIFETIME_LOCK);
+		break;
+	case TSS_TPMSTATUS_PHYSPRES_HWENABLE:
+		/* set the HW enable bit */
+		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_HW_ENABLE);
+		break;
+	case TSS_TPMSTATUS_PHYSPRES_CMDENABLE:
+		/* set the command enable bit */
+		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_CMD_ENABLE);
+		break;
+	case TSS_TPMSTATUS_PHYSPRES_LOCK:
+		/* set the physical presence lock bit */
+		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LOCK);
+		break;
+#endif
 	default:
 		return TSS_E_BAD_PARAMETER;
 		break;
@@ -1039,19 +1058,20 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 
 	for (;;) {
 		if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-			break;	/* return result; */
+			break;
 
 		if ((result = obj_isConnected_1(hTPM, &tcsContext)))
-			break;	/* return result; */
+			break;
 
 		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
-			break;	/* return result; */
+			break;
 
+#if 0
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
-
+#endif
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
-			break;	/* return result; */
+			break;
 
 		break;
 	}
@@ -1059,7 +1079,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 		LogDebug("Failed GetStatus with result 0x%.8X", result);
 		return result;
 	}
-
+#if 0
 	if ((result = TCSP_GetCapabilityOwner(tcsContext,	/*  in */
 					     &auth,	/*  out */
 					     &version,	/*  out */
@@ -1078,6 +1098,9 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
+		return result;
+#endif
+	if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
 		return result;
 
 	switch (statusFlag) {
@@ -1415,6 +1438,9 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 	if (fOwnerAuth) {
 		/* do an owner authorized get capability call */
+		if ((result = get_tpm_flags(tcsContext, hTPM, volFlags, nonVolFlags)))
+			return result;
+#if 0
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
@@ -1443,7 +1469,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
 			return result;
-
+#endif
 		respLen = 2 * sizeof(UINT32);
 		respData = calloc_tspi(tspContext, respLen);
 		if (respData == NULL) {
