@@ -11,6 +11,7 @@
 #ifndef _TCS_UTILS_H_
 #define _TCS_UTILS_H_
 
+#include <assert.h>
 #include <pthread.h>
 
 struct key_mem_cache
@@ -48,6 +49,12 @@ extern struct tpm_properties tpm_metrics;
 	((tpm_metrics.version.major == maj) && (tpm_metrics.version.minor == min))
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+#ifdef TSS_DEBUG
+#define DBG_ASSERT	assert
+#else
+#define DBG_ASSERT
+#endif
 
 TSS_RESULT get_tpm_metrics(struct tpm_properties *);
 
