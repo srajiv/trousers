@@ -16,6 +16,8 @@
 #include <syslog.h>
 #include <stdlib.h>
 
+/* Debug logging */
+#ifdef TSS_DEBUG
 /* log to stdout */
 #define LogMessage(dest, priority, layer, fmt, ...) \
 	do { \
@@ -31,8 +33,6 @@
 		} \
 	} while (0)
 
-/* Debug logging */
-#ifdef TSS_DEBUG
 #define LogDebug(fmt, ...)	LogMessage(stdout, "LOG_DEBUG", APPID, fmt, ##__VA_ARGS__)
 #define LogDebug1(data)		LogMessage1(stdout, "LOG_DEBUG", APPID, data)
 #define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
