@@ -1,4 +1,5 @@
 
+ - added a manpage for Tspi_TPM_PcrExtend
  - added SHA1_HASH_SIZE #define tied to openssl/sha.h
  - Corrected typo in tcpa_types.h of pValdationData -> pValidationData
  - updated README with info on device file stuff
