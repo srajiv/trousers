@@ -71,9 +71,12 @@ auth_mgr_final()
 void
 auth_mgr_swap_in()
 {
+#if 0
 	if (tpm_metrics.authctx_swap) {
+		// XXX
 		LogError1("IN AUTHCTX SWAP PATH.");
 	} else {
+#endif
 		if (auth_mgr.overflow[auth_mgr.of_tail] != NULL) {
 			LogDebug("waking up thread %x, auth slot has opened", (UINT32)pthread_self());
 			/* wake up the next sleeping thread in order and increment tail */
@@ -83,17 +86,21 @@ auth_mgr_swap_in()
 		}
 		/* else nobody needs to be swapped in, so continue */
 		LogDebug("no threads need to be signaled.");
+#if 0
 	}
+#endif
 }
 
 /* we need to swap out an auth context or add a waiting context to the overflow queue */
 TSS_RESULT
 auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 {
+#if 0
 	if (tpm_metrics.authctx_swap) {
 		LogError1("IN AUTHCTX SWAP PATH.");
 		return TSS_E_INTERNAL_ERROR;
 	} else {
+#endif
 		pthread_cond_t *cond = ctx_get_cond_var(hContext);
 
 		if (cond == NULL) {
@@ -125,7 +132,9 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 					TSS_DEFAULT_OVERFLOW_AUTHS);
 			return TSS_E_INTERNAL_ERROR;
 		}
+#if 0
 	}
+#endif
 
 	return TSS_SUCCESS;
 }
