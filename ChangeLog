@@ -1,4 +1,26 @@
 
+* TROUSERS_0_1_5
+
+ - Complete memory management overhaul. calloc_tspi is now used to clean up
+   memory allocated by Tspi functions. TCS blob functions have been changed
+   to not require a context, since there's no need w/o calloc_tspi. Its
+   now necessary to call free explicitly everywhere in the TCS. In the TSP,
+   calloc_tspi is now always called with the TSP context of the session, which
+   would will ensure all memory allocated by the session is accounted for.
+ - Unused #defines and variables removed from spi_utils.h
+ - Commented out code removed throughout the source.
+ - Removed log.o on a 'make clean'.
+ - commented out unnecessary logging, added more descriptive logging
+ - renamed variables named 'hContext' to specifiy whether they represent TSP
+   of TCS context handles.
+ - got rid of a few magic numbers
+ - Bugfixes
+   - in tcs/cache.c, getNextTimeStamp() was unlocking the mutex twice.
+   - removed destroy_key_refs() in TSP, which caused double free errors
+   - added call to event_log_final() in tcsd_shutdown() to clean up the event log
+   - added an intermediate copy stage of data in getTCSDPacket() to avoid
+   memcpy() calls with overlapping source and dest fields.
+
 * TROUSERS_0_1_4
 
  - added ChangeLog :-)
