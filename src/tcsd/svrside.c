@@ -196,15 +196,6 @@ main(int argc, char **argv)
 	int sd, c;
 	char hostname[80];
 
-	/* log startup messages to the foreground in case something goes wrong,
-	 * then switch to background after a successful startup. If the user
-	 * specifies -f, foreground logging will be re-enabled below.
-	 */
-	if ((result = tcsd_startup()))
-		return (int)result;
-
-	foreground = 0;
-
 	while ((c = getopt(argc, argv, "f")) != -1) {
 		switch (c) {
 			case 'f':
@@ -214,6 +205,9 @@ main(int argc, char **argv)
 				break;
 		}
 	}
+
+	if ((result = tcsd_startup()))
+		return (int)result;
 
 	if (!foreground) {
 		if (daemon(0, 0) == -1) {
