@@ -908,37 +908,45 @@ Tspi_Context_GetCapability(TSS_HCONTEXT hContext,	/*  in */
 	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
 		return result;
 
-	/* --   See if we check here in the TSP */
-	if (capArea == TSS_TSPCAP_ALG ||
-	    capArea == TSS_TSPCAP_VERSION || capArea == TSS_TSPCAP_PERSSTORAGE) {
-		LogDebug1("Dectected to be TSP query");
-		if (capArea == TSS_TSPCAP_ALG) {
-			if (ulSubCapLength == 4)
-				subCap = Decode_UINT32(rgbSubCap);
-			else {
-				LogDebug1("Don't know this subCap");
-				return TSS_E_BAD_PARAMETER;
+	switch (capArea) {
+		case TSS_TSPCAP_ALG:
+		case TSS_TSPCAP_VERSION:
+		case TSS_TSPCAP_PERSSTORAGE:
+			LogDebug1("Dectected to be TSP query");
+			if (capArea == TSS_TSPCAP_ALG) {
+				if (ulSubCapLength != sizeof(UINT32) && rgbSubCap)
+					return TSS_E_BAD_PARAMETER;
 			}
-		}
-		if ((result = internal_GetCap(hContext, capArea, subCap, pulRespDataLength, prgbRespData)))
-			return result;
-		return TSS_SUCCESS;
-	} else if (capArea == TSS_TCSCAP_ALG || capArea == TSS_TCSCAP_VERSION ||
-			capArea == TSS_TCSCAP_CACHING || capArea == TSS_TCSCAP_PERSSTORAGE) {
-		LogDebug1("Query the TCS");
 
-		if ((result = TCS_GetCapability(tcsContext,
-						capArea,
-						ulSubCapLength,
-						rgbSubCap,
-						pulRespDataLength,
-						prgbRespData)))
-			return result;
-	} else {
-		return TSS_E_BAD_PARAMETER;
+			result = internal_GetCap(hContext, capArea, *(UINT32 *)rgbSubCap,
+							pulRespDataLength, prgbRespData);
+			break;
+		case TSS_TCSCAP_ALG:
+		case TSS_TCSCAP_VERSION:
+		case TSS_TCSCAP_CACHING:
+		case TSS_TCSCAP_PERSSTORAGE:
+			LogDebug1("Dectected to be TCS query");
+			if (capArea == TSS_TCSCAP_ALG) {
+				if (ulSubCapLength != sizeof(UINT32) && rgbSubCap)
+					return TSS_E_BAD_PARAMETER;
+			}
+
+			subCap = endian32(*(UINT32 *)rgbSubCap);
+
+			result = TCS_GetCapability(tcsContext,
+							capArea,
+							ulSubCapLength,
+							(BYTE *)&subCap,
+							pulRespDataLength,
+							prgbRespData);
+			break;
+		default:
+			result = TSS_E_BAD_PARAMETER;
+			break;
 	}
+
 	LogDebug1("Leaving Tspi_Context_GetCap");
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
