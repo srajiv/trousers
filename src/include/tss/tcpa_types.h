@@ -44,7 +44,6 @@ Boolean types
 #define TRUE		0x01	/*Assertion */
 #define FALSE		0x00	/*Contradiction */
 #endif
-#define MAX_RPC_WAIT	180
 
 typedef struct tdTCPA_DIGEST {
 	BYTE digest[20];
@@ -70,6 +69,7 @@ typedef UINT16 TCPA_SIG_SCHEME;
 typedef UINT32 TCPA_ALGORITHM_ID;
 typedef UINT16 TCPA_KEY_USAGE;
 typedef UINT16 TCPA_ENTITY_TYPE;
+typedef UINT16 TCPA_PHYSICAL_PRESENCE;
 
 typedef UINT32 TCPA_PCRINDEX;	/*Index to a PCR register */
 typedef UINT32 TCPA_DIRINDEX;	/*Index to a DIR register */
