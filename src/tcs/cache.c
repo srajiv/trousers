@@ -1143,6 +1143,7 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 	return result;
 }
 
+/* XXX why ** if malloc isn't called? */
 TSS_RESULT
 getParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID **ret_uuid)
 {

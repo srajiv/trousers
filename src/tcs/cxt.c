@@ -116,6 +116,9 @@ get_previous_context(TCS_CONTEXT_HANDLE handle)
 	return 0;
 }
 
+/* runs through the list of all keys loaded by context c and decrements
+ * their ref count by 1, then free's their structures.
+ */
 void
 ctx_ref_count_keys(struct tcs_context *c)
 {
