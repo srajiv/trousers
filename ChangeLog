@@ -1,4 +1,5 @@
 
+ - Revert accidental change in tddl.c
  - Lots of 0's replaced with non-magic #define's in the TSP code
  - In spi_getset.c: removed unimportant debugging stmts; make
    Tspi_{Get|Set}AttribData set the correct public and private key data

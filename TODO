@@ -9,7 +9,7 @@ These are now prioritized, in order of decreasing priority...
   TCS Key Context Mgr.
     11/30 - keys are now reference counted, key loading and evicting is atomic
 
-  TCS context handles shouldprobably be random numbers, not incremental.
+  TCS context handles should probably be random numbers, not incremental.
 
   Implement Tspi get event functions so that if ppEvent == NULL, only the number of events is
     returned.
@@ -27,9 +27,6 @@ These are now prioritized, in order of decreasing priority...
   Return code layer correctness.
     High level testcases needed to flush out bad return codes
     Make sure bitmasks for return codes are correct at each level (TSP, TCS, TDDL, TPM)
-
-  Audit memory freeing everywhere. getSPIMemory was being used as a crutch for
-    freeing memory.
 
   Audit code for fault tolerance when reading in bogus data.
 
@@ -75,6 +72,9 @@ These are now prioritized, in order of decreasing priority...
    - The 1.2 access control policies appear to be based on OS auth
 
 ---- DONE ---- (DONE means designed, coded and unit tested)
+
+  Audit memory freeing everywhere. getSPIMemory was being used as a crutch for
+    freeing memory.
 
   Revisit threading in the TCSD, there are loose ends.  Check signal handling. Polish up
     the TRM.
