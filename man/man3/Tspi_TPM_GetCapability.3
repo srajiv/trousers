@@ -38,7 +38,7 @@ Tspi_TPM_GetCapability \- get information on the capabilities of the TPM
 
 .SH "DESCRIPTION"
 .PP
-\fBTspi_TPM_GetCapability\fR 
+\fBTspi_TPM_GetCapability\fR
 gets information on various capabilities of the TPM. This command can
 be used to learn how many PCRs the TPM supports, etc.
 
@@ -47,18 +47,46 @@ be used to learn how many PCRs the TPM supports, etc.
 .SS hTPM
 The \fIhTPM\fR parameter is used to specify the handle of the TPM object.
 .SS capArea
-The \fIcapArea\fR parameter is the flag indicating the attribute to query.
+The \fIcapArea\fR parameter is the flag indicating the attribute to query. Possible values are:
 .SS ulSubCapLength
 The \fIulSubCapLength\fR parameter is the length in bytes of the
 \fIrgbSubCap\fR parameter.
 .SS rgbSubCap
-The \fIrgbSubCap\fR parameter is the data indicating the attribute to query.
+The \fIrgbSubCap\fR parameter is the data indicating the attribute to query. Possible values are:
 .SS pulRespDataLength
 The \fIpulRespDataLength\fR parameter is the length in bytes of the
 \fIprgbRespData\fR parameter.
 .SS prgbRespData
 The \fIprgbRespData\fR parameter receives a pointer to the actual data
 of the specified attribute.
+
+.SH "NOTES"
+.PP
+The following Capability Areas and Sub-Capability Areas are supported by 1.1 TSS's:
+.sp 2
+.BR TSS_TPMCAP_ORD " - query whether an ordinal is supported by the TPM. "
+        subCaps: TPM_ORD_* (see tcpa_literals.h)
+.sp
+.BR TSS_TPMCAP_FLAG " - query for the volatile and non-volatile flags inside the TPM. (Must be owner authorized). In this case, the 2 UINT32 values will be returned concatenated together in prgbRespData. "
+        subCaps: ignored.
+.sp
+.BR TSS_TPMCAP_ALG " - query whether an algorithm is supported by the TPM. "
+        subCaps: TSS_ALG_RSA
+                 TSS_ALG_DES
+                 TSS_ALG_3DES
+                 TSS_ALG_SHA
+                 TSS_ALG_HMAC
+                 TSS_ALG_AES
+.sp
+.BR TSS_TPMCAP_PROPERTY " - query a property of the TPM. "
+        subCaps: TSS_TPMCAP_PROP_PCR
+                 TSS_TPMCAP_PROP_DIR
+                 TSS_TPMCAP_PROP_MANUFACTURER
+                 TSS_TPMCAP_PROP_SLOTS
+.sp
+.BR TSS_TPMCAP_VERSION " - get the TSS_VERSION structure tha identifies the TPM. "
+        subCaps: ignored.
+
 
 .SH "RETURN CODES"
 .PP
