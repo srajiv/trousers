@@ -545,8 +545,7 @@ getCurrentVersion(TSS_HCONTEXT hContext)
 		if (!result) {
 			offset = 0;
 			UnloadBlob_TCPA_VERSION(&offset, resp, &version);
-/* 			Tspi_Context_FreeMemory( hContext, resp ); */
-			TCS_FreeMemory(hContext, resp);
+			free(resp);
 			firstVersionCheck = 0;
 		}
 	}
@@ -1439,15 +1438,21 @@ LoadBlob_CHANGEAUTH_VALIDATE(UINT16 * offset, BYTE * blob,
 	return;
 }
 
+/* free any pointers this key may have and zero out the respective areas. */
 void
 destroy_key_refs(TCPA_KEY *key)
 {
 	free(key->algorithmParms.parms);
 	key->algorithmParms.parms = NULL;
+	key->algorithmParms.parmSize = 0;
+
 	free(key->pubKey.key);
 	key->pubKey.key = NULL;
+	key->pubKey.keyLength = 0;
+
 	free(key->encData);
 	key->encData = NULL;
+	key->encSize = 0;
 }
 
 UINT32
