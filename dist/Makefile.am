@@ -17,5 +17,5 @@ install-exec-hook:
 	/bin/chmod 1777 ${DESTDIR}/@localstatedir@/tpm
 
 uninstall-hook:
-	/usr/sbin/groupdel tss
 	/usr/sbin/userdel tss
+	/usr/sbin/groupdel tss
