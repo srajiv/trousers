@@ -3,6 +3,7 @@
    tcg/highlevel/tspi.
  - added test tcg/highlevel/tpm/Tspi_TPM_PcrRead04.c
  - updated Tspi_TPM_GetCapability manpage.
+ - added code to detect a 1.2 TPM and get auth sessions the 1.2 way.
  - added manpage for Tspi_TPM_GetPubEndorsementKey
  - Bugfixes
     - Allow validating the entire TCPA_PUBKEY structure in
