@@ -64,7 +64,7 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/*  out */
 //              return result;
 #endif
 	/* ---  Now create a new context object with default settings */
-	hObject = addNewObject(0, TSS_OBJECT_TYPE_CONTEXT);
+	hObject = addObject(0, TSS_OBJECT_TYPE_CONTEXT);
 	if (hObject == 0)
 		return TSS_E_INTERNAL_ERROR;
 
@@ -155,7 +155,7 @@ ConnectGuts(TSS_HCONTEXT hContext, UNICODE *wszDestination, TCS_CONTEXT_HANDLE t
 	/* ---  Now add a TPM object to this context */
 	objectSize = sizeof (TCPA_TPM_OBJECT);
 
-	hObject = addNewObject(hContext, TSS_OBJECT_TYPE_TPM);
+	hObject = addObject(hContext, TSS_OBJECT_TYPE_TPM);
 	if (hObject == 0)
 		return TSS_E_INTERNAL_ERROR;
 
@@ -376,7 +376,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 		if ((initFlags & (TSS_POLICY_USAGE | TSS_POLICY_MIGRATION)) == 0)
 			return TSS_E_INVALID_OBJECT_INIT_FLAG;
 
-		*phObject = addNewObject(hContext, objectType);
+		*phObject = addObject(hContext, objectType);
 		if (*phObject == 0)
 			return TSS_E_INTERNAL_ERROR;
 
@@ -471,7 +471,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 		/* ---  Start to setup the key object */
 
 		objectSize = sizeof (TCPA_RSAKEY_OBJECT);
-		*phObject = addNewObject(hContext, objectType);
+		*phObject = addObject(hContext, objectType);
 		if (*phObject == 0)
 			return TSS_E_INTERNAL_ERROR;
 
@@ -555,7 +555,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 		}
 
 		if (initFlags & TSS_KEY_TSP_SRK) {
-			addNewKeyHandle(FIXED_SRK_KEY_HANDLE, *phObject);
+			addKeyHandle(FIXED_SRK_KEY_HANDLE, *phObject);
 			rsaObj->privateKey.Privlen = 0;
 			rsaObj->tcpaKey.PCRInfoSize = 0;
 			rsaKeyParms.keyLength = 2048;
@@ -598,7 +598,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 		}
 #endif
 		if (initFlags & TSS_KEY_SRK_HANDLE) {
-			addNewKeyHandle(FIXED_SRK_KEY_HANDLE, *phObject);
+			addKeyHandle(FIXED_SRK_KEY_HANDLE, *phObject);
 		}
 		zero = 0;
 		LoadBlob_RSA_KEY_PARMS(&zero, rsaObj->tcpaKey.algorithmParms.parms, &rsaKeyParms);
@@ -618,7 +618,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 			return TSS_E_INVALID_OBJECT_INIT_FLAG;
 
 		objectSize = sizeof (TCPA_ENCDATA_OBJECT);
-		*phObject = addNewObject(hContext, objectType);
+		*phObject = addObject(hContext, objectType);
 		if (*phObject == 0)
 			return TSS_E_INTERNAL_ERROR;
 		object = calloc(1, objectSize);
@@ -649,7 +649,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 			return TSS_E_INVALID_OBJECT_INIT_FLAG;
 
 		objectSize = sizeof (TCPA_PCR_OBJECT);
-		*phObject = addNewObject(hContext, objectType);
+		*phObject = addObject(hContext, objectType);
 		if (*phObject == 0)
 			return TSS_E_INTERNAL_ERROR;
 		object = calloc(1, objectSize);
@@ -690,7 +690,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT hContext,	/*  in */
 			return TSS_E_INVALID_OBJECT_INIT_FLAG;
 
 		objectSize = sizeof (TCPA_HASH_OBJECT);
-		*phObject = addNewObject(hContext, objectType);
+		*phObject = addObject(hContext, objectType);
 		if (*phObject == 0)
 			return TSS_E_INTERNAL_ERROR;
 
@@ -1092,7 +1092,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT hContext,	/*  in */
 		return TSS_E_INTERNAL_ERROR;
 	}
 
-	addNewKeyHandle(myTCSKeyHandle, *phKey);
+	addKeyHandle(myTCSKeyHandle, *phKey);
 
 	LogDebug1("Leaving Loadkeybyblob");
 	return TSS_SUCCESS;
@@ -1246,7 +1246,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT hContext,	/*  in */
 		return result;
 
 	/* ---  Update our table to bind the tcsKeyHandle to this TspKeyHandle */
-	addNewKeyHandle(tcsKeyHandle, *phKey);
+	addKeyHandle(tcsKeyHandle, *phKey);
 
 	/* ---  Stuff the data into the object */
 	if ((result = Tspi_SetAttribData(*phKey, TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB,

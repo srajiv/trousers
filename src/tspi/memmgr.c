@@ -21,7 +21,7 @@
 #include "log.h"
 
 MemSlot *
-createNewMemSlot()
+createMemSlot()
 {
 	return calloc(1, sizeof(MemSlot));
 }
@@ -143,7 +143,7 @@ calloc_tspi(TCS_CONTEXT_HANDLE tcsContext, UINT32 howMuch)
 		}
 		index->tcsContext = tcsContext;
 	}
-	newSlot = createNewMemSlot();
+	newSlot = createMemSlot();
 	newSlot->memPointer = calloc(1, howMuch);
 	if (newSlot->memPointer == NULL) {
 		free(index);

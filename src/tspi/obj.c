@@ -83,7 +83,7 @@ getAnObjectByHandle(UINT32 oHandle)
 }
 
 TSS_HOBJECT
-addNewObject(UINT32 contextHandle, UINT32 objectType)
+addObject(UINT32 contextHandle, UINT32 objectType)
 {
 	AnObject *object;
 
@@ -371,13 +371,13 @@ anyPopupPolicies(TSS_HCONTEXT context)
 /* ====================================================================================================== */
 
 TSPKeyHandleContainer *
-createNewTSPKeyHandleContainer()
+createTSPKeyHandleContainer()
 {
 	return calloc(1, sizeof(TSPKeyHandleContainer));
 }
 
 TCSKeyHandleContainer *
-createNewTCSKeyHandleContainer()
+createTCSKeyHandleContainer()
 {
 	return calloc(1, sizeof(TCSKeyHandleContainer));
 }
@@ -432,12 +432,12 @@ getTCSKeyHandleContainerByTCSHandle(TCS_KEY_HANDLE tcsHandle)
 /*	These can be called by other funcs */
 
 void
-addNewKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
+addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 {
 	TCSKeyHandleContainer *newTCS = NULL;
 	TSPKeyHandleContainer *newTSP = NULL;
 
-	newTSP = createNewTSPKeyHandleContainer();
+	newTSP = createTSPKeyHandleContainer();
 	newTSP->tspKeyHandle = tspHandle;
 
 	newTCS = getTCSKeyHandleContainerByTCSHandle(tcsHandle);
@@ -445,7 +445,7 @@ addNewKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 	pthread_mutex_lock(&keylist_lock);
 
 	if (newTCS == NULL) {
-		newTCS = createNewTCSKeyHandleContainer();
+		newTCS = createTCSKeyHandleContainer();
 		newTCS->tcsKeyHandle = tcsHandle;
 		concatTCSKeyHandleContainer(&glKeyHandleManager, newTCS);
 	}
