@@ -1017,6 +1017,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
 	TCPA_CONTEXT_OBJECT *ctxObj;
 	TCPA_RSAKEY_OBJECT *rsaObj;
 	TSP_INTERNAL_POLICY_OBJECT *pObj;
+	UINT32 attrib;
 
 	if (pulAttrib == NULL)
 		return TSS_E_BAD_PARAMETER;
@@ -1054,16 +1055,16 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
 					*pulAttrib = rsaObj->tcpaKey.keyUsage;
 					break;
 				case TSS_TSPATTRIB_KEYINFO_MIGRATABLE:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & migratable;
+					*pulAttrib = rsaObj->tcpaKey.keyFlags & migratable ? TRUE : FALSE;
 					break;
 				case TSS_TSPATTRIB_KEYINFO_REDIRECTED:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & redirection;
+					*pulAttrib = rsaObj->tcpaKey.keyFlags & redirection ? TRUE : FALSE;
 					break;
 				case TSS_TSPATTRIB_KEYINFO_VOLATILE:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & volatileKey;
+					*pulAttrib = rsaObj->tcpaKey.keyFlags & volatileKey ? TRUE : FALSE;
 					break;
 				case TSS_TSPATTRIB_KEYINFO_AUTHDATAUSAGE:
-					*pulAttrib = rsaObj->tcpaKey.authDataUsage;
+					*pulAttrib = rsaObj->tcpaKey.authDataUsage ? TRUE : FALSE;
 					break;
 				case TSS_TSPATTRIB_KEYINFO_ALGORITHM:
 					*pulAttrib = rsaObj->tcpaKey.algorithmParms.algorithmID;
@@ -1080,6 +1081,9 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
 				case TSS_TSPATTRIB_KEYINFO_AUTHUSAGE:
 					*pulAttrib = rsaObj->tcpaKey.authDataUsage;
 					break;
+				case TSS_TSPATTRIB_KEYINFO_SIZE:
+					*pulAttrib = rsaObj->tcpaKey.pubKey.keyLength;
+					break;
 
 				default:
 					return TSS_E_INVALID_ATTRIB_SUBFLAG;
@@ -1087,9 +1091,11 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
 
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_KEYSIZE) {
-				*pulAttrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).keyLength;
+				attrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).keyLength;
+				*pulAttrib = endian32(attrib);
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_PRIMES) {
-				*pulAttrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).numPrimes;
+				attrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).numPrimes;
+				*pulAttrib = endian32(attrib);
 			} else
 				return TSS_E_INVALID_ATTRIB_SUBFLAG;
 
@@ -1224,11 +1230,17 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
 			LogDebug1("TSS_TSPATTRIB_KEYBLOB_BLOB");
+
+			/* free any pointers held by the old key */
+			destroy_key_refs(&rsaObj->tcpaKey);
+
 			offset = 0;
 			UnloadBlob_KEY(0, &offset, rgbAttribData, &rsaObj->tcpaKey);
+#if 0
+			/* don't do this, since the key object would already be hosed anyway */
 			if (offset != ulAttribDataSize)	/* just checking */
 				return TSS_E_BAD_PARAMETER;
-			/* ---  Need to add stuff to free old key components */
+#endif
 
 			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
