@@ -2727,6 +2727,33 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 }
 
 TSS_RESULT
+TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
+			TCPA_PHYSICAL_PRESENCE fPhysicalPresence /* in */
+    )
+{
+	UINT32 paramSize;
+	TSS_RESULT result = TSS_E_NOTIMPL;
+	BYTE txBlob[TPM_TXBLOB_SIZE];
+	char runlevel;
+
+	runlevel = platform_get_runlevel();
+
+	if (runlevel != 's' && runlevel != '1')
+		return TSS_E_NOTIMPL;
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
+			TPM_ORD_PhysicalPresence, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	return UnloadBlob_Header(txBlob, &paramSize);
+}
+
+TSS_RESULT
 TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
     )
 {
