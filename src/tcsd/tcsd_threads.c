@@ -121,6 +121,8 @@ tcsd_thread_create(int socket, char *hostname)
 			break;
 	}
 
+	DBG_ASSERT(thread_num != tm->max_threads);
+
 	tm->thread_data[thread_num].sock = socket;
 	tm->thread_data[thread_num].context = NULL_TCS_HANDLE;
 	if (hostname != NULL)
@@ -274,7 +276,6 @@ done:
 	data->sock = -1;
 	data->buf = NULL;
 	data->buf_size = -1;
-	data->hostname[0] = '\0';
 	/* If the connection was not shut down cleanly, free TCS resources here */
 	if (data->context != NULL_TCS_HANDLE) {
 		TCS_CloseContext_Internal(data->context);
@@ -292,6 +293,7 @@ done:
 				 " Resources may not be properly released.", rc);
 		}
 	}
+	data->hostname[0] = '\0';
 	data->thread_id = (pthread_t)0;
 	pthread_mutex_unlock(&(tm->lock));
 	pthread_exit(NULL);
