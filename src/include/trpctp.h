@@ -476,6 +476,10 @@
 						   BOOL state	/* in */
 	    );
 
+	TCPA_RESULT TCSP_PhysicalPresence_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
+						   TCPA_PHYSICAL_PRESENCE fPhysicalPresence	/* in */
+	    );
+
 	TCPA_RESULT TCSP_SetTempDeactivated_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext	/* in */
 	    );
 

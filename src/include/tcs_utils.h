@@ -697,6 +697,10 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	TSS_RESULT TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	    );
 
+	TSS_RESULT TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TCPA_PHYSICAL_PRESENCE fPhysicalPresence /* in */
+	    );
+
 	TSS_RESULT TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	    );
 
@@ -1228,6 +1232,10 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 
 	TSS_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/* in */
 							 BOOL state	/* in */
+	    );
+
+	TSS_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,  /*  in */
+			TCPA_PHYSICAL_PRESENCE fPhysicalPresence        /*  in */
 	    );
 
 	TSS_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE hContext	/* in */
