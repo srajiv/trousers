@@ -1,0 +1,50 @@
+
+* TROUSERS_0_1_4
+
+ - added ChangeLog :-)
+ - TSP object management overhaul. All API's should be correct for contexts
+    whether they're connected to a TCS or not.
+ - testsuite changes based on object mgmt overhaul
+ - various internal fixes and simplifications of the code due to object mgmt
+    overhaul
+
+* TROUSERS_0_1_3
+
+ - added helpful message when package gtk2-devel is not found in configure.in
+ - chown changes in dist/Makefile for new syntax
+ - added detailed flags to various manpages
+ - TSP memory management overhaul
+ - added more complete destroy_key_refs() function
+ - Bugfixes
+    - quashed memory leaks in TSP found by valgrind
+    - return TRUE/FALSE from getAttribData
+    - added TSS_TSPATTRIB_KEYINFO_SIZE to Tspi_GetAttribData
+    - call free() not Tspi_Context_FreeMemory() in spi_utils.c
+
+* TROUSERS_0_1_2
+
+ - added bug report mailing list to configure.in
+ - added --enable-stderrlog feature to configure.in
+ - Marked Tspi_TPM_GetCapabilitySigned as not implemented (per TSS v1.1b spec)
+ - Bugfixes
+    - Removed common.h from Tspi_Context_RegisterKey manpage
+    - added endianess macros to spi_utils.h
+    - made all endianess fixes to the TSP and testsuite
+    - logging improvements tcspbg.c
+    - tcs_utils.c compile time warning quashed
+
+* TROUSERS_0_1_1
+
+ - Updated design doc
+ - Updated README
+ - More sensible function naming (no addNewObject, just addObject)
+ - Bugfixes
+    - return data correctly in Tspi_GetAttribData
+    - malloc space for returned UUID correctly in tspps.c
+    - log errors in tddl.c
+    - follow a failure path in auth_mgr.c
+    - don't always return success in req_mgr.c
+
+* TROUSERS_0_1_0
+
+ - Initial code drop
