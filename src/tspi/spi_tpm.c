@@ -1286,7 +1286,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TCPA_CAPABILITY_AREA tcsCapArea;
-	BYTE tcsSubCap[4];
+	UINT32 tcsSubCap;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
 
@@ -1296,49 +1296,47 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	if ((result = internal_CheckObjectType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	/* ===  Get context */
-/* 	hContext = obj_getContextForObject( hTPM ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
 	if ((result = internal_CheckContext_1(hTPM, &hContext)))
 		return result;
 
-	/* ---          Verify the caps and subcaps */
-
+	/* Verify the caps and subcaps */
 	switch (capArea) {
-
 	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
-		tcsCapArea = TCPA_CAP_ALG;
-		if (ulSubCapLength != 4)
+		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
 			return TSS_E_BAD_PARAMETER;
-		memcpy(tcsSubCap, rgbSubCap, 4);
+
+		tcsCapArea = TCPA_CAP_ALG;
+		tcsSubCap = *(UINT32 *)rgbSubCap;
 		break;
 	case TSS_TPMCAP_PROPERTY:	/*     Determines a physical property of the TPM. */
+		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
+			return TSS_E_BAD_PARAMETER;
+
 		tcsCapArea = TCPA_CAP_PROPERTY;
-		tcsSubCapContainer = Decode_UINT32(rgbSubCap);
+		tcsSubCapContainer = *(UINT32 *)rgbSubCap;
+
 		if (tcsSubCapContainer == TSS_TPMCAP_PROP_PCR) {
-			UINT32ToArray(TCPA_CAP_PROP_PCR, tcsSubCap);
+			tcsSubCap = TCPA_CAP_PROP_PCR;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_DIR) {
-			UINT32ToArray(TCPA_CAP_PROP_DIR, tcsSubCap);
+			tcsSubCap = TCPA_CAP_PROP_DIR;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SLOTS) {
-			UINT32ToArray(TCPA_CAP_PROP_SLOTS, tcsSubCap);
+			tcsSubCap = TCPA_CAP_PROP_SLOTS;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
-			UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, tcsSubCap);
+			tcsSubCap = TCPA_CAP_PROP_MANUFACTURER;
 		} else
 			return TSS_E_BAD_PARAMETER;
 		break;
 	case TSS_TPMCAP_VERSION:	/*      Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
-		if (ulSubCapLength != 0)
-			return TSS_E_BAD_PARAMETER;
 		break;
-
 	default:
 		return TSS_E_BAD_PARAMETER;
 		break;
 	}
 
-	if ((result = TCSP_GetCapability(hContext, tcsCapArea, ulSubCapLength, tcsSubCap,
+	tcsSubCap = endian32(tcsSubCap);
+
+	if ((result = TCSP_GetCapability(hContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
 			       pulRespDataLength, prgbRespData)))
 		return result;
 
@@ -1356,6 +1354,13 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 			     BYTE ** prgbRespData	/*  out */
     )
 {
+#if 1
+	/*
+	 * Function was found to have a vulnerability, so implementation is not
+	 * required by the TSS 1.1b spec.
+	 */
+	return TSS_E_NOTIMPL;
+#else
 	TCS_AUTH auth;
 	TCS_CONTEXT_HANDLE hContext;
 	TCPA_RESULT result;
@@ -1565,6 +1570,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	}
 
 	return TSS_SUCCESS;
+#endif
 }
 
 TSS_RESULT
