@@ -106,22 +106,25 @@ Tspi_Context_Close(TSS_HCONTEXT hContext)	/*  in */
 	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
-	/* ---  Get the tcsContext */
-	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
-		return result;
+	/* Get the TCS context, if we're connected */
+	result = internal_CheckContext_1(hContext, &tcsContext);
+	if (result == TSS_SUCCESS) {
+		/* ---  Destroy all objects */
+		destroyObjectsByContext(tcsContext);
 
-	/* ---  Destroy all objects */
-	destroyObjectsByContext(tcsContext);
+		/* free all context related memory */
+		free_tspi(tcsContext, NULL);
 
-	/* free all context related memory */
-	free_tspi(tcsContext, NULL);
+		/* Assume 1 TSPi context per process. Is there a reason to open more than 1? */
+		destroy_ps();
 
-	/* Assume 1 TSPi context per process. Is there a reason to open more than 1? */
-	destroy_ps();
+		LogDebug1("Leaving Context Close");
+		/* ---  Have the TCS do its thing */
+		return TCS_CloseContext(tcsContext);
+	}
 
-	LogDebug1("Leaving Context Close");
-	/* ---  Have the TCS do its thing */
-	return TCS_CloseContext(tcsContext);
+	/* We're not a connected context, so just exit */
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -285,8 +288,11 @@ Tspi_Context_FreeMemory(TSS_HCONTEXT hContext,	/*  in */
 	if ((result = internal_CheckObjectType_1(hContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
+#if 0
+	/* we don't need this, you should be able to free memory on an unconnected context */
 	if ((result = internal_CheckContext_1(hContext, &tcsContext)))
 		return result;
+#endif
 
 	free_tspi(tcsContext, rgbMemory);
 
