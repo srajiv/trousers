@@ -61,6 +61,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_TPM_KillMaintenanceFeature.3 \
 	    Tspi_TPM_LoadMaintenancePubKey.3 \
 	    Tspi_TPM_PcrRead.3 \
+	    Tspi_TPM_PcrExtend.3 \
 	    Tspi_TPM_Quote.3 \
 	    Tspi_TPM_SelfTestFull.3 \
 	    Tspi_TPM_SetStatus.3 \
