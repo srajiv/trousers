@@ -1,4 +1,6 @@
 
+ - added SHA1_HASH_SIZE #define tied to openssl/sha.h
+ - Corrected typo in tcpa_types.h of pValdationData -> pValidationData
  - updated README with info on device file stuff
  - added a usage function and long options to tcsd
  - added an error message when incorrect params are passed to tcsd on
@@ -10,6 +12,11 @@
    TCSP_OwnerSetDisable and TCSP_PhysicalDisable.
  - Bugfixes
    - tcsem.c:507, error in calculating number of PCR events to copy out.
+   - sf.net bug #1151183 fixed. Tspi_TPM_GetPubEndorsementKey now takes
+   the correct number of params, and all testcases/TSS calls are changed.
+   - sf.net bug #1113313 fixed. Tspi_TPM_TakeOwnership now allows a NULL
+   pub endorsement key handle and a testcase,
+   tcg/highlevel/tpm/Tspi_TPM_TakeOwnership03.c, exists to test this.
 
 * TROUSERS_0_1_7
 
