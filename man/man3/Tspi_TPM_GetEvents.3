@@ -1,0 +1,76 @@
+.\" Copyright (C) 2004 International Business Machines Corporation
+.\" Written by Kathy Robertson based on the Trusted Computing Group Software Stack Specification Version 1.1 Golden
+.\"
+.de Sh \" Subsection
+.br
+.if t .Sp
+.ne 5
+.PP
+\fB\\$1\fR
+.PP
+..
+.de Sp \" Vertical space (when we can't use .PP)
+.if t .sp .5v
+.if n .sp
+..
+.de Ip \" List item
+.br
+.ie \\n(.$>=3 .ne \\$3
+.el .ne 3
+.IP "\\$1" \\$2
+..
+.TH "Tspi_TPM_GetEvents" 3 "2004-05-26" "TSS 1.1" "TCG Software Stack Developer's Reference"
+.SH Tspi_TPM_GetEvents
+Tspi_TPM_GetEvents\- get a specific number of PCR events for a given index.
+.SH "SYNOPSIS"
+.ad l
+.hy 0
+.B #include <tss/spi_types.h>
+.sp
+.BI "TSS_RESULT Tspi_TPM_GetEvents(TSS_HTPM " hTPM ", UINT32 " ulPcrIndex ", UINT32 " ulStartNumber ", UINT32 " ulEventNumber ", UINT32* " pulEventNumber ", TSS_PCR_EVENT* " prgPcrEvents ")
+.sp
+.ad
+.hy
+
+.SH "DESCRIPTION"
+.PP
+\fBTspi_TPM_GetEvents\fR provides a specific number of PCR events for a given index. This command only retuns one event at a time.
+.SH "PARAMETERS"
+.PP
+.SS hTPM
+Handle of the TPM object.
+.PP 
+.SS ulPcrIndex
+Index of the PCR to request.
+.PP
+.SS ulStartNumber
+Indext of the first event to request
+.PP
+.SS ulEventNumber
+[IN] Number of elements to request.
+[OUT] Receives number of returned event data structures in prgPcrEvents parameter.
+.PP
+.SS prgPcrEvents
+Receives a pointer to an array of PCR event data.
+If NULL, only the numberof elements is returned in pulEventNumber parameter.
+.SH "RETURN CODES"
+.PP
+\fBTspi_TPM_GetEvents\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
+.TP
+.SM TSS_E_INVALID_HANDLE
+Can't find the TPM.
+.TP
+.SM TSS_E_INTERNAL_ERROR
+The command failed.
+
+.SH "CONFORMING TO"
+
+.PP
+\fBTspi_TPM_GetEvents\fR conforms to the Trusted Computing Group Software Specification version 1.1 Golden
+.SH "SEE ALSO"
+
+.PP
+\fBTspi_TPM_GetEvent\fR(3) \fBTspi_TPM_GetEventLog\fR(3).
+
+
+

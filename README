@@ -1,0 +1,88 @@
+
+trousers README
+
+ARCHITECTURE
+
+  This TSS implementation has several components.
+
+  A) The TCS Daemon - A user space daemon who should be (according to the TSS spec)
+  the only portal to the TPM device driver. At boot time, the TCS Daemon should be
+  started, it should open the TPM device driver and from that point on, all
+  requests to the TPM should go through the TSS stack. The TCSD manages TPM
+  resources and handles requests from TSP's both local and remote.
+
+  B) The TSP shared library - The TSP (TCG Service Provider) is a shared library
+  that enables applications to talk to TCSD's both locally and remotely. The TSP
+  also manages resources used in commicating with the application and the TCSD
+  and transparently contacts the TCSD whenever necessary
+
+  C) Persistant storage files - TSS's have 2 different kinds of 'persistant'
+  storage. 'User' persistant storage has the lifetime of that of the application
+  using it (not very persistent, IMO) and therefore is destroyed when an application
+  exits.  User PS is controlled by the TSP of the application.  'System' persistent
+  storage is controlled by the TCS and stays valid across application lifetimes, TCSD
+  restarts and system resets. Data registered in system PS stays valid until an
+  application requests that it be removed. User PS files are by default stored as
+  /var/tpm/user.{pid} and the system PS file by default is /var/tpm/system.data. The
+  system PS file is initially created when ownership of the TPM is first taken.
+
+  D) A config file. By default located in $prefix/etc/tcsd.conf.
+
+BUILD REQUIREMENTS
+
+  Currently this software is BETA quality and will build, however it is not
+fully functional.
+
+  Packages needed to build:
+
+  automake
+  autoconf
+  pkgconfig
+  gtk2-devel
+  openssl-0.9.7 or newer
+  openssl-devel-0.9.7 or newer
+  pthreads library (glibc-devel)
+
+BUILDING the TSS
+
+  To build:
+
+  $ sh bootstrap.sh
+  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] [--enable-gcov]
+  $ make
+  $ make install
+
+  By default the build will place everything in /usr/local. To install in a
+slightly more predictable place, user `./configure --prefix=/usr`.
+
+RUNNING the TSS
+
+  Before running your app:
+  1) Create the device file for your tpm
+  # /bin/mknod /dev/tpm c 10 224
+  2) Change the device settings:
+  # chown tss.tss /dev/tpm
+  # chmod 0600 /dev/tpm
+  3) load the tpm device driver:
+  # modprobe tpm
+  4) start the TCS Core Services daemon, by default /usr/local/sbin/tcsd.
+  # startproc -u tss /usr/local/sbin/tcsd
+
+  At this point your apps should be ready to run!
+
+  'make install' will run ldconfig, but if /usr/local/lib is not in your
+/etc/ld.so.conf, this won't make a difference. You may need to manually
+add it and run ldconfig as root to allow your apps to link at run time
+to libtspi.so.
+
+BUILDING a TSS RPM
+
+ # sh bootstrap.sh
+ # ./configure --prefix=/usr
+ # cd ..
+ # mv trousers trousers-${version}
+ # tar zcvf /usr/src/packages/SOURCES/trousers-${version}.tar.gz trousers-${version}
+ # rpmbuild -bb trousers-${version}/dist/trousers.spec
+
+EOF
+

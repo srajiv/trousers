@@ -1,0 +1,32 @@
+
+/*
+ * Licensed Materials - Property of IBM
+ *
+ * trousers - An open source TCG Software Stack
+ *
+ * (C) Copyright International Business Machines Corp. 2004
+ *
+ */
+
+#ifndef _IMAEM_H_
+#define _IMAEM_H_
+
+int ima_open(void *, int *);
+TSS_RESULT ima_get_entries_by_pcr(int, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT ima_get_entry(int, UINT32, UINT32 *, TSS_PCR_EVENT **);
+int ima_close(int);
+
+extern struct ext_log_source ima_source;
+
+/* this should be large if we're reading out of /proc */
+#define IMA_READ_SIZE	4096
+
+/*  4 bytes binary         [PCR  value]
+ * 20 bytes binary         [SHA1 value]
+ * 40 bytes of ascii (MAX) [event name]
+ * 1  byte -> '\n'         [separator ]
+ */
+#define IMA_MIN_EVENT_SIZE 26
+#define IMA_MAX_EVENT_SIZE 65
+
+#endif

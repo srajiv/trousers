@@ -1,0 +1,24 @@
+
+Tspi_TPM_GetEvents
+
+  Events in the TCS event log are 0 indexed.  So, a call such as:
+
+	UINT32 five = 5;
+	Tspi_TPM_GetEvents(hTPM, ulPcrIndex, 1, &five, &prgbPcrEvents);
+
+  will get you 5 events (assuming at least 6 events have happened on the PCR) which
+  will be the 2nd through 6th events on the PCR. (Since the 1st event is at index 0).
+  This is probably what you want:
+
+	UINT32 five = 5;
+	Tspi_TPM_GetEvents(hTPM, ulPcrIndex, 0, &five, &prgbPcrEvents);
+
+
+Tspi_GetAttribData
+
+For an RSA key:
+
+  Unless you create a key object manually of type TSS_KEY_TYPE_LEGACY and set the private
+key yourself, the private key will be inaccessible.  Tspi_GetAttribData() will return
+TSS_E_INVALID_ATTRIB_DATA. This is because the private area of the key and its auth data
+comes back from the chip as a blob of encrypted data.

@@ -1,0 +1,65 @@
+
+#
+# This is the configuration file for the trousers tcsd. (The Trusted Computing
+# Software Stack Core Services Daemon.
+#
+# Defaults are listed below, commented out
+#
+#
+#
+
+# Option: port
+# Values: 1 - 65535
+# Description: The port that the tcsd will listen on.
+#
+# port = 30003
+#
+
+# Option: num_threads
+# Values: 1 - 65535
+# Description: The number of threads that the tcsd will spawn internally.
+#
+# num_threads = 10
+#
+
+# Option: system_ps_file
+# Values: Any absolute directory path
+# Description: Path where the tcsd creates its persistent storage file.
+#
+# system_ps_file = @localstatedir@/tpm/system.data
+#
+
+# Option: firmware_log_file
+# Values: Any absolute directory path
+# Description: Path to the file containing the current firmware PCR event
+#  log data. The interface to this log is usually provided by the TPM
+#  device driver.
+#
+# firmware_log_file = /proc/tpm/firmware_events
+#
+
+# Option: kernel_log_file
+# Values: Any absolute directory path
+# Description: Path to the file containing the current kernel PCR event
+#  log data. By default, this data will be parsed in the format provided
+#  by the Integrity Measurement Architecture LSM.
+#
+# kernel_log_file = /proc/tcg/measurement_events
+#
+
+# Option: firmware_pcrs
+# Values: PCR indices, separated by commas (no whitespace)
+# Description: A list of PCR indices that are manipulated only by the system
+#  firmware and therefore are not extended or logged by the TCSD.
+#
+# firmware_pcrs = 0,1,2,3,4,5,6,7
+#
+
+# Option: kernel_pcrs
+# Values: PCR indices, separated by commas (no whitespace)
+# Description: A list of PCR indices that are manipulated only by the kernel
+#  and therefore are not extended or logged by the TCSD.
+#
+# kernel_pcrs = 10
+#
+

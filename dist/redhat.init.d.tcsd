@@ -1,0 +1,89 @@
+#!/bin/sh
+#
+# tcsd          This shell script takes care of starting and stopping
+#               tcsd (TCG Core Services daemon).
+#
+# chkconfig: 2345 99 10
+# description: TCS(TCG Core Software) daemon is a part of TSS(TCG Software Stack)
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+prog=/usr/sbin/tcsd
+port=30003
+
+if ! [ -e /dev/tpm ]; then 
+  echo "Error: TPM Device Driver is not installed your system?"
+  exit 1
+fi
+
+
+#
+# Try to install TPM driver module...  9/14 SM
+#
+preload_tpm() {
+	lsmod | grep tpm
+	RETVAL=$?
+	if [ $RETVAL -ne 0 ]; then
+		echo "Loading the TPM device driver..."
+		/sbin/modprobe tpm
+	fi
+}
+
+start() {
+	preload_tpm
+        # Start daemon
+        echo -n $"Starting tcsd: "
+        daemon $prog --port=$port $OPTIONS &
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/tcsd
+        return $RETVAL
+}
+
+
+stop() {
+        # Stop daemon
+        echo -n $"Shutting down tcsd: "
+        killproc $prog
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/tcsd
+        return $RETVAL
+}
+
+
+# See how we were called.
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        status tcsd
+        RETVAL=$?
+        ;;
+  restart|reload)
+        stop
+        start
+        RETVAL=$?
+        ;;
+  condrestart)
+        if [ -f /var/lock/subsys/tcsd ]; then
+            stop
+            start
+            RETVAL=$?
+        fi
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|condrestart|status}"
+        exit 1
+esac
+
+exit $RETVAL

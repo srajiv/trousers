@@ -1,0 +1,112 @@
+
+%define name		@PACKAGE@
+%define version		@VERSION@
+%define release		1
+
+# RPM specfile for the trousers project
+
+Name:		%{name}
+Summary:	Implementation of the TCG's Software Stack v1.1 Specification
+Version:	%{version}
+Release:	%{release}
+License:	CPL
+Group:		Productivity/Security
+Source:		%{name}-%{version}.tar.gz
+Url:		http://www.sf.net/projects/trousers
+BuildRoot:	%{_tmppath}/%{name}-%{version}-root
+PreReq:		/usr/sbin/groupadd /usr/sbin/useradd /bin/chown
+Requires:	gtk+ >= 2.0, openssl
+
+%description
+TrouSerS is an implementation of the Trusted Computing Group's Software Stack
+(TSS) specification. You can use TrouSerS to write applications that make use
+of your TPM hardware. TPM hardware can create, store and use RSA keys
+securely (without ever being exposed in memory), verify a platform's software
+state using cryptographic hashes and more.
+
+%package	devel
+Summary:	TrouSerS header files and documentation
+Group:		Productivity/Security
+Requires:	trousers >= 0.1.0
+
+%description	devel
+Header files and man pages for use in creating TSS enabled applications.
+
+%prep
+%setup
+
+%build
+make
+
+%clean
+[ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
+
+%pre
+# add group tss
+/usr/sbin/groupadd tss || {
+	RC=$?
+	case $RC in
+		9) # group 'tss' already exists
+			;;
+		*) # some other error; fail
+			echo "Couldn't create group 'tss'. Exiting."
+			exit $RC;;
+	esac
+}
+# add user tss
+/usr/sbin/useradd -r tss || {
+	RC=$?
+	case $RC in
+		9) # user 'tss' already exists
+			;;
+		*) # some other error; fail
+			echo "Couldn't create user 'tss'. Exiting."
+			exit $RC;;
+	esac
+}
+
+%post
+# create the default location for the persistent store files
+if test -e @localstatedir@/tpm; then
+	mkdir -p @localstatedir@/tpm
+	/bin/chown tss.tss @localstatedir@/tpm
+	/bin/chmod 1777 @localstatedir@/tpm
+fi
+
+# create the device file if it DNE
+if test ! -e /dev/tpm; then
+	/bin/mknod /dev/tpm c 10 224
+fi
+
+# set the device file appropriately
+/bin/chown tss.tss /dev/tpm
+/bin/chmod 0600 /dev/tpm
+
+# chown the daemon
+/bin/chown tss.tss %{_sbindir}/tcsd
+
+/sbin/ldconfig
+
+%install
+# This line keeps build machines from being affected
+[ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
+mkdir -p ${RPM_BUILD_ROOT}
+make install DESTDIR=${RPM_BUILD_ROOT}
+
+%postun
+/sbin/ldconfig
+/usr/sbin/userdel tss
+/usr/sbin/groupdel tss
+
+# The files for the base package, 'trousers'
+%files
+%doc TODO README NICETOHAVES AUTHORS
+%attr(755, tss, tss) %{_sbindir}/tcsd
+%{_libdir}/libtspi.so
+%config %attr(600, tss, tss) %{_sysconfdir}/tcsd.conf
+
+# The files to be used by developers, 'trousers-devel'
+%files		devel
+%{_includedir}/tss/*.h
+%{_mandir}/man3/Tspi_*
+
