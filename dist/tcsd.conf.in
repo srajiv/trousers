@@ -63,3 +63,26 @@
 # kernel_pcrs = 10
 #
 
+# Option: remote_ops
+# Values: TCS operation names, separated by commas (no whitespace)
+# Description: A list of TCS commands which will be allowed to be executed
+#  on this machine's TCSD by TSP's on non-local hosts (over the internet).
+#  By default, access to all operations is denied.
+#
+# possible values = seal - encrypt data bound to PCR values
+#		    unseal - decrypt data bound to PCR values
+#		    registerkey - store keys in system persistent storage [Disk write access!]
+#		    unregisterkey - remove keys from system persistent storage
+#		    loadkey - load a key into the TPM
+#		    createkey - create a key using the TPM
+#		    sign - encrypt data using a private key
+#		    random - generate random numbers
+#		    getcapability - query the TCS/TPM for its capabilities
+#		    unbind - decrypt data
+#		    quote - request a signed blob containing all PCR values
+#		    getpubek - access the TPM's Public EndorsementKey
+#		    getregisteredkeybypublicinfo - Search system persistent storage for a public key
+#
+# remote_ops =
+#
+
