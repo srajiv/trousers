@@ -126,7 +126,7 @@ tcsd_thread_create(int socket, char *hostname)
 	tm->thread_data[thread_num].sock = socket;
 	tm->thread_data[thread_num].context = NULL_TCS_HANDLE;
 	if (hostname != NULL)
-		memcpy(tm->thread_data[thread_num].hostname, hostname, 80);
+		memcpy(tm->thread_data[thread_num].hostname, hostname, strlen(hostname));
 
 #ifdef TCSD_SINGLE_THREAD_DEBUG
 	(void)tcsd_thread_run((void *)(&(tm->thread_data[thread_num])));
