@@ -569,7 +569,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
  * entry from outside a load key path
  */
 TSS_RESULT
-add_mem_cache_entry_lock(TCS_KEY_HANDLE tcs_handle,
+add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 			TCPA_KEY_HANDLE tpm_handle,
 			TCPA_KEY *key_blob)
 {
@@ -577,11 +577,9 @@ add_mem_cache_entry_lock(TCS_KEY_HANDLE tcs_handle,
 
 	/* Make sure the cache doesn't already have an entry for this key */
 	pthread_mutex_lock(&mem_cache_lock);
-
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		if (tcs_handle == tmp->tcs_handle) {
-			pthread_mutex_unlock(&mem_cache_lock);
-			return TSS_SUCCESS;
+			remove_mem_cache_entry(tcs_handle);
 		}
 	}
 	pthread_mutex_unlock(&mem_cache_lock);
@@ -645,24 +643,15 @@ add_mem_cache_entry_lock(TCS_KEY_HANDLE tcs_handle,
 	}
 	entry->blob->encSize = key_blob->encSize;
 
+	memcpy(&entry->uuid, &SRK_UUID, sizeof(TSS_UUID));
+
 	pthread_mutex_lock(&mem_cache_lock);
 	/* add to the front of the list */
 	entry->next = key_mem_cache_head;
 	if (key_mem_cache_head) {
-		/* set the reference count to 0 initially for all keys not being the SRK. Up
-		 * the call chain, a reference to this mem cache entry will be set in the
-		 * context object of the calling context and this reference count will be
-		 * incremented there.
-		 */
-		entry->ref_cnt = 0;
-
 		key_mem_cache_head->prev = entry;
-	} else {
-		/* if we are the SRK, initially set the reference count to 1, so that it is
-		 * never unregistered.
-		 */
-		entry->ref_cnt = 1;
 	}
+	entry->ref_cnt = 1;
 	key_mem_cache_head = entry;
 	pthread_mutex_unlock(&mem_cache_lock);
 
@@ -737,6 +726,9 @@ key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE hContext,
 	pthread_mutex_lock(&mem_cache_lock);
 
 	result = TCSP_LoadKeyByUUID_Internal(hContext, uuid, pInfo, phKeyTCSI);
+
+	LogDebug("Key %s loaded by UUID w/ TCS handle: 0x%x",
+		result ? "NOT" : "successfully", result ? 0 : *phKeyTCSI);
 
 	pthread_mutex_unlock(&mem_cache_lock);
 
@@ -832,14 +824,11 @@ key_mgr_ref_count()
 	pthread_mutex_unlock(&mem_cache_lock);
 }
 
-#if 0
 /* caller must lock the mem cache before calling! */
 TSS_RESULT
 remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *cur;
-
-	pthread_mutex_lock(&mem_cache_lock);
 
 	for (cur = key_mem_cache_head; cur; cur = cur->next) {
 		if (cur->tcs_handle == tcs_handle) {
@@ -855,15 +844,14 @@ remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
 				key_mem_cache_head = cur->next;
 			free(cur);
 
-			pthread_mutex_unlock(&mem_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
 
-	pthread_mutex_unlock(&mem_cache_lock);
 	return TCS_E_FAIL;
 }
 
+#if 0
 TSS_RESULT
 setUuidsByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID *uuid, TSS_UUID *p_uuid)
 {
