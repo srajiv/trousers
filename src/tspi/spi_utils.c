@@ -461,13 +461,12 @@ internal_CopySecrets(TSS_HPOLICY dest, TSS_HPOLICY source)
 	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
 
 	memcpy(tempSecret.secret, &pObj->p.Secret, 20);
-	return internal_SetSecret(dest, pObj->p.SecretMode, 20, tempSecret.secret, FALSE);
+	return internal_SetSecret(dest, pObj->p.SecretMode, 20, tempSecret.secret);
 
 }
 
 TSS_RESULT
-internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data,
-		   BOOL hashSecretForMe)
+internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data)
 {
 	AnObject *object = NULL;
 	TSP_INTERNAL_POLICY_OBJECT *pObj = NULL;
@@ -483,21 +482,25 @@ internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data,
 
 	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
 
-	if (size && data && (mode != TSS_SECRET_MODE_CALLBACK)) {
-		if (hashSecretForMe) {
+	switch (mode) {
+		case TSS_SECRET_MODE_PLAIN:
 			Trspi_Hash(TSS_HASH_SHA1, size, data, (BYTE *)&pObj->p.Secret);
-		} else {
-			if (size != 20)
+			pObj->p.SecretSize = SHA1_HASH_SIZE;
+			break;
+		case TSS_SECRET_MODE_SHA1:
+			if (size != 20) {
 				return TSS_E_BAD_PARAMETER;
+			}
 			memcpy(&pObj->p.Secret, data, size);
-		}
-	} else if (mode == TSS_SECRET_MODE_POPUP) {
-		/* TRUE will force the confirmation of popup entry data dialog to appear */
-		if(popup_GetSecret(TRUE, pObj->p.popupString, &pObj->p.Secret))
-			return TSS_E_INTERNAL_ERROR;
+			pObj->p.SecretSize = SHA1_HASH_SIZE;
+			break;
+		case TSS_SECRET_MODE_POPUP:
+		case TSS_SECRET_MODE_NONE:
+			break;
+		default:
+			return TSS_E_BAD_PARAMETER;
 	}
 	pObj->p.SecretMode = mode;
-	pObj->p.SecretSize = 20;
 
 	return TSS_SUCCESS;
 }

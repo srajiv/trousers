@@ -43,13 +43,9 @@ Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/*  in */
 	    TSS_TSPATTRIB_CONTEXT_SILENT && secretMode == TSS_SECRET_MODE_POPUP)
 		return TSS_E_SILENT_CONTEXT;
 
-	if (secretMode == TSS_SECRET_MODE_SHA1 || secretMode == TSS_SECRET_MODE_NONE) {
-		if ((result = internal_SetSecret(hPolicy, secretMode, ulSecretLength, rgbSecret, FALSE)))
-			return result;
-	} else {
-		if ((result = internal_SetSecret(hPolicy, secretMode, ulSecretLength, rgbSecret, TRUE)))
-			return result;
-	}
+	if ((result = internal_SetSecret(hPolicy, secretMode, ulSecretLength, rgbSecret)))
+		return result;
+
 	return TSS_SUCCESS;
 }
 
