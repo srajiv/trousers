@@ -33,7 +33,7 @@
 #define EVP_SUCCESS 1
 
 TSS_RESULT
-TSS_Hash(UINT32 HashType, UINT32 BufSize, BYTE* Buf, BYTE* Digest)
+Trspi_Hash(UINT32 HashType, UINT32 BufSize, BYTE* Buf, BYTE* Digest)
 {
 	EVP_MD_CTX md_ctx;
 	unsigned int result_size;
@@ -79,7 +79,7 @@ out:
 }
 
 UINT32
-TSS_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE* Secret, UINT32 BufSize, BYTE* Buf, BYTE* hmacOut)
+Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE* Secret, UINT32 BufSize, BYTE* Buf, BYTE* hmacOut)
 {
 	/*HMAC_CTX hmac_ctx;*/
 	const EVP_MD *md;
@@ -105,7 +105,7 @@ out:
 
 /* XXX int set to unsigned int values */
 int
-TSS_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
+Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 		unsigned int dataToEncryptLen,  /* in */
 		unsigned char *encryptedData,   /* out */
 		unsigned int *encryptedDataLen, /* out */
@@ -173,7 +173,7 @@ out:
 }
 
 TSS_RESULT
-TSS_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
+Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 	   unsigned char *pModulus, int iKeyLength,
 	   BYTE *pSignature, UINT32 sig_len)
 {
@@ -231,7 +231,7 @@ out:
  */
 
 TSS_RESULT
-TSS_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
+Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
                        unsigned int dataToEncryptLen,
                        unsigned char *encryptedData,
                        unsigned int *encryptedDataLen,
