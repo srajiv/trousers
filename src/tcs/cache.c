@@ -45,7 +45,11 @@ getNextTcsKeyHandle()
 	TCS_KEY_HANDLE ret;
 
 	pthread_mutex_lock(&tcs_keyhandle_lock);
-	ret = NextTcsKeyHandle++;
+
+	do {
+		ret = NextTcsKeyHandle++;
+	} while (NextTcsKeyHandle == SRK_TPM_HANDLE);
+
 	pthread_mutex_unlock(&tcs_keyhandle_lock);
 
 	return ret;
