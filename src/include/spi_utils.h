@@ -13,6 +13,7 @@
 #define _SPI_UTILS_H_
 
 #include <pthread.h>
+#include <netinet/in.h> // for endian routines
 
 struct key_mem_cache
 {
@@ -99,6 +100,9 @@ short get_port(void);
 
 #define AUTH_RETRY_NANOSECS	500000000
 #define AUTH_RETRY_COUNT	5
+
+#define endian32(x)	htonl(x)
+#define endian16(x)	htons(x)
 
 /*===	Object Stuff */
 void removeObject(UINT32 objectHandle);
