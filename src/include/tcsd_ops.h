@@ -40,6 +40,10 @@
 #define STIRRANDOM			TCSD_ORD_STIRRANDOM
 #define GETCAPABILITY			TCSD_ORD_GETCAPABILITY
 #define READPUBEK			TCSD_ORD_READPUBEK
+#define SELFTESTFULL			TCSD_ORD_SELFTESTFULL
+#define CERTIFYSELFTEST			TCSD_ORD_CERTIFYSELFTEST
+#define CONTINUESELFTEST		TCSD_ORD_CONTINUESELFTEST
+#define GETTESTRESULT			TCSD_ORD_GETTESTRESULT
 /* below this line are ordinals that probably shouldn't be allowed for non-localhosts */
 #if 0
 #define OWNERREADPUBEK			TCSD_ORD_OWNERREADPUBEK
@@ -68,10 +72,6 @@
 #define DIRWRITEAUTH			TCSD_ORD_DIRWRITEAUTH
 #define CREATEMIGRATIONBLOB		TCSD_ORD_CREATEMIGRATIONBLOB
 #define CONVERTMIGRATIONBLOB		TCSD_ORD_CONVERTMIGRATIONBLOB
-#define SELFTESTFULL			TCSD_ORD_SELFTESTFULL
-#define CERTIFYSELFTEST			TCSD_ORD_CERTIFYSELFTEST
-#define CONTINUESELFTEST		TCSD_ORD_CONTINUESELFTEST
-#define GETTESTRESULT			TCSD_ORD_GETTESTRESULT
 #define OWNERSETDISABLE			TCSD_ORD_OWNERSETDISABLE
 #define OWNERCLEAR			TCSD_ORD_OWNERCLEAR
 #define DISABLEOWNERCLEAR		TCSD_ORD_DISABLEOWNERCLEAR
@@ -96,6 +96,7 @@
 #define SUBOP_RANDOM			STIRRANDOM, GETRANDOM
 #define SUBOP_AUTHSESS			OIAP, OSAP, TERMINATEHANDLE
 #define SUBOP_LOADKEYBYUUID		LOADKEYBYUUID, GETREGISTEREDKEYBLOB, FREEMEMORY
+#define SUBOP_SELFTEST			SELFTESTFULL, CERTIFYSELFTEST, CONTINUESELFTEST, GETTESTRESULT 
 
 /* Top level TCSD operations which can be enabled to be used by remote hosts. Each of these
  * should have a corresponding on/off switch in the tcsd.conf file
@@ -113,6 +114,7 @@
 #define TCSD_OP_UNBIND				UNBIND, SUBOP_CONTEXT, SUBOP_AUTHSESS, SUBOP_RANDOM, 0
 #define TCSD_OP_QUOTE				QUOTE, SUBOP_CONTEXT, SUBOP_AUTHSESS, SUBOP_RANDOM, 0
 #define TCSD_OP_READPUBEK			READPUBEK, SUBOP_CONTEXT, SUBOP_AUTHSESS, SUBOP_RANDOM, 0
+#define TCSD_OP_SELFTEST			SUBOP_SELFTEST, SUBOP_CONTEXT, FREEMEMORY, 0
 
 struct tcsd_op {
 	char *name;
@@ -132,6 +134,7 @@ struct tcsd_op tcsd_op_getcapability = {"getcapability", {TCSD_OP_GETCAPABILITY}
 struct tcsd_op tcsd_op_unbind = {"unbind", {TCSD_OP_UNBIND}};
 struct tcsd_op tcsd_op_quote = {"quote", {TCSD_OP_QUOTE}};
 struct tcsd_op tcsd_op_readpubek = {"readpubek", {TCSD_OP_READPUBEK}};
+struct tcsd_op tcsd_op_selftest = {"selftest", {TCSD_OP_SELFTEST}};
 
 struct tcsd_op *tcsd_ops[] = {
 	&tcsd_op_seal,
@@ -147,6 +150,7 @@ struct tcsd_op *tcsd_ops[] = {
 	&tcsd_op_unbind,
 	&tcsd_op_quote,
 	&tcsd_op_readpubek,
+	&tcsd_op_selftest,
 	NULL
 };
 
