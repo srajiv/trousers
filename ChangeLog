@@ -1,4 +1,10 @@
 
+ - Bugfixes
+   - cxt.c: when destroying a context object, release the tcs_ctx_lock before
+     calling ctx_ref_count_keys(). This prevents a deadlock.
+   - added a mutex unlock call for an error path that would have caused a
+     deadlock
+
 * TROUSERS_0_1_6
 
  - Logging functionality changes only, for bug #1106301
