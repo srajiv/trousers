@@ -54,6 +54,7 @@
 
 #define	TSS_KEY_EMPTY_KEY		(0x00020000)	/* no TCPA key template (empty TSP key object) */
 #define	TSS_KEY_TSP_SRK			(0x00040000)	/* use a TCPA SRK template (TSP key object for SRK) */
+/* XXX Where did this symbol come from? */
 #define TSS_KEY_SRK_HANDLE		TSS_KEY_TSP_SRK
 
 #define TSS_KEY_VOLATILE		(0x00080000)
