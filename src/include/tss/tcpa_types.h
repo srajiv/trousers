@@ -146,6 +146,18 @@ typedef struct tdTCPA_VERSION {
 	BYTE revMinor;
 } TCPA_VERSION;
 
+/* XXX 1.2 */
+
+#define TPM_VERSION_BYTE	BYTE
+typedef struct tdTPM_VERSION {
+	TPM_VERSION_BYTE major;
+	TPM_VERSION_BYTE minor;
+	BYTE revMajor;
+	BYTE revMinor;
+} TPM_VERSION;
+
+/* XXX end 1.2 */
+
 typedef struct tdTCPA_KEY_HANDLE_LIST {
 	UINT16 loaded;
 	TCPA_KEY_HANDLE *handle;
