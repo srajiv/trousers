@@ -94,8 +94,7 @@ policy_UsesAuth(TSS_HPOLICY hPolicy, BOOL * ret)
 	 * to use auth on (TPM, Key, Encrypted Data), since the default is TRUE.
 	 */
 
-	AnObject *index, *object;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
+	AnObject *index;
 
 	LogDebug1("Checking if policy uses auth");
 	for (index = (AnObject *) objectList; index; next(index)) {
@@ -168,7 +167,7 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 	TSS_RESULT result;
 	TCPA_SECRET secret;
 
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TSP_INTERNAL_POLICY_OBJECT *policyObject;
 	AnObject *object;
 	BOOL bExpired;
@@ -196,8 +195,8 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 		return TSS_SUCCESS;
 	}
 
-	hContext = obj_getTcsContext(hPolicy);
-	if (hContext == 0)
+	tcsContext = obj_getTcsContext(hPolicy);
+	if (tcsContext == NULL_HCONTEXT)
 		return TSS_E_INVALID_HANDLE;
 
 	/* ---  This validates that the secret can be used */
@@ -208,11 +207,11 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 		return TSS_E_INVALID_OBJ_ACCESS;
 
 	/* ---  OIAP */
-	if ((result = Init_AuthNonce(hContext, auth)))
+	if ((result = Init_AuthNonce(tcsContext, auth)))
 		return result;
 
 	/* added retry logic */
-	if ((result = TCSP_OIAP(hContext, &auth->AuthHandle, &auth->NonceEven))) {
+	if ((result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven))) {
 		if (result == TCPA_RESOURCES) {
 			int retry = 0;
 			do {
@@ -221,7 +220,7 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 
 				nanosleep(&t, NULL);
 
-				result = TCSP_OIAP(hContext, &auth->AuthHandle, &auth->NonceEven);
+				result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven);
 			} while (result == TCPA_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
@@ -265,7 +264,7 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 	}
 
 	if (result) {
-		TCSP_TerminateHandle(hContext, auth->AuthHandle);
+		TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
 		return result;
 	}
 
@@ -283,7 +282,7 @@ secret_ValidateAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH *
 	BOOL useAuth;
 
 	object = getAnObjectByHandle(hPolicy);
-	if (object == 0)
+	if (object == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->memPointer == NULL) {
 		LogError("mem pointer for policy object 0x%x is NULL", hPolicy);
@@ -355,13 +354,13 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 /* 	TCPA_SECRET encSecret; */
 	TCPA_SECRET usageSecret;
 	TCPA_SECRET migSecret;
-	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
+	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
 
-	if (hContext == 0)
+	if (tcsContext == NULL_HCONTEXT)
 		return TSS_E_INVALID_HANDLE;
 
 	object = getAnObjectByHandle(hPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -369,7 +368,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	keyPolicyObject = object->memPointer;
 
 	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -380,7 +379,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 /* 		return result; */
 
 	object = getAnObjectByHandle(hMigrationPolicy);
-	if (object == 0)
+	if (object == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -466,14 +465,14 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			return TSS_E_POLICY_NO_SECRET;
 		}
 
-		if ((result = OSAP_Calc(hContext, osapType, osapData, keySecret.secret,	/* wrap policy- usage */
+		if ((result = OSAP_Calc(tcsContext, osapType, osapData, keySecret.secret,	/* wrap policy- usage */
 				       usageSecret.secret,	/* encSecret.secret,    //key policy - usage */
 				       migSecret.secret,	/* encSecret.secret,    //key policy - migration */
 				       encAuthUsage, encAuthMig, sharedSecret, auth)))
 			return result;
 	} else if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
 		/* call osap here */
-		if ((result = TCSP_OSAP(hContext, osapType, osapData, auth->NonceOdd,
+		if ((result = TCSP_OSAP(tcsContext, osapType, osapData, auth->NonceOdd,
 				  &auth->AuthHandle, &auth->NonceEven, nonceEvenOSAP)))
 			return result;
 
@@ -506,13 +505,13 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	AnObject *object;
 
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
+	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
 
-	if (hContext == 0)
+	if (tcsContext == NULL_HCONTEXT)
 		return TSS_E_INVALID_HANDLE;
 
 	object = getAnObjectByHandle(hPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -520,7 +519,7 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	keyPolicyObject = object->memPointer;
 
 	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -528,7 +527,7 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	usagePolicyObject = object->memPointer;
 
 	object = getAnObjectByHandle(hMigPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -604,13 +603,13 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	AnObject *object;
 
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE hContext = obj_getTcsContext(hPolicy);
+	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
 
-	if (hContext == 0)
+	if (tcsContext == NULL_HCONTEXT)
 		return TSS_E_INVALID_HANDLE;
 
 	object = getAnObjectByHandle(hPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -618,7 +617,7 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	keyPolicyObject = object->memPointer;
 
 	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -626,7 +625,7 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	usagePolicyObject = object->memPointer;
 
 	object = getAnObjectByHandle(hMigPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
 		return TSS_E_INVALID_HANDLE;
@@ -694,10 +693,12 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	AnObject *anObject;
 	TSP_INTERNAL_POLICY_OBJECT *ownerPolicy;
 	TSP_INTERNAL_POLICY_OBJECT *srkPolicy;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 
-	hContext = obj_getTcsContext(hTPM);
-	if (hContext == 0)
+	tcsContext = obj_getTcsContext(hTPM);
+	tspContext = obj_getTspContext(hTPM);
+	if (tcsContext == NULL_HCONTEXT || tspContext == NULL_HCONTEXT)
 		return TSS_E_INVALID_HANDLE;
 
 	/*************************************************
@@ -743,7 +744,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 		/* ---  now stick it in a Key Structure */
 		offset = 0;
-		UnloadBlob_KEY(hContext, &offset, endorsementKey, &dummyKey);
+		UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
 
 		/* ---  Now get the secrets */
 		if (ownerPolicy->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
@@ -774,8 +775,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		if ((rc = Tspi_TPM_GetRandom(hTPM, 20, &random)))
 			return rc;
 		memcpy(randomSeed, random, 20);
-/* 		free( random ); */
-		try_FreeMemory(random);
+		free_tspi(tspContext, random);
 
 		TSS_RSA_Encrypt(ownerSecret.secret,
 				       20,	/* sizeof(tpmObject->ownerAuth), //dataToEncryptLen,  //in */
@@ -789,8 +789,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 			return rc;
 
 		memcpy(randomSeed, random, 20);
-/* 		free( random ); */
-		try_FreeMemory(random);
+		free_tspi(tspContext, random);
 
 		TSS_RSA_Encrypt(srkSecret.secret,
 				       20,	/* sizeof(tpmObject->SRKAuth), //dataToEncryptLen,  //in */

@@ -182,12 +182,12 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 }
 
 TSS_RESULT
-Atmel_Tspi_GetState(TSS_HCONTEXT hContext, BYTE stateID, UINT32 * sizeState, BYTE ** stateValue)
+Atmel_Tspi_GetState(TSS_HCONTEXT tspContext, BYTE stateID, UINT32 * sizeState, BYTE ** stateValue)
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	if ((result = obj_isConnected_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(tspContext, &tcsContext)))
 		return result;
 
 	return Atmel_TPM_GetState(tcsContext, stateID, sizeState, stateValue);
@@ -204,7 +204,7 @@ Atmel_Tspi_GetState(TSS_HCONTEXT hContext, BYTE stateID, UINT32 * sizeState, BYT
 
 BOOL firstVendorCheck = 1;
 UINT32
-internal_getChipVendor(TSS_HCONTEXT hContext)
+internal_getChipVendor(TSS_HCONTEXT tspContext)
 {
 	static UINT16 vendor;
 	UINT32 respSize;
@@ -216,7 +216,7 @@ internal_getChipVendor(TSS_HCONTEXT hContext)
 	if (firstVendorCheck == 0)
 		return vendor;
 
-	if ((result = obj_isConnected_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(tspContext, &tcsContext)))
 		return result;
 
 	UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, subCap);
@@ -232,7 +232,7 @@ internal_getChipVendor(TSS_HCONTEXT hContext)
 	else
 		vendor = CHIP_VENDOR_UNKNOWN;
 
-	TCS_FreeMemory(tcsContext, resp);
+	free(resp);
 
 	firstVendorCheck = 0;
 	return vendor;
@@ -240,7 +240,7 @@ internal_getChipVendor(TSS_HCONTEXT hContext)
 
 BOOL firstTCSVendorCheck = 1;
 UINT32
-internal_getTCSVendor(TSS_HCONTEXT hContext)
+internal_getTCSVendor(TSS_HCONTEXT tspContext)
 {
 	static UINT16 vendor;
 	UINT32 respSize;
@@ -256,7 +256,7 @@ internal_getTCSVendor(TSS_HCONTEXT hContext)
 		return vendor;
 	}
 
-	if ((result = obj_isConnected_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(tspContext, &tcsContext)))
 		return result;
 
 /* 	UINT32ToArray( TSS_TCSCAP_MANUFACTURER, subCap ); */
@@ -272,7 +272,7 @@ internal_getTCSVendor(TSS_HCONTEXT hContext)
 		vendor = TCS_VENDOR_UNKNOWN;
 	}
 
-	TCS_FreeMemory(tcsContext, resp);
+	free(resp);
 
 	firstTCSVendorCheck = 0;
 	LogDebug1("Leaving TCS Vendor check");
@@ -289,7 +289,7 @@ ConvertLib_UINT32ToArray(UINT32 in, BYTE * out)
 
 /* ---	Call this to see if the chip has an owner */
 TSS_RESULT
-IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT hContext, BOOL * hasOwner)
+IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, BOOL * hasOwner)
 {
 /* 	UINT32 keySize; */
 /* 	BYTE*	keyBlob; */
@@ -300,10 +300,10 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT hContext, BOOL * hasOwner)
 	TCPA_NONCE nonce0 = { { 0 } }, nonce1 = { { 0 } };
 	UINT32 vendor;
 
-	if (internal_getTCSVendor(hContext) != TCS_VENDOR_IBM)
+	if (internal_getTCSVendor(tspContext) != TCS_VENDOR_IBM)
 		return TSS_E_NOTIMPL;
 
-	if ((result = obj_isConnected_1(hContext, &tcsContext)))
+	if ((result = obj_isConnected_1(tspContext, &tcsContext)))
 		return result;
 
 	/* ---  First check for an owner in the chip */
@@ -316,8 +316,8 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT hContext, BOOL * hasOwner)
 	 *		there is no owner, otherwise AUTHFAIL will be thrown.
 	 ************************************/
 
-	vendor = internal_getChipVendor(hContext);
-/* 	if( internal_getChipVendor( hContext ) == CHIP_VENDOR_ATMEL ) */
+	vendor = internal_getChipVendor(tspContext);
+/* 	if( internal_getChipVendor( tspContext ) == CHIP_VENDOR_ATMEL ) */
 	if (vendor == CHIP_VENDOR_ATMEL) {
 		result =
 		    TCSP_OSAP(tcsContext, TCPA_ET_KEYHANDLE, 0x40000000, nonce0,
@@ -343,7 +343,7 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT hContext, BOOL * hasOwner)
 		    TCSP_OSAP(tcsContext, TCPA_ET_KEYHANDLE, 0x40000000, nonce0,
 			      &authHandle, &nonce1, &nonce1);
 
-		if (result == 0) {
+		if (result == TSS_SUCCESS) {
 			TCSP_TerminateHandle(tcsContext, authHandle);
 			*hasOwner = TRUE;
 		} else if (result == 0x15) {	/* no handles but passed */
@@ -369,32 +369,32 @@ IBM_Tspi_CheckSystemStorage(TSS_HKEY hSRK)
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 /* 	TSS_HKEY hSRK; */
-	TSS_HCONTEXT hContext;
+	TSS_HCONTEXT tspContext;
 /* 	TCPA_KEY keyContainer; */
 /* 	UINT16 offset; */
 
 	if ((result = obj_isConnected_1(hSRK, &tcsContext)))
 		return result;
 
-	if ((hContext = obj_getTspContext(tcsContext)) == 0)
+	if ((tspContext = obj_getTspContext(hSRK)) == NULL_HCONTEXT)
 		return TSS_E_INTERNAL_ERROR;
 
-	if (internal_getTCSVendor(hContext) != TCS_VENDOR_IBM)
+	if (internal_getTCSVendor(tspContext) != TCS_VENDOR_IBM)
 		return TSS_E_INTERNAL_ERROR;
 
 	/* ---  Try to get the SRK info out of the TCS keyfile */
 	result = TCS_GetRegisteredKeyBlob(tcsContext, SRK_UUID, &keySize, &keyBlob);
-	TCS_FreeMemory(tcsContext, keyBlob);
+	free(keyBlob);
 
 	/* ---  If failed NOT_REGISTERED, then read the info and register it */
 	if (result) {		/* == TCS_E_KEY_NOT_REGISTERED ) */
 		if ((result = Tspi_Key_GetPubKey(hSRK, &keySize, &keyBlob)))
 			return result;
 
-		TCS_FreeMemory(tcsContext, keyBlob);
+		free(keyBlob);
 
 		/* ---  Forget this now because IBM tcs registers it on getPubKey */
-/* 		if( result = Tspi_Context_RegisterKey( hContext, hSRK, TSS_PS_TYPE_SYSTEM, SRK_UUID, TSS_PS_TYPE_SYSTEM, SRK_UUID )) */
+/* 		if( result = Tspi_Context_RegisterKey( tspContext, hSRK, TSS_PS_TYPE_SYSTEM, SRK_UUID, TSS_PS_TYPE_SYSTEM, SRK_UUID )) */
 /* 			return result; */
 
 	}

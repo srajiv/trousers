@@ -26,22 +26,14 @@ Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/*  in */
     )
 {
 	TSS_RESULT result;
-	//TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	AnObject *anObject;
 
 	if ((result = obj_checkType_1(hPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
-#if 0
-	/* No reason to be connected to set an attribute of an object */
-	if ((result = internal_CheckContext_1(hPolicy, &tcsContext)))
-		return result;
-
-	if ((result = internal_GetContextObjectForContext(tcsContext, &tspContext)))
-		return result;
-#endif
-	tspContext = obj_getTspContext(hPolicy);
+	if ((tspContext = obj_getTspContext(hPolicy)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	anObject = getAnObjectByHandle(tspContext);
 	if (anObject == NULL || anObject->memPointer == NULL)
@@ -87,7 +79,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 		return result;
 
 	object = getAnObjectByHandle(hPolicy);
-	if (object == 0 || object->memPointer == NULL)
+	if (object == NULL || object->memPointer == NULL)
 		return TSS_E_INVALID_HANDLE;
 
 	policyObject = &((TSP_INTERNAL_POLICY_OBJECT *)object->memPointer)->p;
@@ -105,7 +97,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 	case TSS_OBJECT_TYPE_RSAKEY:
 
 		object = getAnObjectByHandle(hObject);
-		if (object == 0)
+		if (object == NULL)
 			return TSS_E_INVALID_HANDLE;
 		if (object->memPointer == NULL) {
 			LogError("internal object pointer for handle 0x%x not found!", hObject);
@@ -124,7 +116,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 		break;
 	case TSS_OBJECT_TYPE_TPM:
 		object = getAnObjectByHandle(hObject);
-		if (object == 0)
+		if (object == NULL)
 			return TSS_E_INVALID_HANDLE;
 		if (object->memPointer == NULL) {
 			LogError("internal object pointer for handle 0x%x not found!", hObject);
@@ -137,7 +129,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 
 		object = getAnObjectByHandle(hObject);
 
-		if (object == 0)
+		if (object == NULL)
 			return TSS_E_INVALID_HANDLE;
 		if (object->memPointer == NULL) {
 			LogError("internal object pointer for handle 0x%x not found!", hObject);

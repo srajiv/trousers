@@ -21,77 +21,79 @@
 #include "log.h"
 
 /* caller needs to lock memtable lock */
-ContextMemSlot *
-getContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
+struct memTable *
+getTable(TSS_HCONTEXT tspContext)
 {
-	ContextMemSlot *index;
+	struct memTable *tmp;
 
-	for (index = SpiMemoryTable; index; index = index->next)
-		if (index->tcsContext == tcsContext)
-			return index;
+	for (tmp = SpiMemoryTable; tmp; tmp = tmp->nextTable)
+		if (tmp->tspContext == tspContext)
+			return tmp;
 
 	return NULL;
 }
 
 /* caller needs to lock memtable lock and be sure the context mem slot for
- * @tcsContext exists before calling.
+ * @tspContext exists before calling.
  */
 void
-concatMemSlot(TCS_CONTEXT_HANDLE tcsContext, MemSlot *new)
+addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
 {
-	ContextMemSlot *tmp = getContextMemSlot(tcsContext);
-	MemSlot *tmp_slot = tmp->memSlots;
+	struct memTable *tmp = getTable(tspContext);
+	struct memEntry *tmp_entry = tmp->entries;
 
-	if (tmp->memSlots == NULL) {
-		tmp->memSlots = new;
+	if (tmp->entries == NULL) {
+		tmp->entries = new;
 		return;
 	}
 
 	/* else tack @new onto the end */
-	for (; tmp_slot; tmp_slot = tmp_slot->next)
-		if (tmp_slot->next == NULL) {
-			tmp_slot->next = new;
+	for (; tmp_entry; tmp_entry = tmp_entry->nextEntry)
+		if (tmp_entry->nextEntry == NULL) {
+			tmp_entry->nextEntry = new;
 			break;
 		}
 }
 
 /* caller needs to lock memtable lock */
 void
-concatContextMemSlot(ContextMemSlot *new)
+addTable(struct memTable *new)
 {
-	ContextMemSlot *tmp = SpiMemoryTable;
+	struct memTable *tmp = SpiMemoryTable;
 
+	/* base case, this is the first table */
 	if (SpiMemoryTable == NULL) {
 		SpiMemoryTable = new;
 		return;
 	}
 
-	/* else tack @new onto the end */
-	for (; tmp; tmp = tmp->next)
-		if (tmp->next == NULL) {
-			tmp->next = new;
+	/* else add @new onto the end */
+	for (; tmp; tmp = tmp->nextTable)
+		if (tmp->nextTable == NULL) {
+			tmp->nextTable = new;
 			break;
 		}
 }
 
 /* caller needs to lock memtable lock */
 TSS_RESULT
-freeContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
+freeTable(TSS_HCONTEXT tspContext)
 {
-	ContextMemSlot *prev = NULL, *index, *next;
-	MemSlot *ms_index, *ms_next;
+	struct memTable *prev = NULL, *index, *next;
+	struct memEntry *entry, *entry_next;
 
-	for(index = SpiMemoryTable; index; index = index->next) {
-		next = index->next;
-		if (index->tcsContext == tcsContext) {
-			for (ms_index = index->memSlots; ms_index; ms_index = ms_next) {
-				ms_next = ms_index->next;
-				free(ms_index->memPointer);
-				free(ms_index);
+	for(index = SpiMemoryTable; index; index = index->nextTable) {
+		next = index->nextTable;
+		if (index->tspContext == tspContext) {
+			for (entry = index->entries; entry; entry = entry_next) {
+				/* this needs to be set before we do free(entry) */
+				entry_next = entry->nextEntry;
+				free(entry->memPointer);
+				free(entry);
 			}
 
 			if (prev != NULL)
-				prev->next = next;
+				prev->nextTable = next;
 			else
 				SpiMemoryTable = NULL;
 
@@ -105,21 +107,22 @@ freeContextMemSlot(TCS_CONTEXT_HANDLE tcsContext)
 }
 
 TSS_RESULT
-removeMemSlotByPointer(ContextMemSlot *cms, void *pointer)
+freeEntry(struct memTable *table, void *pointer)
 {
-	MemSlot *index;
-	MemSlot *prev = NULL;
-	MemSlot *toKill;
+	struct memEntry *index;
+	struct memEntry *prev = NULL;
+	struct memEntry *toKill;
 
-	for (index = cms->memSlots; index; prev = index, next(index)) {
+	for (index = table->entries; index; prev = index, index = index->nextEntry) {
 		if (index->memPointer == pointer) {
 			toKill = index;
 			if (prev == NULL)
-				cms->memSlots = toKill->next;
+				table->entries = toKill->nextEntry;
 			else
-				prev->next = toKill->next;
-			try_FreeMemory(pointer);
-			try_FreeMemory(toKill);
+				prev->nextEntry = toKill->nextEntry;
+
+			free(pointer);
+			free(toKill);
 			return TSS_SUCCESS;
 
 		}
@@ -134,30 +137,43 @@ removeMemSlotByPointer(ContextMemSlot *cms, void *pointer)
  * is done here.
  */
 void *
-calloc_tspi(TCS_CONTEXT_HANDLE tcsContext, UINT32 howMuch)
+calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 {
 
-	ContextMemSlot *ctx_slot;
-	MemSlot *newSlot;
+	struct memTable *table;
+	struct memEntry *newEntry;
+
+#ifdef TSS_DEBUG
+	if (tspContext != obj_getTspContext(tspContext) || tspContext == NULL_HCONTEXT)
+		LogError("********** %s called with bad context! ************", __FUNCTION__);
+#endif
 
 	pthread_mutex_lock(&memtable_lock);
 
-	ctx_slot = getContextMemSlot(tcsContext);
-	if (ctx_slot == NULL) {
+	table = getTable(tspContext);
+	if (table == NULL) {
 		/* no table has yet been created to hold the memory allocations of
 		 * this context, so we need to create one
 		 */
-		ctx_slot = calloc(1, sizeof(ContextMemSlot));
-		if (ctx_slot == NULL) {
+		table = calloc(1, sizeof(struct memTable));
+		if (table == NULL) {
+			LogError("malloc of %d bytes failed.", sizeof(struct memTable));
 			pthread_mutex_unlock(&memtable_lock);
 			return NULL;
 		}
-		ctx_slot->tcsContext = tcsContext;
-		concatContextMemSlot(ctx_slot);
+		table->tspContext = tspContext;
+		addTable(table);
 	}
-	newSlot = calloc(1, sizeof(MemSlot));
-	newSlot->memPointer = calloc(1, howMuch);
-	if (newSlot->memPointer == NULL) {
+
+	newEntry = calloc(1, sizeof(struct memEntry));
+	if (newEntry == NULL) {
+		LogError("malloc of %d bytes failed.", sizeof(struct memEntry));
+		pthread_mutex_unlock(&memtable_lock);
+		return NULL;
+	}
+
+	newEntry->memPointer = calloc(1, howMuch);
+	if (newEntry->memPointer == NULL) {
 		LogError("malloc of %d bytes failed.", howMuch);
 		pthread_mutex_unlock(&memtable_lock);
 		return NULL;
@@ -166,11 +182,11 @@ calloc_tspi(TCS_CONTEXT_HANDLE tcsContext, UINT32 howMuch)
 	/* this call must happen inside the lock or else another thread could
 	 * remove the context mem slot, causing a segfault
 	 */
-	concatMemSlot(tcsContext, newSlot);
+	addEntry(tspContext, newEntry);
 
 	pthread_mutex_unlock(&memtable_lock);
 
-	return newSlot->memPointer;
+	return newEntry->memPointer;
 }
 
 /*
@@ -178,26 +194,31 @@ calloc_tspi(TCS_CONTEXT_HANDLE tcsContext, UINT32 howMuch)
  * is done here.
  */
 TSS_RESULT
-free_tspi(TCS_CONTEXT_HANDLE tcsContext, void *memPointer)
+free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 {
-	ContextMemSlot *index;
+	struct memTable *index;
 	TSS_RESULT result;
 
+#ifdef TSS_DEBUG
+	if (tspContext != obj_getTspContext(tspContext) || tspContext == NULL_HCONTEXT)
+		LogError("********** %s called with bad context! ************", __FUNCTION__);
+#endif
 	pthread_mutex_lock(&memtable_lock);
 
 	if (memPointer == NULL) {
-		result = freeContextMemSlot(tcsContext);
+		result = freeTable(tspContext);
 		pthread_mutex_unlock(&memtable_lock);
 		return result;
 	}
 
-	index = getContextMemSlot(tcsContext);
+	index = getTable(tspContext);
 	if (index == NULL) {
 		pthread_mutex_unlock(&memtable_lock);
 		return TSS_E_INVALID_HANDLE;
 	}
 
-	if ((result = removeMemSlotByPointer(index, memPointer))) {
+	/* just free one entry */
+	if ((result = freeEntry(index, memPointer))) {
 		pthread_mutex_unlock(&memtable_lock);
 		return result;
 	}
@@ -206,22 +227,3 @@ free_tspi(TCS_CONTEXT_HANDLE tcsContext, void *memPointer)
 
 	return TSS_SUCCESS;
 }
-
-#if 0
-BOOL
-isThisPointerSPI(TCS_CONTEXT_HANDLE tcsContext, void *memPointer)
-{
-	ContextMemSlot *index;
-	MemSlot *memSlot;
-
-	index = getContextMemSlotByContext(tcsContext);
-	if (index == NULL)
-		return FALSE;
-
-	for (memSlot = index->memSlots; memSlot; next(memSlot))
-		if (memSlot->memPointer == memPointer)
-			return TRUE;
-
-	return FALSE;
-}
-#endif

@@ -37,7 +37,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 	BYTE bdblob[256];
 	TCPA_RESULT result;
 	TCPA_KEY keyContainer;
-	TCS_CONTEXT_HANDLE hContext;
+	TSS_HCONTEXT tspContext;
 #if 0
 	TCPA_NONCE randomSeed;
 	BYTE seed[260];		/* RCC - Fixed to match the 13*20 for loop below */
@@ -54,6 +54,9 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 					TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
+	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
+
 	if ((result = obj_checkSession_2(hEncData, hEncKey)))
 		return result;
 
@@ -62,12 +65,11 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	offset = 0;
-	if ((result = UnloadBlob_KEY(hContext, &offset, keyData, &keyContainer)))
+	if ((result = UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer)))
 		return result;
 
 	if (keyContainer.keyUsage != TSS_KEYUSAGE_BIND &&
 		keyContainer.keyUsage != TSS_KEYUSAGE_LEGACY) {
-		destroy_key_refs(&keyContainer);
 		return TSS_E_INVALID_KEYUSAGE;
 	}
 
@@ -80,18 +82,16 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 						   &encDataLength,
 						   keyContainer.pubKey.key,
 						   keyContainer.pubKey.keyLength))) {
-			destroy_key_refs(&keyContainer);
 			return result;
 		}
 	} else if (keyContainer.algorithmParms.encScheme == TSS_ES_RSAESPKCSV15
 		   && keyContainer.keyUsage == TSS_KEYUSAGE_BIND) {
 		boundData.payload = TCPA_PT_BIND;
 
-		memcpy(&boundData.ver, getCurrentVersion(hContext), sizeof (TCPA_VERSION));
+		memcpy(&boundData.ver, getCurrentVersion(tspContext), sizeof (TCPA_VERSION));
 
 		boundData.payloadData = malloc(ulDataLength);
 		if (boundData.payloadData == NULL) {
-			destroy_key_refs(&keyContainer);
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
@@ -105,21 +105,17 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 							   &encDataLength,
 							   keyContainer.pubKey.key,
 							   keyContainer.pubKey.keyLength))) {
-			destroy_key_refs(&keyContainer);
 			return result;
 		}
-		/*                free( boundData.payloadData ); */
-		/* #endif */
-		try_FreeMemory(boundData.payloadData);
+		free(boundData.payloadData);
 	} else {
 		boundData.payload = TCPA_PT_BIND;
 
-		memcpy(&boundData.ver, getCurrentVersion(hContext), sizeof (TCPA_VERSION));
+		memcpy(&boundData.ver, getCurrentVersion(tspContext), sizeof (TCPA_VERSION));
 
 		boundData.payloadData = malloc(ulDataLength);
 		if (boundData.payloadData == NULL) {
 			LogError("malloc of %d bytes failed.", ulDataLength);
-			destroy_key_refs(&keyContainer);
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
@@ -144,12 +140,11 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 					    keyContainer.pubKey.key,	/* keyObject->tcpa_key.pubKey.key, */
 					    keyContainer.pubKey.keyLength/* keyObject->tcpa_key.pubKey.keyLength, */
 		    ))) {
-			destroy_key_refs(&keyContainer);
 			return result;
 		}
 #endif
 
-		try_FreeMemory(boundData.payloadData);
+		free(boundData.payloadData);
 	}
 
 	if ((result = Tspi_SetAttribData(hEncData,
@@ -177,7 +172,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 	TSS_HPOLICY hPolicy;
 	BYTE *encData;
 	UINT32 encDataSize;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	BYTE hashBlob[1024];
 	TCS_KEY_HANDLE tcsKeyHandle;
 	BOOL usesAuth;
@@ -193,7 +188,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 					TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = obj_isConnected_2(hEncData, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hEncData, hKey, &tcsContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -227,7 +222,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_UnBind(hContext, tcsKeyHandle,	/* hKey, //keyHandle,              */
+	if ((result = TCSP_UnBind(tcsContext, tcsKeyHandle,	/* hKey, //keyHandle,              */
 				 encDataSize,	/* encObject->encryptedDataLength,  */
 				 encData,	/* encObject->encryptedData,  */
 				 pPrivAuth,	/* &privAuth, */
@@ -265,7 +260,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	TCPA_ENCAUTH encAuthMig;
 	TCPA_DIGEST digest;
 	TCPA_RESULT rc;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	BYTE *encData = NULL;
 	UINT32 encDataSize;
@@ -279,6 +274,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	BOOL useAuth;
 	TCS_AUTH *pAuth;
 	TCPA_DIGEST digAtCreation;
+	TSS_HCONTEXT tspContext;
 
 	if (rgbDataToSeal == NULL)
 		return TSS_E_BAD_PARAMETER;
@@ -289,11 +285,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 					       TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return rc; */
 
+		if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
+			return TSS_E_INTERNAL_ERROR;
+
 		if (hPcrComposite == 0) {
-			if ((rc = obj_isConnected_2(hEncData, hEncData, &hContext)))
+			if ((rc = obj_isConnected_2(hEncData, hEncData, &tcsContext)))
 				break;	/* return rc; */
 		} else {
-			if ((rc = obj_isConnected_3(hEncData, hEncData, hPcrComposite, &hContext)))
+			if ((rc = obj_isConnected_3(hEncData, hEncData, hPcrComposite, &tcsContext)))
 				break;	/* return rc; */
 		}
 
@@ -333,7 +332,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 			return TSS_E_INVALID_HANDLE;
 		pcrObject = anObject->memPointer;
 
-		if ((rc = generateCompositeFromTPM(anObject->tcsContext, pcrObject->select, &digAtCreation)))
+		if ((rc = generateCompositeFromTPM(tcsContext, pcrObject->select, &digAtCreation)))
 			return rc;
 /* 		memcpy( pcrObject->digAtRelease.digest, pcrObject->compositeHash.digest, 20 ); */
 
@@ -371,7 +370,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 				    sharedSecret, &auth, digest.digest, nonceEvenOSAP)))
 		return rc;
 
-	if ((rc = TCSP_Seal(hContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
+	if ((rc = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
 				pcrData, ulDataLength, rgbDataToSeal, pAuth,
 				&encDataSize, &encData)))
 		return rc;
@@ -400,7 +399,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	offset = 0;
 	if (pcrDataSize) {
 /* 			UnloadBlob_PCR_COMPOSITE( &offset, pcrData, &encObject->pcrComp ); */
-		if ((rc = UnloadBlob_PCR_INFO(hContext, &offset, pcrData, &encObject->pcrInfo)))
+		if ((rc = UnloadBlob_PCR_INFO(tspContext, &offset, pcrData, &encObject->pcrInfo)))
 			return rc;
 		encObject->usePCRs = 1;
 	} else
@@ -423,7 +422,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 	BYTE hashblob[0x400];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	TCPA_ENCDATA_OBJECT *encObject;
 	AnObject *anObject;
@@ -439,7 +438,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 					       TSS_OBJECT_TYPE_RSAKEY)))
 			break;
 
-		if ((result = obj_isConnected_2(hEncData, hKey, &hContext)))
+		if ((result = obj_isConnected_2(hEncData, hKey, &tcsContext)))
 			break;
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -486,11 +485,11 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 
 	if ((result = secret_PerformAuth_OIAP(hEncPolicy, digest, &privAuth2))) {
 		if (useAuth)
-			TCSP_TerminateHandle(hContext, privAuth.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, privAuth.AuthHandle);
 		return result;
 	}
 
-	if ((result = TCSP_Unseal(hContext, tcsKeyHandle, encObject->encryptedDataLength,
+	if ((result = TCSP_Unseal(tcsContext, tcsKeyHandle, encObject->encryptedDataLength,
 				encObject->encryptedData, pPrivAuth, &privAuth2,
 				pulUnsealedDataLength, prgbUnsealedData)))
 		return result;

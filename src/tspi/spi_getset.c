@@ -29,7 +29,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 		TSS_HPOLICY hNewPolicy	/*  in */
     )
 {
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 /* 	TCPA_KEY			*keyObjectToChange; */
 	TCPA_ENCAUTH encAuthUsage;
 	TCPA_ENCAUTH encAuthMig;
@@ -57,6 +57,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 	BYTE *keyBlob;
 	UINT32 newEncSize;
 	BYTE *newEncData;
+	TSS_HCONTEXT tspContext;
 
 	/* //////////////////////////////////////////////////////////////////////////// */
 	/* Perform the initial checks */
@@ -71,14 +72,14 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hObjectToChange ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
+	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
+
 	if (hParentObject == 0) {
-		if ((result = obj_isConnected_2(hObjectToChange, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_2(hObjectToChange, hNewPolicy, &tcsContext)))
 			return result;
 	} else {
-		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &tcsContext)))
 			return result;
 	}
 	/* what is the object type? */
@@ -113,7 +114,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 					    &auth1, digest.digest, nonceEvenOSAP)))
 			return result;
 
-		if ((result = TCSP_ChangeAuthOwner(hContext,
+		if ((result = TCSP_ChangeAuthOwner(tcsContext,
 						  TCPA_PID_ADCP,
 						  encAuthUsage, TCPA_ET_OWNER, &auth1)))
 			return result;
@@ -167,7 +168,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 						    digest.digest, nonceEvenOSAP)))
 				return result;
 
-			if ((result = TCSP_ChangeAuthOwner(hContext,
+			if ((result = TCSP_ChangeAuthOwner(tcsContext,
 							  TCPA_PID_ADCP,
 							  encAuthUsage, TCPA_ET_SRK, &auth1)))
 				return result;
@@ -209,7 +210,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 				return result;
 
 			offset = 0;
-			UnloadBlob_KEY(hContext, &offset, keyBlob, &keyToChange);
+			UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange);
 
 			keyHandle = getTCSKeyHandle(hParentObject);
 			if (keyHandle == 0)
@@ -259,14 +260,14 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 				return result;
 
 			if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth2))) {
-				TCSP_TerminateHandle(hContext, auth1.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
 				return result;
 			}
 
 			/* ---  for replacing PS */
 			memcpy(oldEncData, keyToChange.encData, 0x100);
 
-			if ((result = TCSP_ChangeAuth(hContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
+			if ((result = TCSP_ChangeAuth(tcsContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
 						     TCPA_ET_KEY,	/*  in */
 						     keyToChange.encSize,	/*  in */
 						     keyToChange.encData, &auth1,	/*  in, out */
@@ -327,7 +328,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			return result;
 
 		offset = 0;
-		if ((result = UnloadBlob_STORED_DATA(hContext, &offset, dataBlob, &storedData)))
+		if ((result = UnloadBlob_STORED_DATA(tspContext, &offset, dataBlob, &storedData)))
 			return result;
 
 		keyHandle = getTCSKeyHandle(hParentObject);
@@ -359,11 +360,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			return result;
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth2))) {
-			TCSP_TerminateHandle(hContext, auth1.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
 			return result;
 		}
 
-		if ((result = TCSP_ChangeAuth(hContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
+		if ((result = TCSP_ChangeAuth(tcsContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
 					     TCPA_ET_DATA,	/*  in */
 					     storedData.encDataSize,	/*  in */
 					     storedData.encData, &auth1,	/*  in, out */
@@ -420,7 +421,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 		    TSS_HPOLICY hNewPolicy	/*  in */
     )
 {
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_KEY *keyObjectToChange;
 	TCS_AUTH auth;
 	UINT16 offset;
@@ -473,14 +474,18 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	BOOL useAuth;
 	TCS_AUTH *pAuth;
 	BYTE dataBlob[1024];
+	TSS_HCONTEXT tspContext;
 
 	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
 		return result;
 
+	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
+
 	if (hParentObject == 0) {
 		return TSS_E_BAD_PARAMETER;
 	} else {
-		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &hContext)))
+		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &tcsContext)))
 			return result;
 	}
 
@@ -543,11 +548,12 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
-			TCSP_GetRandom(hContext,	/*  in */
+			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
+			free(randomBytes);
 
 			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 			offset = 0;
@@ -561,7 +567,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			if (useAuth) {
 				if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth))) {
-					TCSP_TerminateHandle(hContext, auth.AuthHandle);
+					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 					return result;
 				}
 				pAuth = &auth;
@@ -569,7 +575,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymStart(hContext,	/*  in */
+			if ((result = TCSP_ChangeAuthAsymStart(tcsContext,	/*  in */
 							      idHandle,	/*  in */
 							      antiReplay,	/*  in */
 							      tempSize,	/*  in */
@@ -603,23 +609,26 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/*  generate random data for asymfinish */
 			bytesRequested = 20;
-			TCSP_GetRandom(hContext,	/*  in */
+			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
+			free(randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(hContext,	/*  in */
+			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
+			free(randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(hContext,	/*  in */
+			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(seed, randomBytes, 20);
+			free(randomBytes);
 
 			if ((result = Tspi_GetPolicyObject(hObjectToChange,
 							  TSS_POLICY_USAGE, &hOldPolicy)))
@@ -640,7 +649,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			caValidSize = offset;
 
 			offset = 0;
-			UnloadBlob_KEY(hContext, &offset, KeyDataOut, &ephemeralKey);
+			UnloadBlob_KEY(tspContext, &offset, KeyDataOut, &ephemeralKey);
 
 			TSS_RSA_Encrypt(hashBlob,	/* in */
 				       caValidSize,	/* in */
@@ -660,7 +669,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 					return result;
 
 				offset = 0;
-				UnloadBlob_KEY(hContext, &offset, keyObject, &keyContainer);
+				UnloadBlob_KEY(tspContext, &offset, keyObject, &keyContainer);
 
 				encObjectSize = keyContainer.encSize;
 				encObject = malloc(encObjectSize);
@@ -678,7 +687,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 					return result;
 
 				offset = 0;
-				if ((result = UnloadBlob_STORED_DATA(hContext, &offset,
+				if ((result = UnloadBlob_STORED_DATA(tspContext, &offset,
 						       dataObject, &dataContainer)))
 					return result;
 
@@ -709,7 +718,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			if (useAuth) {
 				if ((result = secret_PerformAuth_OIAP(hParentPolicy, digest, &auth))) {
-					TCSP_TerminateHandle(hContext, auth.AuthHandle);
+					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 					free(encObject);
 					return result;
 				}
@@ -718,7 +727,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymFinish(hContext,	/*  in */
+			if ((result = TCSP_ChangeAuthAsymFinish(tcsContext,	/*  in */
 							       keyHandle,	/*  in */
 							       ephHandle,	/*  in */
 							       entityType,	/*  in */
@@ -734,7 +743,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 							       &changeProof	/*  out */
 			    ))) {
 				if (useAuth)
-					TCSP_TerminateHandle(hContext, pAuth->AuthHandle);
+					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
 				free(encObject);
 				return result;
 			}
@@ -751,7 +760,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			if (useAuth) {
 				if ((result = secret_ValidateAuth_OIAP(hParentPolicy, digest, &auth))) {
-					TCSP_TerminateHandle(hContext, pAuth->AuthHandle);
+					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
 					return result;
 				}
 			}
@@ -1202,10 +1211,13 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 	TCPA_POLICY_OBJECT *policyObject = NULL;
 	UINT16 offset;
 	UINT32 type;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 
 	LogDebug1("Tspi_SetAttribData");
+
+	if ((tspContext = obj_getTspContext(hObject)) == NULL_HCONTEXT)
+		return TSS_E_INVALID_HANDLE;
 
 	type = getObjectTypeByHandle(hObject);
 	switch (type) {
@@ -1231,16 +1243,8 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
 			LogDebug1("TSS_TSPATTRIB_KEYBLOB_BLOB");
 
-			/* free any pointers held by the old key */
-			destroy_key_refs(&rsaObj->tcpaKey);
-
 			offset = 0;
-			UnloadBlob_KEY(0, &offset, rgbAttribData, &rsaObj->tcpaKey);
-#if 0
-			/* don't do this, since the key object would already be hosed anyway */
-			if (offset != ulAttribDataSize)	/* just checking */
-				return TSS_E_BAD_PARAMETER;
-#endif
+			UnloadBlob_KEY(tspContext, &offset, rgbAttribData, &rsaObj->tcpaKey);
 
 			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
@@ -1254,22 +1258,15 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 				LogError("Attribute data size doesn't match public key size (%d)", offset);
 				return TSS_E_INTERNAL_ERROR;
 			}
-			/* ---  Need to add stuff to free old key components */
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
 			LogDebug1("TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY");
-#if 0
-			if ((result = obj_isConnected_1(hObject, &tcsContext)))
-				return result;
-
-			/* why was this Decode_UINT32() in here? -KEY */
-			rsaObj->privateKey.Privlen = Decode_UINT32(rgbAttribData);
-#else
 			rsaObj->privateKey.Privlen = ulAttribDataSize;
-#endif
+#if 0
 			if (rsaObj->privateKey.Privkey != NULL)
-				free_tspi(tcsContext, rsaObj->privateKey.Privkey);
+				free(rsaObj->privateKey.Privkey);
+#endif
 
-			rsaObj->privateKey.Privkey = calloc_tspi(tcsContext, rsaObj->privateKey.Privlen);
+			rsaObj->privateKey.Privkey = calloc_tspi(tspContext, rsaObj->privateKey.Privlen);
 			if (rsaObj->privateKey.Privkey == NULL) {
 				LogError("malloc of %d bytes failed.", rsaObj->privateKey.Privlen);
 				return TSS_E_OUTOFMEMORY;
@@ -1346,7 +1343,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 	TCPA_CONTEXT_OBJECT *ctxObj;
 	TSP_INTERNAL_POLICY_OBJECT *pObj;
 	BYTE tempBuf[1024];
-	TCS_CONTEXT_HANDLE hContext = 0;
+	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 	UINT32 size;
 
@@ -1358,12 +1355,8 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 	if ((result = obj_checkSession_1(hObject)))
 		return result;
 
-	/* Don't check the return code here, allow failure. We don't _have_ to
-	 * be connected to a TCS to get Attrib data, but if we are, this will
-	 * let us account for it in the mem tables and free it up later.
-	 * FIXME
-	 */
-	obj_isConnected_1(hObject, &hContext);
+	if ((tspContext = obj_getTspContext(hObject)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	switch (getObjectTypeByHandle(hObject)) {
 	case 0:
@@ -1437,7 +1430,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 			return TSS_E_INVALID_ATTRIB_DATA;
 
 		*pulAttribDataSize = offset;
-		*prgbAttribData = calloc_tspi(hContext, offset);
+		*prgbAttribData = calloc_tspi(tspContext, offset);
 		if (*prgbAttribData == NULL) {
 			LogError("malloc of %d bytes failed.", offset);
 			return TSS_E_OUTOFMEMORY;
@@ -1462,7 +1455,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 			if (subFlag != TSS_TSPATTRIB_ENCDATABLOB_BLOB)
 				return TSS_E_INVALID_ATTRIB_SUBFLAG;
 			*pulAttribDataSize = encDataObj->encryptedDataLength;
-			*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize);
+			*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 			if (*prgbAttribData == NULL) {
 				LogError("malloc of %d bytes failed.", *pulAttribDataSize);
 				return TSS_E_OUTOFMEMORY;
@@ -1475,7 +1468,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				return TSS_E_BAD_PARAMETER;
 			if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATCREATION) {
 				*pulAttribDataSize = 20;
-				*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize);
+				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 				if (*prgbAttribData == NULL) {
 					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
 					return TSS_E_OUTOFMEMORY;
@@ -1485,7 +1478,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 #if 0
 			else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE) {
 				*pulAttribDataSize = 20;
-				*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize);
+				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 				if (*prgbAttribData == NULL) {
 					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
 					return TSS_E_OUTOFMEMORY;
@@ -1495,7 +1488,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				offset = 0;
 				LoadBlob_PCR_SELECTION(&offset, tempBuf, encDataObj->pcrInfo.pcrSelection);
 				*pulAttribDataSize = offset;
-				*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize);
+				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 				if (*prgbAttribData == NULL) {
 					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
 					return TSS_E_OUTOFMEMORY;
@@ -1527,7 +1520,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 
 		/* allocate the number of bytes, not UNICODE characters */
 		*pulAttribDataSize = (ctxObj->machineNameLength + 1) * sizeof(UNICODE);
-		*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize);
+		*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
 		if (*prgbAttribData == NULL) {
 			LogError("malloc of %d bytes failed.", *pulAttribDataSize);
 			return TSS_E_OUTOFMEMORY;
@@ -1554,7 +1547,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 		size = MIN(UI_MAX_POPUP_STRING_LENGTH, (pObj->p.popupStringLength + 1)) * sizeof(UNICODE);
 
 		if (pObj->p.popupStringLength > 0) {
-			*prgbAttribData = calloc_tspi(hContext, size);
+			*prgbAttribData = calloc_tspi(tspContext, size);
 			if (*prgbAttribData == NULL) {
 				LogError("malloc of %d bytes failed.", size);
 				return TSS_E_OUTOFMEMORY;

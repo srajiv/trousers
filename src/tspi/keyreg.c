@@ -40,7 +40,7 @@ keyreg_SetUUIDOfKeyObject(TSS_HKEY hKey, TSS_UUID uuid, TSS_FLAG psType)
 }
 
 BOOL
-keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob)
+keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT tspContext, UINT32 keyBlobSize, BYTE *keyBlob)
 {
 	TCPA_KEY key;
 	UINT16 offset;
@@ -48,7 +48,7 @@ keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob)
 	BOOL answer;
 
 	offset = 0;
-	UnloadBlob_KEY(0, &offset, keyBlob, &key);
+	UnloadBlob_KEY(tspContext, &offset, keyBlob, &key);
 
 	if ((fd = get_file()) < 0)
 		return FALSE;
@@ -79,9 +79,8 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 }
 
 
-/* XXX consider removing the unused tcs_handle */
 TSS_RESULT
-keyreg_RemoveKey(TCS_CONTEXT_HANDLE tcs_handle, TSS_UUID *uuid)
+keyreg_RemoveKey(TSS_UUID *uuid)
 {
         struct key_disk_cache *tmp;
 

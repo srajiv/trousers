@@ -24,13 +24,13 @@
 TSS_RESULT
 Tspi_Key_UnloadKey(TSS_HKEY hKey)	/*  in */
 {
-	TSS_HCONTEXT hContext;
+	TSS_HCONTEXT tcsContext;
 	TSS_RESULT result;
 
 	if ((result = obj_checkType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = obj_isConnected_1(hKey, &hContext)))
+	if ((result = obj_isConnected_1(hKey, &tcsContext)))
 		return result;
 
 	return TSS_E_NOTIMPL;
@@ -48,7 +48,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
 	UINT32 keyslot;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HKEY phKey;
 	TSS_HPOLICY hPolicy;
 	UINT32 keySize;
@@ -63,7 +63,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 					       hUnwrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = obj_isConnected_2(hKey, hUnwrappingKey, &hContext)))
+		if ((result = obj_isConnected_2(hKey, hUnwrappingKey, &tcsContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetAttribData(hKey,
@@ -102,7 +102,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_LoadKeyByBlob(hContext,	/*  in */
+	if ((result = TCSP_LoadKeyByBlob(tcsContext,	/*  in */
 					parentTCSKeyHandle,	/* hUnwrappingKey,          // in */
 					keySize,	/*  in */
 					keyBlob,	/*  in */
@@ -123,7 +123,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 	}
 #if 0
 	else {
-		if (result = TCSP_LoadKeyByBlob(hContext,	// in
+		if (result = TCSP_LoadKeyByBlob(tcsContext,	// in
 						parentTCSKeyHandle,	//hUnwrappingKey,           // in
 						keySize,	// in
 						keyBlob,	// in
@@ -153,7 +153,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 	BYTE hashblob[1024];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	UINT16 offset;
 	TSS_HPOLICY hPolicy;
 	TCS_KEY_HANDLE tcsKeyHandle;
@@ -167,7 +167,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 		if ((result = obj_checkType_1(hKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = obj_isConnected_1(hKey, &hContext)))
+		if ((result = obj_isConnected_1(hKey, &tcsContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -200,7 +200,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_GetPubKey(hContext,	/*  in */
+	if ((result = TCSP_GetPubKey(tcsContext,	/*  in */
 				    tcsKeyHandle,	/* hKey,                          // in */
 				    pAuth,	/* &auth,                        // in, out */
 				    pulPubKeyLength,	/*  out */
@@ -220,7 +220,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 	}
 #if 0
 	else {
-		if (result = TCSP_GetPubKey(hContext,	/*  in */
+		if (result = TCSP_GetPubKey(tcsContext,	/*  in */
 					    tcsKeyHandle,	/* hKey,                          // in */
 					    NULL,	/*  in, out */
 					    pulPubKeyLength,	/*  out */
@@ -248,7 +248,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
     )
 {
 
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	TCS_AUTH certAuth;
 	TCS_AUTH keyAuth;
@@ -271,6 +271,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	BOOL useAuthKey;
 	void *pCertAuth = &certAuth;
 	void *pKeyAuth = &keyAuth;
+	TSS_HCONTEXT tspContext;
 
 
 	for (;;) {
@@ -279,7 +280,12 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 					       hCertifyingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			break;	/* return result; */
 
-		if ((result = obj_isConnected_2(hKey, hCertifyingKey, &hContext)))
+		if ((tspContext = obj_getTspContext(hKey)) == NULL_HCONTEXT) {
+			result = TSS_E_INTERNAL_ERROR;
+			break;
+		}
+
+		if ((result = obj_isConnected_2(hKey, hCertifyingKey, &tcsContext)))
 			break;	/* return result; */
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -330,12 +336,15 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	/* ===  now setup the auth's */
 	if (useAuthCert || useAuthKey) {
 		hashBlob = malloc(24);
+		if (hashBlob == NULL) {
+			LogError("malloc of %d bytes failed.", 24);
+			return TSS_E_OUTOFMEMORY;
+		}
 		offset = 0;
 		LoadBlob_UINT32(&offset, TPM_ORD_CertifyKey, hashBlob);
 		LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
 		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
-		/*      free( hashBlob ); */
-		try_FreeMemory(hashBlob);
+		free(hashBlob);
 	}
 #if 0
 	else {
@@ -351,13 +360,13 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	if (useAuthCert) {
 		if ((result = secret_PerformAuth_OIAP(hCertPolicy, hash, &certAuth))) {
 			if (useAuthKey)
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			return result;
 		}
 	} else
 		pCertAuth = NULL;
 
-	if ((result = TCSP_CertifyKey(hContext,	/*  in */
+	if ((result = TCSP_CertifyKey(tcsContext,	/*  in */
 				     certifyTCSKeyHandle,	/* hCertifyingKey,                 // in */
 				     keyTCSKeyHandle,	/* hKey,                       // in */
 				     antiReplay,	/*  in */
@@ -369,9 +378,9 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 				     &outData	/*  out */
 				))) {
 		if (useAuthKey)
-			TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 		if (useAuthCert)
-			TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 		return result;
 	}
 
@@ -380,27 +389,30 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	if (useAuthCert || useAuthKey) {
 		offset = 0;
 		hashBlob = malloc(1024);
+		if (hashBlob == NULL) {
+			LogError("malloc of %d bytes failed.", 1024);
+			return TSS_E_OUTOFMEMORY;
+		}
 		LoadBlob_UINT32(&offset, result, hashBlob);
 		LoadBlob_UINT32(&offset, TPM_ORD_CertifyKey, hashBlob);
 		LoadBlob(&offset, CertifyInfoSize, hashBlob, CertifyInfo);
 		LoadBlob_UINT32(&offset, outDataSize, hashBlob);
 		LoadBlob(&offset, outDataSize, hashBlob, outData);
 		TSS_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
-		/*      free( hashBlob ); */
-		try_FreeMemory(hashBlob);
+		free(hashBlob);
 		if (useAuthKey) {
 			if ((result = secret_ValidateAuth_OIAP(hPolicy, hash, &keyAuth))) {
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 				if (useAuthCert)
-					TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+					TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 				return result;
 			}
 		}
 		if (useAuthCert) {
 			if ((result = secret_ValidateAuth_OIAP(hCertPolicy, hash, &certAuth))) {
-				TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 				if (useAuthKey)
-					TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+					TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 				return result;
 			}
 		}
@@ -410,16 +422,16 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 		if ((result = Tspi_GetAttribData(hCertifyingKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 			if (useAuthKey)
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			if (useAuthCert)
-				TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 			LogError1("Error in calling GetAttribData internally");
 			return TSS_E_INTERNAL_ERROR;
 		}
 
 		offset = 0;
-		UnloadBlob_KEY(hContext, &offset, keyData, &keyContainer);
+		UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
 
 		TSS_Hash(TSS_HASH_SHA1, CertifyInfoSize, CertifyInfo, hash.digest);
 
@@ -427,47 +439,47 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 				       keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 				       outData, outDataSize))) {
 			if (useAuthKey)
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			if (useAuthCert)
-				TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 			return TSS_E_VERIFICATION_FAILED;
 		}
 
 	} else {
 		pValidationData->ulDataLength = CertifyInfoSize;
-		pValidationData->rgbData = calloc_tspi(hContext, CertifyInfoSize);
+		pValidationData->rgbData = calloc_tspi(tspContext, CertifyInfoSize);
 		if (pValidationData->rgbData == NULL) {
 			LogError("malloc of %d bytes failed.", CertifyInfoSize);
 			if (useAuthKey)
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			if (useAuthCert)
-				TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(pValidationData->rgbData, CertifyInfo, CertifyInfoSize);
 		pValidationData->ulValidationLength = outDataSize;
-		pValidationData->rgbValdationData = calloc_tspi(hContext, outDataSize);
+		pValidationData->rgbValdationData = calloc_tspi(tspContext, outDataSize);
 		if (pValidationData->rgbValdationData == NULL) {
 			LogError("malloc of %d bytes failed.", outDataSize);
 			if (useAuthKey)
-				TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			if (useAuthCert)
-				TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(pValidationData->rgbValdationData, outData, outDataSize);
 		memcpy(&pValidationData->versionInfo,
-		       getCurrentVersion(hContext), sizeof (TCPA_VERSION));
+		       getCurrentVersion(tspContext), sizeof (TCPA_VERSION));
 
 	}
 
 	if (useAuthKey)
-		TCSP_TerminateHandle(hContext, keyAuth.AuthHandle);
+		TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 	if (useAuthCert)
-		TCSP_TerminateHandle(hContext, certAuth.AuthHandle);
+		TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 	return TSS_SUCCESS;
 }
@@ -487,7 +499,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 	TCPA_ENCAUTH encAuthMig;
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 /* 	TSS_HPOLICY				hPolicy; */
 	TSS_HPOLICY hUsagePolicy;
 	TSS_HPOLICY hMigPolicy;
@@ -505,6 +517,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 /* 	BYTE					pcrInfo[512]; */
 /* 	TCPA_PCR_INFO			pcrInfo; */
 	AnObject *anObject;
+	TSS_HCONTEXT tspContext;
 
 	LogDebug1("Tspi_Key_CreateKey");
 	for (;;) {
@@ -512,7 +525,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 			if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 						       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 				break;	/* return result; */
-			if ((result = obj_isConnected_2(hKey, hWrappingKey, &hContext)))
+			if ((result = obj_isConnected_2(hKey, hWrappingKey, &tcsContext)))
 				break;	/* return result; */
 		} else {
 			if ((result =
@@ -522,9 +535,12 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 						       TSS_OBJECT_TYPE_RSAKEY,
 						       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 				break;	/* return result; */
-			if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
+			if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &tcsContext)))
 				break;	/* return result; */
 		}
+
+		if ((tspContext = obj_getTspContext(hKey)) == NULL_HCONTEXT)
+			return TSS_E_INTERNAL_ERROR;
 
 		if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hUsagePolicy)))
 			break;	/* return result; */
@@ -546,13 +562,12 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 		if (hPcrComposite) {
 			LogDebug1("Add Pcr info to the key");
 			offset = 0;
-			UnloadBlob_KEY(hContext, &offset, keyBlob, &keyContainer);
+			UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
 
 			/* --------------------------- */
 			anObject = getAnObjectByHandle(hPcrComposite);
 			if (anObject == NULL || anObject->memPointer == NULL) {
 				LogError1("Cannot find key by PcrComposite Handle!");
-				free(keyBlob);
 				return TSS_E_INTERNAL_ERROR;
 			}
 #if 0
@@ -567,7 +582,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 			    ((TCPA_PCR_OBJECT *) anObject->memPointer)->
 			    pcrComposite.select.sizeOfSelect;
 			pcrInfo.pcrSelection.pcrSelect =
-			    calloc_tspi(hContext, pcrInfo.pcrSelection.sizeOfSelect);
+			    calloc_tspi(tspContext, pcrInfo.pcrSelection.sizeOfSelect);
 			memcpy(pcrInfo.pcrSelection.pcrSelect,
 			       ((TCPA_PCR_OBJECT *) anObject->memPointer)->
 			       pcrComposite.select.pcrSelect, pcrInfo.pcrSelection.sizeOfSelect);
@@ -586,51 +601,39 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 
 			/* ---  Stuff it into the key container */
 			pcrInfoSize = offset;
-			keyContainer.PCRInfo = malloc(offset);
+			keyContainer.PCRInfo = calloc_tspi(tspContext, offset);
 			if (keyContainer.PCRInfo == NULL) {
 				LogError("malloc of %d bytes failed.", offset);
-				free(keyBlob);
 				return TSS_E_OUTOFMEMORY;
 			}
 			keyContainer.PCRInfoSize = pcrInfoSize;
 			memcpy(keyContainer.PCRInfo, pcrInfoData, pcrInfoSize);
 
-			newKey = malloc(1024);
+			newKey = calloc_tspi(tspContext, 1024);
 			if (newKey == NULL) {
 				LogError("malloc of %d bytes failed.", 1024);
-				free(keyContainer.PCRInfo);
-				free(keyBlob);
 				return TSS_E_OUTOFMEMORY;
 			}
 
 			/* ---  New key Blob */
 			offset = 0;
 			LoadBlob_KEY(&offset, newKey, &keyContainer);
-			free(keyContainer.PCRInfo);
 
 			if ((result = Tspi_SetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 					   TSS_TSPATTRIB_KEYBLOB_BLOB, offset, newKey))) {
-				free(keyBlob);
-				try_FreeMemory(newKey);
 				return result;
 			}
-			try_FreeMemory(keyBlob);
 
 			if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 					   TSS_TSPATTRIB_KEYBLOB_BLOB, &keySize, &keyBlob))) {
-				try_FreeMemory(newKey);
 				return result;
 			}
-			try_FreeMemory(newKey);
 
 			/* ---  keyBlob now has the updated key blob */
 		}
 
 		parentTCSKeyHandle = getTCSKeyHandle(hWrappingKey);
 		if (parentTCSKeyHandle == 0) {
-			if (hPcrComposite)
-				free(keyContainer.PCRInfo);
-			free(keyBlob);
 			return TSS_E_KEY_NOT_LOADED;
 		}
 
@@ -669,7 +672,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 	}
 
 	/* ---  Now call the function */
-	if ((result = TCSP_CreateWrapKey(hContext,	/*  in */
+	if ((result = TCSP_CreateWrapKey(tcsContext,	/*  in */
 					parentTCSKeyHandle,	/*  in */
 					encAuthUsage,	/*  in */
 					encAuthMig,	/*  in */
@@ -690,7 +693,6 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 	if ((result = secret_ValidateAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
 				     sharedSecret, &auth, digest.digest, nonceEvenOSAP))) {
 		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
-		TCS_FreeMemory(hContext, newKey);
 		return result;
 	}
 
@@ -700,11 +702,9 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, newKeySize, newKey))) {
 		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
-		TCS_FreeMemory(hContext, newKey);
 		return result;
 	}
 
-	TCS_FreeMemory(hContext, newKey);
 	LogDebug1("Leaving Create Key");
 	return result;
 }
@@ -719,7 +719,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 /* 	TCPA_RSAKEY_OBJECT				*keyObject; */
 	AnObject *anObject;
 /* 	TCPA_RSAKEY_OBJECT				*wrappingKeyObject; */
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
 	TCPA_SECRET secret;
 	TSS_RESULT result;
@@ -741,12 +741,13 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 /* 	BYTE	encData[256]; */
 	TCPA_NONCE seed;	/* nice container */
 	void *keyObject;
+	TSS_HCONTEXT tspContext;
 
 	if (hPcrComposite == 0) {
 		if ((result = obj_checkType_2(hKey, TSS_OBJECT_TYPE_RSAKEY,
 					       hWrappingKey, TSS_OBJECT_TYPE_RSAKEY)))
 			return result;
-		if ((result = obj_isConnected_2(hKey, hWrappingKey, &hContext)))
+		if ((result = obj_isConnected_2(hKey, hWrappingKey, &tcsContext)))
 			return result;
 
 	} else {
@@ -756,9 +757,12 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 					       TSS_OBJECT_TYPE_RSAKEY,
 					       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
 			return result;
-		if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &hContext)))
+		if ((result = obj_isConnected_3(hKey, hWrappingKey, hPcrComposite, &tcsContext)))
 			return result;
 	}
+
+	if ((tspContext = obj_getTspContext(hKey)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 /*	if( result = Tspi_GetAttribData(
 		hKey,
@@ -777,7 +781,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	keyObject = ((AnObject *) keyObject)->memPointer;
 
 	myPrivLength = ((TCPA_RSAKEY_OBJECT *) keyObject)->privateKey.Privlen;
-	myPriv = malloc(myPrivLength);
+	myPriv = calloc_tspi(tspContext, myPrivLength);
 	if (myPriv == NULL) {
 		LogError("malloc of %d bytes failed.", myPrivLength);
 		return TSS_E_OUTOFMEMORY;
@@ -795,7 +799,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 		goto done;
 
 	offset = 0;
-	UnloadBlob_KEY(hContext, &offset, wrap, &keyContainer);
+	UnloadBlob_KEY(tspContext, &offset, wrap, &keyContainer);
 	offset = 0;
 	LoadBlob_STORE_PUBKEY(&offset, pubKey, &keyContainer.pubKey);
 	pubKeySize = offset;
@@ -821,7 +825,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	memcpy(secret.secret, myKeyPolicy->Secret, myKeyPolicy->SecretSize);
 	/* --------------------------- */
 	offset = 0;
-	UnloadBlob_KEY(hContext, &offset, myKeyBlob, &keyContainer);
+	UnloadBlob_KEY(tspContext, &offset, myKeyBlob, &keyContainer);
 
 	offset = 0;
 	LoadBlob_KEY_ForHash(&offset, hashBlob, &keyContainer);
@@ -839,10 +843,10 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	LoadBlob_UINT32(&offset, myPrivLength, hashBlob);
 	LoadBlob(&offset, myPrivLength, hashBlob, myPriv);
 
-	if ((result = internal_GetRandomNonce(hContext, &seed)))
+	if ((result = internal_GetRandomNonce(tcsContext, &seed)))
 		goto done;
 
-	keyContainer.encData = calloc_tspi(hContext, 256);
+	keyContainer.encData = calloc_tspi(tspContext, 256);
 	if (keyContainer.encData == NULL) {
 		LogError("malloc of %d bytes failed.", 256);
 		result = TSS_E_OUTOFMEMORY;
@@ -861,7 +865,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 			   TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB, offset, hashBlob);
 
 #if 0
-	if (result = EncryptStoreAsymKey(hContext, TCPA_PT_ASYM, myPrivLength,	/* keyObject->privateKey.Privlen,  */
+	if (result = EncryptStoreAsymKey(tcsContext, TCPA_PT_ASYM, myPrivLength,	/* keyObject->privateKey.Privlen,  */
 					 myPriv,	/* keyObject->privateKey.Privkey,  */
 					 secret.secret, secret.secret, 0,	/* keyObject, */
 					 pubKey,	/* wrappingKeyObject->tcpaKey.pubKey.key,  */
@@ -869,10 +873,8 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 		return result;
 #endif
 done:
-	if (myPriv)
-		free(myPriv);
-	if (keyContainer.encData)
-		free(keyContainer.encData);
+	free_tspi(tspContext, myPriv);
+	free_tspi(tspContext, keyContainer.encData);
 	return result;
 }
 
@@ -887,7 +889,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 			     BYTE ** prgbMigrationBlob	/*  out */
     )
 {
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_AUTH parentAuth;
 	TCS_AUTH entityAuth;
 	TCPA_RESULT result;
@@ -910,6 +912,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	TCPA_KEY keyContainer;
 	AnObject *anObject;
 	TCPA_STORED_DATA storedData;
+	TSS_HCONTEXT tspContext;
 
 	if (pulRandomLength == NULL || prgbRandom == NULL || rgbMigTicket == NULL ||
 	    pulMigrationBlobLength == NULL || prgbMigrationBlob == NULL)
@@ -919,6 +922,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	if (anObject == NULL)
 		return TSS_E_INVALID_HANDLE;
 
+	/* FIXME What is this? */
 	result =
 	    obj_checkType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
 				       hParentKey, TSS_OBJECT_TYPE_RSAKEY);
@@ -930,13 +934,11 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 		if (result)
 			return result;
 	}
-#if 0
-//      hContext = obj_getContextForObject( hKeyToMigrate );
-//      if( hContext == 0 )
-//              return TSS_E_INVALID_HANDLE;
-#endif
 
-	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &hContext)))
+	if ((tspContext = obj_getTspContext(hKeyToMigrate)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
+
+	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &tcsContext)))
 		return result;
 
 	if ((result = Tspi_GetAttribData(hParentKey,
@@ -970,13 +972,13 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	/* ////////////////////////////////////////////////////////////////////// */
 	/*  Parsing the migration scheme from the blob and key object */
 	offset = 0;
-	UnloadBlob_MigrationKeyAuth(hContext, &offset, &migAuth, rgbMigTicket);
+	UnloadBlob_MigrationKeyAuth(tspContext, &offset, &migAuth, rgbMigTicket);
 
 	offset = 0;
 	if (anObject->objectType == TSS_OBJECT_TYPE_RSAKEY) {
-		UnloadBlob_KEY(hContext, &offset, keyToMigrateBlob, &tcpaKey);
+		UnloadBlob_KEY(tspContext, &offset, keyToMigrateBlob, &tcpaKey);
 	} else {
-		if ((result = UnloadBlob_STORED_DATA(hContext, &offset, keyToMigrateBlob, &storedData)))
+		if ((result = UnloadBlob_STORED_DATA(tspContext, &offset, keyToMigrateBlob, &storedData)))
 			return result;
 	}
 
@@ -1008,7 +1010,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	}
 	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, digest, &entityAuth))) {
 		if (useAuth)
-			TCSP_TerminateHandle(hContext, parentAuth.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, parentAuth.AuthHandle);
 		return result;
 	}
 
@@ -1016,18 +1018,18 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	if (parentHandle == 0)
 		return TSS_E_KEY_NOT_LOADED;
 	if (anObject->objectType == TSS_OBJECT_TYPE_RSAKEY) {
-		if ((result = TCSP_CreateMigrationBlob(hContext,
+		if ((result = TCSP_CreateMigrationBlob(tcsContext,
 					parentHandle, migAuth.migrationScheme, ulMigTicketLength,
 					rgbMigTicket, tcpaKey.encSize, tcpaKey.encData, pParentAuth,
 					&entityAuth, pulRandomLength, prgbRandom,
 					pulMigrationBlobLength, prgbMigrationBlob))) {
 			if (pParentAuth)
-				TCSP_TerminateHandle(hContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(hContext, entityAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
+			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
 			return result;
 		}
 	} else {
-		if ((result = TCSP_CreateMigrationBlob(hContext,
+		if ((result = TCSP_CreateMigrationBlob(tcsContext,
 						parentHandle, migAuth.migrationScheme,
 						ulMigTicketLength, rgbMigTicket,
 						storedData.encDataSize, storedData.encData,
@@ -1035,8 +1037,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 						prgbRandom, pulMigrationBlobLength,
 						prgbMigrationBlob))) {
 			if (pParentAuth)
-				TCSP_TerminateHandle(hContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(hContext, entityAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
+			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
 			return result;
 		}
 	}
@@ -1052,15 +1054,15 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	if (useAuth) {
 		if ((result = secret_ValidateAuth_OIAP(hParentPolicy, digest, &parentAuth))) {
 			if (pParentAuth)
-				TCSP_TerminateHandle(hContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(hContext, entityAuth.AuthHandle);
+				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
+			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
 			return result;
 		}
 	}
 	if ((result = secret_ValidateAuth_OIAP(hMigratePolicy, digest, &entityAuth))) {
 		if (pParentAuth)
-			TCSP_TerminateHandle(hContext, pParentAuth->AuthHandle);
-		TCSP_TerminateHandle(hContext, entityAuth.AuthHandle);
+			TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
+		TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
 		return result;
 	}
 
@@ -1073,9 +1075,9 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 				return result;
 
 			offset = 0;
-			UnloadBlob_KEY(hContext, &offset, blob, &keyContainer);
+			UnloadBlob_KEY(tspContext, &offset, blob, &keyContainer);
 
-			/* keyContainer.encData =       calloc_tspi( hContext, outDataSize ); */
+			/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
 			keyContainer.encSize = *pulMigrationBlobLength;
 			memcpy(keyContainer.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
 
@@ -1096,10 +1098,10 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 				return result;
 
 			offset = 0;
-			if ((result = UnloadBlob_STORED_DATA(hContext, &offset, blob, &storedData)))
+			if ((result = UnloadBlob_STORED_DATA(tspContext, &offset, blob, &storedData)))
 				return result;
 
-			/* keyContainer.encData =       calloc_tspi( hContext, outDataSize ); */
+			/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
 			storedData.encDataSize = *pulMigrationBlobLength;
 			memcpy(storedData.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
 
@@ -1127,7 +1129,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
     )
 {
 
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	UINT32 outDataSize;
 	BYTE *outData;
@@ -1143,17 +1145,17 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	UINT32 blobSize;
 	BYTE *blob;
 	TCPA_KEY keyContainer;
+	TSS_HCONTEXT tspContext;
 
 	if ((result = obj_checkType_2(hKeyToMigrate, TSS_OBJECT_TYPE_RSAKEY,
 				       hParentKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &hContext)))
+	if ((result = obj_isConnected_2(hKeyToMigrate, hParentKey, &tcsContext)))
 		return result;
 
-/* 	hContext = obj_getContextForObject( hKeyToMigrate ); */
-/* 	if( hContext == 0 ) */
-/* 		return TSS_E_INVALID_HANDLE; */
+	if ((tspContext = obj_getTspContext(hKeyToMigrate)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	/* ///////////////////////////////////////////////////////////////////////////// */
 	/*  Get the parent Key */
@@ -1193,7 +1195,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 /* 	if( result = secret_PerformAuth_OIAP( hParentPolicy, digest, &parentAuth )) */
 /* 		return result; */
 
-	if ((result = TCSP_ConvertMigrationBlob(hContext, parentHandle, ulMigrationBlobLength,
+	if ((result = TCSP_ConvertMigrationBlob(tcsContext, parentHandle, ulMigrationBlobLength,
 				     rgbMigrationBlob, pParentAuth, ulRandomLength, rgbRandom,
 				     &outDataSize, &outData)))
 		return result;
@@ -1217,9 +1219,9 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 		return result;
 
 	offset = 0;
-	UnloadBlob_KEY(hContext, &offset, blob, &keyContainer);
+	UnloadBlob_KEY(tspContext, &offset, blob, &keyContainer);
 
-	/* keyContainer.encData =       calloc_tspi( hContext, outDataSize ); */
+	/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
 	keyContainer.encSize = outDataSize;
 	memcpy(keyContainer.encData, outData, outDataSize);
 

@@ -35,7 +35,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	TSS_HPOLICY hPolicy;
-	TCS_CONTEXT_HANDLE hContext;
+	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	AnObject *anObject;
 	TCPA_HASH_OBJECT *hashObject;
@@ -48,7 +48,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 	if ((result = obj_checkType_2(hHash, TSS_OBJECT_TYPE_HASH, hKey, TSS_OBJECT_TYPE_RSAKEY)))
 		return result;
 
-	if ((result = obj_isConnected_2(hHash, hKey, &hContext)))
+	if ((result = obj_isConnected_2(hHash, hKey, &tcsContext)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -85,7 +85,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 			return result;
 	}
 
-	if ((result = TCSP_Sign(hContext,
+	if ((result = TCSP_Sign(tcsContext,
 			       tcsKeyHandle,
 			       hashObject->hashSize,
 			       hashObject->hashData, pPrivAuth, pulSignatureLength, prgbSignature)))
@@ -188,7 +188,7 @@ Tspi_Hash_SetHashValue(TSS_HHASH hHash,	/* in */
 
 	/*---	If the current data in the hasObject exists, free it */
 	if (hashObject->hashData != NULL)
-		try_FreeMemory(hashObject->hashData);
+		free(hashObject->hashData);
 
 	/*---	Malloc new space */
 	hashObject->hashData = malloc(hashObject->hashSize);
@@ -212,12 +212,16 @@ Tspi_Hash_GetHashValue(TSS_HHASH hHash,	/* in */
 	AnObject *object = NULL;
 	TSS_RESULT result = TSS_SUCCESS;
 	TCPA_HASH_OBJECT *hashObject = NULL;
+	TSS_HCONTEXT tspContext;
 
 	if (pulHashValueLength == NULL || prgbHashValue == NULL)
 		return TSS_E_BAD_PARAMETER;
 
 	if ((result = obj_checkType_1(hHash, TSS_OBJECT_TYPE_HASH)))
 		return result;
+
+	if ((tspContext = obj_getTspContext(hHash)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	object = getAnObjectByHandle(hHash);
 	if (object == NULL)
@@ -240,7 +244,7 @@ Tspi_Hash_GetHashValue(TSS_HHASH hHash,	/* in */
 	*pulHashValueLength = hashObject->hashSize;
 
 	/*---	The data */
-	*prgbHashValue = calloc_tspi(obj_getTspContext(hHash), *pulHashValueLength);
+	*prgbHashValue = calloc_tspi(tspContext, *pulHashValueLength);
 	if (*prgbHashValue == NULL) {
 		LogError("malloc of %d bytes failed.", *pulHashValueLength);
 		return TSS_E_OUTOFMEMORY;

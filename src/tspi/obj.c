@@ -130,7 +130,7 @@ setObject(TSS_HOBJECT objectHandle, void *buffer, UINT32 sizeOfBuffer)
 	pthread_mutex_lock(&objectlist_lock);
 
 	if (object->memPointer != NULL)
-		try_FreeMemory(object->memPointer);
+		free(object->memPointer);
 	object->memPointer = malloc(sizeOfBuffer);
 	if (object->memPointer == NULL) {
 		LogError("malloc of %d bytes failed.", sizeOfBuffer);
@@ -145,27 +145,6 @@ setObject(TSS_HOBJECT objectHandle, void *buffer, UINT32 sizeOfBuffer)
 	return TSS_SUCCESS;
 }
 
-#if 0
-TSS_RESULT
-getObject(TSS_HOBJECT objectHandle, void **outBuffer, UINT32 * outSize)
-{
-	AnObject *object;
-
-	object = getAnObjectByHandle(objectHandle);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-
-	*outBuffer = malloc(object->objectSize);
-	if (*outBuffer == NULL) {
-		LogError1("Malloc Failure.");
-		return TSS_E_OUTOFMEMORY;
-	}
-	memcpy(*outBuffer, object->memPointer, object->objectSize);
-	*outSize = object->objectSize;
-	return TSS_SUCCESS;
-}
-#endif
-
 void
 destroyObject(AnObject * object)
 {
@@ -173,9 +152,9 @@ destroyObject(AnObject * object)
 		return;
 
 	if (object->memPointer != NULL)
-		try_FreeMemory(object->memPointer);
+		free(object->memPointer);
 
-	try_FreeMemory(object);
+	free(object);
 
 	return;
 }
@@ -205,7 +184,7 @@ removeObject(TSS_HOBJECT objectHandle)
 }
 
 void
-destroyObjectsByContext(TCS_CONTEXT_HANDLE tcsContext)
+obj_closeContext(TSS_HCONTEXT tspContext)
 {
 	AnObject *index;
 	AnObject *next = NULL;
@@ -216,7 +195,7 @@ destroyObjectsByContext(TCS_CONTEXT_HANDLE tcsContext)
 
 	for (index = objectList; index; ) {
 		next = index->next;
-		if (index->tcsContext == tcsContext) {
+		if (index->tspContext == tspContext) {
 			toKill = index;
 			if (prev == NULL) {
 				objectList = toKill->next;
@@ -319,7 +298,7 @@ obj_checkSession_1(TSS_HOBJECT objHandle1)
 
 	tspContext1 = obj_getTspContext(objHandle1);
 
-	if (tspContext1 == 0) {
+	if (tspContext1 == NULL_HCONTEXT) {
 		return TSS_E_INVALID_HANDLE;
 	}
 
@@ -335,7 +314,8 @@ obj_checkSession_2(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2)
 	tspContext1 = obj_getTspContext(objHandle1);
 	tspContext2 = obj_getTspContext(objHandle2);
 
-	if (tspContext1 != tspContext2 || tspContext1 == 0 || tspContext2 == 0) {
+	if (tspContext1 != tspContext2 || tspContext1 == NULL_HCONTEXT ||
+	    tspContext2 == NULL_HCONTEXT) {
 		return TSS_E_INVALID_HANDLE;
 	}
 
@@ -369,7 +349,7 @@ obj_isConnected_1(TSS_HOBJECT objHandle, TCS_CONTEXT_HANDLE *tcsContext)
 	TCS_CONTEXT_HANDLE tcsContext1;
 
 	tcsContext1 = obj_getTcsContext(objHandle);
-	if (tcsContext1 == 0) {
+	if (tcsContext1 == NULL_HCONTEXT) {
 		return TSS_E_NO_CONNECTION;
 	}
 
@@ -395,7 +375,7 @@ obj_isConnected_2(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2,
 		return TSS_E_INVALID_HANDLE;
 	}
 
-	if (tcsContext1 == 0 || tcsContext2 == 0) {
+	if (tcsContext1 == NULL_HCONTEXT || tcsContext2 == NULL_HCONTEXT) {
 		return TSS_E_NO_CONNECTION;
 	}
 
@@ -422,7 +402,8 @@ obj_isConnected_3(TSS_HOBJECT objHandle1, TSS_HOBJECT objHandle2,
 		return TSS_E_INVALID_HANDLE;
 	}
 
-	if (tcsContext1 == 0 || tcsContext2 == 0 || tcsContext3 == 0) {
+	if (tcsContext1 == NULL_HCONTEXT || tcsContext2 == NULL_HCONTEXT ||
+	    tcsContext3 == NULL_HCONTEXT) {
 		return TSS_E_NO_CONNECTION;
 	}
 
@@ -492,86 +473,6 @@ obj_checkType_3(TSS_HOBJECT object1, UINT32 objectType1,
 
         return TSS_SUCCESS;
 }
-
-#if 0
-TSS_HOBJECT
-obj_GetPolicyOfObject(TSS_HOBJECT objectHandle, UINT32 policyType)
-{
-	AnObject *object;
-	TSS_HOBJECT ret = 0;
-
-	object = getAnObjectByHandle(objectHandle);
-	if (object->objectType == TSS_OBJECT_TYPE_TPM) {
-		ret = ((TCPA_TPM_OBJECT *) object)->policy;
-	} else if (object->objectType == TSS_OBJECT_TYPE_RSAKEY) {
-		if (policyType == TSS_POLICY_MIGRATION)
-			ret = ((TCPA_RSAKEY_OBJECT *) object)->migPolicy;
-		else if (policyType == TSS_POLICY_USAGE)
-			ret = ((TCPA_RSAKEY_OBJECT *) object)->usagePolicy;
-		else
-			ret = 0;
-	} else if ((object->objectHandle = TSS_OBJECT_TYPE_ENCDATA)) {
-		if (policyType == TSS_POLICY_MIGRATION) {
-			if (((TCPA_ENCDATA_OBJECT *) object)->encType != TSS_ENCDATA_SEAL)
-				ret = 0;
-			else
-				ret = ((TCPA_ENCDATA_OBJECT *) object)->migPolicy;
-		} else if (policyType == TSS_POLICY_USAGE)
-			ret = ((TCPA_ENCDATA_OBJECT *) object)->usagePolicy;
-		else
-			ret = 0;
-	} else
-		ret = 0;
-
-	return ret;
-}
-
-TSS_RESULT
-internal_GetContextForContextObject(TSS_HCONTEXT hContext, TCS_CONTEXT_HANDLE * handleOut)
-{
-	AnObject *object = NULL;
-
-	pthread_mutex_lock(&objectlist_lock);
-
-	for (object = objectList; object; object = object->next) {
-		if (object->objectHandle == hContext)
-			break;
-	}
-
-	if (object == NULL) {
-		pthread_mutex_unlock(&objectlist_lock);
-		return TSS_E_INVALID_HANDLE;
-	}
-
-	*handleOut = ((TCPA_CONTEXT_OBJECT *) object->memPointer)->tcsHandle;
-
-	pthread_mutex_unlock(&objectlist_lock);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-internal_GetContextObjectForContext(TCS_CONTEXT_HANDLE tcsContext, TSS_HCONTEXT * tspContext)
-{
-	AnObject *object = NULL;
-	TSS_RESULT result = TSS_E_INVALID_HANDLE;
-
-	pthread_mutex_lock(&objectlist_lock);
-
-	for (object = objectList; object; next(object)) {
-		if (object->objectType == TSS_OBJECT_TYPE_CONTEXT
-		    && object->tcsContext == tcsContext) {
-			*tspContext = object->tspContext;
-			result = TSS_SUCCESS;
-			break;
-		}
-	}
-
-	pthread_mutex_unlock(&objectlist_lock);
-
-	return result;
-}
-#endif
 
 BOOL
 anyPopupPolicies(TSS_HCONTEXT context)
