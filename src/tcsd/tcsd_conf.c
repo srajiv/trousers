@@ -27,6 +27,7 @@
 #include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
+#include "tcsd_ops.h"
 
 struct tcsd_config_options options_list[] = {
 	{"port", opt_port},
@@ -36,6 +37,7 @@ struct tcsd_config_options options_list[] = {
 	{"firmware_pcrs", opt_firmware_pcrs},
 	{"kernel_log_file", opt_kernel_log},
 	{"kernel_pcrs", opt_kernel_pcrs},
+	{"remote_ops", opt_remote_ops},
 	{NULL, 0}
 };
 
@@ -51,6 +53,7 @@ init_tcsd_config(struct tcsd_config *conf)
 	conf->firmware_pcrs = 0;
 	conf->kernel_log_file = NULL;
 	conf->kernel_pcrs = 0;
+	memset(conf->remote_ops, 0, sizeof(conf->remote_ops));
 	conf->unset = 0xffffffff;
 }
 
@@ -142,6 +145,43 @@ get_file_path(char *ptr, char **dest)
 	}
 
 	return 0;
+}
+
+/* add an op ordinal, checking for duplicates along the way */
+void
+tcsd_add_op(int *remote_ops, int *op)
+{
+	int i = 0, j;
+
+	while (op[i] != 0) {
+		j = 0;
+		while (remote_ops[j] != 0) {
+			if (remote_ops[j] == op[i]) {
+				break;
+			}
+			j++;
+		}
+		remote_ops[j] = op[i];
+		i++;
+	}
+}
+
+int
+tcsd_set_remote_op(struct tcsd_config *conf, char *op_name)
+{
+	int i = 0;
+
+	while(tcsd_ops[i]) {
+		if (!strcmp(tcsd_ops[i]->name, op_name)) {
+			/* match found */
+			tcsd_add_op(conf->remote_ops, tcsd_ops[i]->op);
+			return 0;
+		}
+		i++;
+	}
+
+	/* fail, op not found */
+	return 1;
 }
 
 TSS_RESULT
@@ -306,22 +346,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 
 			if (conf->kernel_log_file)
 				free(conf->kernel_log_file);
-#if 0
-			/* break out the system ps directory from the file path */
-			dir_ptr = rindex(tmp_ptr, '/');
-			*dir_ptr = '\0';
-			if (strlen(tmp_ptr) == 0)
-				conf->kernel_log_dir = strdup("/");
-			else
-				conf->kernel_log_dir = strdup(tmp_ptr);
 
-			if (conf->kernel_log_dir == NULL) {
-				LogError1("malloc failed.");
-				free(tmp_ptr);
-				return TSS_E_OUTOFMEMORY;
-			}
-			*dir_ptr = '/';
-#endif
 			conf->kernel_log_file = tmp_ptr;
 			conf->unset &= ~TCSD_OPTION_KERNEL_LOGFILE;
 		}
@@ -347,27 +372,35 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 
 			if (conf->firmware_log_file)
 				free(conf->firmware_log_file);
-#if 0
-			if (conf->firmware_log_dir)
-				free(conf->firmware_log_dir);
 
-			/* break out the system ps directory from the file path */
-			dir_ptr = rindex(tmp_ptr, '/');
-			*dir_ptr = '\0';
-			if (strlen(tmp_ptr) == 0)
-				conf->firmware_log_dir = strdup("/");
-			else
-				conf->firmware_log_dir = strdup(tmp_ptr);
-
-			if (conf->firmware_log_dir == NULL) {
-				LogError1("malloc failed.");
-				free(tmp_ptr);
-				return TSS_E_OUTOFMEMORY;
-			}
-			*dir_ptr = '/';
-#endif
 			conf->firmware_log_file = tmp_ptr;
 			conf->unset &= ~TCSD_OPTION_FIRMWARE_LOGFILE;
+		}
+		break;
+	case opt_remote_ops:
+		conf->unset &= ~TCSD_OPTION_REMOTE_OPS;
+		comma = rindex(arg, '\n');
+		*comma = '\0';
+		while (1) {
+			comma = rindex(arg, ',');
+
+			if (comma == NULL) {
+				comma = arg;
+
+				if (comma != NULL) {
+					if (tcsd_set_remote_op(conf, comma)) {
+						LogError("Config option \"remote_ops\" is invalid. "
+								"%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+					}
+				}
+				break;
+			}
+
+			*comma++ = '\0';
+			if (tcsd_set_remote_op(conf, comma)) {
+				LogError("Config option \"remote_ops\" is invalid. "
+						"%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+			}
 		}
 		break;
 	default:
