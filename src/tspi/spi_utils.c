@@ -704,12 +704,12 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 	UINT16 offset;
 	TSS_HPOLICY hPolicy;
 
+	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+		return result;
+
 	/* do an owner authorized get capability call */
 	UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
 	Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
-
-	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
-		return result;
 
 	if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
 		return result;
@@ -726,8 +726,8 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
 	Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-	Trspi_LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
-	Trspi_LoadBlob_UINT32(&offset, volFlags, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, *nonVolFlags, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, *volFlags, hashBlob);
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
