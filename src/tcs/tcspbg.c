@@ -2043,7 +2043,7 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_UINT32(&offset, respSize, txBlob, "resp size");
 		*resp = getSomeMemory(*respSize, hContext);
 		if (*resp == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", *respSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
