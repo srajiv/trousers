@@ -1,4 +1,6 @@
 
+ - added new testcases for ChangeAuth of the TPM owner and SRK in
+   tcg/highlevel/tspi.
  - added test tcg/highlevel/tpm/Tspi_TPM_PcrRead04.c
  - updated Tspi_TPM_GetCapability manpage.
  - added manpage for Tspi_TPM_GetPubEndorsementKey
@@ -9,6 +11,12 @@
     Tspi_TPM_GetCapability, which required a call to
     TCSP_GetCapabilityOwner to fetch the TPM's internal flags. Added
     tcg/highlevel/tpm/Tspi_TPM_GetCapability0{4,5}.c to test.
+    - When loading the SRK from TCS PS, the TCS key handle should now
+    be 0x40000000 (TSS_SRK_KEY_HANDLE). There were checks for this in
+    the ChangeAuth code paths, which caused failing of various sorts.
+    - Bug fixed in roll over of TCS key handle generation. Previously we
+    would have smashed the SRK's fixed value and we would have thought
+    there were 2 SRK's loaded.
  - Feature Requests
     - sf.net RFE #1122608 completed. Several different device locations
     are now supported by default.  If /dev/tpm is created its assumed that
