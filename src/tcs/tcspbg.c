@@ -225,6 +225,8 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
 		if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
 			return TCS_E_FAIL;	/*tcs error */
+	} else {
+		newEntValue = entityValue;
 	}
 
 	offset = 10;
