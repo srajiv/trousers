@@ -3,6 +3,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_Context_Close.3 \
 	    Tspi_Context_CloseObject.3 \
 	    Tspi_Context_Connect.3 \
+	    Tspi_Context_Create.3 \
 	    Tspi_Context_CreateObject.3 \
 	    Tspi_Context_FreeMemory.3 \
 	    Tspi_Context_GetCapability.3 \
@@ -32,6 +33,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_Key_CreateKey.3 \
 	    Tspi_Key_CreateMigrationBlob.3 \
 	    Tspi_Key_GetPubKey.3 \
+	    Tspi_Key_LoadKey.3 \
 	    Tspi_Key_UnloadKey.3 \
 	    Tspi_PcrComposite_GetPcrValue.3 \
 	    Tspi_PcrComposite_SelectPcrIndex.3 \
@@ -62,4 +64,6 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_TPM_Quote.3 \
 	    Tspi_TPM_SelfTestFull.3 \
 	    Tspi_TPM_SetStatus.3 \
-	    Tspi_TPM_StirRandom.3
+	    Tspi_TPM_StirRandom.3 \
+	    Tspi_TPM_TakeOwnership.3
+EXTRA_DIST = $(man3_MANS)
