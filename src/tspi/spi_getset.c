@@ -1227,7 +1227,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 		break;
 		/* -------------------------------       */
 	case TSS_OBJECT_TYPE_RSAKEY:
-		LogDebug1("TSS_OBJECT_TYPE_RSAKEY");
 		if (attribFlag != TSS_TSPATTRIB_KEY_BLOB)
 			return TSS_E_INVALID_ATTRIB_FLAG;
 
@@ -1241,39 +1240,33 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 		}
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-			LogDebug1("TSS_TSPATTRIB_KEYBLOB_BLOB");
-
 			offset = 0;
 			UnloadBlob_KEY(tspContext, &offset, rgbAttribData, &rsaObj->tcpaKey);
 
 			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-			LogDebug1("TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY");
-			offset = 0;
-			if ((result = UnloadBlob_KEY_PARMS(0, &offset, rgbAttribData, &rsaObj->tcpaKey.algorithmParms)))
-				return result;
-			if ((result = UnloadBlob_STORE_PUBKEY(0, &offset, rgbAttribData, &rsaObj->tcpaKey.pubKey)))
-				return result;
-			if (offset != ulAttribDataSize) {
-				LogError("Attribute data size doesn't match public key size (%d)", offset);
-				return TSS_E_INTERNAL_ERROR;
-			}
-		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-			LogDebug1("TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY");
-			rsaObj->privateKey.Privlen = ulAttribDataSize;
-#if 0
-			if (rsaObj->privateKey.Privkey != NULL)
-				free(rsaObj->privateKey.Privkey);
-#endif
+			if (rsaObj->tcpaKey.pubKey.key)
+				free_tspi(tspContext, rsaObj->tcpaKey.pubKey.key);
+			rsaObj->tcpaKey.pubKey.keyLength = ulAttribDataSize;
 
-			rsaObj->privateKey.Privkey = calloc_tspi(tspContext, rsaObj->privateKey.Privlen);
-			if (rsaObj->privateKey.Privkey == NULL) {
-				LogError("malloc of %d bytes failed.", rsaObj->privateKey.Privlen);
+			rsaObj->tcpaKey.pubKey.key = calloc_tspi(tspContext, ulAttribDataSize);
+			if (rsaObj->tcpaKey.pubKey.key == NULL) {
+				LogError("malloc of %d bytes failed.", ulAttribDataSize);
 				return TSS_E_OUTOFMEMORY;
 			}
-			memcpy(rsaObj->privateKey.Privkey, rgbAttribData, rsaObj->privateKey.Privlen);
+			memcpy(rsaObj->tcpaKey.pubKey.key, rgbAttribData, ulAttribDataSize);
+		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
+			if (rsaObj->tcpaKey.encData)
+				free_tspi(tspContext, rsaObj->tcpaKey.encData);
+			rsaObj->tcpaKey.encSize = ulAttribDataSize;
+
+			rsaObj->tcpaKey.encData = calloc_tspi(tspContext, ulAttribDataSize);
+			if (rsaObj->tcpaKey.encData == NULL) {
+				LogError("malloc of %d bytes failed.", ulAttribDataSize);
+				return TSS_E_OUTOFMEMORY;
+			}
+			memcpy(rsaObj->tcpaKey.encData, rgbAttribData, ulAttribDataSize);
 		} else {
-			LogDebug1("TSS_E_INVALID_ATTRIB_SUBFLAG");
 			return TSS_E_INVALID_ATTRIB_SUBFLAG;
 		}
 		break;
