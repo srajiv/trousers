@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include "tss/tss.h"
 #include "tcs_internal_types.h"
@@ -39,8 +40,6 @@
 
 struct tcsd_config tcsd_options;
 struct tpm_properties tpm_metrics;
-
-int sd, newsd;
 
 void
 tcsd_shutdown()
@@ -187,22 +186,40 @@ tcsd_startup()
 	return TSS_SUCCESS;
 }
 
+void
+usage(void)
+{
+	fprintf(stderr, "\tusage: tcsd [-f] [-h]\n\n");
+	fprintf(stderr, "\t-f|--foreground\trun in the foreground. Logging goes to stderr "
+			"instead of syslog.\n");
+	fprintf(stderr, "\t-h|--help\tdisplay this help message\n");
+	fprintf(stderr, "\n");
+}
+
 int
 main(int argc, char **argv)
 {
 	struct sockaddr_in addr;
 	TSS_RESULT result;
 	socklen_t size;
-	int sd, c;
+	int sd, newsd, c, option_index = 0;
 	char hostname[80];
+	struct option long_options[] = {
+		{"help", 0, NULL, 'h'},
+		{"foreground", 0, NULL, 'f'},
+		{0, 0, 0, 0}
+	};
 
-	while ((c = getopt(argc, argv, "f")) != -1) {
+
+	while ((c = getopt_long(argc, argv, "fh", long_options, &option_index)) != -1) {
 		switch (c) {
 			case 'f':
 				foreground = 1;
 				break;
+			case 'h':
+				/* fall through */
 			default:
-				LogError("invalid option: %s", optarg);
+				usage();
 				return -1;
 				break;
 		}
