@@ -293,6 +293,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 
                 /* jump to the location of the public key */
                 file_offset = PUB_DATA_OFFSET(tmp);
+
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
@@ -313,6 +314,13 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 		if (memcmp(tmp_buffer, pub->key, tmp->pub_data_size)) {
 			tmp = tmp->next;
 			continue;
+		}
+
+		*ret_uuid == (TSS_UUID *)malloc(sizeof(TSS_UUID));
+		if (*ret_uuid == NULL) {
+			LogError("malloc of %d bytes failed.", sizeof(TSS_UUID));
+			pthread_mutex_unlock(&disk_cache_lock);
+			return TSS_E_OUTOFMEMORY;
 		}
 
 		/* the key matches, copy the uuid out */
