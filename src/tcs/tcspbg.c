@@ -160,7 +160,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogError1("Error writing SRK to disk");
 			return result;
 		}
-		result = add_mem_cache_entry_lock(getNextTcsKeyHandle(), SRK_TPM_HANDLE, &srkKeyContainer);
+		result = add_mem_cache_entry_lock(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TCS_SUCCESS)
 			LogError1("Error creating mem cache entry");
 	}
