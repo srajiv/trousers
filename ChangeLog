@@ -1,4 +1,5 @@
 
+ - added Tspi_TPM_CertifySelfTest functionality
  - corrected iptables string in the tcsd manpage.
  - Corrected return code in Tspi_Key_UnloadKey02.c testcase.
  - enabled Tspi_TPM_GetTestResult functionality

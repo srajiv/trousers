@@ -241,7 +241,7 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	free(*hdr);
 	*hdr = tmp_hdr;
-	LogDebug1("Finished sending and receiving repsonse from TCSD");
+	LogDebug1("Finished sending and receiving response from TCSD");
 	return TSS_SUCCESS;
 }
 
@@ -2546,8 +2546,59 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 				    UINT32 * sigSize,	/* out */
 				    BYTE ** sig	/* out */
     ) {
-	return TSS_E_NOTIMPL;
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+	int i;
 
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_CERTIFYSELFTEST;
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (privAuth)
+		if (setData(TCSD_PACKET_TYPE_AUTH, 3, privAuth, 0, &data))
+			return TSS_E_INTERNAL_ERROR;
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		i = 0;
+		if (privAuth)
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, hdr)) {
+				LogDebug1("privAuth");
+				result = TSS_E_INTERNAL_ERROR;
+				goto done;
+			}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, hdr)) {
+			LogDebug1("sigSize");
+			result = TSS_E_INTERNAL_ERROR;
+			goto done;
+		}
+		*sig = (BYTE *) malloc(*sigSize);
+		if (*sig == NULL) {
+			LogError("Malloc of %d bytes failed.", *sigSize);
+			result = TSS_E_OUTOFMEMORY;
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
+			LogDebug1("sig");
+			free(*sig);
+			result = TSS_E_INTERNAL_ERROR;
+		}
+	}
+
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT

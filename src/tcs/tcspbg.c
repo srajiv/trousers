@@ -2444,7 +2444,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Certify self Test");
+	LogDebug1("Entering Certify Self Test");
 
 	do {
 		if ((result = ctx_verify_context(hContext)))

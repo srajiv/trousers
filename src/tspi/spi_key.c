@@ -137,7 +137,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,	/*  in */
 	LogDebug1("Adding key to table");
 	addKeyHandle(phKey, hKey);
 
-	LogDebug1("Leavingf loadkey");
+	LogDebug1("Leaving loadkey");
 	return result;
 }
 

@@ -2866,6 +2866,78 @@ tcs_wrap_SelfTestFull(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_CertifySelfTest(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TSS_RESULT result;
+	UINT32 sigSize;
+	BYTE *sigData = NULL;
+	TCS_KEY_HANDLE hKey;
+	TCPA_NONCE antiReplay;
+	TCS_AUTH privAuth;
+	TCS_AUTH *pPrivAuth;
+	int i;
+
+	LogDebug("tcs_wrap_CertifySelfTest");
+	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x servicing a %s request", (UINT32)pthread_self(), __FUNCTION__);
+        if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, tsp_data))
+                return TSS_E_INTERNAL_ERROR;
+        if (getData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, tsp_data))
+                return TSS_E_INTERNAL_ERROR;
+        if (getData(TCSD_PACKET_TYPE_AUTH, 3, &privAuth, 0, tsp_data))
+                pPrivAuth = NULL;
+        else
+                pPrivAuth = &privAuth;
+
+	result = TCSP_CertifySelfTest_Internal(hContext, hKey, antiReplay, pPrivAuth, &sigSize, &sigData);
+	i = 0;
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH) + sizeof(UINT32) + sigSize);
+		if (*hdr == NULL) {
+			free(sigData);
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH) + sizeof(UINT32) + sigSize);
+			return TSS_E_OUTOFMEMORY;
+		}
+                if (pPrivAuth != NULL) {
+                        if (setData(TCSD_PACKET_TYPE_AUTH, i++, pPrivAuth, 0, *hdr)) {
+                                free(*hdr);
+                                free(sigData);
+                                return TSS_E_INTERNAL_ERROR;
+                        }
+                }
+
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &sigSize, 0, *hdr)) {
+			free(*hdr);
+			free(sigData);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, sigData, sigSize, *hdr)) {
+			free(*hdr);
+			free(sigData);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		free(sigData);
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+
+	LogDebug("tcs_wrap_CertifySelfTest exit");
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_GetTestResult(struct tcsd_thread_data *data,
 			struct tsp_packet *tsp_data,
 			struct tcsd_packet_hdr **hdr)
@@ -3145,7 +3217,7 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Error}, /* 51 */
 	{tcs_wrap_Error}, /* 52 */
 	{tcs_wrap_SelfTestFull}, /* 53 */
-	{tcs_wrap_Error}, /* 54 */
+	{tcs_wrap_CertifySelfTest}, /* 54 */
 	{tcs_wrap_Error}, /* 55 */
 	{tcs_wrap_GetTestResult}, /* 56 */
 	{tcs_wrap_OwnerSetDisable}, /* 57 */
@@ -3208,6 +3280,7 @@ dispatchCommand(struct tcsd_thread_data *data,
 		return TCS_E_FAIL;
 	}
 
+	LogDebug("Dispatching ordinal %d", tsp_data->ordinal);
 	if (access_control(data, tsp_data)) {
 		*hdr = calloc(1, sizeof(struct tcsd_packet_hdr));
 		if (*hdr == NULL) {
