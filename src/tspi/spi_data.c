@@ -159,7 +159,6 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		return TSS_E_INTERNAL_ERROR;
 	}
 
-	destroy_key_refs(&keyContainer);
 	return TSS_SUCCESS;
 }
 
