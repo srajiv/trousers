@@ -199,10 +199,10 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-	struct sockaddr_in addr;
+	struct sockaddr_in serv_addr, client_addr;
 	TSS_RESULT result;
 	socklen_t size;
-	int sd, newsd, c, option_index = 0;
+	int sd, newsd, c, option_index = 0, client_len;
 	char hostname[80];
 	struct option long_options[] = {
 		{"help", 0, NULL, 'h'},
@@ -236,16 +236,18 @@ main(int argc, char **argv)
 		}
 	}
 
-	sd = socket(PF_INET, SOCK_STREAM, 0);
+	sd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sd < 0) {
 		LogError("Failed socket: %s", strerror(errno));
 		return -1;
 	}
-	memset(&addr, 0, sizeof (addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(tcsd_options.port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-	if (bind(sd, (struct sockaddr *) &addr, sizeof (addr)) < 0) {
+
+	memset(&serv_addr, 0, sizeof (serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(tcsd_options.port);
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if (bind(sd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
 		LogError("Failed bind: %s", strerror(errno));
 		return -1;
 	}
@@ -253,10 +255,10 @@ main(int argc, char **argv)
 		LogError("Failed listen: %s", strerror(errno));
 		return -1;
 	}
-	size = sizeof (addr);
+	client_len = sizeof (client_addr);
 	LogInfo("%s: TCSD up and running.", PACKAGE_STRING);
 	do {
-		newsd = accept(sd, (struct sockaddr *) &addr, &size);
+		newsd = accept(sd, (struct sockaddr *) &client_addr, &client_len);
 		LogDebug("accepted socket %i", newsd);
 		if (newsd < 0) {
 			LogError("Failed accept: %s", strerror(errno));
@@ -264,7 +266,7 @@ main(int argc, char **argv)
 		}
 
 		/* Resolve the TSP's hostname and spawn a thread to service it */
-		if ((getnameinfo(&addr, size, hostname, 80, NULL, 0, 0))) {
+		if ((getnameinfo(&client_addr, client_len, hostname, 80, NULL, 0, 0))) {
 			LogError1("Connecting hostname could not be resolved.");
 			tcsd_thread_create(newsd, NULL);
 		} else {
