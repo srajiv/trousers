@@ -1211,7 +1211,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 	UINT16 offset;
 	UINT32 type;
 	TSS_HCONTEXT tspContext;
-	TSS_RESULT result;
 
 	LogDebug1("Tspi_SetAttribData");
 
@@ -1373,8 +1372,8 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 				offset = 0;
 				LoadBlob_KEY(&offset, tempBuf, &rsaObj->tcpaKey);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-				offset = rsaObj->privateKey.Privlen;
-				memcpy(tempBuf, rsaObj->privateKey.Privkey, offset);
+				offset = rsaObj->tcpaKey.encSize;
+				memcpy(tempBuf, rsaObj->tcpaKey.encData, offset);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
 				offset = rsaObj->tcpaKey.pubKey.keyLength;
 				memcpy(tempBuf, rsaObj->tcpaKey.pubKey.key, offset);
