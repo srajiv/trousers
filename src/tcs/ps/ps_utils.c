@@ -515,7 +515,7 @@ init_disk_cache(int fd)
 			if ((rc = UnloadBlob_KEY_PS(&tmp_offset, srk_blob, &srk_key)))
 				goto err_exit;
 			/* add to the mem cache */
-			if ((rc = add_mem_cache_entry(getNextTcsKeyHandle(), SRK_TPM_HANDLE,
+			if ((rc = add_mem_cache_entry(SRK_TPM_HANDLE, SRK_TPM_HANDLE,
 							&srk_key))) {
 				LogError1("Error adding SRK to mem cache.");
 				destroy_key_refs(&srk_key);
