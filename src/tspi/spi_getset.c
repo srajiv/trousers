@@ -1326,7 +1326,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 		   BYTE ** prgbAttribData	/*  out */
     )
 {
-	UINT16 offset;
+	UINT16 offset = 0xffff;
 	AnObject *object = NULL;
 	TCPA_RSAKEY_OBJECT *rsaObj;
 	TCPA_ENCDATA_OBJECT *encDataObj;
@@ -1387,22 +1387,10 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			LogDebug1("TSS_TSPATTRIB_RSAKEY_INFO");
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
-				*pulAttribDataSize = (*(TCPA_RSA_KEY_PARMS *)
+				offset = (*(TCPA_RSA_KEY_PARMS *)
 						(rsaObj->tcpaKey.algorithmParms.parms)).exponentSize;
-				if ((*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize)) == NULL) {
-					LogError("malloc of %d bytes failed", *pulAttribDataSize);
-					return TSS_E_OUTOFMEMORY;
-				}
-				memcpy(*prgbAttribData, (*(TCPA_RSA_KEY_PARMS *)
-							(rsaObj->tcpaKey.algorithmParms.parms)).exponent,
-						*pulAttribDataSize);
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_MODULUS) {
-				*pulAttribDataSize = rsaObj->tcpaKey.pubKey.keyLength;
-				if ((*prgbAttribData = calloc_tspi(hContext, *pulAttribDataSize)) == NULL) {
-					LogError("malloc of %d bytes failed", *pulAttribDataSize);
-					return TSS_E_OUTOFMEMORY;
-				}
-				memcpy(*prgbAttribData, rsaObj->tcpaKey.pubKey.key, *pulAttribDataSize);
+				offset = rsaObj->tcpaKey.pubKey.keyLength;
 			} else
 				return TSS_E_INVALID_ATTRIB_SUBFLAG;
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_UUID) {
