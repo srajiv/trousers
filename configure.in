@@ -47,6 +47,11 @@ AC_ARG_ENABLE(gcov,
 		[CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 		 AC_MSG_RESULT([*** Enabling gcov at user request ***])],)
 
+AC_ARG_ENABLE(stderrlog,
+		AC_HELP_STRING([--enable-stderrlog], [log messages to stderr instead of syslog [default=off]]),
+		[CFLAGS="$CFLAGS -DTSS_LOG_STDERR"
+		 AC_MSG_RESULT([*** Enabling logging to stderr at user request ***])],)
+
 # section imported from Glade compile
 pkg_modules="gtk+-2.0 >= 2.0.0"
 PKG_CHECK_MODULES(GTK, [$pkg_modules], AM_CONDITIONAL(HAVE_GTK, true),)
