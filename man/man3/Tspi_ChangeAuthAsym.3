@@ -42,7 +42,7 @@ This method changes the authorization data of an object ensuring that the parent
 Handle of the object the authorization data should be changed.
 .PP
 .SS hParentObject
-Handle of the parent object wrapping the object addressed by hObjectToChange.
+Handle of the parent object wrapping the object addressed by \fIhObjectToChange\fR.
 .PP
 .SS hIdentKey
 Handle of the identity key object required to proof the internally created temporary key.
@@ -53,7 +53,7 @@ Handle of the policy object providing the new authorization data.
 .PP
 \fBTspi_ChangeAuthAsym\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
 .TP
-.SM TSS_E_INVALID_HANDLE - Either \fIhObjectToChange\fR, \fIhParentObject\fR, or \fRhIdentKey\fR is an invalid handle.
+.SM TSS_E_INVALID_HANDLE - Either \fIhObjectToChange\fR, \fIhParentObject\fR, or \fIhIdentKey\fR is an invalid handle.
 .TP
 .SM TSS_E_INTERNAL_ERROR - An error occurred internal to the TSS.
 

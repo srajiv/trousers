@@ -39,16 +39,14 @@ Tspi_Context_Connect\- connect a TSP to a Core Services daemon
 .SS hLocalContext
 The handle to the context to be connected.
 .PP
-.SS wszDestination 
-A null terminated unicode string which specifies  the local or remote system to which one will be connected. If wszDestination is NULL, the connection will be to a local TSS.
+.SS wszDestination
+A null terminated unicode string which specifies  the local or remote system to which one will be connected. If \fIwszDestination\fR is NULL, the connection will be to a local TCS.
 
 .SH "RETURN CODES"
 .PP
 \fBTspi_Context_Connect\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
 .TP
-.SM TSS_E_INVALID_HANDLE - Either \fIhLocalContext\fR or \fIwszDestination\fR is an invalid handle.
-.TP
-.SM TSS_E_NO_CONNECTION
+.SM TSS_E_INVALID_HANDLE - \fIhLocalContext\fR is an invalid handle.
 .TP
 .SM TSS_E_INTERNAL_ERROR - An error occurred internal to the TSS.
 .SH "CONFORMING TO"
