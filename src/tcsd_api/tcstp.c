@@ -2598,6 +2598,10 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 			free(*pubEndorsementKey);
 			result = TSS_E_INTERNAL_ERROR;
 		}
+		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, hdr)) {
+			free(*pubEndorsementKey);
+			result = TSS_E_INTERNAL_ERROR;
+		}
 	}
 done:
 	free(hdr);
