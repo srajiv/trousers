@@ -85,12 +85,12 @@ get_current_version(TCPA_VERSION *version)
 	TSS_RESULT result;
 	UINT16 offset;
 
-	result = TCSP_GetCapability_Internal(InternalContext,	/* in */
-			capArea,	/* in */
-			0,	/* in */
-			NULL,	/*ignored         subCap, *//* in */
-			&respSize,	/* out */
-			&resp);	/* out */
+	result = TCSP_GetCapability_Internal(InternalContext,
+			capArea,
+			0,
+			NULL,
+			&respSize,
+			&resp);
 	if (!result) {
 		offset = 0;
 		UnloadBlob_VERSION(&offset, resp, version);
