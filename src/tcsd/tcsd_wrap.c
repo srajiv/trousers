@@ -2165,7 +2165,7 @@ tcs_wrap_ChangeAuth(struct tcsd_thread_data *data,
 		return TSS_E_INTERNAL_ERROR;
 	if (getData(TCSD_PACKET_TYPE_ENCAUTH, 3, &newAuth, 0, tsp_data))
 		return TSS_E_INTERNAL_ERROR;
-	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &entityType, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT16, 4, &entityType, 0, tsp_data))
 		return TSS_E_INTERNAL_ERROR;
 	if (getData(TCSD_PACKET_TYPE_UINT32, 5, &encDataSize, 0, tsp_data))
 		return TSS_E_INTERNAL_ERROR;

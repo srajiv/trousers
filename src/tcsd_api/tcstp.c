@@ -1452,7 +1452,7 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE contextHandl
 		return TSS_E_INTERNAL_ERROR;
 	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &newAuth, 0, &data))
 		return TSS_E_INTERNAL_ERROR;
-	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &entityType, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 4, &entityType, 0, &data))
 		return TSS_E_INTERNAL_ERROR;
 	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &encDataSize, 0, &data))
 		return TSS_E_INTERNAL_ERROR;
