@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
+#include <netdb.h>
 
 #include "tss/tss.h"
 #include "spi_internal_types.h"
@@ -3173,10 +3174,16 @@ int
 access_control(struct tcsd_thread_data *thread_data, struct tsp_packet *tsp_data)
 {
 	int i = 0;
+	struct hostent *local_hostent = NULL;
+
+	if ((local_hostent = gethostbyname("localhost")) == NULL) {
+		LogError("Error resolving localhost: %s", hstrerror(h_errno));
+		return 1;
+	}
 
 	/* if the request comes from localhost, or is in the accepted ops list,
 	 * approve it */
-	if (!strcmp(thread_data->hostname, "localhost")) {
+	if (!strncmp(thread_data->hostname, local_hostent->h_name, local_hostent->h_length)) {
 		return 0;
 	} else {
 		while (tcsd_options.remote_ops[i]) {
