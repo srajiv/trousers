@@ -1,7 +1,10 @@
 
+* TROUSERS_0_1_9
+
+ - added tcsd manpage
  - added access control functionality so that sets of ordinals
-   cannont be execute by non-local hosts. This is now a
-   configurable option in tcsd.conf as remote_ops.
+   cannot be executed by non-local hosts. This is now a
+   configurable option in tcsd.conf as "remote_ops".
  - Set Physical Presence now works from the TSP when the TCSD
    detects that it is running in single user mode. When not
    running in single user mode, the TCS_PhysicalPresence
