@@ -407,8 +407,6 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	if (bExpired == TRUE)
 		return TSS_E_INVALID_OBJ_ACCESS;
 
-	/* ---   */
-
 	/* ---  If any of them is a callback */
 	if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
 	    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
