@@ -355,7 +355,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 
 		/* If other flags are set that disagree with the SRK, this will help
 		 * catch that conflict in the later steps */
-		if (initFlags & TSS_KEY_SRK_HANDLE) {
+		if (initFlags & TSS_KEY_TSP_SRK) {
 			initFlags |= (TSS_KEY_TYPE_STORAGE | TSS_KEY_NOT_MIGRATABLE |
 			     TSS_KEY_NON_VOLATILE | TSS_KEY_SIZE_2048 | TSS_KEY_NO_AUTHORIZATION);
 		}
@@ -501,9 +501,12 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 			rsaObj->privateKey.Privlen = 0;
 			rsaObj->tcpaKey.PCRInfoSize = 0;
 			rsaKeyParms.keyLength = 2048;
+#if 0
+			/* XXX done below */
 			rsaObj->tcpaKey.keyUsage = TSS_KEYUSAGE_STORAGE;
 			rsaObj->tcpaKey.algorithmParms.encScheme = TSS_ES_RSAESOAEP_SHA1_MGF1;
 			rsaObj->tcpaKey.algorithmParms.sigScheme = TSS_SS_NONE;
+#endif
 			rsaObj->tcpaKey.keyFlags |= volatileKey;
 		}
 
@@ -538,10 +541,10 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 		if (initFlags & TSS_KEY_MIGRATABLE) {
 			rsaObj->tcpaKey.keyFlags.migratable = 1;	/*  |= FLAG_MIGRATABLE; */
 		}
-#endif
 		if (initFlags & TSS_KEY_SRK_HANDLE) {
 			addKeyHandle(FIXED_SRK_KEY_HANDLE, *phObject);
 		}
+#endif
 		zero = 0;
 		LoadBlob_RSA_KEY_PARMS(&zero, rsaObj->tcpaKey.algorithmParms.parms, &rsaKeyParms);
 
@@ -1053,7 +1056,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 	UINT32 keyBlobSize;
 	BYTE *keyBlob;
 	TCS_KEY_HANDLE tcsKeyHandle;
-	TSS_FLAG initFlag;
+	TSS_FLAG initFlags;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 	TCPA_KEY_HANDLE keySlot;
 	UINT32 parentPSType;
@@ -1171,17 +1174,21 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 
 	offset = 0;
 	UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
-	initFlag = 0;
+	initFlags = 0;
 
 	if (theKey.pubKey.keyLength == 0x100)
-		initFlag |= TSS_KEY_SIZE_2048;
+		initFlags |= TSS_KEY_SIZE_2048;
 	else if (theKey.pubKey.keyLength == 0x80)
-		initFlag |= TSS_KEY_SIZE_1024;
+		initFlags |= TSS_KEY_SIZE_1024;
 	else if (theKey.pubKey.keyLength == 0x40)
-		initFlag |= TSS_KEY_SIZE_512;
+		initFlags |= TSS_KEY_SIZE_512;
+
+	/* Make sure to setup the key properly if its the SRK */
+	if (!(memcmp(&uuidData, &SRK_UUID, sizeof(TSS_UUID))))
+		initFlags |= TSS_KEY_TSP_SRK;
 
 	/* ---  Create the keyObject */
-	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlag, phKey)))
+	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlags, phKey)))
 		return result;
 
 	/* ---  Update our table to bind the tcsKeyHandle to this TspKeyHandle */
