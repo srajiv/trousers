@@ -1,6 +1,11 @@
 
 trousers README
 
+  Trousers is an open-source TCG Software Stack (TSS), released under the Common Public
+License. Trousers aims to be compliant with the current (1.1b) and upcoming (1.2)
+TSS specifications available from the Trusted Computing Group website:
+http://www.trustedcomputinggroup.org.
+
 ARCHITECTURE
 
   This TSS implementation has several components.
