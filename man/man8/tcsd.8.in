@@ -54,7 +54,7 @@ daemon's socket itself and access to specific commands internal to the
 administrator using firewall rules.  If using iptables, the following rule
 will allow a specific host access to the tcsd:
 
-# iptables -A INPUT -s $IP_ADDRESS --dport @TCSD_DEFAULT_PORT@ -j ACCEPT
+# iptables -A INPUT -s $IP_ADDRESS -p tcp --destination-port @TCSD_DEFAULT_PORT@ -j ACCEPT
 
 Access to individual commands internal to the tcsd is configured by the
 \fBtcsd\fR configuration file's "remote_ops" directive. Each function call
