@@ -25,6 +25,9 @@
 #include <openssl/sha.h>
 
 #include "tss/tss.h"
+#include "spi_internal_types.h"
+#include "spi_utils.h"
+
 
 /*
  * Hopefully this will make the code clearer since
@@ -118,7 +121,7 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	int oaepPadLen = 4;
 	RSA *rsa = RSA_new();
 	BYTE encodedData[256];
-	int encodedDataLen = 256;
+	int encodedDataLen;
 
 	if (rsa == NULL) {
 		rv = TSS_E_OUTOFMEMORY;
@@ -140,6 +143,8 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 		rv = TSS_E_INTERNAL_ERROR;
 		goto err;
 	}
+
+	encodedDataLen = MIN(RSA_size(rsa), 256);
 
 	/* perform our OAEP padding here with custom padding parameter */
 	rv = RSA_padding_add_PKCS1_OAEP(encodedData, encodedDataLen, dataToEncrypt,
