@@ -815,7 +815,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 
 	myKeyPolicy = &((TSP_INTERNAL_POLICY_OBJECT *)anObject->memPointer)->p;
 
-	/* why is this a problem? Shouldn't popup secret be ok? */
+	/* XXX why is this a problem? Shouldn't popup secret be ok? */
 	if (myKeyPolicy->SecretMode != TSS_SECRET_MODE_SHA1 &&
 	    myKeyPolicy->SecretMode != TSS_SECRET_MODE_PLAIN) {
 		LogError("Key policy 0x%x is not secret mode SHA1 or PLAIN", hPolicy);
