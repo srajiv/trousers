@@ -18,6 +18,9 @@
  - added code to detect a 1.2 TPM and get auth sessions the 1.2 way.
  - added manpage for Tspi_TPM_GetPubEndorsementKey
  - Bugfixes
+    - in crypto.c, encrypted data area should be RSA_size(rsa) bytes
+    large, not always 256. This was keeping non-2048 bit keys from
+    working with the TPM keyring app.
     - Fixed detection of an already closed Tddl.
     - Allow validating the entire TCPA_PUBKEY structure in
     Tspi_TPM_GetPubEndorsementKey, as National chips do this.
