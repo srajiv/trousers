@@ -25,7 +25,7 @@ int tpm_fd = TDDL_UNINITIALIZED;
 
 BYTE txBuffer[TDDL_TXBUF_SIZE];
 
-#define	TPM_IOCTL
+#undef	TPM_IOCTL
 
 TSS_RESULT
 Tddli_Open()
