@@ -1,4 +1,12 @@
 
+* TROUSERS_0_1_7
+
+ - Fixed the logging up so that if tcsd -f is specified, all logs go the
+   foreground, else all logs go to syslog.
+ - Moved the TPM_IOCTL #define into the tddl.h file. Now, if you're
+   using the IBM research device driver, compiling with #define TPM_IOCTL
+   will use ioctl's to open /dev/tpm and #undef TPM_IOCTL will use
+   read/write calls to /dev/tpm0.
  - Revert accidental change in tddl.c
  - Lots of 0's replaced with non-magic #define's in the TSP code
  - In spi_getset.c: removed unimportant debugging stmts; make
