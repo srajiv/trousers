@@ -1041,65 +1041,20 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
-	TSS_HPOLICY hPolicy;
-	TCS_AUTH auth;
 	TSS_RESULT result;
 	UINT32 nonVolFlags;
 	UINT32 volFlags;
-	TCPA_VERSION version;
-	TCPA_DIGEST digest;
-	BYTE hashBlob[128];
-	UINT16 offset;
-
 	LogDebug1("Tspi_TPM_GetStatus");
 
 	if (pfTpmState == NULL)
 		return TSS_E_BAD_PARAMETER;
 
-	for (;;) {
-		if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-			break;
-
-		if ((result = obj_isConnected_1(hTPM, &tcsContext)))
-			break;
-
-		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
-			break;
-
-#if 0
-		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
-		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
-#endif
-		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
-			break;
-
-		break;
-	}
-	if (result) {
-		LogDebug("Failed GetStatus with result 0x%.8X", result);
-		return result;
-	}
-#if 0
-	if ((result = TCSP_GetCapabilityOwner(tcsContext,	/*  in */
-					     &auth,	/*  out */
-					     &version,	/*  out */
-					     &nonVolFlags,	/*  out */
-					     &volFlags	/*  out */
-	    )))
+	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
 
-	offset = 0;
-	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
-	Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-	Trspi_LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
-	Trspi_LoadBlob_UINT32(&offset, volFlags, hashBlob);
-
-	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-
-	if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
+	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
 		return result;
-#endif
+
 	if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
 		return result;
 
