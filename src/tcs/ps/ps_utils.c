@@ -414,7 +414,7 @@ init_disk_cache(int fd)
 	UINT32 valid_keys = 0;
 	UINT16 tmp_offset;
 	int i, rc = 0, offset;
-	struct key_disk_cache *tmp, *prev;
+	struct key_disk_cache *tmp, *prev = NULL;
 	BYTE srk_blob[2048];
 	TCPA_KEY srk_key;
 
