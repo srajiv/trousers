@@ -16,12 +16,6 @@
 prog=/usr/sbin/tcsd
 port=30003
 
-if ! [ -e /dev/tpm ]; then 
-  echo "Error: TPM Device Driver is not installed your system?"
-  exit 1
-fi
-
-
 #
 # Try to install TPM driver module...  9/14 SM
 #
@@ -38,7 +32,7 @@ start() {
 	preload_tpm
         # Start daemon
         echo -n $"Starting tcsd: "
-        daemon $prog --port=$port $OPTIONS &
+        $prog
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && touch /var/lock/subsys/tcsd
