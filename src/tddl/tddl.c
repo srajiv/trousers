@@ -77,13 +77,14 @@ Tddli_Open()
 TSS_RESULT
 Tddli_Close()
 {
-	if (opened_device != NULL) {
+	if (opened_device == NULL) {
 		LogDebug1("attempted to re-close the TPM driver!");
 		return TDDL_E_ALREADY_CLOSED;
 	}
 
 	close(opened_device->fd);
 	opened_device->fd = TDDL_UNINITIALIZED;
+	opened_device = NULL;
 
 	return TDDL_SUCCESS;
 }
