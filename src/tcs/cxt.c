@@ -157,10 +157,10 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 		return;
 	}
 
+	pthread_mutex_unlock(&tcs_ctx_lock);
+
 	ctx_ref_count_keys(toKill);
 	free(toKill);
-
-	pthread_mutex_unlock(&tcs_ctx_lock);
 }
 
 TCS_CONTEXT_HANDLE
