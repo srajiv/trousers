@@ -460,8 +460,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 		}
 		memcpy(pValidationData->rgbData, CertifyInfo, CertifyInfoSize);
 		pValidationData->ulValidationLength = outDataSize;
-		pValidationData->rgbValdationData = calloc_tspi(tspContext, outDataSize);
-		if (pValidationData->rgbValdationData == NULL) {
+		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
+		if (pValidationData->rgbValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", outDataSize);
 			if (useAuthKey)
 				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
@@ -470,10 +470,9 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 
 			return TSS_E_OUTOFMEMORY;
 		}
-		memcpy(pValidationData->rgbValdationData, outData, outDataSize);
+		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
 		memcpy(&pValidationData->versionInfo,
 		       getCurrentVersion(tspContext), sizeof (TCPA_VERSION));
-
 	}
 
 	if (useAuthKey)
