@@ -12,7 +12,7 @@
 #ifndef _TDDL_H_
 #define _TDDL_H_
 
-#define TPM_DRIVER_NAME "/dev/tpm"
+#define TPM_DEVICE_PATH		"/dev/tpm0"
 #define TDDL_TXBUF_SIZE		2048
 #define TDDL_UNINITIALIZED	-1
 

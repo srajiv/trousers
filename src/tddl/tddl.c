@@ -25,8 +25,7 @@ int tpm_fd = TDDL_UNINITIALIZED;
 
 BYTE txBuffer[TDDL_TXBUF_SIZE];
 
-/* Use the new ioctl based driver 04/22/2004 */
-#define	TPM_IOCTL
+#undef	TPM_IOCTL
 
 TSS_RESULT
 Tddli_Open()
@@ -36,15 +35,15 @@ Tddli_Open()
 		return TDDL_E_ALREADY_OPENED;
 	}
 
-	tpm_fd = open(TPM_DRIVER_NAME, O_RDWR);
+	tpm_fd = open(TPM_DEVICE_PATH, O_RDWR);
 	if (tpm_fd < 0) {
 		if (errno == ENOENT) {
 			tpm_fd = TDDL_UNINITIALIZED;
-			LogError("device file %s does not exist!", TPM_DRIVER_NAME);
+			LogError("device file %s does not exist!", TPM_DEVICE_PATH);
 			/* File DNE */
 			return TDDL_E_COMPONENT_NOT_FOUND;
 		}
-		LogError("Open of %s failed: (errno: %d) %s", TPM_DRIVER_NAME, errno, strerror(errno));
+		LogError("Open of %s failed: (errno: %d) %s", TPM_DEVICE_PATH, errno, strerror(errno));
 		return TDDL_E_FAIL;
 	}
 	LogDebug("Leaving %s", __FUNCTION__);
@@ -83,9 +82,11 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 #else
 	if (write(tpm_fd, txBuffer, TransmitBufLen) == 0)
 		return TDDL_E_IOERROR;
+#if 0
 	LogDebug1("Passed Write");
 
 	LogDebug1("Calling Read");
+#endif
 	sizeResult = read(tpm_fd, txBuffer, TDDL_TXBUF_SIZE);
 #endif
 	if (sizeResult <= 0)
