@@ -19,6 +19,9 @@
     - Bug fixed in roll over of TCS key handle generation. Previously we
     would have smashed the SRK's fixed value and we would have thought
     there were 2 SRK's loaded.
+    - sf.net bug #1154611, old SRK was not being removed from mem cache,
+    though disk cache was being deleted. This means that after re-taking
+    ownership the mem cache was corrupted until a restart of the TCSD.
  - Feature Requests
     - sf.net RFE #1122608 completed. Several different device locations
     are now supported by default.  If /dev/tpm is created its assumed that
