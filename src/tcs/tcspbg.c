@@ -125,9 +125,6 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	offset = 10;
 	if (result == 0) {
 		UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer);
@@ -160,7 +157,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogError1("Error writing SRK to disk");
 			return result;
 		}
-		result = add_mem_cache_entry_lock(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
+		result = add_mem_cache_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TCS_SUCCESS)
 			LogError1("Error creating mem cache entry");
 	}

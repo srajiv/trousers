@@ -111,7 +111,7 @@ replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
 
 TCPA_STORE_PUBKEY *getPubByUuid(TSS_UUID *);
 TSS_RESULT add_mem_cache_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
-TSS_RESULT add_mem_cache_entry_lock(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
+TSS_RESULT add_mem_cache_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
 TSS_RESULT setSlotBySlot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
 TSS_RESULT setSlotByHandle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
 //void removeCacheEntryByHandle(TCS_KEY_HANDLE);
