@@ -1388,7 +1388,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 			return TCS_E_KM_LOADFAILED;
 
 		offset = 0;
-		LoadBlob_KEY(&offset, keyBlob, &myKey);
+		LoadBlob_KEY(&offset, keyBlob, myKey);
 		if ((result = TCSP_LoadKeyByBlob_Internal(hContext,
 							parentHandle,
 							offset,
