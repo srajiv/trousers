@@ -135,10 +135,6 @@ TSS_RESULT internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, B
 TSS_RESULT internal_FlushSecret(TSS_HPOLICY hPolicy);
 TSS_RESULT internal_CopySecrets(TSS_HPOLICY dest, TSS_HPOLICY source);
 
-void LoadBlob_PCR_COMPOSITE(UINT16 * offset, BYTE * outBlob, TCPA_PCR_COMPOSITE comp);
-void UnloadBlob_PCR_COMPOSITE(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * inBlob,
-			      TCPA_PCR_COMPOSITE * comp);
-
 TSS_RESULT calculateCompositeHash(TCPA_PCR_COMPOSITE comp, TCPA_DIGEST * digest);
 TSS_RESULT calcCompositeHash(TCPA_PCR_SELECTION select, TCPA_PCRVALUE * arrayOfPcrs,
 			     TCPA_DIGEST * digestOut);
@@ -149,64 +145,18 @@ UINT16 Decode_UINT16(BYTE * in);
 void UINT32ToArray(UINT32 i, BYTE * out);
 void UINT16ToArray(UINT16 i, BYTE * out);
 UINT32 Decode_UINT32(BYTE * y);
-void LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object);
-void UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object);
-void LoadBlob_UINT32(UINT16 * offset, UINT32 in, BYTE * blob);
-void LoadBlob_UINT16(UINT16 * offset, UINT16 in, BYTE * blob);
-void LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob);
-void UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob);
-void LoadBlob_BOOL(UINT16 * offset, BOOL data, BYTE * blob);
-void UnloadBlob_BOOL(UINT16 * offset, BOOL * dataOut, BYTE * blob);
-void UnloadBlob_UINT32(UINT16 * offset, UINT32 * out, BYTE * blob);
-void UnloadBlob_UINT16(UINT16 * offset, UINT16 * out, BYTE * blob);
-void LoadBlob_RSA_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_RSA_KEY_PARMS * parms);
-void UnloadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION * out);
-void UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out);
-void LoadBlob_BOUND_DATA(UINT16 * offset, TCPA_BOUND_DATA bd, UINT32 payloadLength, BYTE * blob);
-void LoadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION version);
-void LoadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION version);
-void LoadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_PCR_INFO(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-			 TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_PCR_SELECTION(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-			      TCPA_PCR_SELECTION * pcr);
-void LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION pcr);
-TSS_RESULT UnloadBlob_STORED_DATA(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-			    TCPA_STORED_DATA * data);
-void LoadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
-void LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
-/*void LoadBlob_VERSION( UINT16* offset, BYTE* blob,  TCPA_VERSION* ver ); */
-void LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
-void UnloadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
-void LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo);
-void LoadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
-void LoadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID uuid);
-void UnloadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID * uuid);
-TSS_RESULT UnloadBlob_KEY_PARMS(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-			  TCPA_KEY_PARMS * keyParms);
-/*void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ); */
-TSS_RESULT UnloadBlob_KEY(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-		    TCPA_KEY * key);
-/*void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ); */
-TSS_RESULT UnloadBlob_STORE_PUBKEY(TSS_HCONTEXT, UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
-void LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY pubKey);
-void LoadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify);
-void LoadBlob_STORE_ASYMKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_ASYMKEY * store);
-void LoadBlob_KEY_ForHash(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
 
 TSS_RESULT EncryptStoreAsymKey(TCS_CONTEXT_HANDLE hContext, TCPA_PAYLOAD_TYPE payload,
 			       UINT32 privModLength, BYTE * privMod, BYTE * usageAuth, BYTE * migAuth,
 			       TCPA_RSAKEY_OBJECT * keyObject, BYTE * pubkey, UINT32 pubKeyLength);
-void UnloadBlob_TCPA_EVENT_CERT(UINT16 * offset, BYTE * blob, TCPA_EVENT_CERT * cert);
-void UnloadBlob_DIGEST(UINT16 * offset, BYTE * blob, TCPA_DIGEST digest);
-TSS_RESULT UnloadBlob_PUBKEY(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-		       TCPA_PUBKEY * pubKey);
 
-void UnloadBlob_MigrationKeyAuth(TCS_CONTEXT_HANDLE hContext, UINT16 * offset,
-				 TCPA_MIGRATIONKEYAUTH * migAuth, BYTE * blob);
-void LoadBlob_CHANGEAUTH_VALIDATE(UINT16 * offset, BYTE * blob, TCPA_CHANGEAUTH_VALIDATE * caValidate);
 TSS_RESULT popup_GetSecret(UINT32, UNICODE *, void *);
 
 BOOL check_flagset_collision(TSS_FLAG, UINT32);
+
+void LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
+void UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
+void LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info);
+void UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info);
 
 #endif
