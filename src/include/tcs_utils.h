@@ -194,32 +194,32 @@ void UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, c
 void LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal, BYTE * blob);
 TSS_RESULT UnloadBlob_Header(BYTE * blob, UINT32 * size);
 void LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob, TCPA_MIGRATIONKEYAUTH * mkAuth);
-void UnloadBlob_MIGRATIONKEYAUTH(UINT32 cHandle, UINT16 * offset, BYTE * blob,
+void UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
 				 TCPA_MIGRATIONKEYAUTH * mkAuth);
 void LoadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
 void UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
 void LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo);
-TSS_RESULT UnloadBlob_KEY_PARMS(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms);
-TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
+TSS_RESULT UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms);
+TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
 void LoadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
 void UnloadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out);
 void LoadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * ver);
-TSS_RESULT UnloadBlob_KEY(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_KEY * key);
+TSS_RESULT UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
 void LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
 void LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
-TSS_RESULT UnloadBlob_PUBKEY(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
-TSS_RESULT UnloadBlob_SYMMETRIC_KEY(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_SYMMETRIC_KEY * key);
-TSS_RESULT UnloadBlob_PCR_SELECTION(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION * pcr);
+TSS_RESULT UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
+TSS_RESULT UnloadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob, TCPA_SYMMETRIC_KEY * key);
+TSS_RESULT UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION * pcr);
 void LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION pcr);
-TSS_RESULT UnloadBlob_PCR_COMPOSITE(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_PCR_COMPOSITE * out);
+TSS_RESULT UnloadBlob_PCR_COMPOSITE(UINT16 * offset, BYTE * blob, TCPA_PCR_COMPOSITE * out);
 void LoadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_PCR_INFO(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_STORED_DATA(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
+TSS_RESULT UnloadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
+TSS_RESULT UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
 void LoadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
 void LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
 void UnloadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
-TSS_RESULT UnloadBlob_CERTIFY_INFO(UINT32 cHandle, UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify);
-TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
+TSS_RESULT UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify);
+TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset, BYTE * blob,
 				TCPA_KEY_HANDLE_LIST * list);
 void LoadBlob_UUID(UINT16 * offset, BYTE * outBlob, TSS_UUID uuid);
 void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);

@@ -32,7 +32,6 @@ extern struct key_mem_cache *key_mem_cache_head;
 extern pthread_mutex_t mem_cache_lock;
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
-extern TSS_VERSION FIXED_TSP_VERSION;
 
 UINT32 UnicodeToArray(BYTE * bytes, UNICODE * wchars);
 UINT32 ArrayToUnicode(BYTE * bytes, UINT32 howManyBytes, UNICODE * wchars);
@@ -40,18 +39,14 @@ UINT32 StringToUnicodeArray(char *message, BYTE * array);
 
 TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE hContext, TCPA_NONCE * nonce);
 
-void *calloc_tspi(TCS_CONTEXT_HANDLE, UINT32);
-TSS_RESULT free_tspi(TCS_CONTEXT_HANDLE, void *);
-//BOOL isThisPointerSPI(TCS_CONTEXT_HANDLE tcsContext, void *memPointer);
-void destroy_key_refs(TCPA_KEY *);
-
-void try_FreeMemory(void *pointer);
+void *calloc_tspi(TSS_HCONTEXT, UINT32);
+TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
 
 /*---	keyReg.c */
 void keyreg_SetUUIDOfKeyObject(TSS_HKEY hKey, TSS_UUID uuid, TSS_FLAG psType);
-BOOL keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE * keyBlob);
+BOOL keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT, UINT32, BYTE *);
 TSS_RESULT keyreg_WriteKeyToFile(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
-TSS_RESULT keyreg_RemoveKey(TCS_CONTEXT_HANDLE, TSS_UUID *);
+TSS_RESULT keyreg_RemoveKey(TSS_UUID *);
 TSS_RESULT keyreg_GetKeyByUUID(TSS_UUID *, UINT32 *, BYTE **);
 TSS_RESULT keyreg_GetParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT keyreg_GetParentPSTypeByUUID(TSS_UUID *, UINT32 *);
@@ -111,25 +106,10 @@ UINT32 getObjectTypeByHandle(TSS_HOBJECT objectHandle);
 TSS_RESULT setObject(UINT32 objectHandle, void *buffer, UINT32 sizeOfBuffer);
 TSS_RESULT getObject(UINT32 objectHandle, void **outBuffer, UINT32 * outSize);
 TSS_HOBJECT addObject(UINT32 context, UINT32 objectType);
-void destroyObjectsByContext(UINT32 contextHandle);
 
 AnObject *getAnObjectByHandle(UINT32 oHandle);
 BOOL anyPopupPolicies(TSS_HCONTEXT context);
 
-#if 0
-TSS_RESULT internal_GetContextObjectForContext(TCS_CONTEXT_HANDLE tcsContext, TSS_HCONTEXT * tspContext);
-TSS_RESULT internal_GetContextForContextObject(TSS_HCONTEXT hContext, TCS_CONTEXT_HANDLE * tcsContext);
-TSS_RESULT internal_CheckContext_1(TSS_HOBJECT object1, TCS_CONTEXT_HANDLE * tcsContext);
-TSS_RESULT internal_CheckContext_2(TSS_HOBJECT object1, TSS_HOBJECT object2,
-				   TCS_CONTEXT_HANDLE * tcsContext);
-TSS_RESULT internal_CheckContext_3(TSS_HOBJECT object1, TSS_HOBJECT object2, TSS_HOBJECT object3,
-				   TCS_CONTEXT_HANDLE * tcsContext);
-TSS_RESULT internal_CheckObjectType_1(TSS_HOBJECT object, UINT32 objectType);
-TSS_RESULT internal_CheckObjectType_2(TSS_HOBJECT object1, UINT32 objectType1, TSS_HOBJECT object2,
-				      UINT32 objectType2);
-TSS_RESULT internal_CheckObjectType_3(TSS_HOBJECT object1, UINT32 objectType1, TSS_HOBJECT object2,
-				      UINT32 objectType2, TSS_HOBJECT object3, UINT32 objectType3);
-#endif
 /*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
 
 void addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle);
@@ -208,8 +188,7 @@ TSS_RESULT UnloadBlob_KEY_PARMS(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BY
 TSS_RESULT UnloadBlob_KEY(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
 		    TCPA_KEY * key);
 /*void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ); */
-TSS_RESULT UnloadBlob_STORE_PUBKEY(TCS_CONTEXT_HANDLE hContext, UINT16 * offset, BYTE * blob,
-			     TCPA_STORE_PUBKEY * store);
+TSS_RESULT UnloadBlob_STORE_PUBKEY(TSS_HCONTEXT, UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
 void LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY pubKey);
 void LoadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify);
 void LoadBlob_STORE_ASYMKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_ASYMKEY * store);
