@@ -98,5 +98,6 @@ AC_OUTPUT(dist/tcsd.conf \
 	  src/tcsd/Makefile \
 	  dist/Makefile \
 	  man/Makefile \
-	  man/man3/Makefile)
+	  man/man3/Makefile \
+	  man/man8/Makefile)
 
