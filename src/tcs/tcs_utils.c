@@ -79,22 +79,37 @@ fill_key_info(struct key_disk_cache *d,
 TSS_RESULT
 get_current_version(TCPA_VERSION *version)
 {
-	TCPA_CAPABILITY_AREA capArea = TCPA_CAP_VERSION;
+	TCPA_CAPABILITY_AREA capArea = TPM_CAP_VERSION_VAL;
 	UINT32 respSize;
 	BYTE *resp;
 	TSS_RESULT result;
 	UINT16 offset;
 
+	/* try the 1.2 way first */
 	result = TCSP_GetCapability_Internal(InternalContext,
 			capArea,
 			0,
 			NULL,
 			&respSize,
 			&resp);
-	if (!result) {
-		offset = 0;
+	if (result == TSS_SUCCESS) {
+		offset = sizeof(UINT16); // XXX hack
 		UnloadBlob_VERSION(&offset, resp, version);
 		free(resp);
+	} else if (result == TCPA_BAD_MODE) {
+		/* if the TPM doesn't understand VERSION_VAL, try the 1.1 way */
+		capArea = TCPA_CAP_VERSION;
+		result = TCSP_GetCapability_Internal(InternalContext,
+				capArea,
+				0,
+				NULL,
+				&respSize,
+				&resp);
+		if (result == TSS_SUCCESS) {
+			offset = 0;
+			UnloadBlob_VERSION(&offset, resp, version);
+			free(resp);
+		}
 	}
 
 	return result;
@@ -120,6 +135,9 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 			case 1:
 				UnloadBlob_BYTE(&offset, (BYTE *)v, resp, NULL);
 				break;
+			case sizeof(UINT16):
+				UnloadBlob_UINT16(&offset, v, resp, NULL);
+				break;
 			case sizeof(UINT32):
 				UnloadBlob_UINT32(&offset, v, resp, NULL);
 				break;
@@ -139,25 +157,33 @@ get_max_auths(UINT32 *auths)
 {
 	TCS_AUTHHANDLE handles[MAX_AUTHS_CAP];
 	TCPA_NONCE nonce;
+	UINT32 subCap;
 	TSS_RESULT result;
 	int i;
 
-	/* open auth sessions until we get a failure */
-	for (i = 0; i < MAX_AUTHS_CAP; i++) {
-		result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);
-		if (result != TSS_SUCCESS) {
-			/* this is not off by one since we're 0 indexed */
-			*auths = i;
-			break;
+	if (TPM_VERSION(1,2)) {
+		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, &subCap);
+		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
+	} else if (TPM_VERSION(1,1)) {
+		/* open auth sessions until we get a failure */
+		for (i = 0; i < MAX_AUTHS_CAP; i++) {
+			result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);
+			if (result != TSS_SUCCESS) {
+				/* this is not off by one since we're 0 indexed */
+				*auths = i;
+				break;
+			}
 		}
-	}
 
-	if (i == MAX_AUTHS_CAP)
-		*auths = MAX_AUTHS_CAP;
+		if (i == MAX_AUTHS_CAP)
+			*auths = MAX_AUTHS_CAP;
 
-	/* close the auth sessions */
-	for (i = 0; i < *auths; i++) {
-		internal_TerminateHandle(handles[i]);
+		/* close the auth sessions */
+		for (i = 0; i < *auths; i++) {
+			internal_TerminateHandle(handles[i]);
+		}
+	} else {
+		*auths = 0;
 	}
 
 	if (*auths < 2) {
@@ -212,13 +238,16 @@ get_tpm_metrics(struct tpm_properties *p)
 					(UINT32 *)&p->manufacturer)))
 		return TSS_E_INTERNAL_ERROR;
 
+#if 0
 	if (TPM_VERSION(1,1)) {
 		result = get_max_auths(&(p->num_auths));
 	} else {
 		/* XXX query for a 1.2 TPM */
 		p->num_auths = 2;
 	}
-
+#else
+	result = get_max_auths(&(p->num_auths));
+#endif
 	return result;
 }
 
