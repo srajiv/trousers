@@ -13,7 +13,7 @@
 #include <string.h>
 #include <syslog.h>
 
-int foreground = 1;
+int foreground = 0;
 
 /*
  * LogBlobData()
