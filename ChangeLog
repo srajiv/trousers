@@ -1,4 +1,8 @@
 
+ - added an error message when incorrect params are passed to tcsd on
+   the command line.
+ - added -lcrypto and -lpthread to the build of libtspi.so, so that app
+   writers will avoid having to include those when they don't have to.
  - Connected up Tspi_TPM_SetStatus and Tspi_TPM_SelfTestFull to
    TCSP_SetTempDeactivated, TCSP_SelfTestFull, TCSP_SetOwnerInstall,
    TCSP_OwnerSetDisable and TCSP_PhysicalDisable.
