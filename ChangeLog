@@ -1,4 +1,5 @@
 
+ - added test tcg/highlevel/tpm/Tspi_TPM_PcrRead04.c
  - updated Tspi_TPM_GetCapability manpage.
  - added manpage for Tspi_TPM_GetPubEndorsementKey
  - Bugfixes
