@@ -122,6 +122,7 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/*  in */
 			LogError("internal object pointer for handle 0x%x not found!", hObject);
 			return TSS_E_INTERNAL_ERROR;
 		}
+		/* XXX Shouldn't the old policy be free'd here? */
 		((TCPA_TPM_OBJECT *) object->memPointer)->policy = hPolicy;
 
 		break;

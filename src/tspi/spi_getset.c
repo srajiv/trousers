@@ -300,14 +300,13 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			LoadBlob_KEY(&offset, keyBlob, &keyToChange);
 			objectLength = offset;
 
-			result =
+			if ((result =
 			    Tspi_SetAttribData(hObjectToChange,
 					       TSS_TSPATTRIB_KEY_BLOB,
-					       TSS_TSPATTRIB_KEYBLOB_BLOB, objectLength, keyBlob);
-			if (result)
+					       TSS_TSPATTRIB_KEYBLOB_BLOB, objectLength, keyBlob)))
 				return result;
 
-			/* XXX replace with valid impl */
+			/* XXX replace with valid impl if we really want to touch the PS here */
 			//keyreg_replaceEncData_PS(oldEncData, keyToChange.encData);
 		}
 	}
