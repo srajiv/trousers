@@ -1,4 +1,7 @@
 
+ - various compile warnings fixed
+ - moved commonly used utility functions to trspi/trousers.c and
+   exported these functions in the header file tss/trousers.h.
  - added new testcases for ChangeAuth of the TPM owner and SRK in
    tcg/highlevel/tspi.
  - added test tcg/highlevel/tpm/Tspi_TPM_PcrRead04.c
