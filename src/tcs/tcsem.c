@@ -50,10 +50,10 @@ event_log_init()
 	pthread_mutex_init(&(tcs_event_log->lock), NULL);
 
 	/* allocate as many event lists as there are PCR's */
-	tcs_event_log->lists = calloc(tpm_metrics.num_pcrs, sizeof(struct event_wrapper));
+	tcs_event_log->lists = calloc(tpm_metrics.num_pcrs, sizeof(struct event_wrapper *));
 	if (tcs_event_log->lists == NULL) {
 		LogError("malloc of %d bytes failed.",
-				tpm_metrics.num_pcrs * sizeof(struct event_wrapper));
+				tpm_metrics.num_pcrs * sizeof(struct event_wrapper *));
 		free(tcs_event_log);
 		return TSS_E_OUTOFMEMORY;
 	}
@@ -62,6 +62,8 @@ event_log_init()
 	tcs_event_log->firmware_source = NULL;
 #ifdef EVLOG_SOURCE_IMA
 	tcs_event_log->kernel_source = &ima_source;
+#else
+	tcs_event_log->kernel_source = NULL;
 #endif
 
 	return TCS_SUCCESS;
@@ -75,9 +77,6 @@ event_log_final()
 
 	pthread_mutex_lock(&(tcs_event_log->lock));
 
-	/* free the array of event lists, which were just pointers to the main array
-	 * which was freed above
-	 */
 	for (i = 0; i < tpm_metrics.num_pcrs; i++) {
 		cur = tcs_event_log->lists[i];
 		while (cur != NULL) {
@@ -91,6 +90,7 @@ event_log_final()
 
 	pthread_mutex_unlock(&(tcs_event_log->lock));
 
+	free(tcs_event_log->lists);
 	free(tcs_event_log);
 
 	return TCS_SUCCESS;

@@ -93,7 +93,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		/*---	Check on the Atmel Bug Patch */
 		offset = 0;
-		UnloadBlob_KEY(hContext, &offset, srkInfo, &srkKeyContainer);
+		UnloadBlob_KEY(&offset, srkInfo, &srkKeyContainer);
 		oldAuthDataUsage = srkKeyContainer.authDataUsage;
 		LogDebug("auth data usage is %.2X", oldAuthDataUsage);
 
@@ -130,7 +130,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	if (result == 0) {
-		UnloadBlob_KEY(hContext, &offset, txBlob, &srkKeyContainer);
+		UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer);
 		*srkKeySize = offset - 10;
 		*srkKey = getSomeMemory(*srkKeySize, hContext);	/*this is that memory leak problem */
 		if (*srkKey == NULL) {
@@ -474,7 +474,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Checking for room to load the eph key");
 	offset = 0;
-	if ((result = UnloadBlob_KEY_PARMS(hContext, &offset, KeyDataIn, &keyParmsContainer)))
+	if ((result = UnloadBlob_KEY_PARMS(&offset, KeyDataIn, &keyParmsContainer)))
 		return result;
 
 	/* if we can't load the key, evict keys until we can */
@@ -512,7 +512,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (result == 0) {
-		UnloadBlob_CERTIFY_INFO(hContext, &offset, txBlob,
+		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
 					&certifyInfo);
 		*CertifyInfoSize = offset - 10;
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
@@ -531,7 +531,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		UnloadBlob_UINT32(&offset, ephHandle, txBlob, "eph handle");
 		tempSize = offset;
-		UnloadBlob_KEY(hContext, &offset, txBlob, &tempKey);
+		UnloadBlob_KEY(&offset, txBlob, &tempKey);
 		*KeySizeOut = offset - tempSize;
 		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
 		if (*KeyDataOut == NULL) {
@@ -957,7 +957,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		auth_mgr_release_auth(privAuth->AuthHandle);
 
 	if (!result) {
-		UnloadBlob_PCR_COMPOSITE(hContext, &offset, txBlob, &pcrComp);
+		UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp);
 		*pcrDataSizeOut = offset - 10;
 		*pcrDataOut = getSomeMemory(*pcrDataSizeOut, hContext);
 		if (*pcrDataOut == NULL) {
@@ -1153,7 +1153,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		TSS_RESULT tmp_result;
-		if ((tmp_result = UnloadBlob_STORED_DATA(hContext, &offset, txBlob, &storedData)))
+		if ((tmp_result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
 			return tmp_result;
 		*SealedDataSize = offset - 10;
 /*		UnloadBlob_UINT32( &offset, SealedDataSize, txBlob, "sealed data size" ); */
@@ -1582,8 +1582,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
-		UnloadBlob_MIGRATIONKEYAUTH(hContext, &offset, txBlob,
-					    &container);
+		UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container);
 		*MigrationKeyAuthSize = offset - 10;
 		*MigrationKeyAuth = getSomeMemory(*MigrationKeyAuthSize, hContext);
 		if (*MigrationKeyAuth == NULL) {
@@ -1689,7 +1688,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		auth_mgr_release_auth(keyAuth->AuthHandle);
 
 	if (!result) {
-		UnloadBlob_CERTIFY_INFO(hContext, &offset, txBlob,
+		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
 					&certifyContainer);
 		*CertifyInfoSize = offset - 10;
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
@@ -2250,7 +2249,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob_PUBKEY(hContext, &offset, txBlob, &pubKey);
+		UnloadBlob_PUBKEY(&offset, txBlob, &pubKey);
 		*endorsementKeySize = offset - 10;
 		*endorsementKey = getSomeMemory(*endorsementKeySize, hContext);
 		if (*endorsementKey == NULL) {
@@ -2296,7 +2295,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_PUBKEY(hContext, &offset, txBlob, &pubkey);
+		UnloadBlob_PUBKEY(&offset, txBlob, &pubkey);
 		*pubEndorsementKeySize = (UINT32) (offset - 10);
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
@@ -2398,7 +2397,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		offset = 10;
-		UnloadBlob_PUBKEY(hContext, &offset, txBlob, &container);
+		UnloadBlob_PUBKEY(&offset, txBlob, &container);
 		*pubEndorsementKeySize = offset - 10;
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {

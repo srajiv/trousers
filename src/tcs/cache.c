@@ -57,7 +57,7 @@ getNextTimeStamp()
 {
 	UINT32 ret;
 
-	pthread_mutex_unlock(&timestamp_lock);
+	pthread_mutex_lock(&timestamp_lock);
 	ret = NextTimeStamp++;
 	pthread_mutex_unlock(&timestamp_lock);
 
@@ -367,7 +367,7 @@ getUUIDByEncData(BYTE *encData)
 			continue;
 
 		offset = 0;
-		UnloadBlob_KEY(InternalContext, &offset,
+		UnloadBlob_KEY(&offset,
 				entry->cacheStruct.blob, &keyContainer);
 #endif
 		if (tmp->blob->encSize == 0)
@@ -1303,13 +1303,18 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 		goto not_loaded;
 
 	offset = 0;
-	UnloadBlob_KEY_HANDLE_LIST(InternalContext, &offset, resp, &keyList);
+	UnloadBlob_KEY_HANDLE_LIST(&offset, resp, &keyList);
+	free(resp);
 	for (i = 0; i < keyList.loaded; i++) {
 		if (keyList.handle[i] == keySlot) {
 			LogDebug1("Key is loaded");
+			free(keyList.handle);
 			return TRUE;	/* key is already loaded */
 		}
 	}
+
+	free(keyList.handle);
+
 not_loaded:
 	LogDebug1("Key is not loaded, changing slot");
 	setSlotBySlot(keySlot, NULL_TPM_HANDLE);
@@ -1529,7 +1534,7 @@ KM_AddKeyToList(KMList ** list, TSS_UUID myUUID, TSS_UUID parentUUID,
 	       sizeof (TSS_UUID));
 
 	offset = 0;
-	UnloadBlob_KEY(InternalContext, &offset, keyBlob, &key);
+	UnloadBlob_KEY(&offset, keyBlob, &key);
 
 	currentKMList->kmInfo->bAuthDataUsage = key.authDataUsage;
 	currentKMList->kmInfo->fIsLoaded = 0;	/*update this */

@@ -286,7 +286,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	offset = 0;
-	UnloadBlob_KEY(hContext, &offset, tcpaKeyBlob, &tcpaKey);
+	UnloadBlob_KEY(&offset, tcpaKeyBlob, &tcpaKey);
 
 	(*ppKeyInfo)->bAuthDataUsage = tcpaKey.authDataUsage;
 
@@ -379,8 +379,10 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 		offset = 0;
-		if ((result = UnloadBlob_KEY(hContext, &offset, rgbWrappedKeyBlob, key)))
+		if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key))) {
+			free(key);
 			return result;
+		}
 		cWrappedKeyBlobSize = offset;
 
 		/******************************************
@@ -434,16 +436,25 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		 *Now we just have to check if there is enough room in the chip.
 		 *********************************************/
 
-		if ((result = canILoadThisKey(&key->algorithmParms, &canLoad)))
+		if ((result = canILoadThisKey(&key->algorithmParms, &canLoad))) {
+			destroy_key_refs(key);
+			free(key);
 			return result;
+		}
 
 		while (canLoad == FALSE) {
 			/* Evict a key that isn't the parent */
-			if ((result = evictFirstKey(hUnwrappingKey)))
+			if ((result = evictFirstKey(hUnwrappingKey))) {
+				destroy_key_refs(key);
+				free(key);
 				return result;
+			}
 
-			if ((result = canILoadThisKey(&key->algorithmParms, &canLoad)))
+			if ((result = canILoadThisKey(&key->algorithmParms, &canLoad))) {
+				destroy_key_refs(key);
+				free(key);
 				return result;
+			}
 		}
 
 		LogDebug1("Entering LoadKey by blob");
@@ -479,8 +490,11 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if (needToSendPacket == TRUE) {
-		if ((result = UnloadBlob_Header(txBlob, &paramSize)))
+		if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
+			destroy_key_refs(key);
+			free(key);
 			return result;
+		}
 		offset = 10;
 		/*---	Finish unloading the stuff */
 		UnloadBlob_UINT32(&offset, &myKeySlot, txBlob, "handle back");
@@ -512,15 +526,22 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		/*---	Add this info to the memory cache */
 		if (pAuth == NULL) {
 			offset = 0;
-			UnloadBlob_KEY(myTcsKeyHandle, &offset, rgbWrappedKeyBlob, key);
+			destroy_key_refs(key);
+			if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key)))
+				return result;
 		}
 
 		result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, key);
-		if (result != TSS_SUCCESS)
+		if (result != TSS_SUCCESS) {
+			destroy_key_refs(key);
+			free(key);
 			return result;
+		}
 
 		if (ctx_mark_key_loaded(hContext, myTcsKeyHandle)) {
 			LogError1("Error marking key as loaded");
+			destroy_key_refs(key);
+			free(key);
 			return TSS_E_INTERNAL_ERROR;
 		}
 
@@ -528,6 +549,8 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			result = setParentByHandle(myTcsKeyHandle, hUnwrappingKey);
 			if (result != TSS_SUCCESS) {
 				LogError1("setParentBlobByHandle failed.");
+				destroy_key_refs(key);
+				free(key);
 				return result;
 			}
 		}
@@ -540,8 +563,10 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	*phKeyHMAC = myKeySlot;
 
 	LogDebug("Key handles for loadKeyByBlob slot:%.8X tcshandle:%.8X", myKeySlot, myTcsKeyHandle);
-
 	LogResult("LoadKey By Blob", result);
+
+	destroy_key_refs(key);
+	free(key);
 
 	return TSS_SUCCESS;
 }
@@ -580,11 +605,12 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	Now that there is a key, unload it for later use */
 	offset = 0;
-	UnloadBlob_KEY(hContext, &offset, keyBlob, &myKey);
+	UnloadBlob_KEY(&offset, keyBlob, &myKey);
 
 	/*---	First, check if it's actually loaded now or was previously loaded */
 	*phKeyTCSI = getTCSKeyHandleByPub(&myKey.pubKey);
 	LogData("TCSKeyHandle is", *phKeyTCSI);
+	destroy_key_refs(&myKey);
 
 	if (*phKeyTCSI != NULL_TCS_HANDLE) {
 		/* The key was at least previously loaded, now check if its loaded now */
@@ -721,7 +747,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		/*===	First get the data from the packet */
-		UnloadBlob_KEY(hContext, &offset, txBlob, &keyContainer);
+		UnloadBlob_KEY(&offset, txBlob, &keyContainer);
 		/*===	Here's how big it is */
 		*keyDataSize = offset - 10;
 		/*===	malloc the outBuffer */
@@ -741,6 +767,8 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, pAuth);
 		if (result)
 			auth_mgr_release_auth(pAuth->AuthHandle);
+
+		destroy_key_refs(&keyContainer);
 	}
 	LogResult("Create Wrap Key", result);
 
@@ -816,7 +844,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		auth_mgr_release_auth(pAuth->AuthHandle);
 
 	if (!result) {
-		UnloadBlob_PUBKEY(hContext, &offset, txBlob, &pubContainer);
+		UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer);
 		*pcPubKeySize = offset - 10;
 		*prgbPubKey = getSomeMemory(*pcPubKeySize, hContext);
 		if (*prgbPubKey == NULL) {
@@ -883,7 +911,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				}
 			} else {
 				offset = 0;
-				UnloadBlob_KEY(hContext, &offset, srkKeyBlob, &srkKey);
+				UnloadBlob_KEY(&offset, srkKeyBlob, &srkKey);
 				if (srkKey.pubKey.keyLength == pubContainer.pubKey.keyLength
 				    && srkKey.pubKey.key != NULL
 				    && pubContainer.pubKey.key != NULL
@@ -1012,7 +1040,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 
 	if (!result) {
-		UnloadBlob_KEY(hContext, &offset, txBlob, &idKeyContainer);
+		UnloadBlob_KEY(&offset, txBlob, &idKeyContainer);
 		*idKeySize = offset - 10;
 		*idKey = getSomeMemory(*idKeySize, hContext);
 		if (*idKey == NULL) {
