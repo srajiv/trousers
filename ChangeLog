@@ -1,4 +1,6 @@
 
+* TROUSERS_0_1_8
+
  - added a manpage for Tspi_TPM_PcrExtend
  - added SHA1_HASH_SIZE #define tied to openssl/sha.h
  - Corrected typo in tcpa_types.h of pValdationData -> pValidationData
@@ -18,6 +20,8 @@
    - sf.net bug #1113313 fixed. Tspi_TPM_TakeOwnership now allows a NULL
    pub endorsement key handle and a testcase,
    tcg/highlevel/tpm/Tspi_TPM_TakeOwnership03.c, exists to test this.
+   - In Tspi_SetAattribData, set the TCPA_KEY's privkey, not the wrapper
+   object on a TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY.
 
 * TROUSERS_0_1_7
 
