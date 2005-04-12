@@ -151,13 +151,17 @@ internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 	TSS_RESULT result;
 	UINT32 twenty = 20;
 	BYTE *random;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	if ((result = TCSP_GetRandom(tcsContext, &twenty, &random)))
 		return TSS_E_INTERNAL_ERROR;
 
 	memcpy(nonce->nonce, random, 20);
 
-	free(random);
+	free_tspi(tspContext, random);
 	return TSS_SUCCESS;
 }
 
@@ -736,4 +740,3 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 
 	return secret_ValidateAuth_OIAP(hPolicy, digest, &auth);
 }
-

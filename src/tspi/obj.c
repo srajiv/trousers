@@ -266,6 +266,27 @@ obj_getTspContext(TSS_HOBJECT objectHandle)
 	return object->tspContext;
 }
 
+TSS_HCONTEXT
+obj_lookupTspContext(TCS_CONTEXT_HANDLE tcsContext)
+{
+	AnObject *tmp;
+
+	pthread_mutex_lock(&objectlist_lock);
+
+	for (tmp = objectList; tmp; tmp = tmp->next) {
+		if (tmp->tcsContext == tcsContext) {
+			break;
+		}
+	}
+
+	pthread_mutex_unlock(&objectlist_lock);
+
+	if (tmp == NULL)
+		return NULL_HCONTEXT;
+
+	return tmp->tspContext;
+}
+
 /* go through the object list and mark all objects with TSP handle tspContext
  * as being connected to the TCS with handle tcsContext
  */

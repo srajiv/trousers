@@ -40,9 +40,13 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 	AnObject *anObject;
 	TCPA_HASH_OBJECT *hashObject;
 	BOOL usesAuth;
+	TSS_HCONTEXT tspContext;
 
 	if (pulSignatureLength == NULL || prgbSignature == NULL)
 		return TSS_E_BAD_PARAMETER;
+
+	if ((tspContext = obj_getTspContext(hHash)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	LogDebug1("Entering Tspi_Hash_Sign");
 	if ((result = obj_checkType_2(hHash, TSS_OBJECT_TYPE_HASH, hKey, TSS_OBJECT_TYPE_RSAKEY)))
@@ -99,8 +103,10 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		Trspi_LoadBlob(&offset, *pulSignatureLength, hashblob, *prgbSignature);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth))) {
+			free_tspi(tspContext, *prgbSignature);
 			return result;
+		}
 	}
 
 	return TSS_SUCCESS;

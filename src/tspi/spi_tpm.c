@@ -306,7 +306,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 	BYTE *srkKeyBlob;
 	TSS_HPOLICY hOwnerPolicy;
 	UINT32 newSrkBlobSize;
-	BYTE *newSrkBlob;
+	BYTE *newSrkBlob = NULL;
 	BYTE oldAuthDataUsage;
 	TSS_HKEY hPubEK;
 
@@ -388,10 +388,14 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, newSrkBlobSize, hashblob, newSrkBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((rc = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
+	if ((rc = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy))) {
+		free(newSrkBlob);
 		return rc;
-	if ((rc = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &privAuth)))
+	}
+	if ((rc = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &privAuth))) {
+		free(newSrkBlob);
 		return rc;
+	}
 
 	/* ---  Now that it's all happy, stuff the keyBlob into the object */
 	/* ---  If atmel, need to adjust the authDataUsage if it changed */
@@ -402,6 +406,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 
 	Tspi_SetAttribData(hKeySRK, TSS_TSPATTRIB_KEY_BLOB,
 			   TSS_TSPATTRIB_KEYBLOB_BLOB, newSrkBlobSize, newSrkBlob);
+	free(newSrkBlob);
 
 	return rc;
 }
@@ -1263,8 +1268,10 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 
 		if ((result = Trspi_Verify(TSS_HASH_SHA1, hash.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
-					 outData, outDataSize)))
+					 outData, outDataSize))) {
+			free(outData);
 			return TSS_E_VERIFICATION_FAILED;
+		}
 
 	} else {
 		pValidationData->ulDataLength = sizeof(TCPA_NONCE) + sizeof(UINT32) + strlen("Test Passed");
@@ -1284,6 +1291,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
+		free(outData);
 	}
 
 	return TSS_SUCCESS;
@@ -1443,6 +1451,12 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
 				pulRespDataLength, prgbRespData);
+
+		*prgbRespData = calloc_tspi(tspContext, *pulRespDataLength);
+		if (*prgbRespData == NULL) {
+			LogError("malloc of %d bytes failed.", *pulRespDataLength);
+			return TSS_E_OUTOFMEMORY;
+		}
 
 		if (*pulRespDataLength == sizeof(UINT32)) {
 			*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
@@ -1782,7 +1796,7 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 		memcpy(&holdData[index], data, length);
 		index += length;
 
-		free(data);
+		free_tspi(tspContext, data);
 	}
 
 	*prgbRandomData = calloc_tspi(tspContext, index);
@@ -2129,20 +2143,27 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if (usesAuth) {
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth))) {
+			free(pcrDataOut);
+			free(validationData);
 			return result;
+		}
 	}
 	if (verifyInternally) {
 		/* validate the data here */
 		if ((result = Tspi_GetAttribData(hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData)))
+				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
+			free(pcrDataOut);
+			free(validationData);
 			return result;
+		}
 
 		offset = 0;
 		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
 
 		/*  creating pcrCompositeHash */
 		Trspi_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
+		free(pcrDataOut);
 
 		/* generate Quote_info struct */
 		/* 1. add version */
@@ -2163,8 +2184,10 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 
 		if ((result = Trspi_Verify(TSS_HASH_SHA1, digest.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
-					 validationData, validationLength)))
+					 validationData, validationLength))) {
+			free(validationData);
 			return result;
+		}
 
 	} else {
 		pValidationData->ulValidationLength = validationLength;
@@ -2175,6 +2198,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 		}
 		memcpy(pValidationData->rgbValidationData, validationData,
 		       pValidationData->ulValidationLength);
+		free(validationData);
 		pValidationData->ulDataLength = pcrDataOutSize;
 		pValidationData->rgbData = calloc_tspi(tspContext, pcrDataOutSize);
 		if (pValidationData->rgbData == NULL) {
@@ -2182,6 +2206,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(pValidationData->rgbData, pcrDataOut, pcrDataOutSize);
+		free(pcrDataOut);
 		pValidationData->ulExternalDataLength = 20;
 		memcpy(pValidationData->rgbExternalData, antiReplay.nonce, 20);
 		memcpy(&pValidationData->versionInfo,

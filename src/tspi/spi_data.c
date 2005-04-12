@@ -177,11 +177,15 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	BOOL usesAuth;
 	TCS_AUTH *pPrivAuth;
+        TSS_HCONTEXT tspContext;
 
 	if (pulUnboundDataLength == NULL || prgbUnboundData == NULL)
 		return TSS_E_BAD_PARAMETER;
 
 	LogDebug1("Tspi_Data_Unbind");
+
+	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	if ((result = obj_checkType_2(hEncData,
 					TSS_OBJECT_TYPE_ENCDATA, hKey,
@@ -237,8 +241,10 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 		Trspi_LoadBlob(&offset, *pulUnboundDataLength, hashBlob, *prgbUnboundData);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth))) {
+			free_tspi(tspContext, *prgbUnboundData);
 			return result;
+		}
 	}
 	LogDebug1("Leaving unbind");
 	return TSS_SUCCESS;
@@ -383,22 +389,26 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((rc = secret_ValidateAuth_OSAP(hPolicy, hEncPolicy, hEncPolicy,
-					     sharedSecret, &auth, digest.digest, nonceEvenOSAP)))
+					     sharedSecret, &auth, digest.digest, nonceEvenOSAP))) {
+			free(encData);
 			return rc;
+		}
 	}
 
 	/* ---  Need to set the encObject with the blob and the pcr's */
 	anObject = getAnObjectByHandle(hEncData);
-	if (anObject == NULL || anObject->memPointer == NULL)
+	if (anObject == NULL || anObject->memPointer == NULL) {
+		free(encData);
 		return TSS_E_INVALID_HANDLE;
+	}
 
 	encObject = anObject->memPointer;
 	encObject->encryptedDataLength = encDataSize;
-/* 		encObject->encryptedData = malloc( encDataSize ); */
 	memcpy(encObject->encryptedData, encData, encDataSize);
+	free(encData);
+
 	offset = 0;
 	if (pcrDataSize) {
-/* 			Trspi_UnloadBlob_PCR_COMPOSITE( &offset, pcrData, &encObject->pcrComp ); */
 		if ((rc = Trspi_UnloadBlob_PCR_INFO(tspContext, &offset, pcrData, &encObject->pcrInfo)))
 			return rc;
 		encObject->usePCRs = 1;
@@ -428,9 +438,13 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 	AnObject *anObject;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	BOOL useAuth;
+        TSS_HCONTEXT tspContext;
 
 	if (pulUnsealedDataLength == NULL || prgbUnsealedData == NULL)
 		return TSS_E_BAD_PARAMETER;
+
+	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	for (;;) {
 		if ((result = obj_checkType_2(hEncData,
@@ -501,12 +515,16 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 	Trspi_LoadBlob(&offset, *pulUnsealedDataLength, hashblob, *prgbUnsealedData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth)))
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth))) {
+			free_tspi(tspContext, *prgbUnsealedData);
 			return result;
+		}
 	}
 
-	if ((result = secret_ValidateAuth_OIAP(hEncPolicy, digest, &privAuth2)))
+	if ((result = secret_ValidateAuth_OIAP(hEncPolicy, digest, &privAuth2))) {
+		free_tspi(tspContext, *prgbUnsealedData);
 		return result;
+	}
 
 	return TSS_SUCCESS;
 }

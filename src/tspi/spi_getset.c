@@ -288,13 +288,16 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			if ((result =
 			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 						     hNewPolicy, sharedSecret,
-						     &auth1, digest.digest, nonceEvenOSAP)))
+						     &auth1, digest.digest, nonceEvenOSAP))) {
+				free(newEncData);
 				return result;
+			}
 
 			if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth2)))
 				return result;
 
 			memcpy(keyToChange.encData, newEncData, newEncSize);
+			free(newEncData);
 
 			offset = 0;
 			Trspi_LoadBlob_KEY(&offset, keyBlob, &keyToChange);
@@ -384,13 +387,16 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 		if ((result =
 		    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 					     hNewPolicy, sharedSecret, &auth1,
-					     digest.digest, nonceEvenOSAP)))
+					     digest.digest, nonceEvenOSAP))) {
+			free(newEncData);
 			return result;
+		}
 
 		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth2)))
 			return result;
 
 		memcpy(storedData.encData, newEncData, newEncSize);
+		free(newEncData);
 		storedData.encDataSize = newEncSize;
 
 		offset = 0;
@@ -552,7 +558,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
-			free(randomBytes);
+			free_tspi(tspContext, randomBytes);
 
 			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
 			offset = 0;
@@ -613,21 +619,21 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
-			free(randomBytes);
+			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
-			free(randomBytes);
+			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
 				       &bytesRequested,	/*  in, out */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(seed, randomBytes, 20);
-			free(randomBytes);
+			free_tspi(tspContext, randomBytes);
 
 			if ((result = Tspi_GetPolicyObject(hObjectToChange,
 							  TSS_POLICY_USAGE, &hOldPolicy)))

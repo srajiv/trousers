@@ -1147,8 +1147,10 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 			 ******************************/
 
 			if ((result = TCSP_LoadKeyByBlob(tcsContext, parentTCSKeyHandle,
-					       keyBlobSize, keyBlob, NULL, &tcsKeyHandle, &keySlot)))
+					       keyBlobSize, keyBlob, NULL, &tcsKeyHandle, &keySlot))) {
+				free(keyBlob);
 				return result;
+			}
 
 			/* ---  Dont' care about keySlot */
 
@@ -1164,6 +1166,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 		if (result == TCS_E_KEY_NOT_REGISTERED)
 			result = TSS_E_PS_KEY_NOTFOUND;
 		LogDebug("Failed with result %.8X", result);
+		free(keyBlob);
 		return result;
 	}
 	/**************************
@@ -1188,17 +1191,22 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 		initFlags |= TSS_KEY_TSP_SRK;
 
 	/* ---  Create the keyObject */
-	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlags, phKey)))
+	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlags, phKey))) {
+		free(keyBlob);
 		return result;
+	}
 
 	/* ---  Update our table to bind the tcsKeyHandle to this TspKeyHandle */
 	addKeyHandle(tcsKeyHandle, *phKey);
 
 	/* ---  Stuff the data into the object */
 	if ((result = Tspi_SetAttribData(*phKey, TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB,
-				keyBlobSize, keyBlob)))
+				keyBlobSize, keyBlob))) {
+		free(keyBlob);
 		return result;
+	}
 
+	free(keyBlob);
 	keyreg_SetUUIDOfKeyObject(*phKey, uuidData, persistentStorageType);
 
 	LogDebug1("Done with LoadByUUID");
@@ -1397,12 +1405,18 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 	else if (theKey.pubKey.keyLength == 0x40)
 		initFlag |= TSS_KEY_SIZE_512;
 
-	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlag, phKey)))
+	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY, initFlag, phKey))) {
+		free(keyBlob);
 		return result;
+	}
 
 	if ((result = Tspi_SetAttribData(*phKey, TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB,
-				keyBlobSize, keyBlob)))
+				keyBlobSize, keyBlob))) {
+		free(keyBlob);
 		return result;
+	}
+
+	free(keyBlob);
 
 	return TSS_SUCCESS;
 }

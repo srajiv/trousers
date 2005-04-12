@@ -215,27 +215,20 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,	/*  in */
 		Trspi_LoadBlob(&offset, *pulPubKeyLength, hashblob, *prgbPubKey);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
+		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth))) {
+			free(*prgbPubKey);
 			return result;
+		}
 	}
-#if 0
-	else {
-		if (result = TCSP_GetPubKey(tcsContext,	/*  in */
-					    tcsKeyHandle,	/* hKey,                          // in */
-					    NULL,	/*  in, out */
-					    pulPubKeyLength,	/*  out */
-					    prgbPubKey	/*  out */
-		    ))
-			return result;
 
-	}
-#endif
 	LogDebug1("Stuffing info into key object");
 	if ((result = Tspi_SetAttribData(hKey,
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY,
-					*pulPubKeyLength, *prgbPubKey)))
+					*pulPubKeyLength, *prgbPubKey))) {
+		free(*prgbPubKey);
 		return result;
+	}
 
 	LogDebug1("Leaving GetPubKey");
 	return TSS_SUCCESS;
@@ -692,6 +685,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 	if ((result = secret_ValidateAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
 				     sharedSecret, &auth, digest.digest, nonceEvenOSAP))) {
 		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
+		free(newKey);
 		return result;
 	}
 
@@ -701,9 +695,11 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,	/*  in */
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, newKeySize, newKey))) {
 		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
+		free(newKey);
 		return result;
 	}
 
+	free(newKey);
 	LogDebug1("Leaving Create Key");
 	return result;
 }
