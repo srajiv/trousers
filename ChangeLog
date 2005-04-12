@@ -19,6 +19,11 @@
    - Popups are hopefully being handled more correctly now. Previously
    the dialog popped up at the time SetSecret was called, but now its
    just when the secret is actually needed.
+   - sf.net Bug #118026: memory allocations and free's fixed in almost
+   all paths from app to tcstp.c wrt correctly returning calloc_tspi'd
+   memory vs. malloc'd memory. Only problem remaining is the PCR event
+   functions, which have dangling malloc'd references, which is an
+   architectural problem which should be solved in the 1.2 rewrite.
 
 * TROUSERS_0_1_9
 
