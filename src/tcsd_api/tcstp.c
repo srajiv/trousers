@@ -529,6 +529,10 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
 	UINT32 i, j;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -558,7 +562,7 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 		}
 
 		if (*pEventCount > 0) {
-			*ppEvents = malloc(sizeof(TSS_PCR_EVENT) * (*pEventCount));
+			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
 				LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSS_E_OUTOFMEMORY;
@@ -593,6 +597,10 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
 	int i, j;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -613,7 +621,7 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		}
 
 		if (*pEventCount > 0) {
-			*ppEvents = malloc(sizeof(TSS_PCR_EVENT) * (*pEventCount));
+			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
 				LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSS_E_OUTOFMEMORY;
@@ -1938,6 +1946,10 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
 	TCS_AUTH emptyAuth;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 	memset(&emptyAuth, 0, sizeof(TCS_AUTH));
@@ -1992,14 +2004,14 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 			goto done;
 		}
 
-		*Data = (BYTE *) malloc(*DataSize);
+		*Data = (BYTE *) calloc_tspi(tspContext, *DataSize);
 		if (*Data == NULL) {
 			LogError("Malloc of %d bytes failed.", *DataSize);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, *Data, *DataSize, hdr)) {
-			free(*Data);
+			free_tspi(tspContext, *Data);
 			result = TSS_E_INTERNAL_ERROR;
 		}
 	}
@@ -2022,6 +2034,10 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	struct tsp_packet data;
 	int i;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -2057,14 +2073,14 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 			goto done;
 		}
 
-		*outData = (BYTE *) malloc(*outDataSize);
+		*outData = (BYTE *) calloc_tspi(tspContext, *outDataSize);
 		if (*outData == NULL) {
 			LogError("Malloc of %d bytes failed.", *outDataSize);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, hdr)) {
-			free(*outData);
+			free_tspi(tspContext, *outData);
 			result = TSS_E_INTERNAL_ERROR;
 		}
 	}
@@ -2146,6 +2162,10 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	struct tsp_packet data;
 	int i;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -2205,6 +2225,10 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -2225,14 +2249,14 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 			result = TSS_E_INTERNAL_ERROR;
 			goto done;
 		}
-		*randomBytes = (BYTE *) malloc(*bytesRequested);
+		*randomBytes = (BYTE *) calloc_tspi(tspContext, *bytesRequested);
 		if (*randomBytes == NULL) {
 			LogError("Malloc of %d bytes failed.", *bytesRequested);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, *bytesRequested, hdr)) {
-			free(*randomBytes);
+			free_tspi(tspContext, *randomBytes);
 			result = TSS_E_INTERNAL_ERROR;
 		}
 	}
@@ -2335,6 +2359,10 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -2360,14 +2388,14 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			goto done;
 		}
 
-		*resp = (BYTE *) malloc(*respSize);
+		*resp = (BYTE *) calloc_tspi(tspContext, *respSize);
 		if (*resp == NULL) {
 			LogError("Malloc of %d bytes failed.", *respSize);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *resp, *respSize, hdr)) {
-			free(*resp);
+			free_tspi(tspContext, *resp);
 			result = TSS_E_INTERNAL_ERROR;
 		}
 	}
@@ -2609,6 +2637,10 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSS_E_INTERNAL_ERROR;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -2620,7 +2652,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
-	if (result == TSS_SUCCESS) 
+	if (result == TSS_SUCCESS)
 		result = hdr->result;
 
 	if (result == TSS_SUCCESS) {
@@ -2630,15 +2662,15 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 			goto done;
 		}
 
-		*outData = malloc(*outDataSize);
+		*outData = calloc_tspi(tspContext, *outDataSize);
 		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", outDataSize);
+			LogError("malloc of %d bytes failed.", *outDataSize);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
 
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *outData, *outDataSize, hdr)) {
-			free(*outData);
+			free_tspi(tspContext, *outData);
 			*outData = NULL;
 			result = TSS_E_INTERNAL_ERROR;
 		}
