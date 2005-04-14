@@ -1,4 +1,9 @@
 
+ - In Tspi_Context_LoadKeyByUUID, the uninitialized keyBlob variable
+   was causing an invalid free on exit. Corrected that.
+ - changed return value from internal error to invalid handle when a
+   bad object handle is passed to Tspi_Hash_Sign and the Tspi_Data
+   functions.
  - added Tspi_TPM_CertifySelfTest functionality
  - corrected iptables string in the tcsd manpage.
  - Corrected return code in Tspi_Key_UnloadKey02.c testcase.

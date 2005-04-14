@@ -73,7 +73,7 @@ ARCHITECTURE
   storage is controlled by the TCS and stays valid across application lifetimes, TCSD
   restarts and system resets. Data registered in system PS stays valid until an
   application requests that it be removed. User PS files are by default stored as
-  /var/tpm/user.{pid} and the system PS file by default is /var/tpm/system.data. The
+  /var/lib/tpm/user.{pid} and the system PS file by default is /var/lib/tpm/system.data. The
   system PS file is initially created when ownership of the TPM is first taken.
 
   D) A config file. By default located in $prefix/etc/tcsd.conf.
