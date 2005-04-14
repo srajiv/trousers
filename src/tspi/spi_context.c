@@ -1054,7 +1054,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/*  in */
 	TCPA_KEY theKey;
 	UINT16 offset;
 	UINT32 keyBlobSize;
-	BYTE *keyBlob;
+	BYTE *keyBlob = NULL;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_FLAG initFlags;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
