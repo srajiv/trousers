@@ -55,7 +55,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+		return TSS_E_INVALID_HANDLE;
 
 	if ((result = obj_checkSession_2(hEncData, hEncKey)))
 		return result;
@@ -185,7 +185,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,	/*  in */
 	LogDebug1("Tspi_Data_Unbind");
 
 	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+		return TSS_E_INVALID_HANDLE;
 
 	if ((result = obj_checkType_2(hEncData,
 					TSS_OBJECT_TYPE_ENCDATA, hKey,
@@ -292,7 +292,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 			break;	/* return rc; */
 
 		if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
-			return TSS_E_INTERNAL_ERROR;
+			return TSS_E_INVALID_HANDLE;
 
 		if (hPcrComposite == NULL_HPCRS) {
 			if ((rc = obj_isConnected_2(hEncData, hEncData, &tcsContext)))
@@ -444,7 +444,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,	/*  in */
 		return TSS_E_BAD_PARAMETER;
 
 	if ((tspContext = obj_getTspContext(hEncData)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+		return TSS_E_INVALID_HANDLE;
 
 	for (;;) {
 		if ((result = obj_checkType_2(hEncData,

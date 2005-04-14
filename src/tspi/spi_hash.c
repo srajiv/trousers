@@ -46,7 +46,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		return TSS_E_BAD_PARAMETER;
 
 	if ((tspContext = obj_getTspContext(hHash)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+		return TSS_E_INVALID_HANDLE;
 
 	LogDebug1("Entering Tspi_Hash_Sign");
 	if ((result = obj_checkType_2(hHash, TSS_OBJECT_TYPE_HASH, hKey, TSS_OBJECT_TYPE_RSAKEY)))
