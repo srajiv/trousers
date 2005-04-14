@@ -35,8 +35,8 @@ struct tcsd_config
 #define TSS_GROUP_NAME		"tss"
 
 #define TCSD_DEFAULT_MAX_THREADS	10
-#define TCSD_DEFAULT_SYSTEM_PS_FILE	VAR_PREFIX "/tpm/system.data"
-#define TCSD_DEFAULT_SYSTEM_PS_DIR	VAR_PREFIX "/tpm"
+#define TCSD_DEFAULT_SYSTEM_PS_FILE	VAR_PREFIX "/lib/tpm/system.data"
+#define TCSD_DEFAULT_SYSTEM_PS_DIR	VAR_PREFIX "/lib/tpm"
 #define TCSD_DEFAULT_FIRMWARE_LOG_FILE	"/proc/tpm/firmware_events"
 #define TCSD_DEFAULT_KERNEL_LOG_FILE	"/proc/tcg/measurement_events"
 /* PCR's 0-7 */

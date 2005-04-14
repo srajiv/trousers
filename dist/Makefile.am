@@ -12,9 +12,9 @@ install-exec-hook:
 	/usr/sbin/groupadd tss || true
 	/usr/sbin/useradd -r tss -g tss || true
 	/bin/chown tss:tss ${DESTDIR}/@sbindir@/tcsd
-	/bin/sh -c 'if [ ! -e ${DESTDIR}/@localstatedir@/tpm ];then mkdir -p ${DESTDIR}/@localstatedir@/tpm; fi'
-	/bin/chown tss:tss ${DESTDIR}/@localstatedir@/tpm
-	/bin/chmod 1777 ${DESTDIR}/@localstatedir@/tpm
+	/bin/sh -c 'if [ ! -e ${DESTDIR}/@localstatedir@/lib/tpm ];then mkdir -p ${DESTDIR}/@localstatedir@/lib/tpm; fi'
+	/bin/chown tss:tss ${DESTDIR}/@localstatedir@/lib/tpm
+	/bin/chmod 1777 ${DESTDIR}/@localstatedir@/lib/tpm
 
 uninstall-hook:
 	/usr/sbin/userdel tss

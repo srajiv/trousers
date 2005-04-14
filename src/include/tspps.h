@@ -13,7 +13,7 @@
 
 #include <pthread.h>
 
-#define TSP_KEY_DIR		VAR_PREFIX "/tpm"
+#define TSP_KEY_DIR		VAR_PREFIX "/lib/tpm"
 #define TSP_KEY_FILE_NAME	TSP_KEY_DIR "/user."
 
 extern struct key_disk_cache *key_disk_cache_head;
