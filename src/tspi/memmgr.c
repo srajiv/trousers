@@ -79,8 +79,8 @@ addTable(struct memTable *new)
 TSS_RESULT
 freeTable(TSS_HCONTEXT tspContext)
 {
-	struct memTable *prev = NULL, *index, *next;
-	struct memEntry *entry, *entry_next;
+	struct memTable *prev = NULL, *index = NULL, *next = NULL;
+	struct memEntry *entry = NULL, *entry_next = NULL;
 
 	for(index = SpiMemoryTable; index; index = index->nextTable) {
 		next = index->nextTable;
@@ -109,9 +109,9 @@ freeTable(TSS_HCONTEXT tspContext)
 TSS_RESULT
 freeEntry(struct memTable *table, void *pointer)
 {
-	struct memEntry *index;
+	struct memEntry *index = NULL;
 	struct memEntry *prev = NULL;
-	struct memEntry *toKill;
+	struct memEntry *toKill = NULL;
 
 	for (index = table->entries; index; prev = index, index = index->nextEntry) {
 		if (index->memPointer == pointer) {
@@ -140,8 +140,8 @@ void *
 calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 {
 
-	struct memTable *table;
-	struct memEntry *newEntry;
+	struct memTable *table = NULL;
+	struct memEntry *newEntry = NULL;
 
 #ifdef TSS_DEBUG
 	if (tspContext != obj_getTspContext(tspContext) || tspContext == NULL_HCONTEXT)
