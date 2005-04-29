@@ -1,4 +1,8 @@
 
+ - Fixed Tspi_Hash_VerifySignature to check signatures based on the
+   signature scheme of the key in use. Also, crypto.c was changed
+   to do a verify based on TSS_HASH_OTHER.
+ - Added 2 new highlevel Unbind testcases to test PKCS1.5 vs OAEP.
  - In Tspi_Context_LoadKeyByUUID, the uninitialized keyBlob variable
    was causing an invalid free on exit. Corrected that.
  - changed return value from internal error to invalid handle when a

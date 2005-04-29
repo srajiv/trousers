@@ -30,9 +30,6 @@ These are now prioritized, in order of decreasing priority...
 
   Audit code for fault tolerance when reading in bogus data.
 
-  TCS Bind/Unbind
-   - PKCSv15 ES seems not to work, investigate
-
   Verify:
    TCS GetRegisteredKeyBlob
    TCS SetOwnerInstall
@@ -65,13 +62,19 @@ These are now prioritized, in order of decreasing priority...
    - Supported on the TCS side. Full utilization by the TSP has yet to be implemented. This
      was never supported by the windows TSS according to RCC. 10/21/04
 
+---- 1.2 Timeframe ----
+
    TCS ChangeAuthAsym{Start|Finish}
    - According to the TSSWG, these functions have been deprecated. Look into these further.
+   - These require a TPM identity, so therefore they're not implemented 04/14/05
 
   Implement the TSS 1.2 policy for remote connections API access controls.
    - The 1.2 access control policies appear to be based on OS auth
 
 ---- DONE ---- (DONE means designed, coded and unit tested)
+
+  TCS Bind/Unbind
+   - PKCSv15 ES seems not to work, investigate
 
   Audit memory freeing everywhere. getSPIMemory was being used as a crutch for
     freeing memory.
