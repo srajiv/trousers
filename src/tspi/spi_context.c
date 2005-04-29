@@ -103,9 +103,6 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/*  in */
 	if ((result = obj_checkType_1(tspContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 
-	/* free all context related memory */
-	free_tspi(tspContext, NULL);
-
 	/* Get the TCS context, if we're connected */
 	result = obj_isConnected_1(tspContext, &tcsContext);
 	if (result == TSS_SUCCESS) {
@@ -119,6 +116,9 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/*  in */
 
 	/* ---  Destroy all objects */
 	obj_closeContext(tspContext);
+
+	/* free all context related memory */
+	free_tspi(tspContext, NULL);
 
 	/* We're not a connected context, so just exit */
 	return TSS_SUCCESS;
