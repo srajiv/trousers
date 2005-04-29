@@ -67,9 +67,10 @@ Tspi_Hash_Sign(TSS_HHASH hHash,	/* in */
 		return TSS_E_INVALID_HANDLE;
 
 	hashObject = anObject->memPointer;
+#if 0
 	if (hashObject->hashType != TSS_HASH_SHA1)
 		return TSS_E_NOTIMPL;
-
+#endif
 	tcsKeyHandle = getTCSKeyHandle(hKey);
 	if (tcsKeyHandle == NULL_HKEY) {
 		return TSS_E_KEY_NOT_LOADED;
@@ -120,14 +121,13 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
     )
 {
 	TCPA_RESULT result;
-	BYTE *keyData = NULL;
-	UINT32 keyDataSize;
+	BYTE *pubKey = NULL;
+	UINT32 pubKeySize;
 	BYTE *hashData = NULL;
 	UINT32 hashDataSize;
 	TCPA_KEY keyContainer;
 	UINT16 offset;
-
-	LogDebug1("Tspi_hash_VerifySignature");
+	UINT32 sigScheme;
 
 	if (ulSignatureLength > 0 && rgbSignature == NULL)
 		return TSS_E_BAD_PARAMETER;
@@ -141,24 +141,31 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 			break;
 
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
-				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData)))
+				       TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY, &pubKeySize, &pubKey)))
+			break;
+
+		if ((result = Tspi_GetAttribUint32(hKey, TSS_TSPATTRIB_KEY_INFO,
+				       TSS_TSPATTRIB_KEYINFO_SIGSCHEME, &sigScheme)))
 			break;
 
 		if ((result = Tspi_Hash_GetHashValue(hHash, &hashDataSize, &hashData)))
 			break;
 
-		offset = 0;
-		Trspi_UnloadBlob_KEY(0, &offset, keyData, &keyContainer);
-
-		if ((result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
-					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
-					 rgbSignature, ulSignatureLength)))
-			result = TSS_E_FAIL;
+		if (sigScheme == TSS_SS_RSASSAPKCS1V15_SHA1) {
+			result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
+						pubKey, pubKeySize,
+						rgbSignature, ulSignatureLength);
+		} else if (sigScheme == TSS_SS_RSASSAPKCS1V15_DER) {
+			result = Trspi_Verify(TSS_HASH_OTHER, hashData, hashDataSize,
+						pubKey, pubKeySize,
+						rgbSignature, ulSignatureLength);
+		} else {
+			result = TSS_E_INVALID_SIGSCHEME;
+		}
 
 		break;
 	}
 
-	LogDebug("Verify result %.8X", result);
 	return result;
 }
 
