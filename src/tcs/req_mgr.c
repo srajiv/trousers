@@ -32,8 +32,8 @@ TSS_RESULT
 req_mgr_submit_req(BYTE *blob)
 {
 	TSS_RESULT result;
-	BYTE loc_buf[1024];
-	UINT32 size = 1024;
+	BYTE loc_buf[TPM_TXBLOB_SIZE];
+	UINT32 size = TPM_TXBLOB_SIZE;
 
 	pthread_mutex_lock(&(trm->queue_lock));
 
