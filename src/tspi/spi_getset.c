@@ -1314,6 +1314,9 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 		if ((ulAttribDataSize/sizeof(UNICODE)) >= UI_MAX_POPUP_STRING_LENGTH)
 			return TSS_E_BAD_PARAMETER;
 
+		/* first, zero the static buffer. wcsncpy can hose it otherwise */
+		memset(policyObject->popupString, 0, policyObject->popupStringLength * sizeof(UNICODE));
+
 		policyObject->popupStringLength = ulAttribDataSize / sizeof(UNICODE);
 		wcsncpy(policyObject->popupString, (UNICODE *)rgbAttribData, policyObject->popupStringLength);
 		break;
