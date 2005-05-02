@@ -1,38 +1,15 @@
-/*
- * Copyright (c) 2001 Markus Friedl.  All rights reserved.
- * Copyright (C) International Business Machines Corp. 2005
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 /*
  * Licensed Materials - Property of IBM
  *
  * trousers - An open source TCG Software Stack
  *
+ * (C) Copyright International Business Machines Corp. 2005
+ *
  */
 
 #include <stdio.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -47,69 +24,69 @@ static char *
 ssh_askpass(const char *msg)
 {
 	pid_t pid;
-	size_t len;
-	char *pass;
-	int p[2], status, ret;
-	char buf[1024];
-	char *title_arg = "*dialog.title: TPM Authentication Dialog";
+	int pipe_fds[2], rc, bytes_read;
+	char *strip, *password;
+	char buf[256];
 
-	if (fflush(stdout) != 0) {
-		LogDebug("ssh_askpass: fflush: %s", strerror(errno));
+	if ((pipe(pipe_fds)) == -1) {
+		LogError("Pipe to get password from GUI failed: %s", strerror(errno));
 		return NULL;
 	}
-	if (askpass == NULL) {
-		LogDebug("internal error: askpass undefined");
+
+	if ((pid = fork()) == -1) {
+		LogError("ssh_askpass: fork: %s", strerror(errno));
 		return NULL;
-	}
-	if (pipe(p) < 0) {
-		LogDebug("ssh_askpass: pipe: %s", strerror(errno));
-		return NULL;
-	}
-	if ((pid = fork()) < 0) {
-		LogDebug("ssh_askpass: fork: %s", strerror(errno));
-		return NULL;
-	}
-	if (pid == 0) {
-		seteuid(getuid());
-		setuid(getuid());
-		close(p[0]);
-		if (dup2(p[1], STDOUT_FILENO) < 0) {
+	} else if (pid == 0) {
+		/* child writing to parent, so close the read fd in the child */
+		close(pipe_fds[0]);
+
+		/* set stdout to the pipe to send password to the parent */
+		if (dup2(pipe_fds[1], fileno(stdout)) == -1) {
 			LogError("ssh_askpass: dup2: %s", strerror(errno));
 			exit(-1);
 		}
-		execlp(askpass, askpass, "-xrm", title_arg, msg, (char *) 0);
-		LogError("ssh_askpass: exec(%s): %s", askpass, strerror(errno));
+
+		/* launch the askpass programand then exit */
+		execl(askpass, askpass, "-xrm", "*dialog.title: TPM Authentication Dialog",
+				msg, NULL);
+		LogError("ssh_askpass: exec'(%s): %s", askpass, strerror(errno));
 		exit(-1);
 	}
-	close(p[1]);
+	/* parent is reading from child, so close the parent's writing fd */
+	close(pipe_fds[1]);
 
-	LogDebug("dialog popup args: %s %s %s %s", askpass, "-xrm", title_arg, msg);
+	LogDebug("dialog popup args: %s %s %s %s\n", askpass, "-xrm",
+			"*dialog.title: TPM Authentication Dialog", msg);
 
-	len = ret = 0;
-	do {
-		ret = read(p[0], buf + len, sizeof(buf) - 1 - len);
-		if (ret == -1 && errno == EINTR)
-			continue;
-		if (ret <= 0)
+	bytes_read = rc = 0;
+	while (rc >= 0 && (bytes_read < 256)) {
+		bytes_read = read(pipe_fds[0], &buf[bytes_read], 256 - bytes_read);
+		if (rc == 0) {
 			break;
-		len += ret;
-	} while (sizeof(buf) - 1 - len > 0);
-	buf[len] = '\0';
+		} else if (rc == -1) {
+			if (errno == EINTR) {
+				rc = 0;
+			} else {
+				LogError("Error on read of password: %s", strerror(errno));
+				break;
+			}
+		}
+		/* rc is greater than 0, add it to bytes_read */
+		bytes_read += rc;
+	}
+	buf[bytes_read] = '\0';
 
-	close(p[0]);
-	while (waitpid(pid, &status, 0) < 0)
-		if (errno != EINTR)
-			break;
-
-	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-		memset(buf, 0, sizeof(buf));
-		return NULL;
+	/* remove whitespace */
+	while ((strip = rindex(buf, '\r')) != NULL) {
+		*strip = '\0';
+	}
+	while ((strip = rindex(buf, '\n')) != NULL) {
+		*strip = '\0';
 	}
 
-	buf[strcspn(buf, "\r\n")] = '\0';
-	pass = strdup(buf);
-	memset(buf, 0, sizeof(buf));
-	return pass;
+	password = strdup(&buf[0]);
+
+	return password;
 }
 
 /*
@@ -126,11 +103,15 @@ DisplayPINWindow(char *string, UNICODE *w_popup)
 {
 	char c_title[256], *pass;
 	mbstate_t ps;
+	int rc;
 
 	memset(&ps, 0, sizeof(mbstate_t));
 
-	wcsrtombs(c_title, (const UNICODE **)&w_popup, 256, &ps);
-	sprintf(c_title, "\"%s\"", c_title);
+	if ((rc = wcsrtombs(c_title, (const UNICODE **)&w_popup, 256, &ps)) == -1) {
+		LogDebug("Error converting wide char string to bytes");
+		return TSS_E_INTERNAL_ERROR;
+	}
+	//sprintf(c_title, "\"%s\"", c_title);
 
 	LogDebug("dialog title: %s", c_title);
 
