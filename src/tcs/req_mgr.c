@@ -37,6 +37,7 @@ req_mgr_submit_req(BYTE *blob)
 
 	pthread_mutex_lock(&(trm->queue_lock));
 
+	/* XXX Put a retry limit in here... */
 	do {
 		result = Tddli_TransmitData(blob, Decode_UINT32(&blob[2]), loc_buf, &size);
 	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_RETRY));
