@@ -1,4 +1,6 @@
 
+ - added comment about TDDL reries and added log statement when a
+   physical presence command is denied because of runlevel.
  - Fixed Tspi_Hash_VerifySignature to check signatures based on the
    signature scheme of the key in use. Also, crypto.c was changed
    to do a verify based on TSS_HASH_OTHER.
