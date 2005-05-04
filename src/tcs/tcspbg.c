@@ -2740,8 +2740,9 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 
 	runlevel = platform_get_runlevel();
 
-	if (runlevel != 's' && runlevel != '1') {
-		LogInfo("Physical Presence command denied: Must be in single user mode.");
+	if (runlevel != 's' && runlevel != 'S' && runlevel != '1') {
+		LogInfo("Physical Presence command denied: Must be in single"
+				" user mode.");
 		return TSS_E_NOTIMPL;
 	}
 
