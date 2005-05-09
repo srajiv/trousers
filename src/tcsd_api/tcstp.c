@@ -2530,7 +2530,32 @@ TSS_RESULT
 TCSP_DisablePubekRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 				     TCS_AUTH * ownerAuth	/* in, out */
     ) {
-	return TSS_E_NOTIMPL;
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_DISABLEPUBEKREAD;
+
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+
+        result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+        if (result == TSS_SUCCESS) 
+                result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+			result = TSS_E_INTERNAL_ERROR;
+	}
+
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
@@ -2539,7 +2564,53 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
 				   UINT32 * pubEndorsementKeySize,	/* out */
 				   BYTE ** pubEndorsementKey	/* out */
     ) {
-	return TSS_E_NOTIMPL;
+
+        TSS_RESULT result;
+        struct tsp_packet data;
+        struct tcsd_packet_hdr *hdr;
+
+        memset(&data, 0, sizeof(struct tsp_packet));
+
+        data.ordinal = TCSD_ORD_OWNERREADPUBEK;
+
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+        if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+        if (result == TSS_SUCCESS)
+                result = hdr->result;
+
+        if (result == TSS_SUCCESS) {
+                if (getData(TCSD_PACKET_TYPE_UINT32, 0, pubEndorsementKeySize, 0, hdr)) {
+                        result = TSS_E_INTERNAL_ERROR;
+                        goto done;
+                }
+
+                *pubEndorsementKey = (BYTE *) malloc(*pubEndorsementKeySize);
+                if (*pubEndorsementKey == NULL) {
+                        LogError("Malloc of %d bytes failed.", *pubEndorsementKeySize);
+                        result = TSS_E_OUTOFMEMORY;
+                        goto done;
+                }
+
+                if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *pubEndorsementKey, *pubEndorsementKeySize, hdr)) {
+                        free(*pubEndorsementKey);
+                        result = TSS_E_INTERNAL_ERROR;
+			goto done;
+                }
+
+                if (getData(TCSD_PACKET_TYPE_AUTH, 2, ownerAuth, 0, hdr)){
+			free(*pubEndorsementKey);
+                        result = TSS_E_INTERNAL_ERROR;
+		}
+        }
+
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
@@ -2686,15 +2757,64 @@ TSS_RESULT
 TCSP_OwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			       TCS_AUTH * ownerAuth	/* in, out */
     ) {
-	return TSS_E_NOTIMPL;
+        TSS_RESULT result;
+        struct tsp_packet data;
+        struct tcsd_packet_hdr *hdr;
 
+        memset(&data, 0, sizeof(struct tsp_packet));
+
+        data.ordinal = TCSD_ORD_OWNERCLEAR;
+
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+        if (result == TSS_SUCCESS)
+                result = hdr->result;
+
+        if (result == TSS_SUCCESS ){
+                if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+                        result = TSS_E_INTERNAL_ERROR;
+        }
+
+        free(hdr);
+        return result;
 }
 
 TSS_RESULT
 TCSP_DisableOwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 				      TCS_AUTH * ownerAuth	/* in, out */
     ) {
-	return TSS_E_NOTIMPL;
+        TSS_RESULT result;
+        struct tsp_packet data;
+        struct tcsd_packet_hdr *hdr;
+
+        memset(&data, 0, sizeof(struct tsp_packet));
+
+        data.ordinal = TCSD_ORD_DISABLEOWNERCLEAR;
+
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+        if (result == TSS_SUCCESS)
+                result = hdr->result;
+
+        if (result == TSS_SUCCESS ){
+                if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+                        result = TSS_E_INTERNAL_ERROR;
+        }
+
+        free(hdr);
+        return result;
 }
 
 TSS_RESULT
@@ -2723,7 +2843,24 @@ TCSP_ForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* 
 TSS_RESULT
 TCSP_DisableForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
     ) {
-	return TSS_E_NOTIMPL;
+        TSS_RESULT result;
+        struct tsp_packet data;
+        struct tcsd_packet_hdr *hdr;
+
+        memset(&data, 0, sizeof(struct tsp_packet));
+
+        data.ordinal = TCSD_ORD_DISABLEFORCECLEAR;
+
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+                return TSS_E_INTERNAL_ERROR;
+
+        result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+        if (result == TSS_SUCCESS)
+                result = hdr->result;
+
+        free(hdr);
+        return result;
 }
 
 TSS_RESULT
