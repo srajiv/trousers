@@ -1,4 +1,5 @@
 
+ - fixed error return code check to socket() syscall clntside.c:52.
  - added comment about TDDL reries and added log statement when a
    physical presence command is denied because of runlevel.
  - Fixed Tspi_Hash_VerifySignature to check signatures based on the
