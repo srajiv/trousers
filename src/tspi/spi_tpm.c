@@ -815,7 +815,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
 		return result;
 
-	if (fForcedClear) {	/*  TPM_OwnerClear */
+	if (!fForcedClear) {	/*  TPM_OwnerClear */
 		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
 
@@ -952,7 +952,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 			return result;
 		break;
 	case TSS_TPMSTATUS_PHYSICALDISABLE:
-		result = TCSP_PhysicalDisable(tcsContext);
+		if ( fTpmState )
+			result = TCSP_PhysicalDisable(tcsContext);
+		else
+			result = TCSP_PhysicalEnable(tcsContext);
 		break;
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
 		result = TCSP_PhysicalSetDeactivated(tcsContext, fTpmState);
@@ -1011,6 +1014,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
 		/* set the physical presence lock bit */
 		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LOCK);
+		break;
+	case TSS_TPMSTATUS_PHYSPRESENCE:
+		/* set the physical presence state */
+		result = TCSP_PhysicalPresence(tcsContext, (fTpmState ? TCPA_PHYSICAL_PRESENCE_PRESENT : TCPA_PHYSICAL_PRESENCE_NOTPRESENT));
 		break;
 #endif
 	default:
