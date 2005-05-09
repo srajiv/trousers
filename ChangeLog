@@ -1,4 +1,11 @@
 
+ - Added function guts for various functions in tcstp.c. (thanks
+   Kylie).
+ - In Tspi_TPM_SetStatus, do the right in the physical presence
+   path based on boolean. (thanks Kylie).
+ - Actually pass in the bool flag on TCSP_PhysicalPresence_Internal
+   (thanks Kylie).
+ - corrected force clear logic in spi_tpm.c:818 (thanks Kylie).
  - fixed error return code check to socket() syscall clntside.c:52.
  - added comment about TDDL reries and added log statement when a
    physical presence command is denied because of runlevel.
