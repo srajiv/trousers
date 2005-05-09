@@ -2733,6 +2733,7 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 			TCPA_PHYSICAL_PRESENCE fPhysicalPresence /* in */
     )
 {
+	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result = TSS_E_NOTIMPL;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
@@ -2749,7 +2750,9 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
+	offset = 10;
+	LoadBlob_UINT16(&offset, fPhysicalPresence, txBlob, NULL);
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
 			TPM_ORD_PhysicalPresence, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
