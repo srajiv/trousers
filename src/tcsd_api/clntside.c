@@ -49,7 +49,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	LogDebug1("Sending TCS_OpenContext Packet");
 
 	sd = socket(PF_INET, SOCK_STREAM, 0);
-	if (sd <= 0) {
+	if (sd == -1) {
 		LogError("socket: %s", strerror(errno));
 		result = TSS_E_COMM_FAILURE;
 		goto err_exit;
