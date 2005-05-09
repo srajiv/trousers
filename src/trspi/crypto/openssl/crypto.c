@@ -184,6 +184,7 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 {
 	int rv, nid;
 	unsigned char exp[] = { 0x01, 0x00, 0x01 }; /* 65537 hex */
+	unsigned char buf[256];
 	RSA *rsa = RSA_new();
 
 	if (rsa == NULL) {
@@ -191,9 +192,15 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 		goto err;
 	}
 
+	/* We assume we're verifying data from a TPM, so there are only
+	 * two options, SHA1 data and PKCSv1.5 encoded signature data.
+	 */
 	switch (HashType) {
 		case TSS_HASH_SHA1:
 			nid = NID_sha1;
+			break;
+		case TSS_HASH_OTHER:
+			nid = NID_undef;
 			break;
 		default:
 			rv = TSS_E_BAD_PARAMETER;
@@ -211,10 +218,22 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 		goto err;
 	}
 
-	rv = RSA_verify(nid, pHash, iHashLength, pSignature, sig_len, rsa);
-	if (rv == 0) {
-		rv = TSS_E_INTERNAL_ERROR;
-		goto err;
+	/* if we don't know the structure of the data we're verifying, do a public decrypt
+	 * and compare menually. If we know we're looking for a SHA1 hash, allow OpenSSL
+	 * to do the work for us.
+	 */
+	if (nid == NID_undef) {
+		rv = RSA_public_decrypt(sig_len, pSignature, buf, rsa, RSA_PKCS1_PADDING);
+		if (rv != iHashLength) {
+			rv = TSS_E_FAIL;
+		} else if (memcmp(pHash, buf, iHashLength)) {
+			rv = TSS_E_FAIL;
+		}
+	} else {
+		if ((rv = RSA_verify(nid, pHash, iHashLength, pSignature, sig_len, rsa)) == 0) {
+			rv = TSS_E_FAIL;
+			goto out;
+		}
 	}
 
 	rv = TSS_SUCCESS;
