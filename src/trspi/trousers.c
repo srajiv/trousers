@@ -615,20 +615,6 @@ Trspi_UnloadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 	return TSS_SUCCESS;
 }
 
-void
-Trspi_LoadBlob_KEY_ForHash(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
-{
-	Trspi_LoadBlob_TCPA_VERSION(offset, blob, key->ver);
-	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
-	Trspi_LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	blob[(*offset)++] = key->authDataUsage;
-	Trspi_LoadBlob_KEY_PARMS(offset, blob, &key->algorithmParms);
-	Trspi_LoadBlob_UINT32(offset, key->PCRInfoSize, blob);
-	Trspi_LoadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo);
-	Trspi_LoadBlob_STORE_PUBKEY(offset, blob, &key->pubKey);
-}
-
-
 /* loads a blob with the info needed to hash when creating the private key area
  * of a TCPA_KEY from an external source
  */
