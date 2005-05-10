@@ -206,11 +206,16 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			result = Tspi_GetAttribData(hObjectToChange, TSS_TSPATTRIB_KEY_BLOB,
 					       TSS_TSPATTRIB_KEYBLOB_BLOB, &objectLength, &keyBlob);
-			if (result)
+			if (result) {
+				LogDebug("Tspi_GetAttribData failed. result=0x%x", result);
 				return result;
+			}
 
 			offset = 0;
-			Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange);
+			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange))) {
+				LogDebug("Trspi_UnloadBlob_KEY failed. result=0x%x", result);
+				return result;
+			}
 
 			keyHandle = getTCSKeyHandle(hParentObject);
 			if (keyHandle == NULL_HKEY)
@@ -1217,6 +1222,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 	UINT16 offset;
 	UINT32 type;
 	TSS_HCONTEXT tspContext;
+	TSS_RESULT result;
 
 	LogDebug1("Tspi_SetAttribData");
 
@@ -1245,7 +1251,11 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
 			offset = 0;
-			Trspi_UnloadBlob_KEY(tspContext, &offset, rgbAttribData, &rsaObj->tcpaKey);
+			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset,
+							rgbAttribData, &rsaObj->tcpaKey))) {
+				LogDebug("Trspi_UnloadBlob_KEY failed. result=0x%x", result);
+				return result;
+			}
 
 			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
