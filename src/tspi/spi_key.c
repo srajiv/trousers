@@ -710,27 +710,21 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 		 TSS_HPCRS hPcrComposite	/*  in, may be NULL */
     )
 {
-
 	AnObject *anObject;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
 	TCPA_SECRET secret;
 	TSS_RESULT result;
 	TCPA_POLICY_OBJECT *myKeyPolicy;
-	UINT32 myPrivLength;
-	BYTE *myPriv = NULL;
-	UINT32 wrapLength;
-	BYTE *wrap;
+	BYTE *keyPrivBlob = NULL, *wrappingPubKey = NULL, *keyBlob = NULL;
+	UINT32 keyPrivBlobLen, wrappingPubKeyLen, keyBlobLen;
+	BYTE newPrivKey[214]; /* its not magic, see TPM 1.1b spec p.71 */
+	BYTE encPrivKey[256];
+	UINT32 newPrivKeyLen = 214, encPrivKeyLen = 256;
 	UINT16 offset;
-	TCPA_KEY keyContainer = {{0, 0, 0, 0}, 0, 0, 0, {0, 0, 0, 0, NULL}, 0, NULL, {0, NULL}, 0, NULL};
-	UINT32 pubKeySize;
-	BYTE pubKey[260];
-	UINT32 myKeyBlobLength;
-	BYTE *myKeyBlob;
+	TCPA_KEY keyContainer;
 	BYTE hashBlob[1024];
 	TCPA_DIGEST digest;
-	TCPA_NONCE seed;	/* nice container */
-	void *keyObject;
 	TSS_HCONTEXT tspContext;
 
 	if (hPcrComposite == NULL_HPCRS) {
@@ -754,50 +748,27 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 	if ((tspContext = obj_getTspContext(hKey)) == NULL_HCONTEXT)
 		return TSS_E_INTERNAL_ERROR;
 
-/*	if( result = Tspi_GetAttribData(
-		hKey,
-		TSS_TSPATTRIB_KEY_BLOB,
-		TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY,
-		&myPrivLength,
-		&myPriv ))
-		return result;
-*/
-	keyObject = getAnObjectByHandle(hKey);
-	if (keyObject == NULL || ((AnObject *) keyObject)->memPointer == NULL) {
-		LogError("internal object pointer for handle 0x%x not found!", hKey);
-		return TSS_E_INTERNAL_ERROR;
-	}
-
-	keyObject = ((AnObject *) keyObject)->memPointer;
-
-	myPrivLength = ((TCPA_RSAKEY_OBJECT *) keyObject)->privateKey.Privlen;
-	myPriv = calloc_tspi(tspContext, myPrivLength);
-	if (myPriv == NULL) {
-		LogError("malloc of %d bytes failed.", myPrivLength);
-		return TSS_E_OUTOFMEMORY;
-	}
+	memset(&keyContainer, 0, sizeof(TCPA_KEY));
 
 	/* get the key to be wrapped's private key */
-	memcpy(myPriv, ((TCPA_RSAKEY_OBJECT *) keyObject)->privateKey.Privkey, myPrivLength);
+	if ((result = Tspi_GetAttribData(hKey,
+					TSS_TSPATTRIB_KEY_BLOB,
+					TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY, &keyPrivBlobLen, &keyPrivBlob)))
+		goto done;
 
 	/* get the key to be wrapped's blob */
 	if ((result = Tspi_GetAttribData(hKey,
 					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, &myKeyBlobLength, &myKeyBlob)))
+					TSS_TSPATTRIB_KEYBLOB_BLOB, &keyBlobLen, &keyBlob)))
 		goto done;
 
-	/* get the wrapping key's blob */
+	/* get the wrapping key's public key */
 	if ((result = Tspi_GetAttribData(hWrappingKey,
 					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, &wrapLength, &wrap)))
+					TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY, &wrappingPubKeyLen, &wrappingPubKey)))
 		goto done;
 
-	/* unload the wrapping key */
-	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, wrap, &keyContainer);
-	offset = 0;
-	Trspi_LoadBlob_STORE_PUBKEY(&offset, pubKey, &keyContainer.pubKey);
-	pubKeySize = offset;
+	/* XXX This internal policy grabbing has got to go !! */
 
 	/* get the key to be wrapped's usage policy */
 	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
@@ -811,67 +782,52 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,	/*  in */
 
 	myKeyPolicy = &((TSP_INTERNAL_POLICY_OBJECT *)anObject->memPointer)->p;
 
-	/* XXX why is this a problem? Shouldn't popup secret be ok? */
-	if (myKeyPolicy->SecretMode != TSS_SECRET_MODE_SHA1 &&
-	    myKeyPolicy->SecretMode != TSS_SECRET_MODE_PLAIN) {
-		LogError("Key policy 0x%x is not secret mode SHA1 or PLAIN", hPolicy);
-		result = TSS_E_INTERNAL_ERROR;
-		goto done;
+	/* XXX this needs to hook into a trigger for popup */
+	if (myKeyPolicy->SecretMode == TSS_SECRET_MODE_NONE ||
+			myKeyPolicy->SecretSize == 0) {
+		memset(secret.secret, 0, sizeof(TCPA_SECRET));
+	} else {
+		memcpy(secret.secret, myKeyPolicy->Secret, myKeyPolicy->SecretSize);
 	}
 
-	memcpy(secret.secret, myKeyPolicy->Secret, myKeyPolicy->SecretSize);
-	/* unload the wrapping key */
+	/* unload the key to be wrapped's blob */
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, myKeyBlob, &keyContainer);
+	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
 
+	/* load the key's attributes into an object and get its hash value */
 	offset = 0;
-	Trspi_LoadBlob_KEY_ForHash(&offset, hashBlob, &keyContainer);
+	Trspi_LoadBlob_PRIVKEY_DIGEST(&offset, hashBlob, &keyContainer);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-/* 	offset = 0; */
-/* 	Trspi_LoadBlob_STORE_ASYMKEY( &offset, blob, &storeAsymkey ); */
-
-	offset = 1;
-/* 	Trspi_LoadBlob_BYTE( &offset, TCPA_PT_ASYM, hashBlob ); */
-	hashBlob[0] = TCPA_PT_ASYM;
-	Trspi_LoadBlob(&offset, 20, hashBlob, secret.secret);
-	Trspi_LoadBlob(&offset, 20, hashBlob, secret.secret);
-	Trspi_LoadBlob(&offset, 20, hashBlob, digest.digest);
-	Trspi_LoadBlob_UINT32(&offset, myPrivLength, hashBlob);
-	Trspi_LoadBlob(&offset, myPrivLength, hashBlob, myPriv);
-
-	if ((result = internal_GetRandomNonce(tcsContext, &seed)))
-		goto done;
-
-	keyContainer.encData = calloc_tspi(tspContext, 256);
-	if (keyContainer.encData == NULL) {
-		LogError("malloc of %d bytes failed.", 256);
-		result = TSS_E_OUTOFMEMORY;
-		goto done;
-	}
-	if ((result = Trspi_RSA_Encrypt(hashBlob, offset, keyContainer.encData,	/* keyObject->tcpaKey.encData,    */
-				    &keyContainer.encSize,	/* &keyObject->tcpaKey.encSize,  */
-				    &pubKey[4],	/* pubkey, */
-				    pubKeySize - sizeof (UINT32))))	/* pubKeyLength,  */
-		goto done;
-
+	/* create the plaintext private key blob */
 	offset = 0;
-	Trspi_LoadBlob_KEY(&offset, hashBlob, &keyContainer);
+	Trspi_LoadBlob_BYTE(&offset, TCPA_PT_ASYM, newPrivKey);
+	Trspi_LoadBlob(&offset, 20, newPrivKey, secret.secret);
+	Trspi_LoadBlob(&offset, 20, newPrivKey, secret.secret);
+	Trspi_LoadBlob(&offset, 20, newPrivKey, digest.digest);
+	Trspi_LoadBlob_UINT32(&offset, keyPrivBlobLen, newPrivKey);
+	Trspi_LoadBlob(&offset, keyPrivBlobLen, newPrivKey, keyPrivBlob);
+	newPrivKeyLen = offset;
 
-	Tspi_SetAttribData(hKey,
-			   TSS_TSPATTRIB_KEY_BLOB, TSS_TSPATTRIB_KEYBLOB_BLOB, offset, hashBlob);
+	/* encrypt the private key blob */
+	if ((result = Trspi_RSA_Encrypt(newPrivKey, newPrivKeyLen, encPrivKey,
+					&encPrivKeyLen, wrappingPubKey,
+					wrappingPubKeyLen)))
+		goto done;
 
-#if 0
-	if (result = EncryptStoreAsymKey(tcsContext, TCPA_PT_ASYM, myPrivLength,	/* keyObject->privateKey.Privlen,  */
-					 myPriv,	/* keyObject->privateKey.Privkey,  */
-					 secret.secret, secret.secret, 0,	/* keyObject, */
-					 pubKey,	/* wrappingKeyObject->tcpaKey.pubKey.key,  */
-					 pubKeySize))	/* wrappingKeyObject->tcpaKey.pubKey.keyLength        )) */
-		return result;
-#endif
+	/* set the new encrypted private key in the wrapped key object */
+	if ((result = Tspi_SetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
+					TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY,
+					encPrivKeyLen, encPrivKey)))
+		goto done;
+
 done:
-	free_tspi(tspContext, myPriv);
-	free_tspi(tspContext, keyContainer.encData);
+	if (keyPrivBlob)
+		free_tspi(tspContext, keyPrivBlob);
+	if (keyBlob)
+		free_tspi(tspContext, keyBlob);
+	if (wrappingPubKey)
+		free_tspi(tspContext, wrappingPubKey);
 	return result;
 }
 
