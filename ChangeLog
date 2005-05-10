@@ -1,4 +1,5 @@
 
+ - Updated implementation of Tspi_Key_WrapKey.
  - Added missing goto in ReadPubEK in tcstp.c. (thanks Kylie).
  - Added function guts for various functions in tcstp.c. (thanks
    Kylie).
