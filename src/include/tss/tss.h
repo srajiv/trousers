@@ -35,13 +35,6 @@
 #define TCSerr(x)	(x | 0x0000000000002000)
 #define TSPerr(x)	(x | 0x0000000000003000)
 
-/* defined in tspi/tspi_data.c */
-extern char *tss_layers[4];
-
-/* This decodes the return code info for printing */
-#define tss_layer(r)	tss_layers[((r) & 0x3000) >> 12]
-#define tss_error(r)	((r) & 0xfff)
-
 /* TSS rets defined in TSS spec 1.1 pg. 41 */
 #define TSS_SUCCESS			0
 #define TSS_E_FAIL			TSPerr(1)
@@ -50,7 +43,9 @@ extern char *tss_layers[4];
 #define TSS_E_NOTIMPL			TSPerr(4)
 #define TSS_E_PS_KEY_NOTFOUND		TSPerr(5)
 #define TSS_E_KEY_ALREADY_REGISTERED	TSPerr(6)
+#define TSS_E_PS_KEY_EXISTS		TSS_E_KEY_ALREADY_REGISTERED
 #define TSS_E_CANCELLED			TSPerr(7)
+#define TSS_E_CANCELED			TSS_E_CANCELLED
 #define TSS_E_TIMEOUT			TSPerr(8)
 #define TSS_E_OUTOFMEMORY		TSPerr(9)
 #define TSS_E_TPM_UNEXPECTED		TSPerr(10)
@@ -75,6 +70,7 @@ extern char *tss_layers[4];
 #define TSS_E_KEY_NOT_LOADED		TSPerr(27)
 #define TSS_E_KEY_NOT_SET		TSPerr(28)
 #define TSS_E_VALIDATION_FAILED		TSPerr(29)
+#define TSS_E_EK_CHECKSUM		TSS_E_VALIDATION_FAILED
 #define TSS_E_TSP_AUTHREQUIRED		TSPerr(30)
 #define TSS_E_TSP_AUTH2REQUIRED		TSPerr(31)
 #define TSS_E_TSP_AUTHFAIL		TSPerr(32)
