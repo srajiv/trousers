@@ -1,4 +1,5 @@
 
+ - Added defns for volatile and non-volatile flags (thanks Kylie).
  - Added Trspi_Error, which converts a TSS_RESULT to a string.
    (thanks Kylie).
  - In tcsd_wrap.c, added function bodies for tcs_wrap_OwnerClear,
