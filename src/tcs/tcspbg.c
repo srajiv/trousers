@@ -2374,7 +2374,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 				TPM_ORD_OwnerReadPubek, txBlob);
 
 		if ((result = req_mgr_submit_req(txBlob)))
@@ -2400,6 +2400,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return TSS_E_OUTOFMEMORY;
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
+		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Owner Read Pubek", result);
 	return result;
