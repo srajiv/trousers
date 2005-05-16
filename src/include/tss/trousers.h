@@ -106,4 +106,8 @@ int Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 			unsigned int *encryptedDataLen,
 			unsigned char *publicKey,
 			unsigned int keysize);
+
+/* error functions */
+char *Trspi_Error(TSS_RESULT);
+
 #endif
