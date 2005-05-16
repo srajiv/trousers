@@ -871,7 +871,6 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 	TCPA_DIGEST hashDigest;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
-	UINT32 volFlags, nonVolFlags;
 
 	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
@@ -1072,49 +1071,46 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 
 	switch (statusFlag) {
 	case TSS_TPMSTATUS_DISABLEOWNERCLEAR:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000010);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_OWNER_CLEARABLE);
 		break;
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
-		*pfTpmState = MakeMeABOOL(volFlags & 0x00000002);
+		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES_CLEARABLE);
 		break;
 	case TSS_TPMSTATUS_DISABLED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000001);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_DISABLED);
 		break;
-/* 	case TSS_TPMSTATUS_DEACTIVATED: */
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_DEACTIVATED);
+		break;
 	case TSS_TPMSTATUS_SETTEMPDEACTIVATED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000004);
+		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_TEMP_DEACTIVATED);
 		break;
-		break;
-
 	case TSS_TPMSTATUS_SETOWNERINSTALL:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000002);	/* not sure if this is right */
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_OWNABLE);
 		break;
-
 	case TSS_TPMSTATUS_DISABLEPUBEKREAD:
-		*pfTpmState = InvertMe(MakeMeABOOL(nonVolFlags & 0x00000080));
+		*pfTpmState = InvertMe(MakeMeABOOL(nonVolFlags & TPM11_NONVOL_READABLE_PUBEK));
 		break;
-
 	case TSS_TPMSTATUS_ALLOWMAINTENANCE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000020);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_ALLOW_MAINT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000040);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_LIFETIME_LOCK);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_HWENABLE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000080);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_HW_PRES);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_CMDENABLE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000100);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_CMD_PRES);
 		break;
 	case TSS_TPMSTATUS_CEKP_USED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & 0x00000200);
+		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_CEKP_USED);
 		break;
 	case TSS_TPMSTATUS_PHYSPRESENCE:
-		*pfTpmState = MakeMeABOOL(volFlags & 0x00000004);
+		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
-		*pfTpmState = MakeMeABOOL(volFlags & 0x00000008);
+		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES_LOCK);
 		break;
 
 	default:
@@ -1341,12 +1337,8 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
 	UINT32 nonVolFlags, volFlags, respLen;
-	TCPA_VERSION version;
-	TCPA_DIGEST digest;
-	BYTE hashBlob[128], *respData;
+	BYTE *respData;
 	UINT16 offset;
-	TSS_HPOLICY hPolicy;
-	TCS_AUTH auth;
 	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
@@ -1408,7 +1400,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 	if (fOwnerAuth) {
 		/* do an owner authorized get capability call */
-		if ((result = get_tpm_flags(tcsContext, hTPM, volFlags, nonVolFlags)))
+		if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
 			return result;
 #if 0
 		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
@@ -1977,7 +1969,6 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,	/*  in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 	TSS_PCR_EVENT *events = NULL;
-	UINT32 i;
 
 	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
 		return TSS_E_BAD_PARAMETER;
@@ -2030,7 +2021,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	UINT16 offset;
 	BYTE hashBlob[1000];
 	TCPA_DIGEST digest;
-	BYTE mySecret[20] = { 0 };
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HPOLICY hPolicy;
