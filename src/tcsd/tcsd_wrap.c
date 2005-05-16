@@ -457,6 +457,102 @@ tcs_wrap_ReadPubek(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_OwnerReadPubek(struct tcsd_thread_data *data,
+		   struct tsp_packet *tsp_data,
+		   struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 pubEKSize;
+	BYTE *pubEK;
+	TSS_RESULT result;
+	TCS_AUTH auth;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_OwnerReadPubek_Internal(hContext, &auth, &pubEKSize, &pubEK);
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH) + sizeof(UINT32) + pubEKSize);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + pubEKSize);
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
+			free(*hdr);
+			free(pubEK);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, 1, &pubEKSize, 0, *hdr)) {
+			free(*hdr);
+			free(pubEK);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 2, pubEK, pubEKSize, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		free(pubEK);
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_DisablePubekRead(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TCS_AUTH auth;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_DisablePubekRead_Internal(hContext, &auth);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH));
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_CloseContext(struct tcsd_thread_data *data,
 			struct tsp_packet *tsp_data,
 			struct tcsd_packet_hdr **hdr)
@@ -1096,6 +1192,90 @@ tcs_wrap_TakeOwnership(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_OwnerClear(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TCS_AUTH auth;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_OwnerClear_Internal(hContext, &auth);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH));
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_DisableOwnerClear(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+	TCS_AUTH auth;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = TCSP_DisableOwnerClear_Internal(hContext, &auth);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TCS_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH));
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_ForceClear(struct tcsd_thread_data *data,
 			struct tsp_packet *tsp_data,
 			struct tcsd_packet_hdr **hdr)
@@ -1111,6 +1291,37 @@ tcs_wrap_ForceClear(struct tcsd_thread_data *data,
 	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
 
 	result = TCSP_ForceClear_Internal(hContext);
+
+	tsp_data->numParms = 0;
+	tsp_data->dataSize = 0;
+	*hdr = calloc(1, size);
+	if (*hdr == NULL) {
+		LogError("malloc of %d bytes failed.", size);
+		return TSS_E_OUTOFMEMORY;
+	}
+
+	(*hdr)->packet_size = size;
+	(*hdr)->result = result;
+
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_DisableForceClear(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	result = TCSP_DisableForceClear_Internal(hContext);
 
 	tsp_data->numParms = 0;
 	tsp_data->dataSize = 0;
@@ -3214,17 +3425,17 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_GetCapabilityOwner}, /* 48 */
 	{tcs_wrap_Error}, /* 49 */
 	{tcs_wrap_ReadPubek}, /* 50 */
-	{tcs_wrap_Error}, /* 51 */
-	{tcs_wrap_Error}, /* 52 */
+	{tcs_wrap_DisablePubekRead}, /* 51 */
+	{tcs_wrap_OwnerReadPubek}, /* 52 */
 	{tcs_wrap_SelfTestFull}, /* 53 */
 	{tcs_wrap_CertifySelfTest}, /* 54 */
 	{tcs_wrap_Error}, /* 55 */
 	{tcs_wrap_GetTestResult}, /* 56 */
 	{tcs_wrap_OwnerSetDisable}, /* 57 */
-	{tcs_wrap_Error}, /* 58 */
-	{tcs_wrap_Error}, /* 59 */
+	{tcs_wrap_OwnerClear}, /* 58 */
+	{tcs_wrap_DisableOwnerClear}, /* 59 */
 	{tcs_wrap_ForceClear}, /* 60 */
-	{tcs_wrap_Error}, /* 61 */
+	{tcs_wrap_DisableForceClear}, /* 61 */
 	{tcs_wrap_PhysicalDisable}, /* 62 */
 	{tcs_wrap_PhysicalEnable}, /* 63 */
 	{tcs_wrap_PhysicalSetDeactivated}, /* 64 */
