@@ -25,7 +25,6 @@
 #include "obj.h"
 #include "tss/trousers.h"
 
-char *tss_layers[] = { "tpm", "tddl", "tcs", "tsp" };
 
 TSS_RESULT
 internal_GetMachineName(UNICODE *name, int nameSize)
