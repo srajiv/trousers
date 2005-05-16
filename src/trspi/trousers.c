@@ -636,3 +636,132 @@ Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key)
 	/* exclude encSize, encData as spec'd in TPM 1.1b spec p.71 */
 }
 
+/* function to mimic strerror with TSS error codes */
+char *
+Trspi_Error(TSS_RESULT r)
+{
+	switch (r) {
+	case TSS_SUCCESS:			return "Success";
+
+	case TDDL_E_BAD_PARAMETER:		return "Bad parameter";
+	case TDDL_E_COMPONENT_NOT_FOUND:	return "Connection to TPM device failed";
+	case TDDL_E_ALREADY_OPENED:		return "Device already opened";
+	case TDDL_E_BADTAG:			return "Invalid or unsupported capability";
+	case TDDL_E_TIMEOUT:			return "Operation timed out";
+	case TDDL_E_INSUFFICIENT_BUFFER:	return "Receive buffer too small";
+	case TDDL_COMMAND_COMPLETED:		return "Command has already completed";
+	case TDDL_E_OUTOFMEMORY:		return "Out of memory";
+	case TDDL_E_ALREADY_CLOSED:		return "Device driver already closed";
+	case TDDL_E_IOERROR:			return "I/O error";
+	case TDDL_E_COMMAND_ABORTED:		return "TPM aborted processing of command";
+
+	case TCS_E_KEY_MISMATCH:		return "UUID does not match key handle";
+	case TCS_E_KM_LOADFAILED:		return "Key load failed: parent key requires authorization";
+	case TCS_E_KEY_CONTEXT_RELOAD:		return "Reload of key context failed";
+	case TCS_E_INVALID_CONTEXTHANDLE:	return "Invalid context handle";
+	case TCS_E_INVALID_KEYHANDLE:		return "Invalid key handle";
+	case TCS_E_INVALID_AUTHHANDLE:		return "Invalid authorization session handle";
+	case TCS_E_INVALID_AUTHSESSION:		return "Authorization session has been closed by TPM";
+	case TCS_E_INVALID_KEY:			return "Invalid key";
+
+
+	case TCS_E_FAIL:			/* fall through */
+	case TSS_E_FAIL:			/* fall through */
+	case TDDL_E_FAIL:			return "General failure";
+	case TSS_E_BAD_PARAMETER:		return "Bad parameter";
+	case TSS_E_INTERNAL_ERROR:		return "Internal software error";
+	case TSS_E_NOTIMPL:			return "Not implemented";
+	case TCS_E_KEY_NOT_REGISTERED:		/* fall through */
+	case TSS_E_PS_KEY_NOTFOUND:		return "Key not found in persistent storage";
+	case TCS_E_KEY_ALREADY_REGISTERED:	/* fall through */
+	case TSS_E_KEY_ALREADY_REGISTERED:	return "UUID already registered";
+	case TSS_E_CANCELED:			return "The action was cancelled by request";
+	case TSS_E_TIMEOUT:			return "The operation has timed out";
+	case TSS_E_OUTOFMEMORY:			return "Out of memory";
+	case TSS_E_TPM_UNEXPECTED:		return "Unexpected TPM output";
+	case TSS_E_COMM_FAILURE:		return "Communication failure";
+	case TSS_E_TPM_UNSUPPORTED_FEATURE:	return "Unsupported feature";
+
+	case TSS_E_INVALID_OBJECT_TYPE:		return "Object type not valid for this operation";
+	case TSS_E_INVALID_OBJECT_INIT_FLAG:	return "Wrong flag creation for object creation";
+	case TSS_E_INVALID_HANDLE:		return "Invalid handle";
+	case TSS_E_NO_CONNECTION:		return "Core service connection doesn't exist";
+	case TSS_E_CONNECTION_FAILED:		return "Core service connection failed";
+	case TSS_E_CONNECTION_BROKEN:		return "Communication with core services failed";
+	case TSS_E_HASH_INVALID_ALG:		return "Invalid hash algorithm";
+	case TSS_E_HASH_INVALID_LENGTH:		return "Hash length is inconsistent with algorithm";
+	case TSS_E_HASH_NO_DATA:		return "Hash object has no internal hash value";
+	case TSS_E_SILENT_CONTEXT:		return "A silent context requires user input";
+	case TSS_E_INVALID_ATTRIB_FLAG:		return "Flag value for attrib-functions inconsistent";
+	case TSS_E_INVALID_ATTRIB_SUBFLAG:	return "Sub-flag value for attrib-functions inconsistent";
+	case TSS_E_INVALID_ATTRIB_DATA:		return "Data for attrib-functions invalid";
+	case TSS_E_NO_PCRS_SET:			return "No PCR registers are selected or set";
+	case TSS_E_KEY_NOT_LOADED:		return "The addressed key is not currently loaded";
+	case TSS_E_KEY_NOT_SET:			return "No key informatio is currently available";
+	case TSS_E_VALIDATION_FAILED:		return "Internal validation of data failed";
+	case TSS_E_TSP_AUTHREQUIRED:		return "Authorization is required";
+	case TSS_E_TSP_AUTH2REQUIRED:		return "Multiple authorizations are required";
+	case TSS_E_TSP_AUTHFAIL:		return "Authorization failed";
+	case TSS_E_TSP_AUTH2FAIL:		return "Multiple authorization failed";
+	case TSS_E_KEY_NO_MIGRATION_POLICY:	return "Addressed key has no migration policy";
+	case TSS_E_POLICY_NO_SECRET:		return "No secret information available for the address policy";
+	case TSS_E_INVALID_OBJ_ACCESS:		return "Accessed object is in an inconsistent state";
+	case TSS_E_INVALID_ENCSCHEME:		return "Invalid encryption scheme";
+	case TSS_E_INVALID_SIGSCHEME:		return "Invalid signature scheme";
+	case TSS_E_ENC_INVALID_LENGTH:		return "Invalid length for encrypted data object";
+	case TSS_E_ENC_NO_DATA:			return "Encrypted data object contains no data";
+	case TSS_E_ENC_INVALID_TYPE:		return "Invalid type for encrypted data object";
+	case TSS_E_INVALID_KEYUSAGE:		return "Invalid usage of key";
+	case TSS_E_VERIFICATION_FAILED:		return "Internal validation of data failed";
+	case TSS_E_HASH_NO_IDENTIFIER:		return "Hash algorithm identifier not set";
+
+	case TCPA_AUTHFAIL:			return "Authentication failed";
+	case TCPA_BADINDEX:			return "Bad index";
+	case TCPA_BADPARAMETER:			return "Bad parameter";
+	case TCPA_AUDITFAILURE:			return "Audit failure";
+	case TCPA_CLEAR_DISABLED:		return "Clear has been disabled";
+	case TCPA_DEACTIVATED:			return "TPM is deactivated";
+	case TCPA_DISABLED:			return "TPM is disabled";
+	case TCPA_DISABLED_CMD:			return "Diabled command";
+	case TCPA_FAIL:				return "Operation failed";
+	case TCPA_BAD_ORDINAL:			return "Unknown command";
+	case TCPA_INSTALL_DISABLED:		return "Owner install disabled";
+	case TCPA_INVALID_KEYHANDLE:		return "Invalid keyhandle";
+	case TCPA_KEYNOTFOUND:			return "Key not found";
+	case TCPA_INAPPROPRIATE_ENC:		return "Bad encryption scheme";
+	case TCPA_MIGRATE_FAIL:			return "Migration authorization failed";
+	case TCPA_INVALID_PCR_INFO:		return "PCR information uninterpretable";
+	case TCPA_NOSPACE:			return "No space to load key";
+	case TCPA_NOSRK:			return "No SRK";
+	case TCPA_NOTSEALED_BLOB:		return "Encrypted blob invalid";
+	case TCPA_OWNER_SET:			return "Owner already set";
+	case TCPA_RESOURCES:			return "Insufficient TPM resources";
+	case TCPA_SHORTRANDOM:			return "Random string too short";
+	case TCPA_SIZE:				return "TPM out of space";
+	case TCPA_WRONGPCRVAL:			return "Wrong PCR value";
+	case TCPA_BAD_PARAM_SIZE:		return "Bad input size";
+	case TCPA_SHA_THREAD:			return "No existing SHA-1 thread";
+	case TCPA_SHA_ERROR:			return "SHA-1 error";
+	case TCPA_FAILEDSELFTEST:		return "Self-test failed, TPM shutdown";
+	case TCPA_AUTH2FAIL:			return "Second authorization session failed";
+	case TCPA_BADTAG:			return "Invalid tag";
+	case TCPA_IOERROR:			return "I/O error";
+	case TCPA_ENCRYPT_ERROR:		return "Encryption error";
+	case TCPA_DECRYPT_ERROR:		return "Decryption error";
+	case TCPA_INVALID_AUTHHANDLE:		return "Invalid authorization handle";
+	case TCPA_NO_ENDORSEMENT:		return "No EK";
+	case TCPA_INVALID_KEYUSAGE:		return "Invalid key usage";
+	case TCPA_WRONG_ENTITYTYPE:		return "Invalid entity type";
+	case TCPA_INVALID_POSTINIT:		return "Invalid POST init sequence";
+	case TCPA_INAPPRORIATE_SIG:		return "Invalid signature format";
+	case TCPA_BAD_KEY_PROPERTY:		return "Unsupported key parameters";
+	case TCPA_BAD_MIGRATION:		return "Invalid migration properties";
+	case TCPA_BAD_SCHEME:			return "Invalid signature or encryption scheme";
+	case TCPA_BAD_DATASIZE:			return "Invalid data size";
+	case TCPA_BAD_MODE:			return "Bad mode parameter";
+	case TCPA_BAD_PRESENCE:			return "Bad physical presence value";
+	case TCPA_BAD_VERSION:			return "Invalid version";
+	case TCPA_RETRY:			return "TPM busy: Retry command at a later time";
+	default:				return "Unknown error";
+	}
+}
