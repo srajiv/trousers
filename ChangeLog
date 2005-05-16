@@ -1,4 +1,15 @@
 
+ - Added Trspi_Error, which converts a TSS_RESULT to a string.
+   (thanks Kylie).
+ - In tcsd_wrap.c, added function bodies for tcs_wrap_OwnerClear,
+   tcs_wrap_DisablePubekRead, tcs_wrap_OwnerReadPubek,
+   tcs_wrap_DisableForceClear and tcs_wrap_DisableOwnerClear.
+   (thanks Kylie).
+ - Added an unload of the auth returned from the TPM in
+   TCSP_OwnerReadPubek_Internal. (thanks Kylie).
+ - Corrected the TAG for the TPM command in
+   TCSP_OwnerReadPubek_Internal. (thanks Kylie).
+
 * TROUSERS_0_1_10
 
  - Updated implementation of Tspi_Key_WrapKey.
