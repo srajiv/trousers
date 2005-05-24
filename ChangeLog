@@ -1,4 +1,6 @@
 
+ - Fixed order of receiving for the TCS_OwnerReadPubek call
+   (thanks Kylie).
  - Added defns for volatile and non-volatile flags (thanks Kylie).
  - Added Trspi_Error, which converts a TSS_RESULT to a string.
    (thanks Kylie).
