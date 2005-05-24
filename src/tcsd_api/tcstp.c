@@ -2471,7 +2471,55 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 					     BYTE ** endorsementKey,	/* out */
 					     TCPA_DIGEST * checksum	/* out */
     ) {
-	return TSS_E_NOTIMPL;
+
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_CREATEENDORSEMENTKEYPAIR;
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &endorsementKeyInfoSize, 0, &data))
+		return TSS_E_INTERNAL_ERROR;
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, endorsementKeyInfo, endorsementKeyInfoSize, &data))
+		return TSS_E_INTERNAL_ERROR;
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, endorsementKeySize, 0, hdr)) {
+			result = TSS_E_INTERNAL_ERROR;
+			goto done;
+		}
+
+		*endorsementKey = (BYTE *) malloc(*endorsementKeySize);
+		if (*endorsementKey == NULL) {
+			LogError("Malloc of %d bytes failed.", *endorsementKeySize);
+			result = TSS_E_OUTOFMEMORY;
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *endorsementKey, *endorsementKeySize, hdr)) {
+			free(*endorsementKey);
+			result = TSS_E_INTERNAL_ERROR;
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, hdr)) {
+			free(*endorsementKey);
+			result = TSS_E_INTERNAL_ERROR;
+		}
+	}
+
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
