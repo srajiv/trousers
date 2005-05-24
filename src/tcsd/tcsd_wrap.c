@@ -480,7 +480,8 @@ tcs_wrap_OwnerReadPubek(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TCS_AUTH) + sizeof(UINT32) + pubEKSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + pubEKSize);
+			LogError("malloc of %d bytes failed.", size + sizeof(TCS_AUTH) +
+					sizeof(UINT32) + pubEKSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
