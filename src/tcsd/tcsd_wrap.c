@@ -403,6 +403,86 @@ tcs_wrap_GetRandom(struct tcsd_thread_data *data,
 }
 
 TSS_RESULT
+tcs_wrap_CreateEndorsementKeyPair(struct tcsd_thread_data *data,
+				struct tsp_packet *tsp_data,
+				struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCPA_NONCE antiReplay;
+	UINT32 eKPtrSize;
+	BYTE *eKPtr;
+	UINT32 eKSize;
+	BYTE* eK;
+	TCPA_DIGEST checksum;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &eKPtrSize, 0, tsp_data))
+		return TSS_E_INTERNAL_ERROR;
+
+	if ( eKPtrSize == 0 )
+		eKPtr = NULL;
+
+	else {
+		eKPtr = calloc(1, eKPtrSize );
+		if ( eKPtr == NULL ) {
+			LogError("malloc of %d bytes failed.", eKPtrSize);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, eKPtr, eKPtrSize, tsp_data)) {
+			free( eKPtr );
+			return TSS_E_INTERNAL_ERROR; 
+		}
+	}
+
+	result = TCSP_CreateEndorsementKeyPair_Internal( hContext, antiReplay, eKPtrSize, eKPtr, &eKSize, &eK, &checksum );
+
+	free(eKPtr);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
+		if ( hdr == NULL ) {
+			LogError("malloc of %d bytes faile.", size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
+			free(eK);
+			return TSS_E_OUTOFMEMORY;
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eKSize, 0, *hdr)) {
+			free(*hdr);
+			free(eK);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, eK, eKSize, *hdr)) {
+			free(*hdr);
+			free(eK);
+			return TSS_E_INTERNAL_ERROR;
+		}
+		free(eK);
+		if (setData( TCSD_PACKET_TYPE_DIGEST, 2, &checksum, 0, *hdr)) {
+			free(*hdr);
+			return TSS_E_INTERNAL_ERROR;
+		}
+	}
+	else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TSS_E_OUTOFMEMORY;
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TCS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_ReadPubek(struct tcsd_thread_data *data,
 		   struct tsp_packet *tsp_data,
 		   struct tcsd_packet_hdr **hdr)
@@ -3424,7 +3504,7 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_GetCapability}, /* 46 */
 	{tcs_wrap_Error}, /* 47 */
 	{tcs_wrap_GetCapabilityOwner}, /* 48 */
-	{tcs_wrap_Error}, /* 49 */
+	{tcs_wrap_CreateEndorsementKeyPair}, /* 49 */
 	{tcs_wrap_ReadPubek}, /* 50 */
 	{tcs_wrap_DisablePubekRead}, /* 51 */
 	{tcs_wrap_OwnerReadPubek}, /* 52 */
@@ -3471,7 +3551,7 @@ access_control(struct tcsd_thread_data *thread_data, struct tsp_packet *tsp_data
 		return 0;
 	} else {
 		while (tcsd_options.remote_ops[i]) {
-			if (tcsd_options.remote_ops[i] == tsp_data->ordinal) {
+			if ((UINT32)tcsd_options.remote_ops[i] == tsp_data->ordinal) {
 				return 0;
 			}
 			i++;
