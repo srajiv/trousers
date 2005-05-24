@@ -1336,7 +1336,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	UINT32 tcsSubCap;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
-	UINT32 nonVolFlags, volFlags, respLen;
+	UINT32 nonVolFlags, volFlags, respLen, correct_endianess = 0;
 	BYTE *respData;
 	UINT16 offset;
 	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
@@ -1381,10 +1381,13 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 
 		if (tcsSubCapContainer == TSS_TPMCAP_PROP_PCR) {
 			tcsSubCap = TCPA_CAP_PROP_PCR;
+			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_DIR) {
 			tcsSubCap = TCPA_CAP_PROP_DIR;
+			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SLOTS) {
 			tcsSubCap = TCPA_CAP_PROP_SLOTS;
+			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
 			tcsSubCap = TCPA_CAP_PROP_MANUFACTURER;
 		} else
@@ -1402,36 +1405,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		/* do an owner authorized get capability call */
 		if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
 			return result;
-#if 0
-		UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
-		Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
-		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
-			return result;
-
-		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
-			return result;
-
-		if ((result = TCSP_GetCapabilityOwner(tcsContext,       /*  in */
-						&auth,     /*  out */
-						&version,  /*  out */
-						&nonVolFlags,      /*  out */
-						&volFlags  /*  out */
-						)))
-			return result;
-
-		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilityOwner, hashBlob);
-		Trspi_LoadBlob_TCPA_VERSION(&offset, hashBlob, version);
-		Trspi_LoadBlob_UINT32(&offset, nonVolFlags, hashBlob);
-		Trspi_LoadBlob_UINT32(&offset, volFlags, hashBlob);
-
-		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
-			return result;
-#endif
 		respLen = 2 * sizeof(UINT32);
 		respData = calloc_tspi(tspContext, respLen);
 		if (respData == NULL) {
@@ -1449,15 +1423,20 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		tcsSubCap = endian32(tcsSubCap);
 
 		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
-				pulRespDataLength, prgbRespData);
+				&respLen, &respData);
 
-		*prgbRespData = calloc_tspi(tspContext, *pulRespDataLength);
+		*prgbRespData = calloc_tspi(tspContext, respLen);
 		if (*prgbRespData == NULL) {
-			LogError("malloc of %d bytes failed.", *pulRespDataLength);
+			free(respData);
+			LogError("malloc of %d bytes failed.", respLen);
 			return TSS_E_OUTOFMEMORY;
 		}
 
-		if (*pulRespDataLength == sizeof(UINT32)) {
+		*pulRespDataLength = respLen;
+		memcpy(*prgbRespData, respData, respLen);
+		free(respData);
+
+		if (*pulRespDataLength == sizeof(UINT32) && correct_endianess) {
 			*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
 		}
 	}
