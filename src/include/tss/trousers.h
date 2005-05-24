@@ -108,6 +108,14 @@ int Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 			unsigned int keysize);
 
 /* error functions */
-char *Trspi_Error(TSS_RESULT);
+
+/* return a human readable string based on the result */
+char *Trspi_Error_String(TSS_RESULT);
+
+/* return a human readable error layer ( "tpm", "tddl", etc...) */
+char *Trspi_Error_Layer(TSS_RESULT);
+
+/* return just the error code bits of the result */
+TSS_RESULT Trspi_Error_Code(TSS_RESULT);
 
 #endif

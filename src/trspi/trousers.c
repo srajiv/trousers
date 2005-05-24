@@ -638,7 +638,7 @@ Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key)
 
 /* function to mimic strerror with TSS error codes */
 char *
-Trspi_Error(TSS_RESULT r)
+Trspi_Error_String(TSS_RESULT r)
 {
 	switch (r) {
 	case TSS_SUCCESS:			return "Success";
@@ -722,7 +722,7 @@ Trspi_Error(TSS_RESULT r)
 	case TCPA_CLEAR_DISABLED:		return "Clear has been disabled";
 	case TCPA_DEACTIVATED:			return "TPM is deactivated";
 	case TCPA_DISABLED:			return "TPM is disabled";
-	case TCPA_DISABLED_CMD:			return "Diabled command";
+	case TCPA_DISABLED_CMD:			return "Disabled command";
 	case TCPA_FAIL:				return "Operation failed";
 	case TCPA_BAD_ORDINAL:			return "Unknown command";
 	case TCPA_INSTALL_DISABLED:		return "Owner install disabled";
@@ -764,4 +764,22 @@ Trspi_Error(TSS_RESULT r)
 	case TCPA_RETRY:			return "TPM busy: Retry command at a later time";
 	default:				return "Unknown error";
 	}
+}
+
+char *
+Trspi_Error_Layer(TSS_RESULT r)
+{
+	switch (TSS_ERROR_LAYER(r)) {
+		case TSS_ERROR_LAYER_TPM:	return "tpm";
+		case TSS_ERROR_LAYER_TDDL:	return "tddl";
+		case TSS_ERROR_LAYER_TCS:	return "tcs";
+		case TSS_ERROR_LAYER_TSP:	return "tsp";
+		default:			return "unknown";
+	}
+}
+
+TSS_RESULT
+Trspi_Error_Code(TSS_RESULT r)
+{
+	return TSS_ERROR_CODE(r);
 }

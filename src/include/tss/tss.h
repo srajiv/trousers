@@ -27,7 +27,10 @@
 #define TSS_ERROR_LAYER_TCS		0x02
 #define TSS_ERROR_LAYER_TSP		0x03
 
-#define TSS_ERROR_LAYER_MASK		0x3000
+#define TSS_ERROR_LAYER_MASK		0x00003000
+#define TSS_ERROR_CODE_MASK		0x00000fff
+#define TSS_ERROR_LAYER(x)		((x & TSS_ERROR_LAYER_MASK) >> 12)
+#define TSS_ERROR_CODE(x)		(x & TSS_ERROR_CODE_MASK)
 
 /* These encode the layer information in a return code */
 #define TPMerr(x)	(x | 0x0000000000000000)
