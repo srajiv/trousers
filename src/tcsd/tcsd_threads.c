@@ -197,7 +197,7 @@ tcsd_thread_run(void *v)
 		LogError("Packet received from socket %d was too large (%u bytes)",
 				data->sock, data->buf_size);
 		goto done;
-	} else if (data->buf_size < ((2 * sizeof(UINT32)) + sizeof(UINT16))) {
+	} else if (data->buf_size < (int)((2 * sizeof(UINT32)) + sizeof(UINT16))) {
 		LogError("Packet received from socket %d was too small (%u bytes)",
 				data->sock, data->buf_size);
 		goto done;
