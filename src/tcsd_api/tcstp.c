@@ -2585,7 +2585,12 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
                 result = hdr->result;
 
         if (result == TSS_SUCCESS) {
-                if (getData(TCSD_PACKET_TYPE_UINT32, 0, pubEndorsementKeySize, 0, hdr)) {
+                if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr)){
+			free(*pubEndorsementKey);
+                        result = TSS_E_INTERNAL_ERROR;
+		}
+
+                if (getData(TCSD_PACKET_TYPE_UINT32, 1, pubEndorsementKeySize, 0, hdr)) {
                         result = TSS_E_INTERNAL_ERROR;
                         goto done;
                 }
@@ -2597,16 +2602,11 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
                         goto done;
                 }
 
-                if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *pubEndorsementKey, *pubEndorsementKeySize, hdr)) {
+                if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *pubEndorsementKey, *pubEndorsementKeySize, hdr)) {
                         free(*pubEndorsementKey);
                         result = TSS_E_INTERNAL_ERROR;
 			goto done;
                 }
-
-                if (getData(TCSD_PACKET_TYPE_AUTH, 2, ownerAuth, 0, hdr)){
-			free(*pubEndorsementKey);
-                        result = TSS_E_INTERNAL_ERROR;
-		}
         }
 
 done:
