@@ -1,4 +1,5 @@
 
+ - added Trspi_Error functions to manipulate TSS_RESULTs.
  - Fixed order of receiving for the TCS_OwnerReadPubek call
    (thanks Kylie).
  - Added defns for volatile and non-volatile flags (thanks Kylie).
