@@ -1131,7 +1131,7 @@ TCPA_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/*  in */
 }
 
 TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
-			   UINT32 * bytesRequested,	/*  in, out */
+			   UINT32 bytesRequested,	/*  in */
 			   BYTE ** randomBytes	/*  out */
     ) {
 	TSS_RESULT result;
@@ -1144,6 +1144,14 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		result =
 		    TCSP_GetRandom_TP(entry, hContext,
 				      bytesRequested, randomBytes);
+
+		if (result) {
+			LogWarn("TPM random generation failed. result=0x%x",
+					__FUNCTION__, result);
+			result = get_local_random(obj_lookupTspContext(hContext),
+					bytesRequested, randomBytes);
+		}
+
 		return result;
 	}
 
