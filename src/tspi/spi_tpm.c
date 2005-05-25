@@ -1723,20 +1723,16 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 		   BYTE ** prgbRandomData	/*  out */
     )
 {
-	UINT32 length;
-	UINT32 index;
 	TSS_RESULT status;
-	BYTE *data;
-	BYTE *holdData = NULL;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
 
+	if (prgbRandomData == NULL || ulRandomDataLength > 4096)
+		return TSS_E_BAD_PARAMETER;
+
 	if (ulRandomDataLength == 0)
 		return TSS_SUCCESS;
-
-	if (prgbRandomData == NULL)
-		return TSS_E_BAD_PARAMETER;
 
 	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
 		return result;
@@ -1744,49 +1740,10 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+	if ((result = TCSP_GetRandom(tcsContext, ulRandomDataLength, prgbRandomData)))
+		return result;
 
-	index = 0;
-	while (index < ulRandomDataLength) {
-		length = ulRandomDataLength - index;
-		status = TCSP_GetRandom(tcsContext, &length, &data);
-		if (status) {
-			if (holdData)
-				free(holdData);
-			return status;
-		}
-
-		if (holdData == NULL) {
-			holdData = malloc(length);
-			if (holdData == NULL) {
-				LogError("malloc of %d bytes failed.", length);
-				return TSS_E_OUTOFMEMORY;
-			}
-		} else {
-			holdData = realloc(holdData, index + length);
-			if (holdData == NULL) {
-				LogError("malloc of %d bytes failed.", index + length);
-				return TSS_E_OUTOFMEMORY;
-			}
-		}
-
-		memcpy(&holdData[index], data, length);
-		index += length;
-
-		free_tspi(tspContext, data);
-	}
-
-	*prgbRandomData = calloc_tspi(tspContext, index);
-	if (*prgbRandomData == NULL) {
-		LogError("malloc of %d bytes failed.", index);
-		result = TSS_E_OUTOFMEMORY;
-	} else {
-		memcpy(*prgbRandomData, holdData, index);
-	}
-
-	free(holdData);
-	return 0;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
