@@ -1,4 +1,8 @@
 
+ - committed fix for RNG problem: a TPM's RNG is disabled when
+   the TPM is in the disabled state, yet needs a random number
+   to open an OSAP session to call the owner auth'd TPM enable
+   command.
  - added code for CreatePubEK plumbing (thanks Kylie).
  - fixed a couple signed/unsigned comparison warnings
  - fixed endianess stuff in TPM GetCap spi_tpm.c.
