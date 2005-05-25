@@ -2219,7 +2219,7 @@ done:
 
 TSS_RESULT
 TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-			      UINT32 * bytesRequested,	/* in, out */
+			      UINT32 bytesRequested,	/* in */
 			      BYTE ** randomBytes	/* out */
     ) {
 	TSS_RESULT result;
@@ -2236,7 +2236,7 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSS_E_INTERNAL_ERROR;
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, bytesRequested, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &bytesRequested, 0, &data))
 		return TSS_E_INTERNAL_ERROR;
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
@@ -2245,17 +2245,17 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 		result = hdr->result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, bytesRequested, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, hdr)) {
 			result = TSS_E_INTERNAL_ERROR;
 			goto done;
 		}
-		*randomBytes = (BYTE *) calloc_tspi(tspContext, *bytesRequested);
+		*randomBytes = (BYTE *) calloc_tspi(tspContext, bytesRequested);
 		if (*randomBytes == NULL) {
-			LogError("Malloc of %d bytes failed.", *bytesRequested);
+			LogError("Malloc of %d bytes failed.", bytesRequested);
 			result = TSS_E_OUTOFMEMORY;
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, *bytesRequested, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, bytesRequested, hdr)) {
 			free_tspi(tspContext, *randomBytes);
 			result = TSS_E_INTERNAL_ERROR;
 		}
