@@ -559,7 +559,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
-				       &bytesRequested,	/*  in, out */
+				       bytesRequested,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
@@ -620,21 +620,21 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			/*  generate random data for asymfinish */
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
-				       &bytesRequested,	/*  in, out */
+				       bytesRequested,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
-				       &bytesRequested,	/*  in, out */
+				       bytesRequested,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 			TCSP_GetRandom(tcsContext,	/*  in */
-				       &bytesRequested,	/*  in, out */
+				       bytesRequested,	/*  in */
 				       &randomBytes	/*  out */
 			    );
 			memcpy(seed, randomBytes, 20);
