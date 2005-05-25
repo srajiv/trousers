@@ -359,7 +359,7 @@
 	    );
 
 	TCPA_RESULT TCSP_GetRandom_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-				      UINT32 * bytesRequested,	/* in, out */
+				      UINT32 bytesRequested,	/* in */
 				      BYTE ** randomBytes	/* out */
 	    );
 

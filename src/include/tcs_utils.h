@@ -1117,7 +1117,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
-					    UINT32 * bytesRequested,	/* in, out */
+					    UINT32 bytesRequested,	/* in */
 					    BYTE ** randomBytes	/* out */
 	    );
 

@@ -376,7 +376,7 @@ TSS_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/* in */
     );
 
 TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
-			   UINT32 * bytesRequested,	/* in, out */
+			   UINT32 bytesRequested,	/* in */
 			   BYTE ** randomBytes	/* out */
     );
 
