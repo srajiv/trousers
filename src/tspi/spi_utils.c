@@ -149,19 +149,18 @@ TSS_RESULT
 internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 {
 	TSS_RESULT result;
-	UINT32 twenty = 20;
 	BYTE *random;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
 		return TSS_E_INTERNAL_ERROR;
 
-	if ((result = TCSP_GetRandom(tcsContext, &twenty, &random)))
+	if ((result = TCSP_GetRandom(tcsContext, sizeof(TCPA_NONCE), &random)))
 		return TSS_E_INTERNAL_ERROR;
 
-	memcpy(nonce->nonce, random, 20);
-
+	memcpy(nonce->nonce, random, sizeof(TCPA_NONCE));
 	free_tspi(tspContext, random);
+
 	return TSS_SUCCESS;
 }
 
@@ -739,4 +738,39 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	return secret_ValidateAuth_OIAP(hPolicy, digest, &auth);
+}
+
+TSS_RESULT
+get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
+{
+	FILE *f = NULL;
+	BYTE *buf = NULL;
+
+	LogWarn("Falling back to %s", TSS_LOCAL_RANDOM_DEVICE);
+
+	f = fopen(TSS_LOCAL_RANDOM_DEVICE, "r");
+	if (f == NULL) {
+		LogError("open of %s failed: %s",
+				TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
+		return TSS_E_INTERNAL_ERROR;
+	}
+
+	buf = calloc_tspi(tspContext, size);
+	if (buf == NULL) {
+		LogError("malloc of %u bytes failed", size);
+		fclose(f);
+		return TSS_E_OUTOFMEMORY;
+	}
+
+	if (fread(buf, size, 1, f) == 0) {
+		LogError("fread of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE,
+				strerror(errno));
+		fclose(f);
+		return TSS_E_INTERNAL_ERROR;
+	}
+
+	fclose(f);
+	*data = buf;
+
+	return TSS_SUCCESS;
 }
