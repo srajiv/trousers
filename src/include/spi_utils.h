@@ -90,6 +90,9 @@ TSS_RESULT DisplayNewPINWindow(char *, UNICODE *);
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
 
+#define TSS_LOCAL_RANDOM_DEVICE		"/dev/random"
+TSS_RESULT get_local_random(TSS_HCONTEXT, UINT32, BYTE **);
+
 short get_port(void);
 
 #define AUTH_RETRY_NANOSECS	500000000
