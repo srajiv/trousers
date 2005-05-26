@@ -1,4 +1,5 @@
 
+ - commited fix for detecting past runlevel states (thanks Kylie).
  - committed fix for RNG problem: a TPM's RNG is disabled when
    the TPM is in the disabled state, yet needs a random number
    to open an OSAP session to call the owner auth'd TPM enable
