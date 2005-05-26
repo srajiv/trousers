@@ -37,6 +37,8 @@ platform_get_runlevel()
 
 	pthread_mutex_lock(&utmp_lock);
 
+	setutent();
+
 	memset(&ut, 0, sizeof(struct utmp));
 	memset(&save, 0, sizeof(struct utmp));
 	memset(&tv, 0, sizeof(struct timeval));
