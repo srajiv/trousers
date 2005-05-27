@@ -3639,7 +3639,7 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 
 		tmp_offset = 0;
 		if (totalSize - offset > 1024)
-			LogError1("%s: ************** ERROR ***********************", __FUNCTION__);
+			LogError("%s: ************** ERROR ***********************", __FUNCTION__);
 		LoadBlob(&tmp_offset, totalSize - offset, tmp_data, &((*hdr)->data), NULL);
 		LoadBlob(&offset, totalSize - offset, (BYTE *)*hdr, tmp_data, NULL);
 #endif
