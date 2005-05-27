@@ -3,8 +3,19 @@
 #
 
 AC_INIT(trousers, 0.1.10, trousers-tech@lists.sf.net)
-# Require the tested version
+# compute $target
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(1.6.3)
+
+# Arch specific stuff
+case $target in
+        *x86_64*)
+		CFLAGS="$CFLAGS -m32"
+		;;
+        *)
+                ;;
+esac
+
 
 # Debugging support
 AC_ARG_ENABLE(debug,
