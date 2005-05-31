@@ -16,6 +16,7 @@ fully functional.
   automake
   autoconf
   pkgconfig
+  libtool
   gtk2-devel OR openssh-askpass
     Using gtk2-devel builds a native GTK2 popup into trousers, using openssh-askpass
     calls the ssh-askpass program externally to grab secrets from your GUI. The
