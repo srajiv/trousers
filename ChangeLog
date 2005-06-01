@@ -1,4 +1,6 @@
 
+ - Changed TCSD logging to only log on remote connection attempts,
+   local connections will be left silent.
  - mended compiled time warnings
  - updated src/tspi/Makefile.am to respect libtool.
  - added x86_64 case to configure.in
