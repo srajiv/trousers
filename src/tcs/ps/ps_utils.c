@@ -24,8 +24,8 @@
 #include "tss/tss.h"
 #include "tcs_int_literals.h"
 #include "tcs_internal_types.h"
-#include "tcs_utils.h"
 #include "tcsps.h"
+#include "tcs_utils.h"
 #include "tcs_tsp.h"
 #include "tcslog.h"
 
@@ -411,7 +411,6 @@ int
 init_disk_cache(int fd)
 {
 	UINT32 num_keys = get_num_keys_in_file(fd);
-	UINT32 valid_keys = 0;
 	UINT16 tmp_offset;
 	int i, rc = 0, offset;
 	struct key_disk_cache *tmp, *prev = NULL;
@@ -444,7 +443,7 @@ init_disk_cache(int fd)
 		goto err_exit;
 	}
 
-	for (i=0; i<num_keys; i++) {
+	for (i=0; (UINT32)i<num_keys; i++) {
 		offset = lseek(fd, 0, SEEK_CUR);
 		if (offset == ((off_t) - 1)) {
 			LogError("lseek: %s", strerror(errno));

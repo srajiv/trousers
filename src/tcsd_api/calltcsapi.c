@@ -17,6 +17,9 @@
 #include "hosttable.h"
 #include "tsplog.h"
 #include "trpctp.h"
+#include "spi_internal_types.h"
+#include "spi_utils.h"
+#include "obj.h"
 
 TSS_RESULT
 TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)

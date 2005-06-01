@@ -2129,7 +2129,7 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	TCS_AUTH parentAuth, dataAuth, emptyAuth;
-	TCS_AUTH *pParentAuth, *pDataAuth;
+	TCS_AUTH *pParentAuth;
 
 	UINT32 outDataSize;
 	BYTE *outData;
@@ -3552,6 +3552,8 @@ access_control(struct tcsd_thread_data *thread_data, struct tsp_packet *tsp_data
 	} else {
 		while (tcsd_options.remote_ops[i]) {
 			if ((UINT32)tcsd_options.remote_ops[i] == tsp_data->ordinal) {
+				LogInfo("Remote connection accepted from %s",
+						thread_data->hostname);
 				return 0;
 			}
 			i++;

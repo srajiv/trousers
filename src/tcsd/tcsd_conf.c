@@ -22,12 +22,12 @@
 #include <stdlib.h>
 
 #include "tss/tss.h"
-#include "tcs_utils.h"
 #include "tcsps.h"
 #include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tcsd_ops.h"
+#include "tcs_utils.h"
 
 struct tcsd_config_options options_list[] = {
 	{"port", opt_port},

@@ -224,7 +224,7 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 	 */
 	if (nid == NID_undef) {
 		rv = RSA_public_decrypt(sig_len, pSignature, buf, rsa, RSA_PKCS1_PADDING);
-		if (rv != iHashLength) {
+		if (rv != (int)iHashLength) {
 			rv = TSS_E_FAIL;
 		} else if (memcmp(pHash, buf, iHashLength)) {
 			rv = TSS_E_FAIL;

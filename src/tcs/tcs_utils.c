@@ -47,7 +47,7 @@ fill_key_info(struct key_disk_cache *d,
 		key_info->fIsLoaded = FALSE;
 
 		/* read key from disk */
-		if ((result = getKeyByCacheEntry(d, &tmp_blob, &tmp_blob_size)))
+		if ((result = getKeyByCacheEntry(d, tmp_blob, &tmp_blob_size)))
 			return result;
 
 		offset = 0;
@@ -179,7 +179,7 @@ get_max_auths(UINT32 *auths)
 			*auths = MAX_AUTHS_CAP;
 
 		/* close the auth sessions */
-		for (i = 0; i < *auths; i++) {
+		for (i = 0; (UINT32)i < *auths; i++) {
 			internal_TerminateHandle(handles[i]);
 		}
 	} else {
@@ -609,8 +609,10 @@ LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob, char *log)
 {
 	blob[*offset] = data;
 	(*offset)++;
+#if DEBUG
 	if (log)
 		LogDebug("%s: %c", log, data);
+#endif
 
 }
 
@@ -619,8 +621,10 @@ UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob, char *log)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
+#if DEBUG
 	if (log)
 		LogDebug("%s: %c", log, *dataOut);
+#endif
 }
 
 void
@@ -649,7 +653,6 @@ void
 LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object,
 	 char *log)
 {
-	UINT16 firstOffset = *offset;
 	memcpy(&container[*offset], object, size);
 	(*offset) += (UINT16) size;
 #if 0

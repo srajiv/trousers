@@ -106,14 +106,14 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		LogError1("recv: No bytes returned from the TCSD.");
 		result = TSS_E_COMM_FAILURE;
 		goto err_exit;
-	} else if (returnSize < (2 * sizeof(UINT32))) {
+	} else if (returnSize < (int)(2 * sizeof(UINT32))) {
 		LogError("TCSD returned too few bytes to report its packet size! (%d bytes)",
 				returnSize);
 		result = TSS_E_COMM_FAILURE;
 		goto err_exit;
 	} else {
-		if (Decode_UINT32(&loc_hdr.result) == TSS_SUCCESS)
-			returnSize = Decode_UINT32(&loc_hdr.packet_size);
+		if (Decode_UINT32((BYTE *)&loc_hdr.result) == TSS_SUCCESS)
+			returnSize = Decode_UINT32((BYTE *)&loc_hdr.packet_size);
 		else
 			returnSize = hdr_size;
 
@@ -205,8 +205,8 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 	/* at this point there has been one header received. Check the return code. If
 	 * its success, we'll probably have more data to receive.
 	 */
-	if (Decode_UINT32(&loc_hdr.result) == TSS_SUCCESS)
-		returnSize = Decode_UINT32(&loc_hdr.packet_size);
+	if (Decode_UINT32((BYTE *)&loc_hdr.result) == TSS_SUCCESS)
+		returnSize = Decode_UINT32((BYTE *)&loc_hdr.packet_size);
 	else
 		returnSize = hdr_size;
 

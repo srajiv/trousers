@@ -19,12 +19,12 @@
 #include <unistd.h>
 
 #include "tss/tss.h"
-#include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tddl.h"
 #include "req_mgr.h"
 #include "tcslog.h"
+#include "tcs_utils.h"
 
 static struct tpm_req_mgr *trm;
 

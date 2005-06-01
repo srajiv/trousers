@@ -685,7 +685,7 @@ LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 	Trspi_LoadBlob_UUID(offset, blob, info->keyUUID);
 	Trspi_LoadBlob_UUID(offset, blob, info->parentKeyUUID);
 	Trspi_LoadBlob(offset, TPM_DIGEST_SIZE, blob, info->paramDigest.digest);
-	LoadBlob_AUTH(offset, blob, &info->authData);
+	LoadBlob_AUTH(offset, blob, (TCS_AUTH *)&info->authData);
 }
 
 void
@@ -694,7 +694,7 @@ UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 	Trspi_UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	Trspi_UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
 	Trspi_UnloadBlob(offset, TPM_DIGEST_SIZE, info->paramDigest.digest, blob);
-	UnloadBlob_AUTH(offset, blob, &info->authData);
+	UnloadBlob_AUTH(offset, blob, (TCS_AUTH *)&info->authData);
 }
 
 

@@ -77,8 +77,8 @@ enter_event(GtkWidget *widget, struct userdata *user_data)
 void
 on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 {
-	gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
-	gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
+	const gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
+	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	int len = strlen(entryConf_text);
 
 	if (len == 0) {
@@ -99,8 +99,8 @@ on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 void
 on_entryConfirm_activate(GtkEntry *entry, struct userdata *user_data)
 {
-	gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
-	gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
+	const gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
+	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	int len = strlen(entryConf_text);
 
 	/* Compare the two text boxes, if they're equal, we're done */
@@ -123,8 +123,8 @@ on_cancelbutton2_clicked(GtkButton *button, struct userdata *user_data)
 void
 on_okbutton2_clicked(GtkButton *button, struct userdata *user_data)
 {
-	gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
-	gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
+	const gchar *entryPass_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryPass));
+	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	int len = strlen(entryConf_text);
 
 	/* Compare the two text boxes, if they're equal, we're done */

@@ -201,7 +201,6 @@ main(int argc, char **argv)
 {
 	struct sockaddr_in serv_addr, client_addr;
 	TSS_RESULT result;
-	socklen_t size;
 	int sd, newsd, c, option_index = 0, client_len;
 	char *hostname = NULL;
 	struct hostent *client_hostent = NULL;
@@ -272,7 +271,6 @@ main(int argc, char **argv)
 			LogError("Connecting hostname could not be resolved");
 		} else {
 			hostname = strdup(client_hostent->h_name);
-			LogInfo("Connection accepted from %s", client_hostent->h_name);
 		}
 
 		tcsd_thread_create(newsd, hostname);

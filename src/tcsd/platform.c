@@ -24,6 +24,7 @@
 #include "capabilities.h"
 #include "tcsps.h"
 #include "tcslog.h"
+#include "tcs_utils.h"
 
 pthread_mutex_t utmp_lock = PTHREAD_MUTEX_INITIALIZER;
 

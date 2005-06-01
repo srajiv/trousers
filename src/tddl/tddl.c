@@ -113,7 +113,7 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 		if ((sizeResult = write(opened_device->fd, txBuffer, TransmitBufLen)) < 0) {
 			LogError("write to device %s failed: %s", opened_device->path, strerror(errno));
 			return TDDL_E_IOERROR;
-		} else if (sizeResult < TransmitBufLen) {
+		} else if (sizeResult < (int)TransmitBufLen) {
 			LogError("wrote %d bytes to %s (tried to write %d)", sizeResult,
 					opened_device->path, TransmitBufLen);
 			return TDDL_E_IOERROR;

@@ -75,6 +75,10 @@ TSS_RESULT event_log_final();
 
 #define next( x ) x = x->next
 
+/* platform.c */
+
+char platform_get_runlevel();
+
 /*---	cache.c */
 
 void key_mgr_ref_count();
@@ -142,6 +146,7 @@ TSS_RESULT setParentByHandle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
 TSS_RESULT isUUIDRegistered(TSS_UUID *, BOOL *);
 TSS_RESULT destroyKeyFile(void);
 void destroy_key_refs(TCPA_KEY *);
+TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 
 #if 0
 int KM_GetHierarchy(TSS_UUID *, KMNode **);
@@ -162,12 +167,14 @@ pthread_cond_t *ctx_get_cond_var(TCS_CONTEXT_HANDLE);
 TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 
 TCS_CONTEXT_HANDLE make_context();
+void destroy_context(TCS_CONTEXT_HANDLE);
 
 
 /*******************************************************************************************************/
 /*---	tcs_utils.c */
 
 TSS_RESULT get_current_version(TCPA_VERSION *);
+TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO *);
 
 void setCorruptParamSize(BOOL);
 TSS_RESULT ensureKeyIsLoaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_KEY_HANDLE *);

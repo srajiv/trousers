@@ -21,10 +21,10 @@
 
 #include "tss/tss.h"
 #include "tcs_int_literals.h"
-#include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tcslog.h"
+#include "tcs_utils.h"
 
 struct tcsd_thread_mgr *tm = NULL;
 

@@ -139,7 +139,7 @@ secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, BOOL *answer)
 		 * expired.
 		 */
 		seconds_elapsed = t - policyObject->SecretTimer;
-		if (seconds_elapsed >= policyObject->SecretCounter) {
+		if ((UINT32)seconds_elapsed >= policyObject->SecretCounter) {
 			*answer = TRUE;
 		} else {
 			*answer = FALSE;

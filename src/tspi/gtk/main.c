@@ -52,7 +52,7 @@ TSS_RESULT DisplayPINWindow(char *string, UNICODE *w_popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  wcsrtombs(c_title, &w_popup, 256, &ps);
+  wcsrtombs(c_title, (const wchar_t **)&w_popup, 256, &ps);
 
   ud.string = string;
 
@@ -91,7 +91,7 @@ TSS_RESULT DisplayNewPINWindow(char *string, UNICODE *w_popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  wcsrtombs(c_title, &w_popup, 256, &ps);
+  wcsrtombs(c_title, (const wchar_t **)&w_popup, 256, &ps);
 
   ud.string = string;
 

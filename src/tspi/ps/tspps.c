@@ -360,8 +360,7 @@ ps_write_key(int fd,
 {
 	BYTE pub_key[2048];
 	TCPA_KEY key;
-        UINT32 offset;
-	UINT16 pub_key_size, cache_flags = CACHE_FLAG_VALID;
+	UINT16 offset, pub_key_size, cache_flags = CACHE_FLAG_VALID;
 	int rc = 0;
 
 	/* leaving the cache flag for parent ps type as 0 implies TSS_PS_TYPE_USER */

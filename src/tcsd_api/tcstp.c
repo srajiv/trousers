@@ -15,11 +15,12 @@
 #include "tss/tss.h"
 #include "tss/trousers.h"
 #include "spi_internal_types.h"
-#include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "hosttable.h"
 #include "tcsd_wrap.h"
+#include "obj.h"
+#include "spi_utils.h"
 
 TSS_RESULT send_init(struct host_table_entry *, BYTE *, int, struct tcsd_packet_hdr **);
 TSS_RESULT sendit(struct host_table_entry *, BYTE *data, int, struct tcsd_packet_hdr **);
@@ -34,7 +35,7 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 		memset(packet->types, 0, sizeof (packet->types));
 	}
 	offset = packet->dataSize;
-	if (index > sizeof (packet->types))
+	if (index > (int)sizeof (packet->types))
 		return -1;
 	switch (dataType) {
 	case TCSD_PACKET_TYPE_BYTE:
@@ -596,7 +597,7 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
-	int i, j;
+	UINT32 i, j;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
@@ -722,9 +723,9 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
     ) {
 	TSS_RESULT result;
 	struct tsp_packet data;
-	TSS_UUID uuid;
+	//TSS_UUID uuid;
 	struct tcsd_packet_hdr *hdr;
-	int i, j;
+	UINT32 i, j;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 

@@ -1166,11 +1166,11 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
 				}
 				/* curtime - SecretTimer is the number of seconds elapsed since we
 				 * started the timer. SecretCounter is the number of seconds the
-				 * secret is valid.  If seconds_elspased > SecretCounter, we've
+				 * secret is valid.  If seconds_elapsed > SecretCounter, we've
 				 * expired.
 				 */
 				seconds_elapsed = t - pObj->p.SecretTimer;
-				if (seconds_elapsed >= pObj->p.SecretCounter) {
+				if ((UINT32)seconds_elapsed >= pObj->p.SecretCounter) {
 					*pulAttrib = 0;
 				} else {
 					*pulAttrib = pObj->p.SecretCounter - seconds_elapsed;

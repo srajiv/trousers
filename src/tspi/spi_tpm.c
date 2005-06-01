@@ -1723,10 +1723,8 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 		   BYTE ** prgbRandomData	/*  out */
     )
 {
-	TSS_RESULT status;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
 
 	if (prgbRandomData == NULL || ulRandomDataLength > 4096)
 		return TSS_E_BAD_PARAMETER;
@@ -1964,7 +1962,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	AnObject *anObject;
 	TCPA_PCR_OBJECT *pcrObject;
 	UINT32 pcrDataSize;
-	BYTE *pcrData;
+	BYTE *pcrData = NULL;
 	BOOL verifyInternally = 0;
 	UINT32 validationLength = 0;
 	BYTE *validationData = NULL;

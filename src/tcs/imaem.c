@@ -154,7 +154,7 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 		ptr += sizeof(int);
 
 		/* if the index is the one we're looking for, grab the entry */
-		if (pcr_index == pcr_value) {
+		if ((int)pcr_index == pcr_value) {
 			if (seen_indices >= first) {
 				/* grab this entry */
 				cur->event.rgbPcrValue = malloc(20);
@@ -224,7 +224,7 @@ copy_events:
 	}
 
 	cur = list;
-	for (i = 0; i < copied_events; i++) {
+	for (i = 0; (UINT32)i < copied_events; i++) {
 		memcpy(&((*events)[i]), &(cur->event), sizeof(TSS_PCR_EVENT));
 		cur = cur->next;
 	}
@@ -309,7 +309,7 @@ ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent
 		memcpy(&pcr_value, &page[ptr], sizeof(int));
 		ptr += sizeof(int);
 
-		if (pcr_index == pcr_value) {
+		if ((int)pcr_index == pcr_value) {
 			if (seen_indices == *num) {
 				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 				if (*ppEvent == NULL) {

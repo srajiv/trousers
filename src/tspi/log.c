@@ -28,7 +28,7 @@ void LogBlobData( char* szDescriptor, unsigned long sizeOfBlob, unsigned char* b
 {
 	char temp[1024];
 	char oneByte[8];
-	int i;
+	unsigned long i;
 
 	openlog(szDescriptor, LOG_NDELAY|LOG_PID, LOG_LOCAL5);
 	memset( temp, 0, sizeof( temp ));

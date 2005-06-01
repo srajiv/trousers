@@ -125,8 +125,6 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,	/* in  */
 	UINT32 pubKeySize;
 	BYTE *hashData = NULL;
 	UINT32 hashDataSize;
-	TCPA_KEY keyContainer;
-	UINT16 offset;
 	UINT32 sigScheme;
 
 	if (ulSignatureLength > 0 && rgbSignature == NULL)

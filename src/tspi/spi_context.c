@@ -200,7 +200,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
 		internal_GetMachineName(wMachineName, 256);
 	} else {
 		/* XXX According to the man page, wcsnlen is a GNU extension */
-		string_len = wcsnlen(wszDestination, 256);
+		string_len = wcslen(wszDestination);
 		if (string_len >= 256 || string_len < 1) {
 			LogError1("Invalid hostname.");
 			return TSS_E_BAD_PARAMETER;
@@ -682,9 +682,10 @@ Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/*  in */
     )
 {
 	TSS_RESULT result = 0;
+#if 0
 	AnObject *anObject;
 	TCPA_RSAKEY_OBJECT *rsaObj;
-
+#endif
 	if ((result = obj_checkType_1(tspContext, TSS_OBJECT_TYPE_CONTEXT)))
 		return result;
 

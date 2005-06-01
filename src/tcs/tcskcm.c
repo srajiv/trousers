@@ -588,7 +588,6 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_STORE_PUBKEY *parentPub;
 	TCPA_KEY_HANDLE parentKeySlot;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
-	TCS_LOADKEY_INFO tmpInfo;
 
 	LogDebug1("LoadKeyByUUID");
 	if ((result = ctx_verify_context(hContext)))
@@ -788,11 +787,6 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	TCPA_PUBKEY pubContainer;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE srkKeyBlob[1024];
-	UINT16 srkKeySize;
-	TCPA_KEY srkKey;
-	UINT32 rc;
-	TCPA_VERSION *version;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Get pub key");
