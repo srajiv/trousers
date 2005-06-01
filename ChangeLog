@@ -1,4 +1,5 @@
 
+ - mended compiled time warnings
  - updated src/tspi/Makefile.am to respect libtool.
  - added x86_64 case to configure.in
  - added args to print stmt tcsd_wrap.c:3640 (thanks Kylie).
