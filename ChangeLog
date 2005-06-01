@@ -1,4 +1,6 @@
 
+* TROUSERS_0_1_11
+
  - Changed TCSD logging to only log on remote connection attempts,
    local connections will be left silent.
  - mended compiled time warnings
