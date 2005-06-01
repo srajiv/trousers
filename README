@@ -44,7 +44,6 @@ BUILDING the TSS
 
   To build trousers after you have the device driver installed:
 
-  $ sh bootstrap.sh
   $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] [--enable-gcov]
   $ make
   $ make install
