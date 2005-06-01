@@ -99,7 +99,7 @@ if test $NO_GTK -eq 1; then
 	if [[ "x${SSH_ASKPASS_EXE}" == "x" ]]; then
 		AC_PATH_PROG(SSH_ASKPASS_EXE, [ssh-askpass],
 			     [${DEFAULT_SSH_ASKPASS_EXE}],
-			     [$PATH:/usr/lib/ssh])
+			     [$PATH:/usr/lib/ssh:/usr/lib/openssh:/usr/libexec/ssh:/usr/libexec/openssh])
 	fi
 
 	if [[ ! -x ${SSH_ASKPASS_EXE} ]]; then
