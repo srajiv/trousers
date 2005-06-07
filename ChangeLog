@@ -1,4 +1,6 @@
 
+ - added cvs commit logging to CVSROOT/loginfo file.
+
 * TROUSERS_0_1_11
 
  - Changed TCSD logging to only log on remote connection attempts,
