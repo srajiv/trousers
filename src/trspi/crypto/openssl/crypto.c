@@ -282,7 +282,7 @@ Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 	}
 
 	/* XXX (CAST TO UNSIGNED) XXX  padding constraint for PKCS#1 v1.5 padding */
-	if ((int)dataToEncryptLen >= (RSA_size(rsa) - 11)) {
+	if ((int)dataToEncryptLen > (RSA_size(rsa) - 11)) {
 		rv = TSS_E_INTERNAL_ERROR;
 		goto err;
 	}
