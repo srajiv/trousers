@@ -1,4 +1,8 @@
 
+ - Added valid_keys variable for the debugging build of
+   tcs/ps/ps_utils.c.
+ - Changed >= to > in openssl/crypto.c to correct off by one in
+   checking the size of the input data.
  - added cvs commit logging to CVSROOT/loginfo file.
 
 * TROUSERS_0_1_11
