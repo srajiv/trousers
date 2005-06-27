@@ -19,7 +19,7 @@
 					       TCS_CONTEXT_HANDLE hContext,
 					       BYTE stateID, UINT32 stateSize,
 					       BYTE * stateValue,
-					       TCS_AUTH * ownerAuth);
+					       TPM_AUTH * ownerAuth);
 	TCPA_RESULT Atmel_TPM_GetState_TP(struct host_table_entry *,
 					  TCS_CONTEXT_HANDLE hContext,
 					  BYTE stateID, UINT32 * stateSize,
@@ -91,7 +91,7 @@
 					  TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 					  UINT32 cWrappedKeyBlobSize,	/* in */
 					  BYTE * rgbWrappedKeyBlob,	/* in */
-					  TCS_AUTH * pAuth,	/* in , out */
+					  TPM_AUTH * pAuth,	/* in , out */
 					  TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 					  TCS_KEY_HANDLE * phKeyHMAC	/* out */
 	    );
@@ -114,12 +114,12 @@
 					  BYTE * keyInfo,	/* in */
 					  UINT32 * keyDataSize,	/* out */
 					  BYTE ** keyData,	/* out */
-					  TCS_AUTH * pAuth	/* in , out */
+					  TPM_AUTH * pAuth	/* in , out */
 	    );
 
 	TCPA_RESULT TCSP_GetPubKey_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
 				      TCS_KEY_HANDLE hKey,	/* in */
-				      TCS_AUTH * pAuth,	/* in , out */
+				      TPM_AUTH * pAuth,	/* in , out */
 				      UINT32 * pcPubKeySize,	/* out */
 				      BYTE ** prgbPubKey	/* out */
 	    );
@@ -129,8 +129,8 @@
 					 TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
 					 UINT32 idKeyInfoSize,	/* in */
 					 BYTE * idKeyInfo,	/* in */
-					 TCS_AUTH * pSrkAuth,	/* in , out */
-					 TCS_AUTH * pOwnerAuth,	/* in , out */
+					 TPM_AUTH * pSrkAuth,	/* in , out */
+					 TPM_AUTH * pOwnerAuth,	/* in , out */
 					 UINT32 * idKeySize,	/* out */
 					 BYTE ** idKey,	/* out */
 					 UINT32 * pcIdentityBindingSize,	/* out */
@@ -144,7 +144,7 @@
 	    );
 
 	TCPA_RESULT TCSP_SetOwnerInstall_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					    BOOL state	/* in */
+					    TSS_BOOL state	/* in */
 	    );
 
 	TCPA_RESULT TCSP_TakeOwnership_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -155,7 +155,7 @@
 					  BYTE * encSrkAuth,	/* in */
 					  UINT32 srkInfoSize,	/* in */
 					  BYTE * srkInfo,	/* in */
-					  TCS_AUTH * ownerAuth,	/* in , out */
+					  TPM_AUTH * ownerAuth,	/* in , out */
 					  UINT32 * srkKeySize, BYTE ** srkKey);
 
 	TCPA_RESULT TCSP_OIAP_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -179,8 +179,8 @@
 				       TCPA_ENTITY_TYPE entityType,	/* in */
 				       UINT32 encDataSize,	/* in */
 				       BYTE * encData,	/* in */
-				       TCS_AUTH * ownerAuth,	/* in , out */
-				       TCS_AUTH * entityAuth,	/* in , out */
+				       TPM_AUTH * ownerAuth,	/* in , out */
+				       TPM_AUTH * entityAuth,	/* in , out */
 				       UINT32 * outDataSize,	/* out */
 				       BYTE ** outData	/* out */
 	    );
@@ -189,7 +189,7 @@
 					    TCPA_PROTOCOL_ID protocolID,	/* in */
 					    TCPA_ENCAUTH newAuth,	/* in */
 					    TCPA_ENTITY_TYPE entityType,	/* in */
-					    TCS_AUTH * ownerAuth	/* in , out */
+					    TPM_AUTH * ownerAuth	/* in , out */
 	    );
 
 	TCPA_RESULT TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -197,7 +197,7 @@
 						TCPA_NONCE antiReplay,	/* in */
 						UINT32 KeySizeIn,	/* in */
 						BYTE * KeyDataIn,	/* in */
-						TCS_AUTH * pAuth,	/* in , out */
+						TPM_AUTH * pAuth,	/* in , out */
 						UINT32 * KeySizeOut,	/* out */
 						BYTE ** KeyDataOut,	/* out */
 						UINT32 * CertifyInfoSize,	/* out */
@@ -216,7 +216,7 @@
 						 BYTE * encNewAuth,	/* in */
 						 UINT32 encDataSizeIn,	/* in */
 						 BYTE * encDataIn,	/* in */
-						 TCS_AUTH * ownerAuth,	/* in , out */
+						 TPM_AUTH * ownerAuth,	/* in , out */
 						 UINT32 * encDataSizeOut,	/* out */
 						 BYTE ** encDataOut,	/* out */
 						 TCPA_SALT_NONCE * saltNonce,	/* out */
@@ -231,8 +231,8 @@
 						TCS_KEY_HANDLE idKey,	/* in */
 						UINT32 blobSize,	/* in */
 						BYTE * blob,	/* in */
-						TCS_AUTH * idKeyAuth,	/* in , out */
-						TCS_AUTH * ownerAuth,	/* in , out */
+						TPM_AUTH * idKeyAuth,	/* in , out */
+						TPM_AUTH * ownerAuth,	/* in , out */
 						UINT32 * SymmetricKeySize,	/* out */
 						BYTE ** SymmetricKey	/* out */
 	    );
@@ -253,7 +253,7 @@
 				  TCPA_NONCE antiReplay,	/* in */
 				  UINT32 pcrDataSizeIn,	/* in */
 				  BYTE * pcrDataIn,	/* in */
-				  TCS_AUTH * privAuth,	/* in , out */
+				  TPM_AUTH * privAuth,	/* in , out */
 				  UINT32 * pcrDataSizeOut,	/* out */
 				  BYTE ** pcrDataOut,	/* out */
 				  UINT32 * sigSize,	/* out */
@@ -263,7 +263,7 @@
 	TCPA_RESULT TCSP_DirWriteAuth_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
 					 TCPA_DIRINDEX dirIndex,	/* in */
 					 TCPA_DIRVALUE newContents,	/* in */
-					 TCS_AUTH * ownerAuth	/* in , out */
+					 TPM_AUTH * ownerAuth	/* in , out */
 	    );
 
 	TCPA_RESULT TCSP_DirRead_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -278,7 +278,7 @@
 				 BYTE * PcrInfo,	/* in */
 				 UINT32 inDataSize,	/* in */
 				 BYTE * inData,	/* in */
-				 TCS_AUTH * pubAuth,	/* in , out */
+				 TPM_AUTH * pubAuth,	/* in , out */
 				 UINT32 * SealedDataSize,	/* out */
 				 BYTE ** SealedData	/* out */
 	    );
@@ -287,8 +287,8 @@
 				   TCS_KEY_HANDLE parentHandle,	/* in */
 				   UINT32 SealedDataSize,	/* in */
 				   BYTE * SealedData,	/* in */
-				   TCS_AUTH * parentAuth,	/* in , out */
-				   TCS_AUTH * dataAuth,	/* in , out */
+				   TPM_AUTH * parentAuth,	/* in , out */
+				   TPM_AUTH * dataAuth,	/* in , out */
 				   UINT32 * DataSize,	/* out */
 				   BYTE ** Data	/* out */
 	    );
@@ -297,7 +297,7 @@
 				   TCS_KEY_HANDLE keyHandle,	/* in */
 				   UINT32 inDataSize,	/* in */
 				   BYTE * inData,	/* in */
-				   TCS_AUTH * privAuth,	/* in , out */
+				   TPM_AUTH * privAuth,	/* in , out */
 				   UINT32 * outDataSize,	/* out */
 				   BYTE ** outData	/* out */
 	    );
@@ -309,8 +309,8 @@
 						BYTE * MigrationKeyAuth,	/* in */
 						UINT32 encDataSize,	/* in */
 						BYTE * encData,	/* in */
-						TCS_AUTH * parentAuth,	/* in , out */
-						TCS_AUTH * entityAuth,	/* in , out */
+						TPM_AUTH * parentAuth,	/* in , out */
+						TPM_AUTH * entityAuth,	/* in , out */
 						UINT32 * randomSize,	/* out */
 						BYTE ** random,	/* out */
 						UINT32 * outDataSize,	/* out */
@@ -321,7 +321,7 @@
 						 TCS_KEY_HANDLE parentHandle,	/* in */
 						 UINT32 inDataSize,	/* in */
 						 BYTE * inData,	/* in */
-						 TCS_AUTH * parentAuth,	/* in , out */
+						 TPM_AUTH * parentAuth,	/* in , out */
 						 UINT32 randomSize,	/* should be in */
 						 BYTE * random,	/* should be in */
 						 UINT32 * outDataSize,	/* out */
@@ -332,7 +332,7 @@
 						  TCPA_MIGRATE_SCHEME migrateScheme,	/* in */
 						  UINT32 MigrationKeySize,	/* in */
 						  BYTE * MigrationKey,	/* in */
-						  TCS_AUTH * ownerAuth,	/* in, out */
+						  TPM_AUTH * ownerAuth,	/* in, out */
 						  UINT32 * MigrationKeyAuthSize,	/* out */
 						  BYTE ** MigrationKeyAuth	/* out */
 	    );
@@ -341,8 +341,8 @@
 				       TCS_KEY_HANDLE certHandle,	/* in */
 				       TCS_KEY_HANDLE keyHandle,	/* in */
 				       TCPA_NONCE antiReplay,	/* in */
-				       TCS_AUTH * certAuth,	/* in, out */
-				       TCS_AUTH * keyAuth,	/* in, out */
+				       TPM_AUTH * certAuth,	/* in, out */
+				       TPM_AUTH * keyAuth,	/* in, out */
 				       UINT32 * CertifyInfoSize,	/* out */
 				       BYTE ** CertifyInfo,	/* out */
 				       UINT32 * outDataSize,	/* out */
@@ -353,7 +353,7 @@
 				 TCS_KEY_HANDLE keyHandle,	/* in */
 				 UINT32 areaToSignSize,	/* in */
 				 BYTE * areaToSign,	/* in */
-				 TCS_AUTH * privAuth,	/* in, out */
+				 TPM_AUTH * privAuth,	/* in, out */
 				 UINT32 * sigSize,	/* out */
 				 BYTE ** sig	/* out */
 	    );
@@ -390,7 +390,7 @@
 						TCPA_CAPABILITY_AREA capArea,	/* in */
 						UINT32 subCapSize,	/* in */
 						BYTE * subCap,	/* in */
-						TCS_AUTH * privAuth,	/* in, out */
+						TPM_AUTH * privAuth,	/* in, out */
 						TCPA_VERSION * Version,	/* out */
 						UINT32 * respSize,	/* out */
 						BYTE ** resp,	/* out */
@@ -399,7 +399,7 @@
 	    );
 
 	TCPA_RESULT TCSP_GetCapabilityOwner_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					       TCS_AUTH * pOwnerAuth,	/* out */
+					       TPM_AUTH * pOwnerAuth,	/* out */
 					       TCPA_VERSION * pVersion,	/* out */
 					       UINT32 * pNonVolatileFlags,	/* out */
 					       UINT32 * pVolatileFlags	/* out */
@@ -422,11 +422,11 @@
 	    );
 
 	TCPA_RESULT TCSP_DisablePubekRead_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					     TCS_AUTH * ownerAuth	/* in, out */
+					     TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_OwnerReadPubek_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					   TCS_AUTH * ownerAuth,	/* in, out */
+					   TPM_AUTH * ownerAuth,	/* in, out */
 					   UINT32 * pubEndorsementKeySize,	/* out */
 					   BYTE ** pubEndorsementKey	/* out */
 	    );
@@ -437,7 +437,7 @@
 	TCPA_RESULT TCSP_CertifySelfTest_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
 					    TCS_KEY_HANDLE keyHandle,	/* in */
 					    TCPA_NONCE antiReplay,	/* in */
-					    TCS_AUTH * privAuth,	/* in, out */
+					    TPM_AUTH * privAuth,	/* in, out */
 					    UINT32 * sigSize,	/* out */
 					    BYTE ** sig	/* out */
 	    );
@@ -448,16 +448,16 @@
 	    );
 
 	TCPA_RESULT TCSP_OwnerSetDisable_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					    BOOL disableState,	/* in */
-					    TCS_AUTH * ownerAuth	/* in, out */
+					    TSS_BOOL disableState,	/* in */
+					    TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_OwnerClear_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-				       TCS_AUTH * ownerAuth	/* in, out */
+				       TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_DisableOwnerClear_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-					      TCS_AUTH * ownerAuth	/* in, out */
+					      TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_ForceClear_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext	/* in */
@@ -473,7 +473,7 @@
 	    );
 
 	TCPA_RESULT TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-						   BOOL state	/* in */
+						   TSS_BOOL state	/* in */
 	    );
 
 	TCPA_RESULT TCSP_PhysicalPresence_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -488,19 +488,19 @@
 					 BYTE * dataIn,	/* in */
 					 UINT32 * dataOutSize,	/* out */
 					 BYTE ** dataOut,	/* out */
-					 TCS_AUTH * ownerAuth	/* in, out */
+					 TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_SetRedirection_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
 					   TCS_KEY_HANDLE keyHandle,	/* in */
 					   UINT32 c1,	/* in */
 					   UINT32 c2,	/* in */
-					   TCS_AUTH * privAuth	/* in, out */
+					   TPM_AUTH * privAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-						     BOOL generateRandom,	/* in */
-						     TCS_AUTH * ownerAuth,	/* in, out */
+						     TSS_BOOL generateRandom,	/* in */
+						     TPM_AUTH * ownerAuth,	/* in, out */
 						     UINT32 * randomSize,	/* out */
 						     BYTE ** random,	/* out */
 						     UINT32 archiveSize,	/* out */
@@ -510,11 +510,11 @@
 	TCPA_RESULT TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
 						   UINT32 * pcDataSize,	/* in, out */
 						   BYTE ** prgbData,	/* in, out */
-						   TCS_AUTH * ownerAuth	/* in, out */
+						   TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_KillMaintenanceFeature_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-						   TCS_AUTH * ownerAuth	/* in, out */
+						   TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TCPA_RESULT TCSP_LoadManuMaintPub_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */

@@ -75,10 +75,6 @@ TSS_RESULT event_log_final();
 
 #define next( x ) x = x->next
 
-/* platform.c */
-
-char platform_get_runlevel();
-
 /*---	cache.c */
 
 void key_mgr_ref_count();
@@ -87,7 +83,7 @@ TSS_RESULT key_mgr_inc_ref_count(TCS_KEY_HANDLE);
 TSS_RESULT key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE, TSS_UUID *, TCS_LOADKEY_INFO *,
 				TCS_KEY_HANDLE *);
 TSS_RESULT key_mgr_load_by_blob(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *,
-				TCS_AUTH *, TCS_KEY_HANDLE *, TCS_KEY_HANDLE *);
+				TPM_AUTH *, TCS_KEY_HANDLE *, TCS_KEY_HANDLE *);
 TSS_RESULT key_mgr_evict(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 
 
@@ -126,27 +122,26 @@ TCPA_KEY_HANDLE getSlotByHandle_lock(TCS_KEY_HANDLE);
 TCPA_KEY_HANDLE getSlotByPub(TCPA_STORE_PUBKEY *);
 TCS_KEY_HANDLE getTCSKeyHandleByPub(TCPA_STORE_PUBKEY *);
 TCPA_STORE_PUBKEY *getParentPubByPub(TCPA_STORE_PUBKEY *);
-BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
+TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT getBlobByPub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
 //TSS_RESULT setParentPubByPub(TCPA_STORE_PUBKEY *, TCPA_STORE_PUBKEY *);
 TCS_KEY_HANDLE getAnyHandleBySlot(TCPA_KEY_HANDLE);
 //TCS_KEY_HANDLE getKeyHandleByUuid(TSS_UUID *);
 TSS_RESULT evictFirstKey(TCS_KEY_HANDLE);
-TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID **);
+TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT removeRegisteredKeyFromFile(TSS_UUID *);
 /*TSS_RESULT removeRegisteredKeyNode(TSS_UUID *);*/
 TSS_RESULT getRegisteredKeyByUUID(TSS_UUID *, BYTE *, UINT16 *);
 TSS_RESULT isPubRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT getRegisteredUuidByPub(TCPA_STORE_PUBKEY *, TSS_UUID **);
-BOOL isKeyLoaded(TCPA_KEY_HANDLE);
+TSS_BOOL isKeyLoaded(TCPA_KEY_HANDLE);
 TSS_RESULT LoadKeyShim(TCS_CONTEXT_HANDLE, TCPA_STORE_PUBKEY *, TSS_UUID *,TCPA_KEY_HANDLE *);
 TSS_RESULT writeRegisteredKeyToFile(TSS_UUID *, TSS_UUID *, BYTE *, UINT32);
-BOOL isKeyInMemCache(TCS_KEY_HANDLE);
+TSS_BOOL isKeyInMemCache(TCS_KEY_HANDLE);
 TSS_RESULT setParentByHandle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
-TSS_RESULT isUUIDRegistered(TSS_UUID *, BOOL *);
+TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
 TSS_RESULT destroyKeyFile(void);
 void destroy_key_refs(TCPA_KEY *);
-TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 
 #if 0
 int KM_GetHierarchy(TSS_UUID *, KMNode **);
@@ -174,9 +169,8 @@ void destroy_context(TCS_CONTEXT_HANDLE);
 /*---	tcs_utils.c */
 
 TSS_RESULT get_current_version(TCPA_VERSION *);
-TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO *);
 
-void setCorruptParamSize(BOOL);
+void setCorruptParamSize(TSS_BOOL);
 TSS_RESULT ensureKeyIsLoaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_KEY_HANDLE *);
 UINT16 getVendor(TCS_CONTEXT_HANDLE);
 
@@ -186,7 +180,7 @@ void LogArray(char *string, BYTE * data, UINT32 length);
 void LogResult(char *string, TSS_RESULT result);
 void setLogging(BYTE b);
 void purgeLog();
-TSS_RESULT canILoadThisKey(TCPA_KEY_PARMS *parms, BOOL *);
+TSS_RESULT canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *);
 TSS_RESULT internal_EvictByKeySlot(TCPA_KEY_HANDLE slot);
 
 TSS_RESULT clearKeysFromChip(TCS_CONTEXT_HANDLE hContext);
@@ -202,8 +196,8 @@ void UnloadBlob_UINT32(UINT16 * offset, UINT32 * out, BYTE * blob, char *);
 void UnloadBlob_UINT16(UINT16 * offset, UINT16 * out, BYTE * blob, char *);
 void LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob, char *);
 void UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob, char *);
-void LoadBlob_BOOL(UINT16 * offset, BOOL data, BYTE * blob, char *);
-void UnloadBlob_BOOL(UINT16 * offset, BOOL * dataOut, BYTE * blob, char *);
+void LoadBlob_BOOL(UINT16 * offset, TSS_BOOL data, BYTE * blob, char *);
+void UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL * dataOut, BYTE * blob, char *);
 void LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, char *);
 void UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, char *);
 void LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal, BYTE * blob);
@@ -211,8 +205,8 @@ TSS_RESULT UnloadBlob_Header(BYTE * blob, UINT32 * size);
 void LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob, TCPA_MIGRATIONKEYAUTH * mkAuth);
 void UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
 				 TCPA_MIGRATIONKEYAUTH * mkAuth);
-void LoadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
-void UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
+void LoadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
+void UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
 void LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo);
 TSS_RESULT UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms);
 TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
@@ -243,6 +237,12 @@ TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 
+struct key_disk_cache;
+TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *,
+				TSS_KM_KEYINFO *);
+char platform_get_runlevel();
+TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
+
 #if 1
 	TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 
@@ -250,7 +250,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						UINT32 sizeState, BYTE * stateValue);
 	TSS_RESULT Atmel_TPM_OwnerSetState_Internal(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 						     UINT32 sizeState, BYTE * stateValue,
-						     TCS_AUTH * ownerAuth);
+						     TPM_AUTH * ownerAuth);
 	TSS_RESULT Atmel_TPM_GetState_Internal(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 						UINT32 * sizeState, BYTE ** stateValue);
 
@@ -329,7 +329,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 						UINT32 cWrappedKeyBlobSize,	/* in */
 						BYTE * rgbWrappedKeyBlob,	/* in */
-						TCS_AUTH * pAuth,	/* in, out */
+						TPM_AUTH * pAuth,	/* in, out */
 						TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 						TCS_KEY_HANDLE * phKeyHMAC	/* out */
 	    );
@@ -352,12 +352,12 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						BYTE * keyInfo,	/* in */
 						UINT32 * keyDataSize,	/* out */
 						BYTE ** keyData,	/* out */
-						TCS_AUTH * pAuth	/* in, out */
+						TPM_AUTH * pAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					    TCS_KEY_HANDLE hKey,	/* in */
-					    TCS_AUTH * pAuth,	/* in, out */
+					    TPM_AUTH * pAuth,	/* in, out */
 					    UINT32 * pcPubKeySize,	/* out */
 					    BYTE ** prgbPubKey	/* out */
 	    );
@@ -366,8 +366,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					       TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
 					       UINT32 idKeyInfoSize,	/*in */
 					       BYTE * idKeyInfo,	/*in */
-					       TCS_AUTH * pSrkAuth,	/* in, out */
-					       TCS_AUTH * pOwnerAuth,	/* in, out */
+					       TPM_AUTH * pSrkAuth,	/* in, out */
+					       TPM_AUTH * pOwnerAuth,	/* in, out */
 					       UINT32 * idKeySize,	/* out */
 					       BYTE ** idKey,	/* out */
 					       UINT32 * pcIdentityBindingSize,	/* out */
@@ -381,7 +381,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						  BOOL state	/* in  */
+						  TSS_BOOL state	/* in  */
 	    );
 	TSS_RESULT TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						UINT16 protocolID,	/* in */
@@ -391,7 +391,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						BYTE * encSrkAuth,	/* in */
 						UINT32 srkInfoSize,	/*in */
 						BYTE * srkInfo,	/*in */
-						TCS_AUTH * ownerAuth,	/* in, out */
+						TPM_AUTH * ownerAuth,	/* in, out */
 						UINT32 * srkKeySize,	/*out */
 						BYTE ** srkKey	/*out */
 	    );
@@ -417,8 +417,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					     TCPA_ENTITY_TYPE entityType,	/* in */
 					     UINT32 encDataSize,	/* in */
 					     BYTE * encData,	/* in */
-					     TCS_AUTH * ownerAuth,	/* in, out */
-					     TCS_AUTH * entityAuth,	/* in, out       */
+					     TPM_AUTH * ownerAuth,	/* in, out */
+					     TPM_AUTH * entityAuth,	/* in, out       */
 					     UINT32 * outDataSize,	/* out */
 					     BYTE ** outData	/* out */
 	    );
@@ -427,7 +427,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						  TCPA_PROTOCOL_ID protocolID,	/* in */
 						  TCPA_ENCAUTH newAuth,	/* in */
 						  TCPA_ENTITY_TYPE entityType,	/* in */
-						  TCS_AUTH * ownerAuth	/* in, out */
+						  TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -435,7 +435,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCPA_NONCE antiReplay,	/* in */
 						      UINT32 KeySizeIn,	/* in */
 						      BYTE * KeyDataIn,	/* in */
-						      TCS_AUTH * pAuth,	/* in, out */
+						      TPM_AUTH * pAuth,	/* in, out */
 						      UINT32 * KeySizeOut,	/* out */
 						      BYTE ** KeyDataOut,	/* out */
 						      UINT32 * CertifyInfoSize,	/* out */
@@ -454,10 +454,10 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						       BYTE * encNewAuth,	/* in */
 						       UINT32 encDataSizeIn,	/* in */
 						       BYTE * encDataIn,	/* in */
-						       TCS_AUTH * ownerAuth,	/* in, out */
+						       TPM_AUTH * ownerAuth,	/* in, out */
 						       UINT32 * encDataSizeOut,	/* out */
 						       BYTE ** encDataOut,	/* out */
-						       TCPA_SALT_NONCE * saltNonce,	/* out */
+						       TCPA_NONCE * saltNonce,	/* out */
 						       TCPA_DIGEST * changeProof	/* out */
 	    );
 
@@ -469,8 +469,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCS_KEY_HANDLE idKey,	/* in */
 						      UINT32 blobSize,	/* in */
 						      BYTE * blob,	/* in */
-						      TCS_AUTH * idKeyAuth,	/* in, out */
-						      TCS_AUTH * ownerAuth,	/* in, out */
+						      TPM_AUTH * idKeyAuth,	/* in, out */
+						      TPM_AUTH * ownerAuth,	/* in, out */
 						      UINT32 * SymmetricKeySize,	/* out */
 						      BYTE ** SymmetricKey	/* out */
 	    );
@@ -491,7 +491,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					TCPA_NONCE antiReplay,	/* in */
 					UINT32 pcrDataSizeIn,	/* in */
 					BYTE * pcrDataIn,	/* in */
-					TCS_AUTH * privAuth,	/* in, out */
+					TPM_AUTH * privAuth,	/* in, out */
 					UINT32 * pcrDataSizeOut,	/* out */
 					BYTE ** pcrDataOut,	/* out */
 					UINT32 * sigSize,	/* out */
@@ -501,7 +501,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	TSS_RESULT TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					       TCPA_DIRINDEX dirIndex,	/* in */
 					       TCPA_DIRVALUE newContents,	/* in */
-					       TCS_AUTH * ownerAuth	/* in, out */
+					       TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -516,7 +516,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 				       BYTE * PcrInfo,	/* in */
 				       UINT32 inDataSize,	/* in */
 				       BYTE * inData,	/* in */
-				       TCS_AUTH * pubAuth,	/* in, out */
+				       TPM_AUTH * pubAuth,	/* in, out */
 				       UINT32 * SealedDataSize,	/* out */
 				       BYTE ** SealedData	/* out */
 	    );
@@ -525,8 +525,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 UINT32 SealedDataSize,	/* in */
 					 BYTE * SealedData,	/* in */
-					 TCS_AUTH * parentAuth,	/* in, out */
-					 TCS_AUTH * dataAuth,	/* in, out */
+					 TPM_AUTH * parentAuth,	/* in, out */
+					 TPM_AUTH * dataAuth,	/* in, out */
 					 UINT32 * DataSize,	/* out */
 					 BYTE ** Data	/* out */
 	    );
@@ -535,7 +535,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					 TCS_KEY_HANDLE keyHandle,	/* in */
 					 UINT32 inDataSize,	/* in */
 					 BYTE * inData,	/* in */
-					 TCS_AUTH * privAuth,	/* in, out */
+					 TPM_AUTH * privAuth,	/* in, out */
 					 UINT32 * outDataSize,	/* out */
 					 BYTE ** outData	/* out */
 	    );
@@ -547,8 +547,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      BYTE * MigrationKeyAuth,	/* in */
 						      UINT32 encDataSize,	/* in */
 						      BYTE * encData,	/* in */
-						      TCS_AUTH * parentAuth,	/* in, out */
-						      TCS_AUTH * entityAuth,	/* in, out */
+						      TPM_AUTH * parentAuth,	/* in, out */
+						      TPM_AUTH * entityAuth,	/* in, out */
 						      UINT32 * randomSize,	/* out */
 						      BYTE ** random,	/* out */
 						      UINT32 * outDataSize,	/* out */
@@ -559,7 +559,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						       TCS_KEY_HANDLE parentHandle,	/* in */
 						       UINT32 inDataSize,	/* in */
 						       BYTE * inData,	/* in */
-						       TCS_AUTH * parentAuth,	/* in, out */
+						       TPM_AUTH * parentAuth,	/* in, out */
 						       UINT32 randomSize,	/* should be in */
 						       BYTE * random,	/* should be in */
 						       UINT32 * outDataSize,	/* out */
@@ -570,7 +570,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 							TCPA_MIGRATE_SCHEME migrateScheme,	/* in */
 							UINT32 MigrationKeySize,	/* in */
 							BYTE * MigrationKey,	/* in */
-							TCS_AUTH * ownerAuth,	/* in, out */
+							TPM_AUTH * ownerAuth,	/* in, out */
 							UINT32 * MigrationKeyAuthSize,	/* out */
 							BYTE ** MigrationKeyAuth	/* out */
 	    );
@@ -579,8 +579,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					     TCS_KEY_HANDLE certHandle,	/* in */
 					     TCS_KEY_HANDLE keyHandle,	/* in */
 					     TCPA_NONCE antiReplay,	/* in */
-					     TCS_AUTH * certAuth,	/* in, out */
-					     TCS_AUTH * keyAuth,	/* in, out */
+					     TPM_AUTH * certAuth,	/* in, out */
+					     TPM_AUTH * keyAuth,	/* in, out */
 					     UINT32 * CertifyInfoSize,	/* out */
 					     BYTE ** CertifyInfo,	/* out */
 					     UINT32 * outDataSize,	/* out */
@@ -591,7 +591,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 				       TCS_KEY_HANDLE keyHandle,	/* in */
 				       UINT32 areaToSignSize,	/* in */
 				       BYTE * areaToSign,	/* in */
-				       TCS_AUTH * privAuth,	/* in, out */
+				       TPM_AUTH * privAuth,	/* in, out */
 				       UINT32 * sigSize,	/* out */
 				       BYTE ** sig	/* out */
 	    );
@@ -628,7 +628,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCPA_CAPABILITY_AREA capArea,	/* in */
 						      UINT32 subCapSize,	/* in */
 						      BYTE * subCap,	/* in */
-						      TCS_AUTH * privAuth,	/* in, out */
+						      TPM_AUTH * privAuth,	/* in, out */
 						      TCPA_VERSION * Version,	/* out */
 						      UINT32 * respSize,	/* out */
 						      BYTE ** resp,	/* out */
@@ -637,7 +637,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						     TCS_AUTH * pOwnerAuth,	/* out */
+						     TPM_AUTH * pOwnerAuth,	/* out */
 						     TCPA_VERSION * pVersion,	/* out */
 						     UINT32 * pNonVolatileFlags,	/* out */
 						     UINT32 * pVolatileFlags	/* out */
@@ -660,11 +660,11 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						   TCS_AUTH * ownerAuth	/* in, out */
+						   TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						 TCS_AUTH * ownerAuth,	/* in, out */
+						 TPM_AUTH * ownerAuth,	/* in, out */
 						 UINT32 * pubEndorsementKeySize,	/* out */
 						 BYTE ** pubEndorsementKey	/* out */
 	    );
@@ -675,7 +675,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	TSS_RESULT TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  TCS_KEY_HANDLE keyHandle,	/* in */
 						  TCPA_NONCE antiReplay,	/* in */
-						  TCS_AUTH * privAuth,	/* in, out */
+						  TPM_AUTH * privAuth,	/* in, out */
 						  UINT32 * sigSize,	/* out */
 						  BYTE ** sig	/* out */
 	    );
@@ -686,16 +686,16 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						  BOOL disableState,	/* in */
-						  TCS_AUTH * ownerAuth	/* in, out */
+						  TSS_BOOL disableState,	/* in */
+						  TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-					     TCS_AUTH * ownerAuth	/* in, out */
+					     TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						    TCS_AUTH * ownerAuth	/* in, out */
+						    TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
@@ -715,7 +715,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-							 BOOL state	/* in */
+							 TSS_BOOL state	/* in */
 	    );
 
 	TSS_RESULT TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
@@ -726,19 +726,19 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					       BYTE * dataIn,	/* in */
 					       UINT32 * dataOutSize,	/* out */
 					       BYTE ** dataOut,	/* out */
-					       TCS_AUTH * ownerAuth	/* in, out */
+					       TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						 TCS_KEY_HANDLE keyHandle,	/* in */
 						 UINT32 c1,	/* in */
 						 UINT32 c2,	/* in */
-						 TCS_AUTH * privAuth	/* in, out */
+						 TPM_AUTH * privAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-							   BOOL generateRandom,	/* in */
-							   TCS_AUTH * ownerAuth,	/* in, out */
+							   TSS_BOOL generateRandom,	/* in */
+							   TPM_AUTH * ownerAuth,	/* in, out */
 							   UINT32 * randomSize,	/* out */
 							   BYTE ** random,	/* out */
 							   UINT32 * archiveSize,	/* out */
@@ -750,11 +750,11 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 							 BYTE * dataIn,	/* in */
 							 UINT32 * dataOutSize,	/* out */
 							 BYTE ** dataOut,	/* out */
-							 TCS_AUTH * ownerAuth	/* in, out */
+							 TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-							 TCS_AUTH * ownerAuth	/* in, out */
+							 TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_LoadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -769,17 +769,17 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						   TCPA_DIGEST * checksum	/* out */
 	    );
 #else
-
+#if 0
 	TSS_RESULT TSC_PhysicalPresence(UINT16 physPres);
 
 	TSS_RESULT Atmel_TPM_SetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 						UINT32 sizeState, BYTE * stateValue);
 	TSS_RESULT Atmel_TPM_OwnerSetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 						     UINT32 sizeState, BYTE * stateValue,
-						     TCS_AUTH * ownerAuth);
+						     TPM_AUTH * ownerAuth);
 	TSS_RESULT Atmel_TPM_GetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 						UINT32 * sizeState, BYTE ** stateValue);
-
+#endif
 /*---	Proposed Commands */
 	TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/* in */
 							       UINT32 ulPublicInfoLength,	/* in */
@@ -831,7 +831,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 
 	TSS_RESULT TCSP_UnregisterKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 						TSS_UUID KeyUUID	/* in  */
-/*TCS_AUTH*				pAuth		// in, out */
+/*TPM_AUTH*				pAuth		// in, out */
 	    );
 
 	TSS_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -856,7 +856,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 						UINT32 cWrappedKeyBlobSize,	/* in */
 						BYTE * rgbWrappedKeyBlob,	/* in */
-						TCS_AUTH * pAuth,	/* in, out */
+						TPM_AUTH * pAuth,	/* in, out */
 						TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 						TCS_KEY_HANDLE * phKeyHMAC	/* out */
 	    );
@@ -879,12 +879,12 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						BYTE * keyInfo,	/* in */
 						UINT32 * keyDataSize,	/* out */
 						BYTE ** keyData,	/* out */
-						TCS_AUTH * pAuth	/* in, out */
+						TPM_AUTH * pAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 					    TCS_KEY_HANDLE hKey,	/* in */
-					    TCS_AUTH * pAuth,	/* in, out */
+					    TPM_AUTH * pAuth,	/* in, out */
 					    UINT32 * pcPubKeySize,	/* out */
 					    BYTE ** prgbPubKey	/* out */
 	    );
@@ -893,8 +893,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					       TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
 					       UINT32 idKeyInfoSize,	/*in */
 					       BYTE * idKeyInfo,	/*in */
-					       TCS_AUTH * pSrkAuth,	/* in, out */
-					       TCS_AUTH * pOwnerAuth,	/* in, out */
+					       TPM_AUTH * pSrkAuth,	/* in, out */
+					       TPM_AUTH * pOwnerAuth,	/* in, out */
 					       UINT32 * idKeySize,	/* out */
 					       BYTE ** idKey,	/* out */
 					       UINT32 * pcIdentityBindingSize,	/* out */
@@ -908,7 +908,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_SetOwnerInstall(TCS_CONTEXT_HANDLE hContext,	/* in */
-						  BOOL state	/* in  */
+						  TSS_BOOL state	/* in  */
 	    );
 	TSS_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE hContext,	/* in */
 						UINT16 protocolID,	/* in */
@@ -918,7 +918,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						BYTE * encSrkAuth,	/* in */
 						UINT32 srkInfoSize,	/*in */
 						BYTE * srkInfo,	/*in */
-						TCS_AUTH * ownerAuth,	/* in, out */
+						TPM_AUTH * ownerAuth,	/* in, out */
 						UINT32 * srkKeySize,	/*out */
 						BYTE ** srkKey	/*out */
 	    );
@@ -944,8 +944,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					     TCPA_ENTITY_TYPE entityType,	/* in */
 					     UINT32 encDataSize,	/* in */
 					     BYTE * encData,	/* in */
-					     TCS_AUTH * ownerAuth,	/* in, out */
-					     TCS_AUTH * entityAuth,	/* in, out       */
+					     TPM_AUTH * ownerAuth,	/* in, out */
+					     TPM_AUTH * entityAuth,	/* in, out       */
 					     UINT32 * outDataSize,	/* out */
 					     BYTE ** outData	/* out */
 	    );
@@ -954,7 +954,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						  TCPA_PROTOCOL_ID protocolID,	/* in */
 						  TCPA_ENCAUTH newAuth,	/* in */
 						  TCPA_ENTITY_TYPE entityType,	/* in */
-						  TCS_AUTH * ownerAuth	/* in, out */
+						  TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -962,7 +962,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCPA_NONCE antiReplay,	/* in */
 						      UINT32 KeySizeIn,	/* in */
 						      BYTE * KeyDataIn,	/* in */
-						      TCS_AUTH * pAuth,	/* in, out */
+						      TPM_AUTH * pAuth,	/* in, out */
 						      UINT32 * KeySizeOut,	/* out */
 						      BYTE ** KeyDataOut,	/* out */
 						      UINT32 * CertifyInfoSize,	/* out */
@@ -981,10 +981,10 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						       BYTE * encNewAuth,	/* in */
 						       UINT32 encDataSizeIn,	/* in */
 						       BYTE * encDataIn,	/* in */
-						       TCS_AUTH * ownerAuth,	/* in, out */
+						       TPM_AUTH * ownerAuth,	/* in, out */
 						       UINT32 * encDataSizeOut,	/* out */
 						       BYTE ** encDataOut,	/* out */
-						       TCPA_SALT_NONCE * saltNonce,	/* out */
+						       TCPA_NONCE * saltNonce,	/* out */
 						       TCPA_DIGEST * changeProof	/* out */
 	    );
 
@@ -996,8 +996,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCS_KEY_HANDLE idKey,	/* in */
 						      UINT32 blobSize,	/* in */
 						      BYTE * blob,	/* in */
-						      TCS_AUTH * idKeyAuth,	/* in, out */
-						      TCS_AUTH * ownerAuth,	/* in, out */
+						      TPM_AUTH * idKeyAuth,	/* in, out */
+						      TPM_AUTH * ownerAuth,	/* in, out */
 						      UINT32 * SymmetricKeySize,	/* out */
 						      BYTE ** SymmetricKey	/* out */
 	    );
@@ -1018,7 +1018,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					TCPA_NONCE antiReplay,	/* in */
 					UINT32 pcrDataSizeIn,	/* in */
 					BYTE * pcrDataIn,	/* in */
-					TCS_AUTH * privAuth,	/* in, out */
+					TPM_AUTH * privAuth,	/* in, out */
 					UINT32 * pcrDataSizeOut,	/* out */
 					BYTE ** pcrDataOut,	/* out */
 					UINT32 * sigSize,	/* out */
@@ -1028,7 +1028,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	TSS_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
 					       TCPA_DIRINDEX dirIndex,	/* in */
 					       TCPA_DIRVALUE newContents,	/* in */
-					       TCS_AUTH * ownerAuth	/* in, out */
+					       TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -1043,7 +1043,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 				       BYTE * PcrInfo,	/* in */
 				       UINT32 inDataSize,	/* in */
 				       BYTE * inData,	/* in */
-				       TCS_AUTH * pubAuth,	/* in, out */
+				       TPM_AUTH * pubAuth,	/* in, out */
 				       UINT32 * SealedDataSize,	/* out */
 				       BYTE ** SealedData	/* out */
 	    );
@@ -1052,8 +1052,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 UINT32 SealedDataSize,	/* in */
 					 BYTE * SealedData,	/* in */
-					 TCS_AUTH * parentAuth,	/* in, out */
-					 TCS_AUTH * dataAuth,	/* in, out */
+					 TPM_AUTH * parentAuth,	/* in, out */
+					 TPM_AUTH * dataAuth,	/* in, out */
 					 UINT32 * DataSize,	/* out */
 					 BYTE ** Data	/* out */
 	    );
@@ -1062,7 +1062,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					 TCS_KEY_HANDLE keyHandle,	/* in */
 					 UINT32 inDataSize,	/* in */
 					 BYTE * inData,	/* in */
-					 TCS_AUTH * privAuth,	/* in, out */
+					 TPM_AUTH * privAuth,	/* in, out */
 					 UINT32 * outDataSize,	/* out */
 					 BYTE ** outData	/* out */
 	    );
@@ -1074,8 +1074,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      BYTE * MigrationKeyAuth,	/* in */
 						      UINT32 encDataSize,	/* in */
 						      BYTE * encData,	/* in */
-						      TCS_AUTH * parentAuth,	/* in, out */
-						      TCS_AUTH * entityAuth,	/* in, out */
+						      TPM_AUTH * parentAuth,	/* in, out */
+						      TPM_AUTH * entityAuth,	/* in, out */
 						      UINT32 * randomSize,	/* out */
 						      BYTE ** random,	/* out */
 						      UINT32 * outDataSize,	/* out */
@@ -1086,7 +1086,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						       TCS_KEY_HANDLE parentHandle,	/* in */
 						       UINT32 inDataSize,	/* in */
 						       BYTE * inData,	/* in */
-						       TCS_AUTH * parentAuth,	/* in, out */
+						       TPM_AUTH * parentAuth,	/* in, out */
 						       UINT32 randomSize,	/* should be in */
 						       BYTE * random,	/* should be in */
 						       UINT32 * outDataSize,	/* out */
@@ -1097,7 +1097,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 							TCPA_MIGRATE_SCHEME migrateScheme,	/* in */
 							UINT32 MigrationKeySize,	/* in */
 							BYTE * MigrationKey,	/* in */
-							TCS_AUTH * ownerAuth,	/* in, out */
+							TPM_AUTH * ownerAuth,	/* in, out */
 							UINT32 * MigrationKeyAuthSize,	/* out */
 							BYTE ** MigrationKeyAuth	/* out */
 	    );
@@ -1106,8 +1106,8 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					     TCS_KEY_HANDLE certHandle,	/* in */
 					     TCS_KEY_HANDLE keyHandle,	/* in */
 					     TCPA_NONCE antiReplay,	/* in */
-					     TCS_AUTH * certAuth,	/* in, out */
-					     TCS_AUTH * keyAuth,	/* in, out */
+					     TPM_AUTH * certAuth,	/* in, out */
+					     TPM_AUTH * keyAuth,	/* in, out */
 					     UINT32 * CertifyInfoSize,	/* out */
 					     BYTE ** CertifyInfo,	/* out */
 					     UINT32 * outDataSize,	/* out */
@@ -1118,7 +1118,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 				       TCS_KEY_HANDLE keyHandle,	/* in */
 				       UINT32 areaToSignSize,	/* in */
 				       BYTE * areaToSign,	/* in */
-				       TCS_AUTH * privAuth,	/* in, out */
+				       TPM_AUTH * privAuth,	/* in, out */
 				       UINT32 * sigSize,	/* out */
 				       BYTE ** sig	/* out */
 	    );
@@ -1155,7 +1155,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 						      TCPA_CAPABILITY_AREA capArea,	/* in */
 						      UINT32 subCapSize,	/* in */
 						      BYTE * subCap,	/* in */
-						      TCS_AUTH * privAuth,	/* in, out */
+						      TPM_AUTH * privAuth,	/* in, out */
 						      TCPA_VERSION * Version,	/* out */
 						      UINT32 * respSize,	/* out */
 						      BYTE ** resp,	/* out */
@@ -1164,7 +1164,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE hContext,	/* in */
-						     TCS_AUTH * pOwnerAuth,	/* out */
+						     TPM_AUTH * pOwnerAuth,	/* out */
 						     TCPA_VERSION * pVersion,	/* out */
 						     UINT32 * pNonVolatileFlags,	/* out */
 						     UINT32 * pVolatileFlags	/* out */
@@ -1187,11 +1187,11 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_DisablePubekRead(TCS_CONTEXT_HANDLE hContext,	/* in */
-						   TCS_AUTH * ownerAuth	/* in, out */
+						   TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE hContext,	/* in */
-						 TCS_AUTH * ownerAuth,	/* in, out */
+						 TPM_AUTH * ownerAuth,	/* in, out */
 						 UINT32 * pubEndorsementKeySize,	/* out */
 						 BYTE ** pubEndorsementKey	/* out */
 	    );
@@ -1202,7 +1202,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	TSS_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  TCS_KEY_HANDLE keyHandle,	/* in */
 						  TCPA_NONCE antiReplay,	/* in */
-						  TCS_AUTH * privAuth,	/* in, out */
+						  TPM_AUTH * privAuth,	/* in, out */
 						  UINT32 * sigSize,	/* out */
 						  BYTE ** sig	/* out */
 	    );
@@ -1213,16 +1213,16 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE hContext,	/* in */
-						  BOOL disableState,	/* in */
-						  TCS_AUTH * ownerAuth	/* in, out */
+						  TSS_BOOL disableState,	/* in */
+						  TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_OwnerClear(TCS_CONTEXT_HANDLE hContext,	/* in */
-					     TCS_AUTH * ownerAuth	/* in, out */
+					     TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_DisableOwnerClear(TCS_CONTEXT_HANDLE hContext,	/* in */
-						    TCS_AUTH * ownerAuth	/* in, out */
+						    TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_ForceClear(TCS_CONTEXT_HANDLE hContext	/* in */
@@ -1238,7 +1238,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/* in */
-							 BOOL state	/* in */
+							 TSS_BOOL state	/* in */
 	    );
 
 	TSS_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,  /*  in */
@@ -1253,18 +1253,18 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 					       BYTE * dataIn,	/* in */
 					       UINT32 * dataOutSize,	/* out */
 					       BYTE ** dataOut,	/* out */
-					       TCS_AUTH * ownerAuth	/* in, out */
+					       TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_SetRedirection(TCS_CONTEXT_HANDLE hContext,	/* in */
 						 TCS_KEY_HANDLE keyHandle,	/* in */
 						 UINT32 c1,	/* in */
 						 UINT32 c2,	/* in */
-						 TCS_AUTH * privAuth	/* in, out */
+						 TPM_AUTH * privAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
-							   BOOL generateRandom,	/* in */
+							   TSS_BOOL generateRandom,	/* in */
 							   TPM_AUTH * ownerAuth,	/* in, out */
 							   UINT32 * randomSize,	/* out */
 							   BYTE ** random,	/* out */
@@ -1281,7 +1281,7 @@ UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 	    );
 
 	TSS_RESULT TCSP_KillMaintenanceFeature(TCS_CONTEXT_HANDLE hContext,	/* in */
-							 TCS_AUTH * ownerAuth	/* in, out */
+							 TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/* in */

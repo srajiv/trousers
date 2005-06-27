@@ -19,7 +19,8 @@
 #include <pthread.h>
 #include <assert.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "tcsps.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
@@ -49,12 +50,14 @@ get_file()
 	/* open and lock the file */
 	system_ps_fd = open(tcsd_options.system_ps_file, O_CREAT|O_RDWR, 0600);
 	if (system_ps_fd < 0) {
-		LogError("system PS: open() of %s failed: %s", tcsd_options.system_ps_file, strerror(errno));
+		LogError("system PS: open() of %s failed: %s",
+				tcsd_options.system_ps_file, strerror(errno));
 		return -1;
 	}
 
 	if ((rc = flock(system_ps_fd, LOCK_EX))) {
-		LogError("failed to get system PS lock of file %s: %s", tcsd_options.system_ps_file, strerror(errno));
+		LogError("failed to get system PS lock of file %s: %s",
+				tcsd_options.system_ps_file, strerror(errno));
 		return -1;
 	}
 
@@ -148,14 +151,14 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
                 /* we found the key; file ptr is pointing at the blob */
                 if (*ret_buffer_size < tmp->blob_size) {
                         /* not enough room */
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TCS_E_FAIL;
+                        return TCSERR(TSS_E_FAIL);
                 }
 
                 if ((rc = read_data(fd, ret_buffer, tmp->blob_size))) {
@@ -170,7 +173,7 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TCS_E_FAIL;
+        return TCSERR(TSS_E_FAIL);
 }
 
 /*
@@ -188,7 +191,7 @@ ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer, UI
 	rc = lseek(fd, file_offset, SEEK_SET);
 	if (rc == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	/* we found the key; file ptr is pointing at the blob */
@@ -196,12 +199,12 @@ ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer, UI
 		/* not enough room */
 		LogError("%s: Buf size too small. Needed %d bytes, passed %d", __FUNCTION__,
 				c->blob_size, *ret_buffer_size);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((rc = read_data(fd, ret_buffer, c->blob_size))) {
 		LogError("%s: error reading %d bytes", __FUNCTION__, c->blob_size);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	*ret_buffer_size = c->blob_size;
 
@@ -232,11 +235,11 @@ ps_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 TSS_RESULT
-ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, BOOL *is_reg)
+ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -263,7 +266,7 @@ ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, BOOL *is_reg)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->pub_data_size < 2048);
@@ -322,7 +325,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->pub_data_size < 2048);
@@ -344,7 +347,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 		if (*ret_uuid == NULL) {
 			LogError1("Malloc Failure.");
                         pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		/* the key matches, copy the uuid out */
@@ -355,7 +358,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 TSS_RESULT
@@ -387,7 +390,7 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->pub_data_size < 2048);
@@ -412,7 +415,7 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->blob_size < 4096);
@@ -428,7 +431,7 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 		if (*ret_key == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
                         pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		offset = 0;

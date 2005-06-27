@@ -33,18 +33,18 @@ extern pthread_mutex_t mem_cache_lock;
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
-UINT32 UnicodeToArray(BYTE * bytes, UNICODE * wchars);
-UINT32 ArrayToUnicode(BYTE * bytes, UINT32 howManyBytes, UNICODE * wchars);
-UINT32 StringToUnicodeArray(char *message, BYTE * array);
+UINT32 UnicodeToArray(BYTE *, UNICODE *);
+UINT32 ArrayToUnicode(BYTE *, UINT32, UNICODE *);
+UINT32 StringToUnicodeArray(char *, BYTE *);
 
-TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE hContext, TCPA_NONCE * nonce);
+TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE, TCPA_NONCE *);
 
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
 
 /*---	keyReg.c */
-void keyreg_SetUUIDOfKeyObject(TSS_HKEY hKey, TSS_UUID uuid, TSS_FLAG psType);
-BOOL keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT, UINT32, BYTE *);
+//void keyreg_SetUUIDOfKeyObject(TSS_HKEY, TSS_UUID, TSS_FLAG);
+TSS_BOOL keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT, UINT32, BYTE *);
 TSS_RESULT keyreg_WriteKeyToFile(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
 TSS_RESULT keyreg_RemoveKey(TSS_UUID *);
 TSS_RESULT keyreg_GetKeyByUUID(TSS_UUID *, UINT32 *, BYTE **);
@@ -54,33 +54,27 @@ TSS_RESULT keyreg_replaceEncData_PS(BYTE *, BYTE *);
 
 /*---	secrets.c */
 
-TSS_RESULT policy_UsesAuth(TSS_HPOLICY hPolicy, BOOL *);
+TSS_RESULT policy_UsesAuth(TSS_HPOLICY, TSS_BOOL *);
 
-TSS_RESULT secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * auth);
-TSS_RESULT secret_ValidateAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * auth);
-TSS_RESULT secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy, TSS_HPOLICY hMigPolicy,
-				  TSS_HOBJECT hKey, UINT16 osapType, UINT32 osapData,
-				  TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
-				  BYTE sharedSecret[20], TCS_AUTH * auth, TCPA_NONCE * nonceEvenOSAP);
-TSS_RESULT secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy, TSS_HPOLICY hMigPolicy,
-				   TSS_HOBJECT hKey, BYTE sharedSecret[20], TCS_AUTH * auth,
-				   BYTE * hashDigest, TCPA_NONCE nonceEvenOSAP);
+TSS_RESULT secret_PerformAuth_OIAP(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
+TSS_RESULT secret_PerformXOR_OSAP(TSS_HPOLICY, TSS_HPOLICY, TSS_HPOLICY, TSS_HOBJECT,
+					UINT16, UINT32, TCPA_ENCAUTH *, TCPA_ENCAUTH *,
+					BYTE *, TPM_AUTH *, TCPA_NONCE *);
+TSS_RESULT secret_PerformAuth_OSAP(TSS_HPOLICY, TSS_HPOLICY, TSS_HPOLICY, TSS_HOBJECT,
+					BYTE *, TPM_AUTH *, BYTE *, TCPA_NONCE *);
 
-TSS_RESULT secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
-				    TSS_HPOLICY hMigPolicy, BYTE sharedSecret[20], TCS_AUTH * auth,
-				    BYTE * hashDigest, TCPA_NONCE nonceEvenOSAP);
+TSS_RESULT secret_ValidateAuth_OSAP(TSS_HPOLICY, TSS_HPOLICY, TSS_HPOLICY, BYTE *, TPM_AUTH *,
+				    BYTE *, TCPA_NONCE *);
 
-TSS_RESULT secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
-				TSS_HTPM hTPM,
-				TSS_HKEY hKeySRK,
-				TCS_AUTH * auth,
-				UINT32 * encOwnerAuthLength,
-				BYTE * encOwnerAuth, UINT32 * encSRKAuthLength, BYTE * encSRKAuth);
+TSS_RESULT secret_TakeOwnership(TSS_HKEY, TSS_HTPM, TSS_HKEY, TPM_AUTH *,
+				UINT32 *, BYTE *, UINT32 *, BYTE *);
 
 #define next( x )	x = x->next
 
-UINT16 getMaxPCRs(TCS_CONTEXT_HANDLE);
-TCPA_PCRVALUE *getPcrFromComposite(TCPA_PCR_COMPOSITE comp, UINT32 which);
+/* spi_utils.c */
+
+UINT16 get_num_pcrs(TCS_CONTEXT_HANDLE);
+TCPA_PCRVALUE *getPcrFromComposite(TCPA_PCR_COMPOSITE, UINT32);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
@@ -89,6 +83,11 @@ TSS_RESULT DisplayNewPINWindow(char *, UNICODE *);
 
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
+
+TSS_RESULT internal_GetMachineName(UNICODE *, int);
+TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
+
+TSS_RESULT ConnectGuts(TSS_HCONTEXT, UNICODE *, TCS_CONTEXT_HANDLE);
 
 #define TSS_LOCAL_RANDOM_DEVICE		"/dev/random"
 TSS_RESULT get_local_random(TSS_HCONTEXT, UINT32, BYTE **);
@@ -101,64 +100,154 @@ short get_port(void);
 #define endian32(x)	htonl(x)
 #define endian16(x)	htons(x)
 
-/*===	Object Stuff */
-void removeObject(UINT32 objectHandle);
-/*void destroyObject( AnObject* object ); */
-UINT32 getObjectTypeByHandle(TSS_HOBJECT objectHandle);
-TSS_RESULT setObject(UINT32 objectHandle, void *buffer, UINT32 sizeOfBuffer);
-TSS_RESULT getObject(UINT32 objectHandle, void **outBuffer, UINT32 * outSize);
-TSS_HOBJECT addObject(UINT32 context, UINT32 objectType);
+extern TSS_VERSION VERSION_1_1;
 
-AnObject *getAnObjectByHandle(UINT32 oHandle);
-BOOL anyPopupPolicies(TSS_HCONTEXT context);
+TSS_RESULT Spi_UnloadBlob_KEY(UINT16 *, BYTE *, TCPA_KEY *);
+TSS_RESULT Spi_UnloadBlob_KEY_PARMS(UINT16 *, BYTE *, TCPA_KEY_PARMS *);
+TSS_RESULT Spi_UnloadBlob_STORE_PUBKEY(UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
+
+
+/*===	Object Stuff */
+void removeObject(UINT32);
+UINT32 getObjectTypeByHandle(TSS_HOBJECT);
+TSS_RESULT setObject(UINT32, void *, UINT32);
+TSS_RESULT getObject(UINT32, void **, UINT32 *);
+TSS_HOBJECT addObject(UINT32, UINT32);
+
+TSS_BOOL anyPopupPolicies(TSS_HCONTEXT);
 
 /*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
 
-void addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle);
-void removeTSPKeyHandle(TSS_HKEY tspHandle);
-void removeTCSKeyHandle(TCS_KEY_HANDLE tcsHandle);
-TCS_KEY_HANDLE getTCSKeyHandle(TSS_HKEY tspHandle);
+void addKeyHandle(TCS_KEY_HANDLE, TSS_HKEY);
+void removeTSPKeyHandle(TSS_HKEY);
+void removeTCSKeyHandle(TCS_KEY_HANDLE);
+TCS_KEY_HANDLE getTCSKeyHandle(TSS_HKEY);
 
 /*---------------------------------------------------------------------------------------- */
 
-TCPA_VERSION *getCurrentVersion(TSS_HCONTEXT hContext);
+TSS_RESULT Init_AuthNonce(TCS_CONTEXT_HANDLE, TPM_AUTH *);
+TSS_BOOL validateReturnAuth(BYTE *, BYTE *, TPM_AUTH *);
+void HMAC_Auth(BYTE *, BYTE *, TPM_AUTH *);
+TSS_RESULT OSAP_Calc(TCS_CONTEXT_HANDLE, UINT16, UINT32, BYTE *, BYTE *, BYTE *,
+			TCPA_ENCAUTH *, TCPA_ENCAUTH *, BYTE *, TPM_AUTH *);
 
-TSS_RESULT Init_AuthNonce(TCS_CONTEXT_HANDLE hContext, TCS_AUTH * auth);
-BOOL validateReturnAuth(BYTE * secret, BYTE * hash, TCS_AUTH * auth);
-void HMAC_Auth(BYTE * secret, BYTE * Digest, TCS_AUTH * auth);
-TSS_RESULT OSAP_Calc(TCS_CONTEXT_HANDLE hContext, UINT16 EntityType, UINT32 EntityValue,
-		     BYTE * authSecret, BYTE * usageSecret, BYTE * migSecret,
-		     TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig, BYTE * sharedSecret,
-		     TCS_AUTH * auth);
+TSS_RESULT internal_SetSecret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
+TSS_RESULT internal_FlushSecret(TSS_HPOLICY);
+TSS_RESULT internal_CopySecrets(TSS_HPOLICY, TSS_HPOLICY);
 
-TSS_RESULT internal_GetSecret(TSS_HPOLICY, TCPA_SECRET *, BOOL);
-TSS_RESULT internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data);
-TSS_RESULT internal_FlushSecret(TSS_HPOLICY hPolicy);
-TSS_RESULT internal_CopySecrets(TSS_HPOLICY dest, TSS_HPOLICY source);
+TSS_RESULT calculateCompositeHash(TCPA_PCR_COMPOSITE, TCPA_DIGEST *);
+TSS_RESULT calcCompositeHash(TCPA_PCR_SELECTION *, TCPA_PCRVALUE *, TCPA_DIGEST *);
+TSS_RESULT generateCompositeFromTPM(TSS_HCONTEXT, TCPA_PCR_SELECTION *, TCPA_DIGEST *);
 
-TSS_RESULT calculateCompositeHash(TCPA_PCR_COMPOSITE comp, TCPA_DIGEST * digest);
-TSS_RESULT calcCompositeHash(TCPA_PCR_SELECTION select, TCPA_PCRVALUE * arrayOfPcrs,
-			     TCPA_DIGEST * digestOut);
-TSS_RESULT generateCompositeFromTPM(TSS_HCONTEXT hContext, TCPA_PCR_SELECTION select,
-				    TCPA_DIGEST * digest);
-
-UINT16 Decode_UINT16(BYTE * in);
-void UINT32ToArray(UINT32 i, BYTE * out);
-void UINT16ToArray(UINT16 i, BYTE * out);
-UINT32 Decode_UINT32(BYTE * y);
-
-TSS_RESULT EncryptStoreAsymKey(TCS_CONTEXT_HANDLE hContext, TCPA_PAYLOAD_TYPE payload,
-			       UINT32 privModLength, BYTE * privMod, BYTE * usageAuth, BYTE * migAuth,
-			       TCPA_RSAKEY_OBJECT * keyObject, BYTE * pubkey, UINT32 pubKeyLength);
+UINT16 Decode_UINT16(BYTE *);
+void UINT32ToArray(UINT32, BYTE *);
+void UINT16ToArray(UINT16, BYTE *);
+UINT32 Decode_UINT32(BYTE *);
 
 TSS_RESULT popup_GetSecret(UINT32, UNICODE *, void *);
 
-BOOL check_flagset_collision(TSS_FLAG, UINT32);
+TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
 
-void LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
-void UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth);
-void LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info);
-void UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info);
+void LoadBlob_AUTH(UINT16 *, BYTE *, TPM_AUTH *);
+void UnloadBlob_AUTH(UINT16 *, BYTE *, TPM_AUTH *);
+void LoadBlob_LOADKEY_INFO(UINT16 *, BYTE *, TCS_LOADKEY_INFO *);
+void UnloadBlob_LOADKEY_INFO(UINT16 *, BYTE *, TCS_LOADKEY_INFO *);
+void Trspi_LoadBlob_BOUND_DATA(UINT16 *, TCPA_BOUND_DATA, UINT32, BYTE *);
+void Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT16 *, BYTE *, TCPA_CHANGEAUTH_VALIDATE *);
+
+
+TSS_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCS_OpenContext_RPC(UNICODE *, UINT32 *, int);
+TSS_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE, TCPA_CAPABILITY_AREA, UINT32, BYTE *,
+                              UINT32 *, BYTE **);
+TSS_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE, TCPA_CAPABILITY_AREA,	UINT32, BYTE *, UINT32 *,
+				BYTE **);
+TSS_RESULT TCSP_LoadKeyByBlob(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *,
+                               TCS_KEY_HANDLE *, TCS_KEY_HANDLE *);
+TSS_RESULT TCSP_LoadKeyByUUID(TCS_CONTEXT_HANDLE, TSS_UUID, TCS_LOADKEY_INFO *, TCS_KEY_HANDLE *);
+TSS_RESULT TCS_GetRegisteredKeyBlob(TCS_CONTEXT_HANDLE, TSS_UUID, UINT32 *, BYTE **);
+TSS_RESULT TCS_RegisterKey(TCS_CONTEXT_HANDLE, TSS_UUID, TSS_UUID, UINT32, BYTE *, UINT32, BYTE *);
+TSS_RESULT TCSP_UnregisterKey(TCS_CONTEXT_HANDLE, TSS_UUID);
+TSS_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE, TSS_UUID *, UINT32 *, TSS_KM_KEYINFO **);
+TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE, TCPA_ALGORITHM_ID, UINT32,
+                                              BYTE *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_PROTOCOL_ID, TCPA_ENCAUTH,
+				TCPA_ENTITY_TYPE, UINT32, BYTE *, TPM_AUTH *, TPM_AUTH *,
+	                        UINT32 *, BYTE **);
+TSS_RESULT TCSP_ChangeAuthOwner(TCS_CONTEXT_HANDLE, TCPA_PROTOCOL_ID, TCPA_ENCAUTH, TCPA_ENTITY_TYPE,
+                                 TPM_AUTH *);
+TSS_RESULT TCSP_TerminateHandle(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
+TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE, UINT32, BYTE **);
+TSS_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_NONCE, UINT32, BYTE *,
+                                     TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **, UINT32 *,
+                                     BYTE **, TCS_KEY_HANDLE *);
+TSS_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCS_KEY_HANDLE,
+					TCPA_ENTITY_TYPE, TCPA_HMAC, UINT32, BYTE *, UINT32,
+					BYTE *, TPM_AUTH *, UINT32 *, BYTE **, TCPA_SALT_NONCE *,
+					TCPA_DIGEST *);
+TSS_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_CreateWrapKey(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_ENCAUTH, TCPA_ENCAUTH,
+				UINT32, BYTE *, UINT32 *, BYTE **, TPM_AUTH *);
+TSS_RESULT TCSP_CertifyKey(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCS_KEY_HANDLE, TCPA_NONCE, TPM_AUTH *,
+				TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **);
+TSS_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_MIGRATE_SCHEME, UINT32,
+					BYTE *, UINT32, BYTE *, TPM_AUTH *, TPM_AUTH *, UINT32 *,
+					BYTE **, UINT32 *, BYTE **);
+TSS_RESULT TCSP_ConvertMigrationBlob(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *,
+					UINT32, BYTE *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_PcrRead(TCS_CONTEXT_HANDLE, TCPA_PCRINDEX, TCPA_PCRVALUE *);
+TSS_RESULT TCSP_OSAP(TCS_CONTEXT_HANDLE, TCPA_ENTITY_TYPE, UINT32, TCPA_NONCE, TCS_AUTHHANDLE *,
+			TCPA_NONCE *, TCPA_NONCE *);
+TSS_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE, TPM_AUTH *, TCPA_VERSION *, UINT32 *, UINT32 *);
+TSS_RESULT TCSP_OIAP(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE *, TCPA_NONCE *);
+TSS_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_ENCAUTH, UINT32, BYTE *, UINT32, BYTE *,
+                                       TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Unseal(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *, TPM_AUTH *,
+                                         UINT32 *, BYTE **);
+TSS_RESULT TCSP_UnBind(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *, UINT32 *,
+                                         BYTE **);
+TSS_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_CreateEndorsementKeyPair(TCS_CONTEXT_HANDLE, TCPA_NONCE, UINT32, BYTE *, UINT32 *,
+						BYTE **, TCPA_DIGEST *);
+TSS_RESULT TCSP_ReadPubek(TCS_CONTEXT_HANDLE, TCPA_NONCE, UINT32 *, BYTE **, TCPA_DIGEST *);
+TSS_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE, UINT16, UINT32, BYTE *, UINT32, BYTE *, UINT32,
+				BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE, TCPA_ENCAUTH, TCPA_CHOSENID_HASH, UINT32, BYTE *,
+				TPM_AUTH *, TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **, UINT32 *,
+				BYTE **, UINT32 *, BYTE **, UINT32 *, BYTE **);
+TSS_RESULT TCSP_ActivateTPMIdentity(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_AUTH *,
+					TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_OwnerClear(TCS_CONTEXT_HANDLE, TPM_AUTH *);
+TSS_RESULT TCSP_DisableOwnerClear(TCS_CONTEXT_HANDLE, TPM_AUTH *);
+TSS_RESULT TCSP_ForceClear(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_DisableForceClear(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_PhysicalDisable(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_PhysicalEnable(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE, TSS_BOOL);
+TSS_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE, TCPA_PHYSICAL_PRESENCE);
+TSS_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE, TSS_BOOL, TPM_AUTH *);
+TSS_RESULT TCSP_SetOwnerInstall(TCS_CONTEXT_HANDLE, TSS_BOOL);
+TSS_RESULT TCSP_DisablePubekRead(TCS_CONTEXT_HANDLE, TPM_AUTH *);
+TSS_RESULT TCSP_SelfTestFull(TCS_CONTEXT_HANDLE);
+TSS_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_NONCE, TPM_AUTH *, UINT32 *,
+				BYTE **);
+TSS_RESULT TCSP_GetTestResult(TCS_CONTEXT_HANDLE, UINT32 *, BYTE **);
+TSS_RESULT TCSP_StirRandom(TCS_CONTEXT_HANDLE, UINT32, BYTE *);
+TSS_RESULT TCSP_AuthorizeMigrationKey(TCS_CONTEXT_HANDLE, TCPA_MIGRATE_SCHEME, UINT32, BYTE *,
+					TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCS_GetPcrEvent(TCS_CONTEXT_HANDLE, UINT32, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT TCS_GetPcrEventsByPcr(TCS_CONTEXT_HANDLE, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT TCS_GetPcrEventLog(TCS_CONTEXT_HANDLE, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_NONCE, UINT32, BYTE *, TPM_AUTH *,
+			UINT32 *, BYTE **, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Extend(TCS_CONTEXT_HANDLE, TCPA_PCRINDEX, TCPA_DIGEST, TCPA_PCRVALUE *);
+TSS_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE, TCPA_DIRINDEX, TCPA_DIRVALUE, TPM_AUTH *);
+TSS_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE, TCPA_DIRINDEX, TCPA_DIRVALUE *);
+TSS_RESULT TCS_LogPcrEvent(TCS_CONTEXT_HANDLE, TSS_PCR_EVENT, UINT32 *);
+
+
 
 #endif

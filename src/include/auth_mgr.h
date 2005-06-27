@@ -13,7 +13,7 @@
 
 struct auth_map
 {
-	BOOL full;
+	TSS_BOOL full;
 	TCS_AUTHHANDLE auth;
 	TCS_CONTEXT_HANDLE ctx;
 };
