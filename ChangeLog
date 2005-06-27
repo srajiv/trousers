@@ -1,4 +1,7 @@
 
+ - Changed the TCPA_RSA_KEY_PARMS management at key creation time.
+ - Re-implemented TSP object management.
+ - Integrated TSSWG header files.
  - Added valid_keys variable for the debugging build of
    tcs/ps/ps_utils.c.
  - Changed >= to > in openssl/crypto.c to correct off by one in
