@@ -995,7 +995,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
     )
 {
 	UINT32 attrib;
-	TSS_RESULT result;
+	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (pulAttrib == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1116,8 +1116,6 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
 		    obj_is_pcrs(hObject) || obj_is_encdata(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
 	return result;
