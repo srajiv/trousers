@@ -71,7 +71,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsHandle;
-	UNICODE *wMachineName = NULL;
+	BYTE *wMachineName = NULL;
 	TSS_HPOLICY hPolicy;
 	TSS_HOBJECT hTpm;
 	UINT32 string_len = 0;
@@ -87,10 +87,10 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
 	if (wszDestination == NULL) {
 		if ((result = obj_context_get_machine_name(tspContext,
 							&string_len,
-							(BYTE **)&wMachineName)))
+							&wMachineName)))
 			return result;
 
-		if ((result = TCS_OpenContext_RPC(wMachineName, &tcsHandle,
+		if ((result = TCS_OpenContext_RPC((UNICODE *)wMachineName, &tcsHandle,
 						CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 	} else {
