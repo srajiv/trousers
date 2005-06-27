@@ -145,10 +145,14 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		rsakey->tcpaKey.algorithmParms.sigScheme = TCPA_SS_NONE;
 	}
 
+	/* Load the RSA key parms into the blob in the TCPA_KEY_PARMS pointer.
+	 * If the exponent is left NULL, the parmSize variable will change
+	 * here */
 	offset = 0;
 	Trspi_LoadBlob_RSA_KEY_PARMS(&offset,
 			rsakey->tcpaKey.algorithmParms.parms,
 			&rsaKeyParms);
+	rsakey->tcpaKey.algorithmParms.parmSize = offset;
 
 add_key:
 	if ((result = obj_list_add(&rsakey_list, tspContext, rsakey,
