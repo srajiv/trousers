@@ -18,13 +18,13 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tddl.h"
 #include "req_mgr.h"
 #include "tcslog.h"
-#include "tcs_utils.h"
 
 static struct tpm_req_mgr *trm;
 
@@ -40,7 +40,7 @@ req_mgr_submit_req(BYTE *blob)
 	/* XXX Put a retry limit in here... */
 	do {
 		result = Tddli_TransmitData(blob, Decode_UINT32(&blob[2]), loc_buf, &size);
-	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_RETRY));
+	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_E_RETRY));
 
 	if (!result)
 		memcpy(blob, loc_buf, Decode_UINT32(&loc_buf[2]));

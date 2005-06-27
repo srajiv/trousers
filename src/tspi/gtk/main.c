@@ -17,11 +17,16 @@
 #  include <config.h>
 #endif
 
+#include <sys/types.h>
 #include <string.h>
+#include <wchar.h>
 
 #include <gtk/gtk.h>
 
-#include "tss/tss.h"
+#undef TRUE
+#undef FALSE
+
+#include "trousers/tss.h"
 
 #include "interface.h"
 #include "support.h"

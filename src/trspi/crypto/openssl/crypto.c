@@ -24,7 +24,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 
@@ -47,26 +47,26 @@ Trspi_Hash(UINT32 HashType, UINT32 BufSize, BYTE* Buf, BYTE* Digest)
 			rv = EVP_DigestInit(&md_ctx, EVP_sha1());
 			break;
 		default:
-			rv = TSS_E_BAD_PARAMETER;
+			rv = TSPERR(TSS_E_BAD_PARAMETER);
 			goto out;
 			break;
 	}
 
 	if (rv != EVP_SUCCESS) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
 	rv = EVP_DigestUpdate(&md_ctx, Buf, BufSize);
 	if (rv != EVP_SUCCESS) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
 	result_size = EVP_MD_CTX_size(&md_ctx);
 	rv = EVP_DigestFinal(&md_ctx, Digest, &result_size);
 	if (rv != EVP_SUCCESS) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	} else
 		rv = TSS_SUCCESS;
@@ -94,7 +94,7 @@ Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE* Secret, UINT32 BufSize, BYT
 			md = EVP_sha1();
 			break;
 		default:
-			rv = TSS_E_BAD_PARAMETER;
+			rv = TSPERR(TSS_E_BAD_PARAMETER);
 			goto out;
 			break;
 	}
@@ -124,7 +124,7 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	int encodedDataLen;
 
 	if (rsa == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
@@ -134,13 +134,13 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	rsa->e = BN_bin2bn(exp, sizeof(exp), rsa->e);
 
 	if (rsa->n == NULL || rsa->e == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
 	/* padding constraint for PKCS#1 OAEP padding */
 	if ((int)dataToEncryptLen >= (RSA_size(rsa) - ((2 * SHA_DIGEST_LENGTH) + 1))) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
@@ -150,7 +150,7 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	rv = RSA_padding_add_PKCS1_OAEP(encodedData, encodedDataLen, dataToEncrypt,
 			dataToEncryptLen, oaepPad, oaepPadLen);
 	if (rv != EVP_SUCCESS) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
@@ -158,7 +158,7 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	rv = RSA_public_encrypt(encodedDataLen, encodedData,
 				encryptedData, rsa, RSA_NO_PADDING);
 	if (rv == -1) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
@@ -188,7 +188,7 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 	RSA *rsa = RSA_new();
 
 	if (rsa == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
@@ -203,7 +203,7 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 			nid = NID_undef;
 			break;
 		default:
-			rv = TSS_E_BAD_PARAMETER;
+			rv = TSPERR(TSS_E_BAD_PARAMETER);
 			goto out;
 			break;
 	}
@@ -214,24 +214,24 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 	rsa->e = BN_bin2bn(exp, sizeof(exp), rsa->e);
 
 	if (rsa->n == NULL || rsa->e == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
 	/* if we don't know the structure of the data we're verifying, do a public decrypt
-	 * and compare menually. If we know we're looking for a SHA1 hash, allow OpenSSL
+	 * and compare manually. If we know we're looking for a SHA1 hash, allow OpenSSL
 	 * to do the work for us.
 	 */
 	if (nid == NID_undef) {
 		rv = RSA_public_decrypt(sig_len, pSignature, buf, rsa, RSA_PKCS1_PADDING);
-		if (rv != (int)iHashLength) {
-			rv = TSS_E_FAIL;
+		if ((UINT32)rv != iHashLength) {
+			rv = TSPERR(TSS_E_FAIL);
 		} else if (memcmp(pHash, buf, iHashLength)) {
-			rv = TSS_E_FAIL;
+			rv = TSPERR(TSS_E_FAIL);
 		}
 	} else {
 		if ((rv = RSA_verify(nid, pHash, iHashLength, pSignature, sig_len, rsa)) == 0) {
-			rv = TSS_E_FAIL;
+			rv = TSPERR(TSS_E_FAIL);
 			goto out;
 		}
 	}
@@ -267,7 +267,7 @@ Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 	RSA *rsa = RSA_new();
 
 	if (rsa == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
@@ -277,20 +277,20 @@ Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 	rsa->e = BN_bin2bn(exp, sizeof(exp), rsa->e);
 
 	if (rsa->n == NULL || rsa->e == NULL) {
-		rv = TSS_E_OUTOFMEMORY;
+		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
 	/* XXX (CAST TO UNSIGNED) XXX  padding constraint for PKCS#1 v1.5 padding */
 	if ((int)dataToEncryptLen > (RSA_size(rsa) - 11)) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
 	rv = RSA_public_encrypt(dataToEncryptLen, dataToEncrypt,
 				encryptedData, rsa, RSA_PKCS1_PADDING);
 	if (rv == -1) {
-		rv = TSS_E_INTERNAL_ERROR;
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 

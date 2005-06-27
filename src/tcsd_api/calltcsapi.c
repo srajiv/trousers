@@ -12,13 +12,15 @@
 #include <stdlib.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <wchar.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
+#include "spi_internal_types.h"
+#include "spi_utils.h"
 #include "hosttable.h"
 #include "tsplog.h"
 #include "trpctp.h"
-#include "spi_internal_types.h"
-#include "spi_utils.h"
 #include "obj.h"
 
 TSS_RESULT
@@ -30,7 +32,7 @@ TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
 	entry = calloc(1, sizeof(struct host_table_entry));
 	if (entry == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct host_table_entry));
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
         /* fill in the entry */
@@ -42,7 +44,6 @@ TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
         entry->type = type;
 
 	if (type == CONNECTION_TYPE_TCP_PERSISTANT) {
-
 		/* lock all the way around the open context process. This will ensure that
 		 * two sessions don't get opened with the same TCS and that then one has to
 		 * be closed.
@@ -66,7 +67,7 @@ TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT
@@ -77,7 +78,7 @@ Atmel_TPM_SetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID, UINT32 stateSize,
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -86,26 +87,26 @@ Atmel_TPM_SetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID, UINT32 stateSize,
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT
 Atmel_TPM_OwnerSetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 			UINT32 stateSize, BYTE * stateValue,
-			TCS_AUTH * ownerAuth)
+			TPM_AUTH * ownerAuth)
 {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = Atmel_TPM_OwnerSetState_TP(entry, hContext, stateID, stateSize, stateValue, ownerAuth);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT
@@ -116,7 +117,7 @@ Atmel_TPM_GetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -125,7 +126,7 @@ Atmel_TPM_GetState(TCS_CONTEXT_HANDLE hContext, BYTE stateID,
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/*  in */
@@ -136,7 +137,7 @@ TCPA_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext, TCP
 	struct host_table_entry *entry = get_table_entry(tcsContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -148,7 +149,7 @@ TCPA_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext, TCP
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -157,7 +158,7 @@ TCPA_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		if ((result = TCS_CloseContext_TP(entry, hContext)) == TSS_SUCCESS) {
@@ -168,7 +169,7 @@ TCPA_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE hContext	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_FreeMemory(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -178,14 +179,14 @@ TCPA_RESULT TCS_FreeMemory(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCS_FreeMemory_TP(entry, hContext, pMemory);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_LogPcrEvent(TCS_CONTEXT_HANDLE hContext,	/*  in   */
@@ -196,14 +197,14 @@ TCPA_RESULT TCS_LogPcrEvent(TCS_CONTEXT_HANDLE hContext,	/*  in   */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCS_LogPcrEvent_TP(entry, hContext, Event, pNumber);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetPcrEvent(TCS_CONTEXT_HANDLE hContext,	/*  in  */
@@ -215,7 +216,7 @@ TCPA_RESULT TCS_GetPcrEvent(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -224,7 +225,7 @@ TCPA_RESULT TCS_GetPcrEvent(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetPcrEventsByPcr(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -237,7 +238,7 @@ TCPA_RESULT TCS_GetPcrEventsByPcr(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -247,7 +248,7 @@ TCPA_RESULT TCS_GetPcrEventsByPcr(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetPcrEventLog(TCS_CONTEXT_HANDLE hContext,	/*  in  */
@@ -258,7 +259,7 @@ TCPA_RESULT TCS_GetPcrEventLog(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -267,7 +268,7 @@ TCPA_RESULT TCS_GetPcrEventLog(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_RegisterKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -282,7 +283,7 @@ TCPA_RESULT TCS_RegisterKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -292,7 +293,7 @@ TCPA_RESULT TCS_RegisterKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_UnregisterKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -302,14 +303,14 @@ TCPA_RESULT TCSP_UnregisterKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_UnregisterKey_TP(entry, hContext, KeyUUID);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -321,7 +322,7 @@ TCPA_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -331,7 +332,7 @@ TCPA_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetRegisteredKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -342,7 +343,7 @@ TCPA_RESULT TCS_GetRegisteredKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -351,7 +352,7 @@ TCPA_RESULT TCS_GetRegisteredKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetRegisteredKeyBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -364,7 +365,7 @@ TCPA_RESULT TCS_GetRegisteredKeyBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -373,14 +374,14 @@ TCPA_RESULT TCS_GetRegisteredKeyBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_LoadKeyByBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			       TCS_KEY_HANDLE hUnwrappingKey,	/*  in */
 			       UINT32 cWrappedKeyBlobSize,	/*  in */
 			       BYTE * rgbWrappedKeyBlob,	/*  in */
-			       TCS_AUTH * pAuth,	/*  in, out */
+			       TPM_AUTH * pAuth,	/*  in, out */
 			       TCS_KEY_HANDLE * phKeyTCSI,	/*  out */
 			       TCS_KEY_HANDLE * phKeyHMAC	/*  out */
     ) {
@@ -388,7 +389,7 @@ TCPA_RESULT TCSP_LoadKeyByBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -399,7 +400,7 @@ TCPA_RESULT TCSP_LoadKeyByBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_LoadKeyByUUID(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -411,7 +412,7 @@ TCPA_RESULT TCSP_LoadKeyByUUID(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -420,7 +421,7 @@ TCPA_RESULT TCSP_LoadKeyByUUID(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_EvictKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -430,14 +431,14 @@ TCPA_RESULT TCSP_EvictKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_EvictKey_TP(entry, hContext, hKey);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CreateWrapKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -448,13 +449,13 @@ TCPA_RESULT TCSP_CreateWrapKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			       BYTE * keyInfo,	/*  in */
 			       UINT32 * keyDataSize,	/*  out */
 			       BYTE ** keyData,	/*  out */
-			       TCS_AUTH * pAuth	/*  in, out */
+			       TPM_AUTH * pAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -465,12 +466,12 @@ TCPA_RESULT TCSP_CreateWrapKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			   TCS_KEY_HANDLE hKey,	/*  in */
-			   TCS_AUTH * pAuth,	/*  in, out */
+			   TPM_AUTH * pAuth,	/*  in, out */
 			   UINT32 * pcPubKeySize,	/*  out */
 			   BYTE ** prgbPubKey	/*  out */
     ) {
@@ -478,7 +479,7 @@ TCPA_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -487,7 +488,7 @@ TCPA_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in  */
@@ -495,8 +496,8 @@ TCPA_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 			      TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/*  in */
 			      UINT32 idKeyInfoSize,	/* in */
 			      BYTE * idKeyInfo,	/* in */
-			      TCS_AUTH * pSrkAuth,	/*  in, out */
-			      TCS_AUTH * pOwnerAuth,	/*  in, out */
+			      TPM_AUTH * pSrkAuth,	/*  in, out */
+			      TPM_AUTH * pOwnerAuth,	/*  in, out */
 			      UINT32 * idKeySize,	/*  out */
 			      BYTE ** idKey,	/*  out */
 			      UINT32 * pcIdentityBindingSize,	/*  out */
@@ -512,7 +513,7 @@ TCPA_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -531,17 +532,17 @@ TCPA_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in  */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_SetOwnerInstall(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				 BOOL state	/*  in  */
+				 TSS_BOOL state	/*  in  */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -549,7 +550,7 @@ TCPA_RESULT TCSP_SetOwnerInstall(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -561,13 +562,13 @@ TCPA_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			       BYTE * encSrkAuth,	/*  in */
 			       UINT32 srkInfoSize,	/*  in */
 			       BYTE * srkInfo,	/*  in */
-			       TCS_AUTH * ownerAuth,	/*  in, out */
+			       TPM_AUTH * ownerAuth,	/*  in, out */
 			       UINT32 * srkKeySize, BYTE ** srkKey) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -579,7 +580,7 @@ TCPA_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_OIAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -590,7 +591,7 @@ TCPA_RESULT TCSP_OIAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -599,7 +600,7 @@ TCPA_RESULT TCSP_OIAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_OSAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -614,7 +615,7 @@ TCPA_RESULT TCSP_OSAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -624,7 +625,7 @@ TCPA_RESULT TCSP_OSAP(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE contextHandle,	/*  in */
@@ -634,8 +635,8 @@ TCPA_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE contextHandle,	/*  in */
 			    TCPA_ENTITY_TYPE entityType,	/*  in */
 			    UINT32 encDataSize,	/*  in */
 			    BYTE * encData,	/*  in */
-			    TCS_AUTH * ownerAuth,	/*  in, out */
-			    TCS_AUTH * entityAuth,	/*  in, out      */
+			    TPM_AUTH * ownerAuth,	/*  in, out */
+			    TPM_AUTH * entityAuth,	/*  in, out      */
 			    UINT32 * outDataSize,	/*  out */
 			    BYTE ** outData	/*  out */
     ) {
@@ -643,7 +644,7 @@ TCPA_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE contextHandle,	/*  in */
 	struct host_table_entry *entry = get_table_entry(contextHandle);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -655,20 +656,20 @@ TCPA_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE contextHandle,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ChangeAuthOwner(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				 TCPA_PROTOCOL_ID protocolID,	/*  in */
 				 TCPA_ENCAUTH newAuth,	/*  in */
 				 TCPA_ENTITY_TYPE entityType,	/*  in */
-				 TCS_AUTH * ownerAuth	/*  in, out */
+				 TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -678,7 +679,7 @@ TCPA_RESULT TCSP_ChangeAuthOwner(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -686,7 +687,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				     TCPA_NONCE antiReplay,	/*  in */
 				     UINT32 KeySizeIn,	/*  in */
 				     BYTE * KeyDataIn,	/*  in */
-				     TCS_AUTH * pAuth,	/*  in, out */
+				     TPM_AUTH * pAuth,	/*  in, out */
 				     UINT32 * KeySizeOut,	/*  out */
 				     BYTE ** KeyDataOut,	/*  out */
 				     UINT32 * CertifyInfoSize,	/*  out */
@@ -699,7 +700,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -712,7 +713,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -724,7 +725,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				      BYTE * encNewAuth,	/*  in */
 				      UINT32 encDataSizeIn,	/*  in */
 				      BYTE * encDataIn,	/*  in */
-				      TCS_AUTH * ownerAuth,	/*  in, out */
+				      TPM_AUTH * ownerAuth,	/*  in, out */
 				      UINT32 * encDataSizeOut,	/*  out */
 				      BYTE ** encDataOut,	/*  out */
 				      TCPA_SALT_NONCE * saltNonce,	/*  out */
@@ -734,7 +735,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -749,7 +750,7 @@ TCPA_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_TerminateHandle(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -759,7 +760,7 @@ TCPA_RESULT TCSP_TerminateHandle(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -767,15 +768,15 @@ TCPA_RESULT TCSP_TerminateHandle(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ActivateTPMIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				     TCS_KEY_HANDLE idKey,	/*  in */
 				     UINT32 blobSize,	/*  in */
 				     BYTE * blob,	/*  in */
-				     TCS_AUTH * idKeyAuth,	/*  in, out */
-				     TCS_AUTH * ownerAuth,	/*  in, out */
+				     TPM_AUTH * idKeyAuth,	/*  in, out */
+				     TPM_AUTH * ownerAuth,	/*  in, out */
 				     UINT32 * SymmetricKeySize,	/*  out */
 				     BYTE ** SymmetricKey	/*  out */
     ) {
@@ -783,7 +784,7 @@ TCPA_RESULT TCSP_ActivateTPMIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -794,7 +795,7 @@ TCPA_RESULT TCSP_ActivateTPMIdentity(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_Extend(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -806,7 +807,7 @@ TCPA_RESULT TCSP_Extend(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -815,7 +816,7 @@ TCPA_RESULT TCSP_Extend(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_PcrRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -826,7 +827,7 @@ TCPA_RESULT TCSP_PcrRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -835,7 +836,7 @@ TCPA_RESULT TCSP_PcrRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -843,7 +844,7 @@ TCPA_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		       TCPA_NONCE antiReplay,	/*  in */
 		       UINT32 pcrDataSizeIn,	/*  in */
 		       BYTE * pcrDataIn,	/*  in */
-		       TCS_AUTH * privAuth,	/*  in, out */
+		       TPM_AUTH * privAuth,	/*  in, out */
 		       UINT32 * pcrDataSizeOut,	/*  out */
 		       BYTE ** pcrDataOut,	/*  out */
 		       UINT32 * sigSize,	/*  out */
@@ -853,7 +854,7 @@ TCPA_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -864,19 +865,19 @@ TCPA_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			      TCPA_DIRINDEX dirIndex,	/*  in */
 			      TCPA_DIRVALUE newContents,	/*  in */
-			      TCS_AUTH * ownerAuth	/*  in, out */
+			      TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -885,7 +886,7 @@ TCPA_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -896,7 +897,7 @@ TCPA_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -905,7 +906,7 @@ TCPA_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -915,7 +916,7 @@ TCPA_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		      BYTE * PcrInfo,	/*  in */
 		      UINT32 inDataSize,	/*  in */
 		      BYTE * inData,	/*  in */
-		      TCS_AUTH * pubAuth,	/*  in, out */
+		      TPM_AUTH * pubAuth,	/*  in, out */
 		      UINT32 * SealedDataSize,	/*  out */
 		      BYTE ** SealedData	/*  out */
     ) {
@@ -923,7 +924,7 @@ TCPA_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -933,15 +934,15 @@ TCPA_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_Unseal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			TCS_KEY_HANDLE parentHandle,	/*  in */
 			UINT32 SealedDataSize,	/*  in */
 			BYTE * SealedData,	/*  in */
-			TCS_AUTH * parentAuth,	/*  in, out */
-			TCS_AUTH * dataAuth,	/*  in, out */
+			TPM_AUTH * parentAuth,	/*  in, out */
+			TPM_AUTH * dataAuth,	/*  in, out */
 			UINT32 * DataSize,	/*  out */
 			BYTE ** Data	/*  out */
     ) {
@@ -949,7 +950,7 @@ TCPA_RESULT TCSP_Unseal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -959,14 +960,14 @@ TCPA_RESULT TCSP_Unseal(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_UnBind(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			TCS_KEY_HANDLE keyHandle,	/*  in */
 			UINT32 inDataSize,	/*  in */
 			BYTE * inData,	/*  in */
-			TCS_AUTH * privAuth,	/*  in, out */
+			TPM_AUTH * privAuth,	/*  in, out */
 			UINT32 * outDataSize,	/*  out */
 			BYTE ** outData	/*  out */
     ) {
@@ -974,7 +975,7 @@ TCPA_RESULT TCSP_UnBind(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -984,7 +985,7 @@ TCPA_RESULT TCSP_UnBind(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -995,8 +996,8 @@ TCPA_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				     BYTE * MigrationKeyAuth,	/*  in */
 				     UINT32 encDataSize,	/*  in */
 				     BYTE * encData,	/*  in */
-				     TCS_AUTH * parentAuth,	/*  in, out */
-				     TCS_AUTH * entityAuth,	/*  in, out */
+				     TPM_AUTH * parentAuth,	/*  in, out */
+				     TPM_AUTH * entityAuth,	/*  in, out */
 				     UINT32 * randomSize,	/*  out */
 				     BYTE ** random,	/*  out */
 				     UINT32 * outDataSize,	/*  out */
@@ -1006,7 +1007,7 @@ TCPA_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1020,14 +1021,14 @@ TCPA_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ConvertMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				      TCS_KEY_HANDLE parentHandle,	/*  in */
 				      UINT32 inDataSize,	/*  in */
 				      BYTE * inData,	/*  in */
-				      TCS_AUTH * parentAuth,	/*  in, out */
+				      TPM_AUTH * parentAuth,	/*  in, out */
 				      UINT32 randomSize,	/*  should be in */
 				      BYTE * random,	/*  should be in */
 				      UINT32 * outDataSize,	/*  out */
@@ -1037,7 +1038,7 @@ TCPA_RESULT TCSP_ConvertMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1048,14 +1049,14 @@ TCPA_RESULT TCSP_ConvertMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_AuthorizeMigrationKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				       TCPA_MIGRATE_SCHEME migrateScheme,	/*  in */
 				       UINT32 MigrationKeySize,	/*  in */
 				       BYTE * MigrationKey,	/*  in */
-				       TCS_AUTH * ownerAuth,	/*  in, out */
+				       TPM_AUTH * ownerAuth,	/*  in, out */
 				       UINT32 * MigrationKeyAuthSize,	/*  out */
 				       BYTE ** MigrationKeyAuth	/*  out */
     ) {
@@ -1063,7 +1064,7 @@ TCPA_RESULT TCSP_AuthorizeMigrationKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1076,15 +1077,15 @@ TCPA_RESULT TCSP_AuthorizeMigrationKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CertifyKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			    TCS_KEY_HANDLE certHandle,	/*  in */
 			    TCS_KEY_HANDLE keyHandle,	/*  in */
 			    TCPA_NONCE antiReplay,	/*  in */
-			    TCS_AUTH * certAuth,	/*  in, out */
-			    TCS_AUTH * keyAuth,	/*  in, out */
+			    TPM_AUTH * certAuth,	/*  in, out */
+			    TPM_AUTH * keyAuth,	/*  in, out */
 			    UINT32 * CertifyInfoSize,	/*  out */
 			    BYTE ** CertifyInfo,	/*  out */
 			    UINT32 * outDataSize,	/*  out */
@@ -1094,7 +1095,7 @@ TCPA_RESULT TCSP_CertifyKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1105,14 +1106,14 @@ TCPA_RESULT TCSP_CertifyKey(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		      TCS_KEY_HANDLE keyHandle,	/*  in */
 		      UINT32 areaToSignSize,	/*  in */
 		      BYTE * areaToSign,	/*  in */
-		      TCS_AUTH * privAuth,	/*  in, out */
+		      TPM_AUTH * privAuth,	/*  in, out */
 		      UINT32 * sigSize,	/*  out */
 		      BYTE ** sig	/*  out */
     ) {
@@ -1120,7 +1121,7 @@ TCPA_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1130,7 +1131,7 @@ TCPA_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1141,7 +1142,7 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1149,7 +1150,7 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				      bytesRequested, randomBytes);
 
 		if (result) {
-			LogWarn("TPM random generation failed. result=0x%x",
+			LogWarn("%s: TPM random generation failed. result=0x%x",
 					__FUNCTION__, result);
 			result = get_local_random(obj_lookupTspContext(hContext),
 					bytesRequested, randomBytes);
@@ -1158,7 +1159,7 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_StirRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1169,7 +1170,7 @@ TCPA_RESULT TCSP_StirRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1178,7 +1179,7 @@ TCPA_RESULT TCSP_StirRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1192,7 +1193,7 @@ TCPA_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1201,7 +1202,7 @@ TCPA_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1215,7 +1216,7 @@ TCPA_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1224,7 +1225,7 @@ TCPA_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetCapabilitySigned(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1233,7 +1234,7 @@ TCPA_RESULT TCSP_GetCapabilitySigned(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				     TCPA_CAPABILITY_AREA capArea,	/*  in */
 				     UINT32 subCapSize,	/*  in */
 				     BYTE * subCap,	/*  in */
-				     TCS_AUTH * privAuth,	/*  in, out */
+				     TPM_AUTH * privAuth,	/*  in, out */
 				     TCPA_VERSION * Version,	/*  out */
 				     UINT32 * respSize,	/*  out */
 				     BYTE ** resp,	/*  out */
@@ -1244,7 +1245,7 @@ TCPA_RESULT TCSP_GetCapabilitySigned(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1256,11 +1257,11 @@ TCPA_RESULT TCSP_GetCapabilitySigned(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				    TCS_AUTH * pOwnerAuth,	/*  out */
+				    TPM_AUTH * pOwnerAuth,	/*  out */
 				    TCPA_VERSION * pVersion,	/*  out */
 				    UINT32 * pNonVolatileFlags,	/*  out */
 				    UINT32 * pVolatileFlags	/*  out */
@@ -1269,7 +1270,7 @@ TCPA_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1280,7 +1281,7 @@ TCPA_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CreateEndorsementKeyPair(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1295,7 +1296,7 @@ TCPA_RESULT TCSP_CreateEndorsementKeyPair(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1308,7 +1309,7 @@ TCPA_RESULT TCSP_CreateEndorsementKeyPair(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1321,7 +1322,7 @@ TCPA_RESULT TCSP_ReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1331,17 +1332,17 @@ TCPA_RESULT TCSP_ReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_DisablePubekRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				  TCS_AUTH * ownerAuth	/*  in, out */
+				  TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1350,11 +1351,11 @@ TCPA_RESULT TCSP_DisablePubekRead(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				TCS_AUTH * ownerAuth,	/*  in, out */
+				TPM_AUTH * ownerAuth,	/*  in, out */
 				UINT32 * pubEndorsementKeySize,	/*  out */
 				BYTE ** pubEndorsementKey	/*  out */
     ) {
@@ -1362,7 +1363,7 @@ TCPA_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1372,7 +1373,7 @@ TCPA_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_SelfTestFull(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1381,20 +1382,20 @@ TCPA_RESULT TCSP_SelfTestFull(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_SelfTestFull_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				 TCS_KEY_HANDLE keyHandle,	/*  in */
 				 TCPA_NONCE antiReplay,	/*  in */
-				 TCS_AUTH * privAuth,	/*  in, out */
+				 TPM_AUTH * privAuth,	/*  in, out */
 				 UINT32 * sigSize,	/*  out */
 				 BYTE ** sig	/*  out */
     ) {
@@ -1402,7 +1403,7 @@ TCPA_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1412,7 +1413,7 @@ TCPA_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_GetTestResult(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1423,7 +1424,7 @@ TCPA_RESULT TCSP_GetTestResult(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1432,18 +1433,18 @@ TCPA_RESULT TCSP_GetTestResult(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				 BOOL disableState,	/*  in */
-				 TCS_AUTH * ownerAuth	/*  in, out */
+				 TSS_BOOL disableState,	/*  in */
+				 TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1452,17 +1453,17 @@ TCPA_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_OwnerClear(TCS_CONTEXT_HANDLE hContext,	/*  in */
-			    TCS_AUTH * ownerAuth	/*  in, out */
+			    TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1470,17 +1471,17 @@ TCPA_RESULT TCSP_OwnerClear(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_DisableOwnerClear(TCS_CONTEXT_HANDLE hContext,	/*  in */
-				   TCS_AUTH * ownerAuth	/*  in, out */
+				   TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1489,7 +1490,7 @@ TCPA_RESULT TCSP_DisableOwnerClear(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ForceClear(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1498,14 +1499,14 @@ TCPA_RESULT TCSP_ForceClear(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_ForceClear_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_DisableForceClear(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1514,14 +1515,14 @@ TCPA_RESULT TCSP_DisableForceClear(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_DisableForceClear_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_PhysicalDisable(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1530,14 +1531,14 @@ TCPA_RESULT TCSP_PhysicalDisable(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_PhysicalDisable_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_PhysicalEnable(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1546,24 +1547,24 @@ TCPA_RESULT TCSP_PhysicalEnable(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_PhysicalEnable_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/*  in */
-					BOOL state	/*  in */
+					TSS_BOOL state	/*  in */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1572,7 +1573,7 @@ TCPA_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1582,7 +1583,7 @@ TCPA_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result =
@@ -1590,7 +1591,7 @@ TCPA_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE hContext	/*  in */
@@ -1599,14 +1600,14 @@ TCPA_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE hContext	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
 		result = TCSP_SetTempDeactivated_TP(entry, hContext);
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_FieldUpgrade(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1614,44 +1615,44 @@ TCPA_RESULT TCSP_FieldUpgrade(TCS_CONTEXT_HANDLE hContext,	/*  in */
 			      BYTE * dataIn,	/*  in */
 			      UINT32 * dataOutSize,	/*  out */
 			      BYTE ** dataOut,	/*  out */
-			      TCS_AUTH * ownerAuth	/*  in, out */
+			      TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_SetRedirection(TCS_CONTEXT_HANDLE hContext,	/*  in */
 				TCS_KEY_HANDLE keyHandle,	/*  in */
 				UINT32 c1,	/*  in */
 				UINT32 c2,	/*  in */
-				TCS_AUTH * privAuth	/*  in, out */
+				TPM_AUTH * privAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/*  in */
-					  BOOL generateRandom,	/*  in */
+					  TSS_BOOL generateRandom,	/*  in */
 					  TPM_AUTH * ownerAuth,	/*  in, out */
 					  UINT32 * randomSize,	/*  out */
 					  BYTE ** random,	/*  out */
@@ -1662,14 +1663,14 @@ TCPA_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_LoadMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -1683,31 +1684,31 @@ TCPA_RESULT TCSP_LoadMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_KillMaintenanceFeature(TCS_CONTEXT_HANDLE hContext,	/*  in */
-					TCS_AUTH * ownerAuth	/*  in, out */
+					TPM_AUTH * ownerAuth	/*  in, out */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1720,14 +1721,14 @@ TCPA_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 TCPA_RESULT TCSP_ReadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/*  in */
@@ -1738,12 +1739,12 @@ TCPA_RESULT TCSP_ReadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/*  in */
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
-		return TSS_E_NO_CONNECTION;
+		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSS_E_INTERNAL_ERROR;	/* function call */
+		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
 		return result;
 	}
 
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }

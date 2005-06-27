@@ -21,13 +21,14 @@
 #include <grp.h>
 #include <stdlib.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
+#include "tcs_utils.h"
 #include "tcsps.h"
 #include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tcsd_ops.h"
-#include "tcs_utils.h"
 
 struct tcsd_config_options options_list[] = {
 	{"port", opt_port},
@@ -209,7 +210,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 		if (tmp_int < 0 || tmp_int > 65535) {
 			LogError("Config option \"port\" out of range. %s:%d: \"%d\"",
 					TCSD_CONFIG_FILE, line_num, tmp_int);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		} else {
 			conf->port = tmp_int;
 			conf->unset &= ~TCSD_OPTION_PORT;
@@ -220,7 +221,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 		if (tmp_int <= 0) {
 			LogError("Config option \"num_threads\" out of range. %s:%d: \"%d\"",
 					TCSD_CONFIG_FILE, line_num, tmp_int);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		} else {
 			conf->num_threads = tmp_int;
 			conf->unset &= ~TCSD_OPTION_MAX_THREADS;
@@ -293,14 +294,14 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
 				LogError("Config option \"system_ps_file\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, arg);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
 				LogError("Config option \"system_ps_file\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, tmp_ptr);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 
 			if (conf->system_ps_file)
 				free(conf->system_ps_file);
@@ -318,7 +319,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if (conf->system_ps_dir == NULL) {
 				LogError1("malloc failed.");
 				free(tmp_ptr);
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			*dir_ptr = '/';
 			conf->system_ps_file = tmp_ptr;
@@ -335,14 +336,14 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
 				LogError("Config option \"kernel_log\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, arg);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
 				LogError("Config option \"kernel_log\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, tmp_ptr);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 
 			if (conf->kernel_log_file)
 				free(conf->kernel_log_file);
@@ -361,14 +362,14 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
 				LogError("Config option \"firmware_log\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, arg);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
 				LogError("Config option \"firmware_log\" is invalid. %s:%d: \"%s\"",
 						TCSD_CONFIG_FILE, line_num, tmp_ptr);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 
 			if (conf->firmware_log_file)
 				free(conf->firmware_log_file);
@@ -407,7 +408,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 		/* bail out on any unknown option */
 		LogError("Unknown config option %s:%d \"%s\"!",
 				TCSD_CONFIG_FILE, line_num, arg);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -422,7 +423,7 @@ read_conf_file(FILE *f, struct tcsd_config *conf)
 	while (fgets(buf, 1024, f)) {
 		line_num++;
 		if (read_conf_line(buf, line_num, conf))
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -455,10 +456,10 @@ conf_file_init(struct tcsd_config *conf)
 			/* no config file? use defaults */
 			config_set_defaults(conf);
 			LogInfo("Config file %s not found, using defaults.", TCSD_CONFIG_FILE);
-			return TCS_SUCCESS;
+			return TSS_SUCCESS;
 		} else {
 			LogError("stat(%s): %s", TCSD_CONFIG_FILE, strerror(errno));
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
@@ -466,31 +467,31 @@ conf_file_init(struct tcsd_config *conf)
 	grp = getgrnam(TSS_GROUP_NAME);
 	if (grp == NULL) {
 		LogError("getgrnam(%s): %s", TSS_GROUP_NAME, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	pw = getpwnam(TSS_USER_NAME);
 	if (pw == NULL) {
 		LogError("getpwnam(%s): %s", TSS_USER_NAME, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	/* make sure user/group TSS owns the conf file */
 	if (pw->pw_uid != stat_buf.st_uid || grp->gr_gid != stat_buf.st_gid) {
 		LogError("TCSD config file (%s) must be user/group %s/%s", TCSD_CONFIG_FILE,
 				TSS_USER_NAME, TSS_GROUP_NAME);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	/* make sure only the tss user can manipulate the config file */
 	if (((stat_buf.st_mode & 0777) ^ mode) != 0) {
 		LogError("TCSD config file (%s) must be mode 0600", TCSD_CONFIG_FILE);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((f = fopen(TCSD_CONFIG_FILE, "r")) == NULL) {
 		LogError("fopen(%s): %s", TCSD_CONFIG_FILE, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	result = read_conf_file(f, conf);
@@ -520,30 +521,30 @@ ps_dirs_init()
 						" in your tcsd.conf file.",
 						tcsd_options.system_ps_dir, strerror(errno),
 						tcsd_options.system_ps_dir);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
 			LogError("stat failed: %s", strerror(errno));
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 	/* stat should not fail now */
 	if (stat(tcsd_options.system_ps_dir, &stat_buf) == -1) {
 		LogError("stat %s failed: %s", tcsd_options.system_ps_dir, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	/* tcsd_options.system_ps_dir should be a directory with mode equal to mode */
 	if (!S_ISDIR(stat_buf.st_mode)) {
 		LogError("PS dir %s is not a directory! Exiting.", tcsd_options.system_ps_dir);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	} else if ((stat_buf.st_mode ^ mode) != 0) {
 		/* This path is likely to be hit since open &'s mode with ~umask */
 		LogInfo("resetting mode of %s to: 01777", tcsd_options.system_ps_dir);
 		if (chmod(tcsd_options.system_ps_dir, mode) == -1) {
 			LogError("chmod(%s) failed: %s", tcsd_options.system_ps_dir, strerror(errno));
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 	return TSS_SUCCESS;

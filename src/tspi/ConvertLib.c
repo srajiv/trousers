@@ -13,13 +13,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tss/trousers.h"
 
 #include "atmel.h"
 
@@ -38,7 +37,7 @@ ConvertLib_Blob_TcpaKey(TSS_HCONTEXT context, BYTE * blob, TCPA_KEY * key)
 	TCS_CONTEXT_HANDLE tcsContext;
 
 	if (internal_GetContextForContextObject(context, &tcsContext))
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	offset = 0;
 	Trspi_UnloadBlob_KEY(tcsContext, &offset, blob, key);
@@ -67,7 +66,7 @@ IBM_Tspi_SetPopupMesssage_SBCS(TSS_HPOLICY hPolicy, char *message)
 
 	size = StringToUnicodeArray(message, tempMessage);
 	if (size == 0)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	result =
 	    Tspi_SetAttribData(hPolicy, TSS_TSPATTRIB_POLICY_POPUPSTRING, 0, size, tempMessage);
@@ -84,14 +83,13 @@ IBM_Tspi_SetPopupMesssage_WCHAR(TSS_HPOLICY hPolicy, UNICODE * message)
 
 	size = UnicodeToArray(tempMessage, message);
 	if (size == 0)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	result =
 	    Tspi_SetAttribData(hPolicy, TSS_TSPATTRIB_POLICY_POPUPSTRING, 0, size, tempMessage);
 
 	return result;
 }
-#endif
 
 /********************************************
  *	Atmel_Tspi_xxx
@@ -100,7 +98,7 @@ IBM_Tspi_SetPopupMesssage_WCHAR(TSS_HPOLICY hPolicy, UNICODE * message)
  ********************************************/
 
 TSS_RESULT
-Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateData)
+Atmel_Tspi_SetState(TSS_HTPM hTPM, TSS_BOOL fOwnerAuth, BYTE stateID, UINT32 stateData)
 {				/* UINT32 sizeState, BYTE* stateValue ) */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -138,7 +136,7 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 /* 	case ATMEL_STATE_ID_INTAMPER: */
 /* 	case ATMEL_STATE_ID_CODEREV: */
 	default:
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	}
 
@@ -171,7 +169,7 @@ Atmel_Tspi_SetState(TSS_HTPM hTPM, BOOL fOwnerAuth, BYTE stateID, UINT32 stateDa
 
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &ownerAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, digest, &ownerAuth)))
 			return result;
 
 	} else {
@@ -202,7 +200,7 @@ Atmel_Tspi_GetState(TSS_HCONTEXT tspContext, BYTE stateID, UINT32 * sizeState, B
 #define TCS_VENDOR_UNKNOWN 0
 #define TCS_VENDOR_IBM 1
 
-BOOL firstVendorCheck = 1;
+TSS_BOOL firstVendorCheck = 1;
 UINT32
 internal_getChipVendor(TSS_HCONTEXT tspContext)
 {
@@ -238,7 +236,7 @@ internal_getChipVendor(TSS_HCONTEXT tspContext)
 	return vendor;
 }
 
-BOOL firstTCSVendorCheck = 1;
+TSS_BOOL firstTCSVendorCheck = 1;
 UINT32
 internal_getTCSVendor(TSS_HCONTEXT tspContext)
 {
@@ -289,7 +287,7 @@ ConvertLib_UINT32ToArray(UINT32 in, BYTE * out)
 
 /* ---	Call this to see if the chip has an owner */
 TSS_RESULT
-IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, BOOL * hasOwner)
+IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, TSS_BOOL * hasOwner)
 {
 /* 	UINT32 keySize; */
 /* 	BYTE*	keyBlob; */
@@ -301,7 +299,7 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, BOOL * hasOwner)
 	UINT32 vendor;
 
 	if (internal_getTCSVendor(tspContext) != TCS_VENDOR_IBM)
-		return TSS_E_NOTIMPL;
+		return TSPERR(TSS_E_NOTIMPL);
 
 	if ((result = obj_isConnected_1(tspContext, &tcsContext)))
 		return result;
@@ -336,7 +334,7 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, BOOL * hasOwner)
 		} else if (result == 0x0D)	/* ATML */
 			*hasOwner = FALSE;
 		else {
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else if (vendor == CHIP_VENDOR_NATL) {
 		result =
@@ -351,11 +349,11 @@ IBM_Tspi_CheckOwnerInstalled(TSS_HCONTEXT tspContext, BOOL * hasOwner)
 		} else if (result == 0x12)
 			*hasOwner = FALSE;
 		else {
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 	} else
-		return TSS_E_NOTIMPL;
+		return TSPERR(TSS_E_NOTIMPL);
 
 	return TSS_SUCCESS;
 }
@@ -376,11 +374,11 @@ IBM_Tspi_CheckSystemStorage(TSS_HKEY hSRK)
 	if ((result = obj_isConnected_1(hSRK, &tcsContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hSRK)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+	if ((result = obj_rsakey_get_tsp_context(hSRK, &tspContext)))
+		return result;
 
 	if (internal_getTCSVendor(tspContext) != TCS_VENDOR_IBM)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	/* ---  Try to get the SRK info out of the TCS keyfile */
 	result = TCS_GetRegisteredKeyBlob(tcsContext, SRK_UUID, &keySize, &keyBlob);
@@ -400,7 +398,7 @@ IBM_Tspi_CheckSystemStorage(TSS_HKEY hSRK)
 	}
 
 /* 	else if( result ) */
-/* 		return  TSS_E_INTERNAL_ERROR ; */
+/* 		return  TSPERR(TSS_E_INTERNAL_ERROR ); */
 
 	return TSS_SUCCESS;
 }
@@ -425,3 +423,4 @@ TSS_RESULT IBM_GetErrorString( TSS_RESULT result, char* string, int stringSize, 
 }
 
   */
+#endif

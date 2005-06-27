@@ -8,19 +8,18 @@
  *
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include <pthread.h>
 #include <assert.h>
+#include <unistd.h>
 
-#include "tss/tss.h"
-#include "tss/trousers.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "tspps.h"
 #include "tcs_tsp.h"
 #include "spi_internal_types.h"
@@ -30,7 +29,7 @@
 
 
 int user_ps_fd = -1;
-char file_name[32];
+char file_name[256];
 pthread_mutex_t disk_cache_lock;
 
 int
@@ -142,7 +141,7 @@ ps_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TSPERR(TSS_E_INTERNAL_ERROR);
                 }
 
                 if ((rc = read_data(fd, ret_uuid, sizeof(TSS_UUID)))) {
@@ -156,7 +155,7 @@ ps_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TSPERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 /*
@@ -185,7 +184,7 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
 		if (rc == ((off_t) - 1)) {
 			LogError("lseek: %s", strerror(errno));
 			pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		/* we found the key; file ptr is pointing at the blob */
@@ -194,7 +193,7 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
 			LogError("%s: %d bytes needed but there's only room for %d", __FUNCTION__,
 					tmp->blob_size, *ret_buffer_size);
 			pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		if ((rc = read_data(fd, ret_buffer, tmp->blob_size))) {
@@ -209,11 +208,11 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
 	}
 	pthread_mutex_unlock(&disk_cache_lock);
 	/* key not found */
-	return TSS_E_PS_KEY_NOTFOUND;
+	return TSPERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 TSS_RESULT
-ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, BOOL *is_reg)
+ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -240,7 +239,7 @@ ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, BOOL *is_reg)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TSPERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->pub_data_size < 2048);
@@ -299,7 +298,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
                         pthread_mutex_unlock(&disk_cache_lock);
-                        return TSS_E_INTERNAL_ERROR;
+                        return TSPERR(TSS_E_INTERNAL_ERROR);
                 }
 
 		assert(tmp->pub_data_size < 2048);
@@ -321,7 +320,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 		if (*ret_uuid == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(TSS_UUID));
 			pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
 		/* the key matches, copy the uuid out */
@@ -332,7 +331,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TSPERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 /*
@@ -369,11 +368,11 @@ ps_write_key(int fd,
 
 	/* Unload the blob to get the public key */
 	offset = 0;
-	if ((rc = UnloadBlob_KEY_PS((UINT16 *)&offset, key_blob, &key)))
+	if ((rc = UnloadBlob_KEY_PS(&offset, key_blob, &key)))
 		return rc;
 
 	offset = 0;
-	Trspi_LoadBlob_STORE_PUBKEY((UINT16 *)&offset, pub_key, &key.pubKey);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, pub_key, &key.pubKey);
 
 	/* offset is incremented sizeof(pub_key) bytes by Trspi_LoadBlob_STORE_PUBKEY */
 	pub_key_size = offset;

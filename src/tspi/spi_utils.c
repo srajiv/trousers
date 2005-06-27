@@ -16,16 +16,20 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <wchar.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
+#include "trousers_types.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tss/trousers.h"
 
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
+
+TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
 
 int
 pin_mem(void *addr, size_t len)
@@ -79,7 +83,7 @@ get_port(void)
 	return (short)port;
 }
 
-BOOL
+TSS_BOOL
 check_flagset_collision(TSS_FLAG flagset, UINT32 flags)
 {
 	UINT32 on_flags = flagset & flags;
@@ -153,10 +157,10 @@ internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if ((result = TCSP_GetRandom(tcsContext, sizeof(TCPA_NONCE), &random)))
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memcpy(nonce->nonce, random, sizeof(TCPA_NONCE));
 	free_tspi(tspContext, random);
@@ -233,108 +237,60 @@ getPcrFromComposite(TCPA_PCR_COMPOSITE comp, UINT32 which)
 			}
 		}
 	}
+
 	return NULL;
 }
 
-#if 0
-BOOL firstPCRCheck = 1;
 UINT16
-getMaxPCRs(TCS_CONTEXT_HANDLE hContext)
+get_num_pcrs(TCS_CONTEXT_HANDLE hContext)
 {
 	TSS_RESULT result;
-	static UINT16 ret;
-	BYTE subCap[4];
+	static UINT16 ret = 0;
+	UINT32 subCap;
 	UINT32 respSize;
 	BYTE *resp;
 
-	LogDebug1("getMaxPCRs");
-	if (firstPCRCheck == 0) {
-		LogDebug("Already ran it, maxPcrs=0x%.4X", ret);
+	if (ret != 0)
 		return ret;
-	}
 
-	/* ===  Make this call the getCap( PROP_PCR ) to find out how many pcr's it supports */
-	UINT32ToArray(TCPA_CAP_PROP_PCR, subCap);
-
-	if ((result = TCSP_GetCapability(hContext, TCPA_CAP_PROPERTY, 4, subCap, &respSize, &resp)))
+	subCap = endian32(TPM_CAP_PROP_PCR);
+	if ((result = TCSP_GetCapability(hContext, TCPA_CAP_PROPERTY, sizeof(UINT32),
+					 (BYTE *)&subCap, &respSize, &resp)))
 		return 0;
 
-	ret = (UINT16) Decode_UINT32(resp);
-/* 	Tspi_Context_FreeMemory( hContext, resp ); */
-	TCS_FreeMemory(hContext, resp);
-	firstPCRCheck = 0;
-	LogDebug("maxPcrs=0x%.4X", ret);
+	ret = (UINT16)Decode_UINT32(resp);
+	free_tspi(hContext, resp);
 
 	return ret;
 }
-#endif
-
-//BOOL firstVersionCheck = 1;
-TCPA_VERSION *
-getCurrentVersion(TSS_HCONTEXT hContext)
-{
-	static TCPA_VERSION version = { 1, 1, 0, 0 };
-#if 0
-	/* No use case for getCurrentVersion has convinced me that the version
-	 * info from the TCS is the right answer. Just return a 1.1.0.0
-	 * answer all the time. - KEY
-	 */
-	/* TCS_CONTEXT_HANDLE hContext; */
-	TCPA_CAPABILITY_AREA capArea = TCPA_CAP_VERSION;
-	UINT32 respSize;
-	BYTE *resp;
-	TCPA_RESULT result = 0;
-	UINT16 offset;
-	TCS_CONTEXT_HANDLE tcsContext;
-
-	if (firstVersionCheck) {
-		if ((result = obj_isConnected_1(hContext, &tcsContext)))
-			return &version;
-
-		result = TCSP_GetCapability(tcsContext,	/*  in */
-					    capArea,	/*  in */
-					    0,	/*  in */
-					    NULL, /* in */
-					    &respSize,	/*  out */
-					    &resp);	/*  out */
-		if (!result) {
-			offset = 0;
-			Trspi_UnloadBlob_TCPA_VERSION(&offset, resp, &version);
-			free(resp);
-			firstVersionCheck = 0;
-		}
-	}
-#endif
-	return &version;
-}
 
 TSS_RESULT
-Init_AuthNonce(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTH * auth)
+Init_AuthNonce(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTH * auth)
 {
 	TSS_RESULT result;
 
 	auth->fContinueAuthSession = 0x00;
 	if ((result = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
 		LogError1("Failed creating random nonce");
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
 }
 
-BOOL
-validateReturnAuth(BYTE *secret, BYTE *hash, TCS_AUTH *auth)
+TSS_BOOL
+validateReturnAuth(BYTE *secret, BYTE *hash, TPM_AUTH *auth)
 {
 	BYTE digest[20];
 	/* ===  auth is expected to have both nonces and the digest from the TPM */
-	memcpy(digest, auth->HMAC, 20);
+	memcpy(digest, &auth->HMAC, 20);
 	HMAC_Auth(secret, hash, auth);
 
-	return (BOOL) memcmp(digest, auth->HMAC, 20);
+	return (TSS_BOOL) memcmp(digest, &auth->HMAC, 20);
 }
 
 void
-HMAC_Auth(BYTE * secret, BYTE * Digest, TCS_AUTH * auth)
+HMAC_Auth(BYTE * secret, BYTE * Digest, TPM_AUTH * auth)
 {
 	UINT16 offset;
 	BYTE Blob[61];
@@ -345,7 +301,7 @@ HMAC_Auth(BYTE * secret, BYTE * Digest, TCS_AUTH * auth)
 	Trspi_LoadBlob(&offset, 20, Blob, auth->NonceOdd.nonce);
 	Blob[offset++] = auth->fContinueAuthSession;
 
-	Trspi_HMAC(TSS_HASH_SHA1, 20, secret, offset, Blob, auth->HMAC);
+	Trspi_HMAC(TSS_HASH_SHA1, 20, secret, offset, Blob, (BYTE *)&auth->HMAC);
 	return;
 }
 
@@ -353,12 +309,10 @@ TSS_RESULT
 OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 	  BYTE * authSecret, BYTE * usageSecret, BYTE * migSecret,
 	  TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
-	  BYTE * sharedSecret, TCS_AUTH * auth)
+	  BYTE * sharedSecret, TPM_AUTH * auth)
 {
 
 	TSS_RESULT rc;
-/* 	BYTE		*random; */
-/* 	UINT32		bytesReturned = 20; */
 	TCPA_NONCE nonceEvenOSAP;
 	UINT16 offset;
 	BYTE hmacBlob[0x200];
@@ -369,24 +323,13 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 
 	if ((rc = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
 		LogError1("Failed creating random nonce");
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	auth->fContinueAuthSession = 0x00;
-#if 0
-	//Generate the Odd Nonce
-//      if( rc = TCSP_GetRandom(
-//              tcsContext,
-//              &bytesReturned,
-//              &random ))
-//              return rc | TSS_E_INTERNAL_ERROR;
-
-//      memcpy(auth->NonceOdd.nonce,random,20);
-//      TCS_FreeMemory( tcsContext, random );
-#endif
 
 	if ((rc = TCSP_OSAP(tcsContext, EntityType, EntityValue, auth->NonceOdd,
 				&auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP))) {
-		if (rc == TCPA_RESOURCES) {
+		if (rc == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
 				/* POSIX sleep time, { secs, nanosecs } */
@@ -396,139 +339,34 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 
 				rc = TCSP_OSAP(tcsContext, EntityType, EntityValue, auth->NonceOdd,
 						   &auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP);
-			} while (rc == TCPA_RESOURCES && ++retry < AUTH_RETRY_COUNT);
+			} while (rc == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
 		if (rc)
 			return rc;
 	}
 
-	/* ---- */
 	offset = 0;
 	Trspi_LoadBlob(&offset, 20, hmacBlob, nonceEvenOSAP.nonce);
 	Trspi_LoadBlob(&offset, 20, hmacBlob, auth->NonceOdd.nonce);
 
 	Trspi_HMAC(TSS_HASH_SHA1, 20, authSecret, offset, hmacBlob, sharedSecret);
 
-	/* ---- */
 	offset = 0;
 	Trspi_LoadBlob(&offset, 20, hashBlob, sharedSecret);
 	Trspi_LoadBlob(&offset, 20, hashBlob, auth->NonceEven.nonce);
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, xorUsageAuth);
 
-	/* ---- */
 	offset = 0;
 	Trspi_LoadBlob(&offset, 20, hashBlob, sharedSecret);
 	Trspi_LoadBlob(&offset, 20, hashBlob, auth->NonceOdd.nonce);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, xorMigAuth);
 
-	/* ---- */
-	for (i = 0; i < 20; i++)
-		encAuthUsage->encauth[i] = usageSecret[i] ^ xorUsageAuth[i];
-	for (i = 0; i < 20; i++)
-		encAuthMig->encauth[i] = migSecret[i] ^ xorMigAuth[i];
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-internal_GetSecret(TSS_HPOLICY hPolicy, TCPA_SECRET * secret, BOOL forHMACUse)
-{
-
-	AnObject *object = NULL;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
-
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-
-	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
-	memcpy(secret->secret, &pObj->p.Secret, 20);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-internal_CopySecrets(TSS_HPOLICY dest, TSS_HPOLICY source)
-{
-	AnObject *object = NULL;
-	TCPA_SECRET tempSecret;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
-
-	object = getAnObjectByHandle(source);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-
-	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
-	memcpy(tempSecret.secret, &pObj->p.Secret, 20);
-	return internal_SetSecret(dest, pObj->p.SecretMode, 20, tempSecret.secret);
-
-}
-
-TSS_RESULT
-internal_SetSecret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE * data)
-{
-	AnObject *object = NULL;
-	TSP_INTERNAL_POLICY_OBJECT *pObj = NULL;
-
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-
-	if (object->memPointer == NULL) {
-		LogError("internal mem pointer for object 0x%x is invalid", hPolicy);
-		return TSS_E_INTERNAL_ERROR;
-	}
-
-	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
-	switch (mode) {
-		case TSS_SECRET_MODE_PLAIN:
-			Trspi_Hash(TSS_HASH_SHA1, size, data, (BYTE *)&pObj->p.Secret);
-			pObj->p.SecretSize = SHA1_HASH_SIZE;
-			break;
-		case TSS_SECRET_MODE_SHA1:
-			if (size != 20) {
-				return TSS_E_BAD_PARAMETER;
-			}
-			memcpy(&pObj->p.Secret, data, size);
-			pObj->p.SecretSize = SHA1_HASH_SIZE;
-			break;
-		case TSS_SECRET_MODE_POPUP:
-		case TSS_SECRET_MODE_NONE:
-			break;
-		default:
-			return TSS_E_BAD_PARAMETER;
-	}
-	pObj->p.SecretMode = mode;
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-internal_FlushSecret(TSS_HPOLICY hPolicy)
-{
-	AnObject *object = NULL;
-	TSP_INTERNAL_POLICY_OBJECT *pObj = NULL;
-
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-
-	if (object->memPointer == NULL) {
-		LogError("internal mem pointer for object 0x%x is invalid", hPolicy);
-		return TSS_E_INTERNAL_ERROR;
-	}
-
-	pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
-	if (pObj->p.Secret != NULL)
-		memset(&pObj->p.Secret, 0, pObj->p.SecretSize);	/* required by spec */
-
-	pObj->p.SecretSize = 0;
+	for (i = 0; i < sizeof(TCPA_ENCAUTH); i++)
+		encAuthUsage->authdata[i] = usageSecret[i] ^ xorUsageAuth[i];
+	for (i = 0; i < sizeof(TCPA_ENCAUTH); i++)
+		encAuthMig->authdata[i] = migSecret[i] ^ xorMigAuth[i];
 
 	return TSS_SUCCESS;
 }
@@ -546,7 +384,7 @@ calculateCompositeHash( TCPA_PCR_COMPOSITE comp, TCPA_DIGEST* digest )
 #endif
 
 TSS_RESULT
-calcCompositeHash(TCPA_PCR_SELECTION select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_DIGEST * digestOut)
+calcCompositeHash(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_DIGEST * digestOut)
 {
 	int size;
 	int index;
@@ -560,9 +398,9 @@ calcCompositeHash(TCPA_PCR_SELECTION select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_D
 	Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, temp, select);
 	offset = sizeOffset + 4;
 
-	for (size = 0; size < select.sizeOfSelect; size++) {
+	for (size = 0; size < select->sizeOfSelect; size++) {
 		for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
-			if (select.pcrSelect[size] & mask) {
+			if (select->pcrSelect[size] & mask) {
 				memcpy(&temp[(numPCRs * 20) + offset],
 				       arrayOfPcrs[numPCRs].digest, 20);
 				numPCRs++;
@@ -570,54 +408,76 @@ calcCompositeHash(TCPA_PCR_SELECTION select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_D
 		}
 	}
 
-	offset += (numPCRs * 20);
-	UINT32ToArray(numPCRs * 20, &temp[sizeOffset]);
+	offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
+	UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &temp[sizeOffset]);
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, temp, digestOut->digest);
-	return 0;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-generateCompositeFromTPM(TSS_HCONTEXT tcsContext, TCPA_PCR_SELECTION select, TCPA_DIGEST * digest)
+init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
+{
+	UINT16 num = get_num_pcrs(tcsContext);
+
+	if (num == 0)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	if (num % 8 != 0) {
+		LogError1("Invalid number of pcrs detected");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if ((select->pcrSelect = calloc_tspi(obj_lookupTspContext(tcsContext),
+						num / 8))) {
+		LogError("malloc of %d bytes failed.", num / 8);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	select->sizeOfSelect = num / 8;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+generateCompositeFromTPM(TSS_HCONTEXT tcsContext, TCPA_PCR_SELECTION *select, TCPA_DIGEST *digest)
 {
 	UINT32 i, j;
 	BYTE hashBlob[1024];
 	BYTE mask;
 	TCPA_PCRVALUE pcrVal;
-/* 	TCS_CONTEXT_HANDLE tcsContext; */
 	UINT16 blobOffset;
 	TCPA_RESULT result;
 	UINT16 count = 0;
-	UINT32 blah;
+	UINT32 tmpOffset;
 
-	/* TCS_OpenContext( &tcsContext ); */
+	if (select->pcrSelect == NULL) {
+		if ((result = init_pcr_select(tcsContext, select)))
+			return result;
+	}
 
 	blobOffset = 0;
 	Trspi_LoadBlob_PCR_SELECTION(&blobOffset, hashBlob, select);
-	blah = blobOffset;
+	tmpOffset = blobOffset;
 	blobOffset += 4;
-	for (i = 0; i < select.sizeOfSelect; i++) {
+	for (i = 0; i < select->sizeOfSelect; i++) {
 		for (j = 0; j < 8; j++) {
 			mask = (1 << j);
-			if (select.pcrSelect[i] & mask) {
+			if (select->pcrSelect[i] & mask) {
 				count++;
 				if ((result = TCSP_PcrRead(tcsContext, (i << 3) + j, &pcrVal)))
 					return result;
 				Trspi_LoadBlob(&blobOffset, 20, hashBlob, pcrVal.digest);
-/* 				memcpy( &hashBlob[blobOffset], pcrVal.digest, 20 ); */
-/* 				blobOffset += 20; */
 			}
 
 		}
 	}
-	UINT32ToArray(count * 20, &hashBlob[blah]);
+	UINT32ToArray(count * 20, &hashBlob[tmpOffset]);
 	Trspi_Hash(TSS_HASH_SHA1, blobOffset, hashBlob, digest->digest);
 
-	/* TCS_CloseContext( tcsContext ); */
 	return TSS_SUCCESS;
 }
 
-/* --------------------------------------------------------------------------------------------------- */
 UINT16
 Decode_UINT16(BYTE * in)
 {
@@ -663,20 +523,20 @@ get_pcr_event_size(TSS_PCR_EVENT *e)
 }
 
 void
-LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
+LoadBlob_AUTH(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 {
 	Trspi_LoadBlob_UINT32(offset, auth->AuthHandle, blob);
 	Trspi_LoadBlob(offset, 20, blob, auth->NonceOdd.nonce);
 	Trspi_LoadBlob_BOOL(offset, auth->fContinueAuthSession, blob);
-	Trspi_LoadBlob(offset, 20, blob, auth->HMAC);
+	Trspi_LoadBlob(offset, 20, blob, (BYTE *)&auth->HMAC);
 }
 
 void
-UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
+UnloadBlob_AUTH(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 {
 	Trspi_UnloadBlob(offset, 20, blob, auth->NonceEven.nonce);
 	Trspi_UnloadBlob_BOOL(offset, &auth->fContinueAuthSession, blob);
-	Trspi_UnloadBlob(offset, 20, blob, auth->HMAC);
+	Trspi_UnloadBlob(offset, 20, blob, (BYTE *)&auth->HMAC);
 }
 
 void
@@ -684,8 +544,8 @@ LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 {
 	Trspi_LoadBlob_UUID(offset, blob, info->keyUUID);
 	Trspi_LoadBlob_UUID(offset, blob, info->parentKeyUUID);
-	Trspi_LoadBlob(offset, TPM_DIGEST_SIZE, blob, info->paramDigest.digest);
-	LoadBlob_AUTH(offset, blob, (TCS_AUTH *)&info->authData);
+	Trspi_LoadBlob(offset, TCPA_DIGEST_SIZE, blob, info->paramDigest.digest);
+	LoadBlob_AUTH(offset, blob, &info->authData);
 }
 
 void
@@ -693,8 +553,25 @@ UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 {
 	Trspi_UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	Trspi_UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
-	Trspi_UnloadBlob(offset, TPM_DIGEST_SIZE, info->paramDigest.digest, blob);
-	UnloadBlob_AUTH(offset, blob, (TCS_AUTH *)&info->authData);
+	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, info->paramDigest.digest, blob);
+	UnloadBlob_AUTH(offset, blob, &info->authData);
+}
+
+void
+Trspi_LoadBlob_BOUND_DATA(UINT16 * offset, TCPA_BOUND_DATA bd,
+		UINT32 payloadLength, BYTE * blob)
+{
+	Trspi_LoadBlob_TCPA_VERSION(offset, blob, bd.ver);
+	Trspi_LoadBlob(offset, 1, blob, &bd.payload);
+	Trspi_LoadBlob(offset, payloadLength, blob, bd.payloadData);
+}
+
+void
+Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT16 * offset, BYTE * blob,
+		TCPA_CHANGEAUTH_VALIDATE * caValidate)
+{
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, caValidate->newAuthSecret.authdata);
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, caValidate->n1.nonce);
 }
 
 
@@ -704,7 +581,7 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 {
 	BYTE hashBlob[128];
 	TCPA_DIGEST digest;
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	TCPA_VERSION version;
 	TSS_RESULT result;
 	UINT16 offset;
@@ -717,7 +594,7 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 	UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
 	Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
-	if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &auth)))
 		return result;
 
 	if ((result = TCSP_GetCapabilityOwner(tcsContext,       /*  in */
@@ -737,7 +614,7 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	return secret_ValidateAuth_OIAP(hPolicy, digest, &auth);
+	return obj_policy_validate_auth_oiap(hPolicy, &digest, &auth);
 }
 
 TSS_RESULT
@@ -752,21 +629,21 @@ get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
 	if (f == NULL) {
 		LogError("open of %s failed: %s",
 				TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	buf = calloc_tspi(tspContext, size);
 	if (buf == NULL) {
 		LogError("malloc of %u bytes failed", size);
 		fclose(f);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	if (fread(buf, size, 1, f) == 0) {
 		LogError("fread of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE,
 				strerror(errno));
 		fclose(f);
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	fclose(f);
@@ -774,3 +651,155 @@ get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+internal_GetMachineName(UNICODE *name, int nameSize)
+{
+	mbstate_t ps;
+	const char *s = "localhost";
+	size_t ret;
+
+	memset(&ps, 0, sizeof(mbstate_t));
+
+	ret = mbsrtowcs(name, &s, nameSize, &ps);
+	if (ret == (size_t)(-1)) {
+		LogError("Error converting string %s to UNICODE", s);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	return TSS_SUCCESS;
+
+}
+
+TSS_RESULT
+internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
+		UINT32 * respSize, BYTE ** respData)
+{
+	UINT16 offset = 0;
+	TSS_VERSION version = INTERNAL_CAP_TSP_VERSION;
+
+	if (capArea == TSS_TSPCAP_VERSION) {
+		*respData = calloc_tspi(tspContext, 4);
+		Trspi_LoadBlob_TSS_VERSION(&offset, *respData, version);
+		*respSize = offset;
+	} else if (capArea == TSS_TSPCAP_ALG) {
+		*respSize = 1;
+		*respData = calloc_tspi(tspContext, 1);
+		switch (subCap) {
+			case TSS_ALG_RSA:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_RSA;
+				break;
+			case TSS_ALG_AES:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_AES;
+				break;
+			case TSS_ALG_SHA:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_SHA;
+				break;
+			case TSS_ALG_HMAC:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_HMAC;
+				break;
+			case TSS_ALG_DES:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_DES;
+				break;
+			case TSS_ALG_3DES:
+				(*respData)[0] = INTERNAL_CAP_TSP_ALG_3DES;
+				break;
+			default:
+				free_tspi(tspContext, *respData);
+				return TSPERR(TSS_E_BAD_PARAMETER);
+		}
+	} else if (capArea == TSS_TSPCAP_PERSSTORAGE) {
+		*respData = calloc_tspi(tspContext, 1);
+		*respSize = 1;
+		(*respData)[0] = INTERNAL_CAP_TSP_PERSSTORAGE;
+	} else
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Spi_UnloadBlob_STORE_PUBKEY(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
+{
+
+	Trspi_UnloadBlob_UINT32(offset, &store->keyLength, blob);
+
+	if (store->keyLength > 0) {
+		store->key = calloc(1, store->keyLength);
+		if (store->key == NULL) {
+			LogError("malloc of %d bytes failed.", store->keyLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, store->keyLength, blob, store->key);
+	} else {
+		store->key = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
+
+TSS_RESULT
+Spi_UnloadBlob_KEY_PARMS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
+{
+	Trspi_UnloadBlob_UINT32(offset, &keyParms->algorithmID, blob);
+	Trspi_UnloadBlob_UINT16(offset, &keyParms->encScheme, blob);
+	Trspi_UnloadBlob_UINT16(offset, &keyParms->sigScheme, blob);
+	Trspi_UnloadBlob_UINT32(offset, &keyParms->parmSize, blob);
+
+	if (keyParms->parmSize > 0) {
+		keyParms->parms = calloc(1, keyParms->parmSize);
+		if (keyParms->parms == NULL) {
+			LogError("malloc of %d bytes failed.", keyParms->parmSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms);
+	} else {
+		keyParms->parms = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Spi_UnloadBlob_KEY(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_TCPA_VERSION(offset, blob, &key->ver);
+	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
+	Trspi_UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
+	key->authDataUsage = blob[(*offset)++];
+	if ((result = Spi_UnloadBlob_KEY_PARMS(offset, (BYTE *)blob, &key->algorithmParms)))
+		return result;
+
+	Trspi_UnloadBlob_UINT32(offset, &key->PCRInfoSize, blob);
+	if (key->PCRInfoSize > 0) {
+		key->PCRInfo = calloc(1, key->PCRInfoSize);
+		if (key->PCRInfo == NULL) {
+			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo);
+	} else {
+		key->PCRInfo = NULL;
+	}
+
+	if ((result = Spi_UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey)))
+		return result;
+
+	Trspi_UnloadBlob_UINT32(offset, &key->encSize, blob);
+	if (key->encSize > 0) {
+		key->encData = calloc(1, key->encSize);
+		if (key->encData == NULL) {
+			LogError("malloc of %d bytes failed.", key->encSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, key->encSize, blob, key->encData);
+	} else {
+		key->encData = NULL;
+	}
+
+	return result;
+}
+

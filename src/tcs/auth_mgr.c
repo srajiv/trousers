@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -38,7 +38,7 @@ auth_mgr_init()
 	if (auth_mgr.overflow == NULL) {
 		LogError("malloc of %d bytes failed",
 				(TSS_DEFAULT_OVERFLOW_AUTHS * sizeof(pthread_cond_t *)));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	pthread_mutex_init(&auth_mgr_lock, NULL);
@@ -98,14 +98,14 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 #if 0
 	if (tpm_metrics.authctx_swap) {
 		LogError1("IN AUTHCTX SWAP PATH.");
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	} else {
 #endif
 		pthread_cond_t *cond = ctx_get_cond_var(hContext);
 
 		if (cond == NULL) {
 			LogError("condition variable not found for TCS context 0x%x", hContext);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		/* Test whether we are the last awake thread.  If we are, we can't go to sleep
@@ -115,7 +115,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 		 */
 		if (auth_mgr.sleeping_threads == (tcsd_options.num_threads - 1)) {
 			LogError1("auth mgr failing: too many threads already waiting");
-			return TCPA_RESOURCES;
+			return TCPA_E_RESOURCES;
 		}
 
 		if (auth_mgr.overflow[auth_mgr.of_head] == NULL) {
@@ -130,7 +130,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 			LogError("auth mgr queue is full! There are currently %d "
 					"TCS sessions waiting on an auth session!",
 					TSS_DEFAULT_OVERFLOW_AUTHS);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 #if 0
 	}
@@ -152,7 +152,7 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].ctx == tcs_handle) {
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
-			if (result == TCPA_INVALID_AUTHHANDLE) {
+			if (result == TCPA_E_INVALID_AUTHHANDLE) {
 				LogError("Tried to close an invalid auth handle: %x",
 						auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
@@ -168,7 +168,7 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 
 	pthread_mutex_unlock(&auth_mgr_lock);
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 /* unload the auth ctx associated with this auth handle */
@@ -184,7 +184,7 @@ auth_mgr_release_auth(TCS_AUTHHANDLE tpm_auth_handle)
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
-			if (result == TCPA_INVALID_AUTHHANDLE) {
+			if (result == TCPA_E_INVALID_AUTHHANDLE) {
 				LogError("Tried to close an invalid auth handle: %x",
 						auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
@@ -200,14 +200,14 @@ auth_mgr_release_auth(TCS_AUTHHANDLE tpm_auth_handle)
 
 	pthread_mutex_unlock(&auth_mgr_lock);
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
 auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 {
 	int i;
-	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
+	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
 
 	pthread_mutex_lock(&auth_mgr_lock);
 
@@ -216,13 +216,13 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 		    auth_mgr.auth_mapper[i].auth  == tpm_auth_handle &&
 		    auth_mgr.auth_mapper[i].ctx   == tcsContext)
 		{
-			result = TCS_SUCCESS;
+			result = TSS_SUCCESS;
 			break;
 		}
 	}
 
 	pthread_mutex_unlock(&auth_mgr_lock);
-	if (result == TSS_E_INTERNAL_ERROR)
+	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
 		LogError("no auth in table for TCS handle 0x%x", tcsContext);
 	return result;
 }
@@ -230,7 +230,7 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 TSS_RESULT
 auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 {
-	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
+	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
 	int i;
 
 	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
@@ -238,14 +238,14 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			auth_mgr.auth_mapper[i].auth = tpm_auth_handle;
 			auth_mgr.auth_mapper[i].ctx = tcsContext;
 			auth_mgr.auth_mapper[i].full = TRUE;
-			result = TCS_SUCCESS;
+			result = TSS_SUCCESS;
 			auth_mgr.open_auth_sessions++;
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
 		}
 	}
 
-	if (result == TSS_E_INTERNAL_ERROR)
+	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
 		LogError1("auth_mapper table is full!!");
 
 	return result;

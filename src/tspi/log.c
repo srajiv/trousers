@@ -28,12 +28,12 @@ void LogBlobData( char* szDescriptor, unsigned long sizeOfBlob, unsigned char* b
 {
 	char temp[1024];
 	char oneByte[8];
-	unsigned long i;
+	int i;
 
 	openlog(szDescriptor, LOG_NDELAY|LOG_PID, LOG_LOCAL5);
 	memset( temp, 0, sizeof( temp ));
 
-	for( i = 0 ; i < sizeOfBlob ; i++ )
+	for( i = 0 ; (unsigned long)i < sizeOfBlob ; i++ )
 	{
 		if( i && (( i & 0x0F ) == 0 ))
 		{

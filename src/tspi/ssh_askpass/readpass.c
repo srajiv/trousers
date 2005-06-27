@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "tsplog.h"
 
 /* SSH_ASKPASS_EXE is defined at configure time */
@@ -109,7 +109,7 @@ DisplayPINWindow(char *string, UNICODE *w_popup)
 
 	if ((rc = wcsrtombs(c_title, (const UNICODE **)&w_popup, 256, &ps)) == -1) {
 		LogDebug("Error converting wide char string to bytes");
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	//sprintf(c_title, "\"%s\"", c_title);
 
@@ -117,7 +117,7 @@ DisplayPINWindow(char *string, UNICODE *w_popup)
 
 	pass = ssh_askpass(c_title);
 	if (pass == NULL)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memcpy(string, pass, strlen(pass));
 	free(pass);
@@ -139,7 +139,7 @@ DisplayNewPINWindow(char *string, UNICODE *w_popup)
 {
 	char c_title[256], *pass, *pass_verify, *label, loop = 0;
 	mbstate_t ps;
-	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
 	char *retry_prefix = "Passwords do not match.\n";
 	char retry_string[512];
 
@@ -158,12 +158,12 @@ DisplayNewPINWindow(char *string, UNICODE *w_popup)
 
 		pass = ssh_askpass(label);
 		if (pass == NULL)
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 
 		pass_verify = ssh_askpass("Please verify your password:");
 		if (pass_verify == NULL) {
 			free(pass);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 
@@ -172,7 +172,7 @@ DisplayNewPINWindow(char *string, UNICODE *w_popup)
 			memcpy(string, pass, strlen(pass));
 			result = TSS_SUCCESS;
 		} else {
-			result = TSS_E_INTERNAL_ERROR;
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 

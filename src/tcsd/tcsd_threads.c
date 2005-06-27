@@ -19,12 +19,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "tcs_int_literals.h"
+#include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 #include "tcslog.h"
-#include "tcs_utils.h"
 
 struct tcsd_thread_mgr *tm = NULL;
 
@@ -52,7 +53,7 @@ tcsd_threads_final()
 	free(tm->thread_data);
 	free(tm);
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -62,7 +63,7 @@ tcsd_threads_init(void)
 	tm = calloc(1, sizeof(struct tcsd_thread_mgr));
 	if (tm == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct tcsd_thread_mgr));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	/* set the max threads variable from config */
@@ -74,10 +75,10 @@ tcsd_threads_init(void)
 		LogError("malloc of %d bytes failed.",
 			 tcsd_options.num_threads * sizeof(struct tcsd_thread_data));
 		free(tm);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 
@@ -92,12 +93,12 @@ tcsd_thread_create(int socket, char *hostname)
 	/* init the thread attribute */
 	if ((rc = pthread_attr_init(&tcsd_thread_attr))) {
 		LogError("pthread_attr_init failed: error=%d: %s", rc, strerror(rc));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	/* make all threads joinable */
 	if ((rc = pthread_attr_setdetachstate(&tcsd_thread_attr, PTHREAD_CREATE_JOINABLE))) {
 		LogError("pthread_attr_init failed: error=%d: %s", rc, strerror(rc));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	pthread_mutex_lock(&(tm->lock));
@@ -112,7 +113,7 @@ tcsd_thread_create(int socket, char *hostname)
 				 " refused.", tm->max_threads);
 		}
 		pthread_mutex_unlock(&(tm->lock));
-		return TSS_E_CONNECTION_FAILED;
+		return TCSERR(TSS_E_CONNECTION_FAILED);
 	}
 
 	/* search for an open slot to store the thread data in */
@@ -137,14 +138,14 @@ tcsd_thread_create(int socket, char *hostname)
 				 (void *)(&(tm->thread_data[thread_num]))))) {
 		LogError("pthread_create() failed: %d", rc);
 		pthread_mutex_unlock(&(tm->lock));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	tm->num_active_threads++;
 
 	pthread_mutex_unlock(&(tm->lock));
 #endif
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 /* since we don't want any of the worker threads to catch any signals,
@@ -207,7 +208,7 @@ tcsd_thread_run(void *v)
 
 	while (1) {
 		sent_total = 0;
-		if ((result = getTCSDPacket(data, &ret_buf)) != TCS_SUCCESS) {
+		if ((result = getTCSDPacket(data, &ret_buf)) != TSS_SUCCESS) {
 			/* something internal to the TCSD went wrong in preparing the packet
 			 * to return to the TSP.  Use our already allocated buffer to return a
 			 * TSS_E_INTERNAL_ERROR return code to the TSP. In the non-error path,
@@ -215,7 +216,7 @@ tcsd_thread_run(void *v)
 			 */
 			offset = 0;
 			/* load result */
-			LoadBlob_UINT32(&offset, TSS_E_INTERNAL_ERROR, buffer, NULL);
+			LoadBlob_UINT32(&offset, result, buffer, NULL);
 			/* load packet size */
 			LoadBlob_UINT32(&offset, sizeof(struct tcsd_packet_hdr), buffer, NULL);
 			/* load num parms */
@@ -265,7 +266,7 @@ tcsd_thread_run(void *v)
 			LogError("TSP has closed its connection: %s. Thread exiting.", strerror(errno));
 			break;
 		} else if (thread_buf_size == 0) {
-			LogDebug1("The TSP has closed the socket's connection. Thread exiting.");
+			LogInfo1("The TSP has closed the socket's connection. Thread exiting.");
 			break;
 		}
 	}

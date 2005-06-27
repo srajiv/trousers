@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -33,7 +33,7 @@
 
 TSS_RESULT
 TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			      BOOL state	/* in  */
+			      TSS_BOOL state	/* in  */
     )
 {
 	UINT16 offset;
@@ -69,7 +69,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    BYTE * encSrkAuth,	/* in */
 			    UINT32 srkInfoSize,	/*in */
 			    BYTE * srkInfo,	/*in */
-			    TCS_AUTH * ownerAuth,	/* in, out */
+			    TPM_AUTH * ownerAuth,	/* in, out */
 			    UINT32 * srkKeySize,	/*out */
 			    BYTE ** srkKey	/*out */
     )
@@ -83,45 +83,37 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE newSRK[1024];
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering TCSI_TakeOwnership");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		/*---	Check on the Atmel Bug Patch */
-		offset = 0;
-		UnloadBlob_KEY(&offset, srkInfo, &srkKeyContainer);
-		oldAuthDataUsage = srkKeyContainer.authDataUsage;
-		LogDebug("auth data usage is %.2X", oldAuthDataUsage);
-
-		offset = 10;
-		LoadBlob_UINT16(&offset, protocolID, txBlob, "prot id");
-		LoadBlob_UINT32(&offset, encOwnerAuthSize, txBlob,
-				"enc owner auth size");
-		LoadBlob(&offset, encOwnerAuthSize, txBlob, encOwnerAuth,
-			 "enc owner auth");
-		LoadBlob_UINT32(&offset, encSrkAuthSize, txBlob,
-				"srk auth size");
-		LoadBlob(&offset, encSrkAuthSize, txBlob, encSrkAuth,
-			 "srk auth");
-
-		LoadBlob(&offset, srkInfoSize, txBlob, srkInfo, "srk");
-
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_TakeOwnership, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	/*---	Check on the Atmel Bug Patch */
+	offset = 0;
+	UnloadBlob_KEY(&offset, srkInfo, &srkKeyContainer);
+	oldAuthDataUsage = srkKeyContainer.authDataUsage;
+	LogDebug("auth data usage is %.2X", oldAuthDataUsage);
+
+	offset = 10;
+	LoadBlob_UINT16(&offset, protocolID, txBlob, "prot id");
+	LoadBlob_UINT32(&offset, encOwnerAuthSize, txBlob,
+			"enc owner auth size");
+	LoadBlob(&offset, encOwnerAuthSize, txBlob, encOwnerAuth,
+			"enc owner auth");
+	LoadBlob_UINT32(&offset, encSrkAuthSize, txBlob,
+			"srk auth size");
+	LoadBlob(&offset, encSrkAuthSize, txBlob, encSrkAuth,
+			"srk auth");
+
+	LoadBlob(&offset, srkInfoSize, txBlob, srkInfo, "srk");
+
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_TakeOwnership, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -132,7 +124,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*srkKey = getSomeMemory(*srkKeySize, hContext);	/*this is that memory leak problem */
 		if (*srkKey == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (srkKeyContainer.authDataUsage != oldAuthDataUsage) {
 			LogDebug1("AuthDataUsage was changed by TPM.  Atmel Bug. Fixing it in PS");
@@ -148,7 +140,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		 * migratable keys in the hierarchy that are still useful to someone.
 		 */
 		result = removeRegisteredKey(&SRK_UUID);
-		if (result != TCS_SUCCESS && result != TCS_E_KEY_NOT_REGISTERED) {
+		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
 			LogError1("Error removing SRK from key file.");
 			return result;
 		}
@@ -158,7 +150,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return result;
 		}
 		result = add_mem_cache_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
-		if (result != TCS_SUCCESS)
+		if (result != TSS_SUCCESS)
 			LogError1("Error creating mem cache entry");
 	}
 	LogResult("TakeOwnership", result);
@@ -192,7 +184,7 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		UnloadBlob_UINT32(&offset, authHandle, txBlob, "authHandle");
-		UnloadBlob(&offset, TPM_NONCE_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob,
 				nonce0->nonce, "n0");
 	}
 
@@ -224,7 +216,7 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* if ET is not KEYHANDLE or KEY, newEntValue is a don't care */
 	if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
 		if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
-			return TCS_E_FAIL;	/*tcs error */
+			return TCSERR(TSS_E_FAIL);	/*tcs error */
 	} else {
 		newEntValue = entityValue;
 	}
@@ -232,7 +224,7 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	LoadBlob_UINT16(&offset, entityType, txBlob, "entity type");
 	LoadBlob_UINT32(&offset, newEntValue, txBlob, "entity value");
-	LoadBlob(&offset, TPM_NONCE_SIZE, txBlob, nonceOddOSAP.nonce, "nonce osap");
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceOddOSAP.nonce, "nonce osap");
 	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OSAP, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -243,8 +235,8 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
 		UnloadBlob_UINT32(&offset, authHandle, txBlob, "auth handle");
-		UnloadBlob(&offset, TPM_NONCE_SIZE, txBlob, nonceEven->nonce, "n0");
-		UnloadBlob(&offset, TPM_NONCE_SIZE, txBlob, nonceEvenOSAP->nonce, "n0 osap");
+		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEven->nonce, "n0");
+		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEvenOSAP->nonce, "n0 osap");
 	}
 	AppendAudit(0, TPM_ORD_OSAP, result);
 	LogResult("OSAP", result);
@@ -260,8 +252,8 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			 TCPA_ENTITY_TYPE entityType,	/* in */
 			 UINT32 encDataSize,	/* in */
 			 BYTE *encData,	/* in */
-			 TCS_AUTH *ownerAuth,	/* in, out */
-			 TCS_AUTH *entityAuth,	/* in, out */
+			 TPM_AUTH *ownerAuth,	/* in, out */
+			 TPM_AUTH *entityAuth,	/* in, out */
 			 UINT32 *outDataSize,	/* out */
 			 BYTE **outData	/* out */
     )
@@ -275,41 +267,34 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Changeauth");
-	do {
-		if ((result = ctx_verify_context(contextHandle)))
-			break;
-
-		if ((result = auth_mgr_check(contextHandle, ownerAuth->AuthHandle)))
-			break;
-		if ((result = auth_mgr_check(contextHandle, entityAuth->AuthHandle)))
-			break;
-
-		if ((result = ensureKeyIsLoaded(contextHandle, parentHandle, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
-		LoadBlob_UINT16(&offset, protocolID, txBlob, "prot ID");
-		LoadBlob(&offset, TPM_ENCAUTH_SIZE, txBlob,
-			 newAuth.encauth, "encauth");
-		LoadBlob_UINT16(&offset, entityType, txBlob, "entity type");
-		LoadBlob_UINT32(&offset, encDataSize, txBlob, "enc data size");
-		LoadBlob(&offset, encDataSize, txBlob, encData, "enc data");
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Auth(&offset, txBlob, entityAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset,
-				TPM_ORD_ChangeAuth, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-		auth_mgr_release_auth(entityAuth->AuthHandle);
+	if ((result = ctx_verify_context(contextHandle)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(contextHandle, ownerAuth->AuthHandle)))
+		return result;
+	if ((result = auth_mgr_check(contextHandle, entityAuth->AuthHandle)))
+		return result;
+
+	if ((result = ensureKeyIsLoaded(contextHandle, parentHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
+	LoadBlob_UINT16(&offset, protocolID, txBlob, "prot ID");
+	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob,
+			newAuth.authdata, "encauth");
+	LoadBlob_UINT16(&offset, entityType, txBlob, "entity type");
+	LoadBlob_UINT32(&offset, encDataSize, txBlob, "enc data size");
+	LoadBlob(&offset, encDataSize, txBlob, encData, "enc data");
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Auth(&offset, txBlob, entityAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset,
+			TPM_ORD_ChangeAuth, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -325,7 +310,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 		*outData = getSomeMemory(*outDataSize, contextHandle);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *outDataSize, txBlob, *outData, "outdata");
 		}
@@ -382,7 +367,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TCPA_PROTOCOL_ID protocolID,	/* in */
 			      TCPA_ENCAUTH newAuth,	/* in */
 			      TCPA_ENTITY_TYPE entityType,	/* in */
-			      TCS_AUTH * ownerAuth	/* in, out */
+			      TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -400,7 +385,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	LoadBlob_UINT16(&offset, protocolID, txBlob, "prot id");
-	LoadBlob(&offset, 20, txBlob, newAuth.encauth, "enc auth");
+	LoadBlob(&offset, 20, txBlob, newAuth.authdata, "enc auth");
 	LoadBlob_UINT16(&offset, entityType, txBlob, "entity type");
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ChangeAuthOwner, txBlob);
@@ -430,7 +415,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TCPA_NONCE antiReplay,	/* in */
 				  UINT32 KeySizeIn,	/* in */
 				  BYTE * KeyDataIn,	/* in */
-				  TCS_AUTH * pAuth,	/* in, out */
+				  TPM_AUTH * pAuth,	/* in, out */
 				  UINT32 * KeySizeOut,	/* out */
 				  BYTE ** KeyDataOut,	/* out */
 				  UINT32 * CertifyInfoSize,	/* out */
@@ -449,7 +434,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY tempKey;
 	UINT32 tempSize;
 	TCPA_KEY_PARMS keyParmsContainer;
-	BOOL canLoad;
+	TSS_BOOL canLoad;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering ChangeAuthAsymStart");
@@ -487,7 +472,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "idhandle");
-	LoadBlob(&offset, TPM_NONCE_SIZE, txBlob, antiReplay.nonce, "nonce");
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce, "nonce");
 /*	LoadBlob_KEY_PARMS( &offset, txBlob, &tempKeyParms ); */
 /*	LoadBlob_UINT32( &offset, KeySizeIn, txBlob, "temp key size" ); */
 	LoadBlob(&offset, KeySizeIn, txBlob, KeyDataIn, "Temp Key");
@@ -513,7 +498,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
 		if (*CertifyInfo == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*CertifyInfo, &txBlob[offset - *CertifyInfoSize],
 		       *CertifyInfoSize);
@@ -521,7 +506,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		UnloadBlob_UINT32(&offset, ephHandle, txBlob, "eph handle");
@@ -531,7 +516,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
 		if (*KeyDataOut == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*KeyDataOut, &txBlob[offset - *KeySizeOut], *KeySizeOut);
 		if (pAuth != NULL)
@@ -553,7 +538,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				   BYTE * encNewAuth,	/* in */
 				   UINT32 encDataSizeIn,	/* in */
 				   BYTE * encDataIn,	/* in */
-				   TCS_AUTH * ownerAuth,	/* in, out */
+				   TPM_AUTH * ownerAuth,	/* in, out */
 				   UINT32 * encDataSizeOut,	/* out */
 				   BYTE ** encDataOut,	/* out */
 				   TCPA_SALT_NONCE * saltNonce,	/* out */
@@ -617,7 +602,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*encDataOut = getSomeMemory(*encDataSizeOut, hContext);
 		if (*encDataOut == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *encDataSizeOut, txBlob,
 			   *encDataOut, "outData");
@@ -704,8 +689,8 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TCS_KEY_HANDLE idKey,	/* in */
 				  UINT32 blobSize,	/* in */
 				  BYTE * blob,	/* in */
-				  TCS_AUTH * idKeyAuth,	/* in, out */
-				  TCS_AUTH * ownerAuth,	/* in, out */
+				  TPM_AUTH * idKeyAuth,	/* in, out */
+				  TPM_AUTH * ownerAuth,	/* in, out */
 				  UINT32 * SymmetricKeySize,	/* out */
 				  BYTE ** SymmetricKey	/* out */
     )
@@ -718,50 +703,41 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("TCSP_ActivateTPMIdentity");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (idKeyAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, idKeyAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		if ((result = ensureKeyIsLoaded(hContext, idKey, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "id key handle");
-		LoadBlob_UINT32(&offset, blobSize, txBlob, "blob size");
-		LoadBlob(&offset, blobSize, txBlob, blob, "in blob");
-		if (idKeyAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, idKeyAuth);
-			LoadBlob_Auth(&offset, txBlob, ownerAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
-					offset,
-					TPM_ORD_ActivateTPMIdentity, txBlob);
-		} else {
-			LoadBlob_Auth(&offset, txBlob, ownerAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset,
-					TPM_ORD_ActivateTPMIdentity, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-
-	if (result) {
-		if (idKeyAuth != NULL)
-			auth_mgr_release_auth(idKeyAuth->AuthHandle);
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (idKeyAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, idKeyAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	if ((result = ensureKeyIsLoaded(hContext, idKey, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "id key handle");
+	LoadBlob_UINT32(&offset, blobSize, txBlob, "blob size");
+	LoadBlob(&offset, blobSize, txBlob, blob, "in blob");
+	if (idKeyAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, idKeyAuth);
+		LoadBlob_Auth(&offset, txBlob, ownerAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
+				offset,
+				TPM_ORD_ActivateTPMIdentity, txBlob);
+	} else {
+		LoadBlob_Auth(&offset, txBlob, ownerAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset,
+				TPM_ORD_ActivateTPMIdentity, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -781,7 +757,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*SymmetricKey = getSomeMemory(*SymmetricKeySize, hContext);
 		if (*SymmetricKey == NULL) {
 			LogError1("Malloc Failure.");
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey, "sym key");
 
@@ -813,24 +789,24 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if (pcrNum > tpm_metrics.num_pcrs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if (tcsd_options.kernel_pcrs & (1 << pcrNum)) {
 		LogInfo("PCR %d is configured to be kernel controlled. Extend request denied.",
 				pcrNum);
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	if (tcsd_options.firmware_pcrs & (1 << pcrNum)) {
 		LogInfo("PCR %d is configured to be firmware controlled. Extend request denied.",
 				pcrNum);
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	offset = 10;
 
 	LoadBlob_UINT32(&offset, pcrNum, txBlob, "pcrNum");
-	LoadBlob(&offset, TPM_DIGEST_SIZE, txBlob, inDigest.digest,
+	LoadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, inDigest.digest,
 		 "in digest");
 
 	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Extend, txBlob);
@@ -841,7 +817,7 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TPM_DIGEST_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   outDigest->digest, "digest");
 	}
 	AppendAudit(0, TPM_ORD_Extend, result);
@@ -866,7 +842,7 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if (pcrNum > tpm_metrics.num_pcrs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, pcrNum, txBlob, "pcrnum");
@@ -879,7 +855,7 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TPM_DIGEST_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   outDigest->digest, "digest");
 	}
 	AppendAudit(0, TPM_ORD_PcrRead, result);
@@ -893,7 +869,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		    TCPA_NONCE antiReplay,	/* in */
 		    UINT32 pcrDataSizeIn,	/* in */
 		    BYTE * pcrDataIn,	/* in */
-		    TCS_AUTH * privAuth,	/* in, out */
+		    TPM_AUTH * privAuth,	/* in, out */
 		    UINT32 * pcrDataSizeOut,	/* out */
 		    BYTE ** pcrDataOut,	/* out */
 		    UINT32 * sigSize,	/* out */
@@ -910,41 +886,34 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering quote");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob(&offset, TPM_NONCE_SIZE, txBlob, antiReplay.nonce, "anti nonce");
-		LoadBlob(&offset, pcrDataSizeIn, txBlob, pcrDataIn, "Pcr Data");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_Quote, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_Quote, txBlob);
-		}
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce, "anti nonce");
+	LoadBlob(&offset, pcrDataSizeIn, txBlob, pcrDataIn, "Pcr Data");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_Quote, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_Quote, txBlob);
+	}
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -957,14 +926,14 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pcrDataOut = getSomeMemory(*pcrDataSizeOut, hContext);
 		if (*pcrDataOut == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pcrDataOut, &txBlob[10], *pcrDataSizeOut);
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sigsize");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
@@ -979,7 +948,7 @@ TSS_RESULT
 TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   TCPA_DIRINDEX dirIndex,	/* in */
 			   TCPA_DIRVALUE newContents,	/* in */
-			   TCS_AUTH * ownerAuth	/* in, out */
+			   TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -988,33 +957,27 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering dirwriteauth");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
 
-		if (dirIndex > tpm_metrics.num_dirs) {
-			result = TSS_E_BAD_PARAMETER;
-			break;
-		}
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, dirIndex, txBlob, "dir index");
-		LoadBlob(&offset, TPM_DIRVALUE_SIZE, txBlob,
-			 newContents.digest, "new contents");
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_DirWriteAuth, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if (dirIndex > tpm_metrics.num_dirs) {
+		result = TCSERR(TSS_E_BAD_PARAMETER);
 		return result;
 	}
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, dirIndex, txBlob, "dir index");
+	LoadBlob(&offset, TCPA_DIRVALUE_SIZE, txBlob,
+			newContents.digest, "new contents");
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_DirWriteAuth, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1048,10 +1011,10 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if (dirValue == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if (dirIndex > tpm_metrics.num_dirs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, dirIndex, txBlob, "dir index");
@@ -1063,7 +1026,7 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TPM_DIRVALUE_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_DIRVALUE_SIZE, txBlob,
 			   dirValue->digest, "digest");
 	}
 	AppendAudit(0, TPM_ORD_DirRead, result);
@@ -1079,7 +1042,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		   BYTE * PcrInfo,	/* in */
 		   UINT32 inDataSize,	/* in */
 		   BYTE * inData,	/* in */
-		   TCS_AUTH * pubAuth,	/* in, out */
+		   TPM_AUTH * pubAuth,	/* in, out */
 		   UINT32 * SealedDataSize,	/* out */
 		   BYTE ** SealedData	/* out */
     )
@@ -1092,53 +1055,46 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Seal");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if (pubAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, pubAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
+	if (pubAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, pubAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
+	}
 
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
 
-		if (keySlot == 0) {
-			result = TCS_E_FAIL;
-			break;
-		}
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
-		LoadBlob(&offset, TPM_ENCAUTH_SIZE, txBlob,
-			 encAuth.encauth, "encauth");
-		LoadBlob_UINT32(&offset, pcrInfoSize, txBlob, "pcr info size");
-		LoadBlob(&offset, pcrInfoSize, txBlob, PcrInfo, "pcr info");
-		LoadBlob_UINT32(&offset, inDataSize, txBlob, "in data size");
-		LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
-
-		if (pubAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, pubAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_Seal, txBlob);
-
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_Seal, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (pubAuth != NULL)
-			auth_mgr_release_auth(pubAuth->AuthHandle);
+	if (keySlot == 0) {
+		result = TCSERR(TSS_E_FAIL);
 		return result;
 	}
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
+	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob,
+			encAuth.authdata, "encauth");
+	LoadBlob_UINT32(&offset, pcrInfoSize, txBlob, "pcr info size");
+	LoadBlob(&offset, pcrInfoSize, txBlob, PcrInfo, "pcr info");
+	LoadBlob_UINT32(&offset, inDataSize, txBlob, "in data size");
+	LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
+
+	if (pubAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, pubAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_Seal, txBlob);
+
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_Seal, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1155,7 +1111,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*SealedData = getSomeMemory(*SealedDataSize, hContext);
 		if (*SealedData == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*SealedData, &txBlob[10], *SealedDataSize);
 /*		LoadBlob_STORED_DATA( &offset, *SealedData, &storedData ); */
@@ -1172,8 +1128,8 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		     TCS_KEY_HANDLE parentHandle,	/* in */
 		     UINT32 SealedDataSize,	/* in */
 		     BYTE * SealedData,	/* in */
-		     TCS_AUTH * parentAuth,	/* in, out */
-		     TCS_AUTH * dataAuth,	/* in, out */
+		     TPM_AUTH * parentAuth,	/* in, out */
+		     TPM_AUTH * dataAuth,	/* in, out */
 		     UINT32 * DataSize,	/* out */
 		     BYTE ** Data	/* out */
     )
@@ -1186,48 +1142,40 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Unseal");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if (parentAuth != NULL) {
-			LogDebug1("Auth used");
-			if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
+	if (parentAuth != NULL) {
+		LogDebug1("Auth used");
+		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
+	}
 
-		if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
-			break;
+	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
+		return result;
 
-		if (keySlot == 0) {
-			result = TCS_E_FAIL;
-			break;
-		}
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
-		LoadBlob(&offset, SealedDataSize, txBlob, SealedData, "data");
-		if (parentAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, parentAuth);
-			LoadBlob_Auth(&offset, txBlob, dataAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
-					offset, TPM_ORD_Unseal, txBlob);
-		} else {
-			LoadBlob_Auth(&offset, txBlob, dataAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_Unseal, txBlob);
-		}
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (parentAuth != NULL)
-			auth_mgr_release_auth(parentAuth->AuthHandle);
-		auth_mgr_release_auth(dataAuth->AuthHandle);
+	if (keySlot == 0) {
+		result = TCSERR(TSS_E_FAIL);
 		return result;
 	}
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
+	LoadBlob(&offset, SealedDataSize, txBlob, SealedData, "data");
+	if (parentAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, parentAuth);
+		LoadBlob_Auth(&offset, txBlob, dataAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
+				offset, TPM_ORD_Unseal, txBlob);
+	} else {
+		LoadBlob_Auth(&offset, txBlob, dataAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_Unseal, txBlob);
+	}
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1243,7 +1191,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*Data = getSomeMemory(*DataSize, hContext);
 		if (*Data == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *DataSize, txBlob, *Data, "sealed data");
 		if (parentAuth != NULL)
@@ -1260,7 +1208,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		     TCS_KEY_HANDLE keyHandle,	/* in */
 		     UINT32 inDataSize,	/* in */
 		     BYTE * inData,	/* in */
-		     TCS_AUTH * privAuth,	/* in, out */
+		     TPM_AUTH * privAuth,	/* in, out */
 		     UINT32 * outDataSize,	/* out */
 		     BYTE ** outData	/* out */
     )
@@ -1271,47 +1219,35 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
-	LogDebug1("\nEntering TCSI_UnBind");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-/*		if( keySlot == 0 ) */
-/*		{ */
-/*			result = TCS_E_FAIL; */
-/*			break; */
-/*		} */
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob_UINT32(&offset, inDataSize, txBlob, "data size");
-		LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_UnBind, txBlob);
-		} else
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_UnBind, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
+	LogDebug1("Entering TCSI_UnBind");
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob_UINT32(&offset, inDataSize, txBlob, "data size");
+	LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_UnBind, txBlob);
+	} else
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_UnBind, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -1323,7 +1259,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, (*outDataSize), txBlob, *outData, "out data");
 		}
@@ -1352,8 +1288,8 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  BYTE * MigrationKeyAuth,	/* in */
 				  UINT32 encDataSize,	/* in */
 				  BYTE * encData,	/* in */
-				  TCS_AUTH * parentAuth,	/* in, out */
-				  TCS_AUTH * entityAuth,	/* in, out */
+				  TPM_AUTH * parentAuth,	/* in, out */
+				  TPM_AUTH * entityAuth,	/* in, out */
 				  UINT32 * randomSize,	/* out */
 				  BYTE ** random,	/* out */
 				  UINT32 * outDataSize,	/* out */
@@ -1368,53 +1304,46 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering TPM_CreateMigrationBlob");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (parentAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("no Auth");
-		}
-
-		if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
-			break;
-
-		if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keyHandle, txBlob, "parent handle");
-		LoadBlob_UINT16(&offset, migrationType, txBlob, "mig type");
-		LoadBlob(&offset, MigrationKeyAuthSize, txBlob,
-			 MigrationKeyAuth, "mig key auth");
-		LoadBlob_UINT32(&offset, encDataSize, txBlob, "enc size");
-		LoadBlob(&offset, encDataSize, txBlob, encData, "enc data");
-		if (parentAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, parentAuth);
-			LoadBlob_Auth(&offset, txBlob, entityAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
-					offset,
-					TPM_ORD_CreateMigrationBlob, txBlob);
-		} else {
-			LoadBlob_Auth(&offset, txBlob, entityAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset,
-					TPM_ORD_CreateMigrationBlob, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (parentAuth != NULL)
-			auth_mgr_release_auth(parentAuth->AuthHandle);
-		auth_mgr_release_auth(entityAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (parentAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("no Auth");
 	}
+
+	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
+		return result;
+
+	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keyHandle, txBlob, "parent handle");
+	LoadBlob_UINT16(&offset, migrationType, txBlob, "mig type");
+	LoadBlob(&offset, MigrationKeyAuthSize, txBlob,
+			MigrationKeyAuth, "mig key auth");
+	LoadBlob_UINT32(&offset, encDataSize, txBlob, "enc size");
+	LoadBlob(&offset, encDataSize, txBlob, encData, "enc data");
+	if (parentAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, parentAuth);
+		LoadBlob_Auth(&offset, txBlob, entityAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
+				offset,
+				TPM_ORD_CreateMigrationBlob, txBlob);
+	} else {
+		LoadBlob_Auth(&offset, txBlob, entityAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset,
+				TPM_ORD_CreateMigrationBlob, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -1431,7 +1360,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *outDataSize, txBlob, *outData, "out data");
 		}
@@ -1452,7 +1381,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				   TCS_KEY_HANDLE parentHandle,	/* in */
 				   UINT32 inDataSize,	/* in */
 				   BYTE * inData,	/* in */
-				   TCS_AUTH * parentAuth,	/* in, out */
+				   TPM_AUTH * parentAuth,	/* in, out */
 				   UINT32 randomSize,	/* should be in */
 				   BYTE * random,	/* should be in */
 				   UINT32 * outDataSize,	/* out */
@@ -1466,44 +1395,38 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("ConvertMigBlob");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (parentAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-		if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "parent handle");
-		LoadBlob_UINT32(&offset, inDataSize, txBlob, "in data size");
-		LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
-		LoadBlob_UINT32(&offset, randomSize, txBlob, "random size");
-		LoadBlob(&offset, randomSize, txBlob, random, "random");
-		if (parentAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, parentAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset,
-					TPM_ORD_ConvertMigrationBlob, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_ConvertMigrationBlob, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (parentAuth != NULL)
-			auth_mgr_release_auth(parentAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (parentAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "parent handle");
+	LoadBlob_UINT32(&offset, inDataSize, txBlob, "in data size");
+	LoadBlob(&offset, inDataSize, txBlob, inData, "in data");
+	LoadBlob_UINT32(&offset, randomSize, txBlob, "random size");
+	LoadBlob(&offset, randomSize, txBlob, random, "random");
+	if (parentAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, parentAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset,
+				TPM_ORD_ConvertMigrationBlob, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_ConvertMigrationBlob, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -1516,7 +1439,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *outDataSize, txBlob, *outData, "out data");
 		}
@@ -1536,7 +1459,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				    TCPA_MIGRATE_SCHEME migrateScheme,	/* in */
 				    UINT32 MigrationKeySize,	/* in */
 				    BYTE * MigrationKey,	/* in */
-				    TCS_AUTH * ownerAuth,	/* in, out */
+				    TPM_AUTH * ownerAuth,	/* in, out */
 				    UINT32 * MigrationKeyAuthSize,	/* out */
 				    BYTE ** MigrationKeyAuth	/* out */
     )
@@ -1549,26 +1472,20 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("TCSP_AuthorizeMigrationKey");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT16(&offset, migrateScheme, txBlob, "migation scheme");
-		LoadBlob(&offset, MigrationKeySize, txBlob, MigrationKey, "pubKey");
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_AuthorizeMigrationKey, txBlob);
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT16(&offset, migrateScheme, txBlob, "migation scheme");
+	LoadBlob(&offset, MigrationKeySize, txBlob, MigrationKey, "pubKey");
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_AuthorizeMigrationKey, txBlob);
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1582,7 +1499,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*MigrationKeyAuth = getSomeMemory(*MigrationKeyAuthSize, hContext);
 		if (*MigrationKeyAuth == NULL) {
 			LogError("malloc of %d bytes failed.", *MigrationKeyAuthSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			memcpy(*MigrationKeyAuth, &txBlob[10], *MigrationKeyAuthSize);
 		}
@@ -1602,8 +1519,8 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TCS_KEY_HANDLE certHandle,	/* in */
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TCPA_NONCE antiReplay,	/* in */
-			 TCS_AUTH * certAuth,	/* in, out */
-			 TCS_AUTH * keyAuth,	/* in, out */
+			 TPM_AUTH * certAuth,	/* in, out */
+			 TPM_AUTH * keyAuth,	/* in, out */
 			 UINT32 * CertifyInfoSize,	/* out */
 			 BYTE ** CertifyInfo,	/* out */
 			 UINT32 * outDataSize,	/* out */
@@ -1620,58 +1537,50 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Certify Key");
 	offset = 10;
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (certAuth != NULL) {
-			LogDebug1("Auth Used for Cert signing key");
-			if ((result = auth_mgr_check(hContext, certAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth used for Cert signing key");
-		}
-
-		if (keyAuth != NULL) {
-			LogDebug1("Auth Used for Key being signed");
-			if ((result = auth_mgr_check(hContext, keyAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth used for Key being signed");
-		}
-
-		if ((result = ensureKeyIsLoaded(hContext, certHandle, &certKeySlot)))
-			break;
-
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-		LoadBlob_UINT32(&offset, certKeySlot, txBlob, "cert handle");
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob(&offset, TPM_NONCE_SIZE, txBlob,
-			 antiReplay.nonce, "anti replay");
-
-		tag = TPM_TAG_RQU_COMMAND;
-		if (certAuth != NULL) {
-			tag++;
-			LoadBlob_Auth(&offset, txBlob, certAuth);
-		}
-		if (keyAuth != NULL) {
-			tag++;
-			LoadBlob_Auth(&offset, txBlob, keyAuth);
-		}
-		LoadBlob_Header(tag, offset, TPM_ORD_CertifyKey, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (certAuth != NULL)
-			auth_mgr_release_auth(certAuth->AuthHandle);
-		if (keyAuth != NULL)
-			auth_mgr_release_auth(keyAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (certAuth != NULL) {
+		LogDebug1("Auth Used for Cert signing key");
+		if ((result = auth_mgr_check(hContext, certAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth used for Cert signing key");
 	}
+
+	if (keyAuth != NULL) {
+		LogDebug1("Auth Used for Key being signed");
+		if ((result = auth_mgr_check(hContext, keyAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth used for Key being signed");
+	}
+
+	if ((result = ensureKeyIsLoaded(hContext, certHandle, &certKeySlot)))
+		return result;
+
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	LoadBlob_UINT32(&offset, certKeySlot, txBlob, "cert handle");
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob,
+			antiReplay.nonce, "anti replay");
+
+	tag = TPM_TAG_RQU_COMMAND;
+	if (certAuth != NULL) {
+		tag++;
+		LoadBlob_Auth(&offset, txBlob, certAuth);
+	}
+	if (keyAuth != NULL) {
+		tag++;
+		LoadBlob_Auth(&offset, txBlob, keyAuth);
+	}
+	LoadBlob_Header(tag, offset, TPM_ORD_CertifyKey, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1689,7 +1598,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
 		if (*CertifyInfo == NULL) {
 			LogError("malloc of %d bytes failed.", *CertifyInfoSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			memcpy(*CertifyInfo, &txBlob[10], *CertifyInfoSize);
 		}
@@ -1698,7 +1607,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *outDataSize, txBlob, *outData, "out data");
 		}
@@ -1724,7 +1633,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		   TCS_KEY_HANDLE keyHandle,	/* in */
 		   UINT32 areaToSignSize,	/* in */
 		   BYTE * areaToSign,	/* in */
-		   TCS_AUTH * privAuth,	/* in, out */
+		   TPM_AUTH * privAuth,	/* in, out */
 		   UINT32 * sigSize,	/* out */
 		   BYTE ** sig	/* out */
     )
@@ -1736,44 +1645,38 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Sign");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-		offset = 10;
-
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob_UINT32(&offset, areaToSignSize, txBlob, "size");
-		LoadBlob(&offset, areaToSignSize, txBlob, areaToSign,
-			 "area to sign");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_Sign, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_Sign, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob_UINT32(&offset, areaToSignSize, txBlob, "size");
+	LoadBlob(&offset, areaToSignSize, txBlob, areaToSign,
+			"area to sign");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_Sign, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_Sign, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -1787,7 +1690,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogError("malloc of %d bytes failed.", *sigSize);
 			if (privAuth != NULL)
 				auth_mgr_release_auth(privAuth->AuthHandle);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
@@ -1828,7 +1731,7 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*randomBytes = getSomeMemory(*bytesRequested, hContext);
 		if (*randomBytes == NULL) {
 			LogError("malloc of %d bytes failed.", *bytesRequested);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *bytesRequested, txBlob, *randomBytes, "random bytes");
 	}
@@ -1893,7 +1796,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*resp = getSomeMemory(1, hContext);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", 1);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		switch (tcsSubCapContainer) {
 		case TSS_ALG_RSA:
@@ -1915,7 +1818,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			(*resp)[0] = INTERNAL_CAP_TCS_ALG_HMAC;
 			break;
 		default:
-			return TCS_E_FAIL;	/*tcs error */
+			return TCSERR(TSS_E_FAIL);	/*tcs error */
 		}
 		break;
 	case TSS_TCSCAP_VERSION:
@@ -1923,7 +1826,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		LoadBlob_VERSION(&offset, *resp, &tcsVersion);
@@ -1935,7 +1838,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*resp = getSomeMemory(1, hContext);
 		if (*resp == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		(*resp)[0] = INTERNAL_CAP_TCS_PERSSTORAGE;
 		break;
@@ -1949,7 +1852,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
 				LogError1("Malloc Failure.");
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
 		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_AUTHCACHE) {
@@ -1958,12 +1861,12 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
 				LogError1("Malloc Failure.");
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
 		} else {
 			LogDebug1("Bad subcap");
-			return TCS_E_FAIL;
+			return TCSERR(TSS_E_FAIL);
 		}
 		break;
 	case TSS_TCSCAP_MANUFACTURER:
@@ -1971,14 +1874,14 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*resp, mfg, 4);
 		*respSize = 4;
 		break;
 	default:
 		LogDebug1("Bad subcap");
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	LogDebug1("Passed internal GetCap");
@@ -2038,7 +1941,7 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*resp = getSomeMemory(*respSize, hContext);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", *respSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 	}
@@ -2054,7 +1957,7 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TCPA_CAPABILITY_AREA capArea,	/* in */
 				  UINT32 subCapSize,	/* in */
 				  BYTE * subCap,	/* in */
-				  TCS_AUTH * privAuth,	/* in, out */
+				  TPM_AUTH * privAuth,	/* in, out */
 				  TCPA_VERSION * Version,	/* out */
 				  UINT32 * respSize,	/* out */
 				  BYTE ** resp,	/* out */
@@ -2068,64 +1971,48 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
+	}
 
-		switch (capArea) {
+	switch (capArea) {
 		case TSS_TCSCAP_ALG:
 		case TSS_TCSCAP_VERSION:
 		case TSS_TCSCAP_PERSSTORAGE:
 		case TSS_TCSCAP_CACHING:
-#if 0
-			/*              if( result = internal_TCSGetCap( hContext, capArea, subCapSize, subCap, respSize, resp ))
-			   return result;
-
-			   //---        sign it
-
-			   return TCPA_SUCCESS;
-			 */
-#endif
-			result = TCS_E_FAIL;	/*can't sign software cap's */
+			result = TCSERR(TSS_E_FAIL);	/*can't sign software cap's */
 			break;
-		}
-
-		LogDebug1("Entering Get Cap Signed");
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob(&offset, 20, txBlob, antiReplay.nonce, "anti replay");
-		LoadBlob_UINT32(&offset, capArea, txBlob, "cap area");
-		LoadBlob_UINT32(&offset, subCapSize, txBlob, "sub cap size");
-		LoadBlob(&offset, subCapSize, txBlob, subCap, "sub cap");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset,
-					TPM_ORD_GetCapabilitySigned, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_GetCapabilitySigned, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
-		return result;
 	}
+
+	LogDebug1("Entering Get Cap Signed");
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob(&offset, 20, txBlob, antiReplay.nonce, "anti replay");
+	LoadBlob_UINT32(&offset, capArea, txBlob, "cap area");
+	LoadBlob_UINT32(&offset, subCapSize, txBlob, "sub cap size");
+	LoadBlob(&offset, subCapSize, txBlob, subCap, "sub cap");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset,
+				TPM_ORD_GetCapabilitySigned, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_GetCapabilitySigned, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2139,14 +2026,14 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*resp = getSomeMemory(*respSize, hContext);
 		if (*resp == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
@@ -2159,7 +2046,7 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				 TCS_AUTH * pOwnerAuth,	/* out */
+				 TPM_AUTH * pOwnerAuth,	/* out */
 				 TCPA_VERSION * pVersion,	/* out */
 				 UINT32 * pNonVolatileFlags,	/* out */
 				 UINT32 * pVolatileFlags	/* out */
@@ -2172,25 +2059,19 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Getcap owner");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_GetCapabilityOwner, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_GetCapabilityOwner, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2231,7 +2112,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	offset = 10;
-	LoadBlob(&offset, TPM_NONCE_SIZE, txBlob, antiReplay.nonce,
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce,
 		 "anit replay");
 	LoadBlob(&offset, endorsementKeyInfoSize, txBlob,
 		 endorsementKeyInfo, "ek stuff");
@@ -2249,11 +2130,11 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*endorsementKey = getSomeMemory(*endorsementKeySize, hContext);
 		if (*endorsementKey == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*endorsementKey, &txBlob[10], *endorsementKeySize);
 
-		UnloadBlob(&offset, TPM_DIGEST_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   checksum->digest, "digest");
 	}
 	LogData("Leaving CreateEKPair with result:", result);
@@ -2295,10 +2176,10 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
-		UnloadBlob(&offset, TPM_DIGEST_SIZE, txBlob,
+		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   checksum->digest, "digest");
 	}
 	LogResult("Read Pubek", result);
@@ -2309,7 +2190,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			       TCS_AUTH * ownerAuth	/* in, out */
+			       TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -2319,25 +2200,19 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("DisablePubekRead");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_DisablePubekRead, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_DisablePubekRead, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2354,7 +2229,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			     TCS_AUTH * ownerAuth,	/* in, out */
+			     TPM_AUTH * ownerAuth,	/* in, out */
 			     UINT32 * pubEndorsementKeySize,	/* out */
 			     BYTE ** pubEndorsementKey	/* out */
     )
@@ -2367,23 +2242,17 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering OwnerReadPubek");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_OwnerReadPubek, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_OwnerReadPubek, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2397,7 +2266,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2434,7 +2303,7 @@ TSS_RESULT
 TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TCS_KEY_HANDLE keyHandle,	/* in */
 			      TCPA_NONCE antiReplay,	/* in */
-			      TCS_AUTH * privAuth,	/* in, out */
+			      TPM_AUTH * privAuth,	/* in, out */
 			      UINT32 * sigSize,	/* out */
 			      BYTE ** sig	/* out */
     )
@@ -2447,43 +2316,36 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Certify Self Test");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			break;
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		LoadBlob(&offset, TPM_NONCE_SIZE, txBlob,
-			 antiReplay.nonce, "nonoce");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_CertifySelfTest,
-					txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_CertifySelfTest, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+		return result;
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob,
+			antiReplay.nonce, "nonoce");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_CertifySelfTest,
+				txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_CertifySelfTest, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2496,7 +2358,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
@@ -2535,7 +2397,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *outDataSize, txBlob, *outData, "outdata");
 		LogDebug1("outdata");
@@ -2548,8 +2410,8 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			      BOOL disableState,	/* in */
-			      TCS_AUTH * ownerAuth	/* in, out */
+			      TSS_BOOL disableState,	/* in */
+			      TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -2559,25 +2421,20 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		LoadBlob_BOOL(&offset, disableState, txBlob, "State");
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_OwnerSetDisable, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	LoadBlob_BOOL(&offset, disableState, txBlob, "State");
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_OwnerSetDisable, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2593,7 +2450,7 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			 TCS_AUTH * ownerAuth	/* in, out */
+			 TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -2603,25 +2460,20 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering OwnerClear");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_OwnerClear, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_OwnerClear, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2638,7 +2490,7 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				TCS_AUTH * ownerAuth	/* in, out */
+				TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -2648,25 +2500,20 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering DisableownerClear");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_DisableOwnerClear, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		return result;
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_DisableOwnerClear, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2736,7 +2583,7 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 {
 	UINT16 offset;
 	UINT32 paramSize;
-	TSS_RESULT result = TSS_E_NOTIMPL;
+	TSS_RESULT result = TCSERR(TSS_E_NOTIMPL);
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 	char runlevel;
 
@@ -2745,7 +2592,7 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	if (runlevel != 's' && runlevel != 'S' && runlevel != '1') {
 		LogInfo("Physical Presence command denied: Must be in single"
 				" user mode.");
-		return TSS_E_NOTIMPL;
+		return TCSERR(TSS_E_NOTIMPL);
 	}
 
 	if ((result = ctx_verify_context(hContext)))
@@ -2815,7 +2662,7 @@ TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 TSS_RESULT
 TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				     BOOL state	/* in */
+				     TSS_BOOL state	/* in */
     )
 {
 	UINT16 offset;
@@ -2872,7 +2719,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   BYTE * dataIn,	/* in */
 			   UINT32 * dataOutSize,	/* out */
 			   BYTE ** dataOut,	/* out */
-			   TCS_AUTH * ownerAuth	/* in, out */
+			   TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	TSS_RESULT result;
@@ -2882,28 +2729,23 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Field Upgrade");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		offset = 10;
-		if (dataInSize != 0) {
-			LoadBlob_UINT32(&offset, dataInSize, txBlob,
-					"data size");
-			LoadBlob(&offset, dataInSize, txBlob, dataIn, "data");
-		}
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_FieldUpgrade, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	offset = 10;
+	if (dataInSize != 0) {
+		LoadBlob_UINT32(&offset, dataInSize, txBlob,
+				"data size");
+		LoadBlob(&offset, dataInSize, txBlob, dataIn, "data");
 	}
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+			TPM_ORD_FieldUpgrade, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (ownerAuth->fContinueAuthSession == FALSE)
@@ -2916,7 +2758,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			*dataOut = getSomeMemory(*dataOutSize, hContext);
 			if (*dataOut == NULL) {
 				LogError1("Malloc Failure.");
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
 				   *dataOut, "data");
@@ -2932,7 +2774,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     TCS_KEY_HANDLE keyHandle,	/* in */
 			     UINT32 c1,	/* in */
 			     UINT32 c2,	/* in */
-			     TCS_AUTH * privAuth	/* in, out */
+			     TPM_AUTH * privAuth	/* in, out */
     )
 {
 	TSS_RESULT result;
@@ -2943,41 +2785,35 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Set Redirection");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (privAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-				return TCS_E_FAIL;
-		} else {
-			keySlot = getSlotByHandle_lock(keyHandle);
-			if (keySlot == NULL_TPM_HANDLE)
-				return TCS_E_FAIL;
-			LogDebug1("No Auth");
-		}
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key slot");
-		LoadBlob_UINT32(&offset, c1, txBlob, "c1");
-		LoadBlob_UINT32(&offset, c2, txBlob, "c2");
-		if (privAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, privAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-					offset, TPM_ORD_SetRedirection, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-					TPM_ORD_SetRedirection, txBlob);
-		}
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (privAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
+			return TCSERR(TSS_E_FAIL);
+	} else {
+		keySlot = getSlotByHandle_lock(keyHandle);
+		if (keySlot == NULL_TPM_HANDLE)
+			return TCSERR(TSS_E_FAIL);
+		LogDebug1("No Auth");
 	}
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key slot");
+	LoadBlob_UINT32(&offset, c1, txBlob, "c1");
+	LoadBlob_UINT32(&offset, c2, txBlob, "c2");
+	if (privAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, privAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
+				offset, TPM_ORD_SetRedirection, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+				TPM_ORD_SetRedirection, txBlob);
+	}
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (privAuth && privAuth->fContinueAuthSession == FALSE)
@@ -2994,8 +2830,8 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				       BOOL generateRandom,	/* in */
-				       TCS_AUTH * ownerAuth,	/* in, out */
+				       TSS_BOOL generateRandom,	/* in */
+				       TPM_AUTH * ownerAuth,	/* in, out */
 				       UINT32 * randomSize,	/* out */
 				       BYTE ** random,	/* out */
 				       UINT32 * archiveSize,	/* out */
@@ -3009,24 +2845,19 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Create Main Archive");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		offset = 10;
-		LoadBlob_BOOL(&offset, generateRandom, txBlob, "gen rand");
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_CreateMaintenanceArchive, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	offset = 10;
+	LoadBlob_BOOL(&offset, generateRandom, txBlob, "gen rand");
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+			TPM_ORD_CreateMaintenanceArchive, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (ownerAuth->fContinueAuthSession == FALSE)
@@ -3038,7 +2869,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*random = getSomeMemory(*randomSize, hContext);
 		if (*random == NULL) {
 			LogError("malloc of %d bytes failed.", *randomSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *randomSize, txBlob, *random, "random");
 		}
@@ -3047,7 +2878,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*archive = getSomeMemory(*archiveSize, hContext);
 		if (*archive == NULL) {
 			LogError("malloc of %d bytes failed.", *archiveSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *archiveSize, txBlob, *archive, "archive");
 		}
@@ -3066,7 +2897,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				     BYTE * dataIn,	/* in */
 				     UINT32 * dataOutSize,	/* out */
 				     BYTE ** dataOut,	/* out */
-				     TCS_AUTH * ownerAuth	/* in, out */
+				     TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	TSS_RESULT result;
@@ -3076,29 +2907,24 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Load Maint Archive");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		offset = 10;
-		if (dataInSize != 0) {
-			LoadBlob_UINT32(&offset, dataInSize, txBlob,
-					"vendor data size");
-			LoadBlob(&offset, dataInSize, txBlob, dataIn,
-				 "vendor data");
-		}
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_LoadMaintenanceArchive, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	offset = 10;
+	if (dataInSize != 0) {
+		LoadBlob_UINT32(&offset, dataInSize, txBlob,
+				"vendor data size");
+		LoadBlob(&offset, dataInSize, txBlob, dataIn,
+				"vendor data");
 	}
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+			TPM_ORD_LoadMaintenanceArchive, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (ownerAuth->fContinueAuthSession == FALSE)
@@ -3111,7 +2937,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			*dataOut = getSomeMemory(*dataOutSize, hContext);
 			if (*dataOut == NULL) {
 				LogError1("Malloc Failure.");
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
 				   *dataOut, "vendor data");
@@ -3124,7 +2950,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				     TCS_AUTH * ownerAuth	/* in, out */
+				     TPM_AUTH * ownerAuth	/* in, out */
     )
 {
 	TSS_RESULT result;
@@ -3134,23 +2960,18 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Kill Maint Feature");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		offset = 10;
-		LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_KillMaintenanceFeature, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
-	}
+
+	offset = 10;
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+			TPM_ORD_KillMaintenanceFeature, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (ownerAuth->fContinueAuthSession == FALSE)

@@ -16,7 +16,8 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "linux/tpm.h"
 #include "tcslog.h"
 #include "tddl.h"
@@ -58,7 +59,7 @@ Tddli_Open()
 
 	if (opened_device != NULL) {
 		LogDebug1("attempted to re-open the TPM driver!");
-		return TDDL_E_ALREADY_OPENED;
+		return TDDLERR(TDDL_E_ALREADY_OPENED);
 	}
 
 	rc = open_device();
@@ -66,13 +67,13 @@ Tddli_Open()
 		LogError("Could not find a device to open!");
 		if (errno == ENOENT) {
 			/* File DNE */
-			return TDDL_E_COMPONENT_NOT_FOUND;
+			return TDDLERR(TDDL_E_COMPONENT_NOT_FOUND);
 		}
 
-		return TDDL_E_FAIL;
+		return TDDLERR(TDDL_E_FAIL);
 	}
 
-	return TDDL_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -80,14 +81,14 @@ Tddli_Close()
 {
 	if (opened_device == NULL) {
 		LogDebug1("attempted to re-close the TPM driver!");
-		return TDDL_E_ALREADY_CLOSED;
+		return TDDLERR(TDDL_E_ALREADY_CLOSED);
 	}
 
 	close(opened_device->fd);
 	opened_device->fd = TDDL_UNINITIALIZED;
 	opened_device = NULL;
 
-	return TDDL_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -98,7 +99,7 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 
 	if (TransmitBufLen > TDDL_TXBUF_SIZE) {
 		LogError("buffer size handed to TDDL is too large! (%u bytes)", TransmitBufLen);
-		return TDDL_E_FAIL;
+		return TDDLERR(TDDL_E_FAIL);
 	}
 
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
@@ -107,16 +108,16 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 	if (opened_device->ioctl) {
 		if ((sizeResult = ioctl(opened_device->fd, TPMIOC_TRANSMIT, txBuffer)) == -1) {
 			LogError("ioctl: (%d) %s", errno, strerror(errno));
-			return TDDL_E_FAIL;
+			return TDDLERR(TDDL_E_FAIL);
 		}
 	} else {
 		if ((sizeResult = write(opened_device->fd, txBuffer, TransmitBufLen)) < 0) {
 			LogError("write to device %s failed: %s", opened_device->path, strerror(errno));
-			return TDDL_E_IOERROR;
-		} else if (sizeResult < (int)TransmitBufLen) {
+			return TDDLERR(TDDL_E_IOERROR);
+		} else if ((UINT32)sizeResult < TransmitBufLen) {
 			LogError("wrote %d bytes to %s (tried to write %d)", sizeResult,
 					opened_device->path, TransmitBufLen);
-			return TDDL_E_IOERROR;
+			return TDDLERR(TDDL_E_IOERROR);
 		}
 
 		sizeResult = read(opened_device->fd, txBuffer, TDDL_TXBUF_SIZE);
@@ -124,42 +125,42 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 
 	if (sizeResult < 0) {
 		LogError("read from device %s failed: %s", opened_device->path, strerror(errno));
-		return TDDL_E_IOERROR;
+		return TDDLERR(TDDL_E_IOERROR);
 	} else if (sizeResult == 0) {
 		LogError("Zero bytes read from device %s", opened_device->path);
-		return TDDL_E_IOERROR;
+		return TDDLERR(TDDL_E_IOERROR);
 	}
 
 	if ((unsigned)sizeResult > *pReceiveBufLen) {
 		LogError("read %d bytes from device %s, (only room for %d)", sizeResult,
 				opened_device->path, *pReceiveBufLen);
-		return TDDL_E_INSUFFICIENT_BUFFER;
+		return TDDLERR(TDDL_E_INSUFFICIENT_BUFFER);
 	}
 
 	*pReceiveBufLen = sizeResult;
 
 	memcpy(pReceiveBuf, txBuffer, *pReceiveBufLen);
-	return TDDL_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-Tddli_GetStatus(UINT32 ReqStatusType)
+Tddli_GetStatus(UINT32 ReqStatusType, UINT32 *pStatus)
 {
-	return TSS_E_NOTIMPL;
+	return TDDLERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
 Tddli_SetCapability(UINT32 CapArea, UINT32 SubCap,
 		    BYTE *pSetCapBuf, UINT32 SetCapBufLen)
 {
-	return TSS_E_NOTIMPL;
+	return TDDLERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
 Tddli_GetCapability(UINT32 CapArea, UINT32 SubCap,
 		    BYTE *pCapBuf, UINT32 *pCapBufLen)
 {
-	return TSS_E_NOTIMPL;
+	return TDDLERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT Tddli_Cancel(void)
@@ -169,14 +170,14 @@ TSS_RESULT Tddli_Cancel(void)
 	if (opened_device->ioctl) {
 		if ((rc = ioctl(opened_device->fd, TPMIOC_CANCEL, NULL)) == -1) {
 			LogError("ioctl: (%d) %s", errno, strerror(errno));
-			return TDDL_E_FAIL;
+			return TDDLERR(TDDL_E_FAIL);
 		} else if (rc == -EIO) {
 			/* The driver timed out while trying to tell the chip to cancel */
-			return TDDL_COMMAND_COMPLETED;
+			return TDDLERR(TDDL_E_COMMAND_COMPLETED);
 		}
 
-		return TDDL_SUCCESS;
+		return TSS_SUCCESS;
 	} else {
-		return TSS_E_NOTIMPL;
+		return TDDLERR(TSS_E_NOTIMPL);
 	}
 }

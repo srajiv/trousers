@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <getopt.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "tcs_internal_types.h"
 #include "spi_internal_types.h"
 #include "tcs_tsp.h"
@@ -89,20 +89,20 @@ signals_init()
 	sigemptyset(&sigmask);
 	if ((rc = sigaddset(&sigmask, SIGCHLD))) {
 		LogError("sigaddset: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if ((rc = sigaddset(&sigmask, SIGINT))) {
 		LogError("sigaddset: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if ((rc = sigaddset(&sigmask, SIGHUP))) {
 		LogError("sigaddset: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((rc = pthread_sigmask(SIG_UNBLOCK, &sigmask, NULL))) {
 		LogError("pthread_sigmask: %s", strerror(rc));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	tcsd_sa_int.sa_handler = tcsd_signal_int;
@@ -111,17 +111,17 @@ signals_init()
 
 	if ((rc = sigaction(SIGINT, &tcsd_sa_int, NULL))) {
 		LogError("signal SIGINT not registered: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((rc = sigaction(SIGHUP, &tcsd_sa_int, NULL))) {
 		LogError("signal SIGHUP not registered: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((rc = sigaction(SIGCHLD, &tcsd_sa_chld, NULL))) {
 		LogError("signal SIGCHLD not registered: %s", strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;

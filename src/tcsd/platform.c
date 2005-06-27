@@ -16,7 +16,7 @@
 #include <utmp.h>
 #include <pthread.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -24,7 +24,6 @@
 #include "capabilities.h"
 #include "tcsps.h"
 #include "tcslog.h"
-#include "tcs_utils.h"
 
 pthread_mutex_t utmp_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -37,8 +36,6 @@ platform_get_runlevel()
 	int flag = 0, counter = 0;
 
 	pthread_mutex_lock(&utmp_lock);
-
-	setutent();
 
 	memset(&ut, 0, sizeof(struct utmp));
 	memset(&save, 0, sizeof(struct utmp));

@@ -16,8 +16,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "tss/tss.h"
-#include "tss/trousers.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "tcs_tsp.h"
 #include "spi_utils.h"
@@ -25,28 +25,13 @@
 #include "tspps.h"
 #include "tsplog.h"
 
-
-void
-keyreg_SetUUIDOfKeyObject(TSS_HKEY hKey, TSS_UUID uuid, TSS_FLAG psType)
-{
-	AnObject *anObject;
-	TCPA_RSAKEY_OBJECT *object;
-	anObject = getAnObjectByHandle(hKey);
-	if (anObject == NULL || anObject->memPointer == NULL)
-		return;
-	object = anObject->memPointer;
-	object->persStorageType = psType;
-	memcpy(&object->uuid, &uuid, sizeof (uuid));
-	return;
-}
-
-BOOL
+TSS_BOOL
 keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT tspContext, UINT32 keyBlobSize, BYTE *keyBlob)
 {
 	TCPA_KEY key;
 	UINT16 offset;
 	int fd = -1;
-	BOOL answer;
+	TSS_BOOL answer;
 
 	offset = 0;
 	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &key);
@@ -71,7 +56,7 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 	TSS_RESULT rc;
 
 	if ((fd = get_file()) < 0)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, blob_size);
 
@@ -103,7 +88,7 @@ keyreg_RemoveKey(TSS_UUID *uuid)
 
         pthread_mutex_unlock(&disk_cache_lock);
 
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TSPERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 TSS_RESULT
@@ -115,7 +100,7 @@ keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 	TSS_RESULT rc = TSS_SUCCESS;
 
 	if ((fd = get_file()) < 0)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	/* XXX need the PS funcs to return TSS_RESULTs */
 	if ((rc = ps_get_key_by_uuid(fd, uuid, tempBlob, &tempBlobSize))) {
@@ -129,7 +114,7 @@ keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 	*blob = malloc(*blobSizeOut);
 	if (*blob == NULL) {
 		LogError("malloc of %d bytes failed.", *blobSizeOut);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(*blob, tempBlob, tempBlobSize);
 	return TSS_SUCCESS;
@@ -142,7 +127,7 @@ keyreg_GetParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID *parent_uuid)
 	TSS_RESULT rc = TSS_SUCCESS;
 
 	if ((fd = get_file()) < 0)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	rc = ps_get_parent_uuid_by_uuid(fd, uuid, parent_uuid);
 
@@ -174,7 +159,7 @@ keyreg_GetParentPSTypeByUUID(TSS_UUID *uuid, UINT32 *psTypeOut)
         }
         pthread_mutex_unlock(&disk_cache_lock);
         /* key not found */
-        return TSS_E_PS_KEY_NOTFOUND;
+        return TSPERR(TSS_E_PS_KEY_NOTFOUND);
 }
 
 #if 0
@@ -185,7 +170,7 @@ keyreg_replaceEncData_PS(BYTE *enc_data, BYTE *new_enc_data)
 	TSS_RESULT rc = TSS_SUCCESS;
 
 	if ((fd = get_file()) < 0)
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	
 	rc = ps_replace_enc_data(fd, enc_data, new_enc_data);
 	put_file(fd);

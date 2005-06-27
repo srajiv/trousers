@@ -13,7 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -28,9 +29,9 @@
 struct key_mem_cache *key_mem_cache_head = NULL;
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
-BOOL corruptParamSize = 0;
+TSS_BOOL corruptParamSize = 0;
 BYTE LOG_ENABLED = 1;
-BOOL firstVendorCheck = 1;
+TSS_BOOL firstVendorCheck = 1;
 
 TSS_RESULT
 fill_key_info(struct key_disk_cache *d,
@@ -47,7 +48,7 @@ fill_key_info(struct key_disk_cache *d,
 		key_info->fIsLoaded = FALSE;
 
 		/* read key from disk */
-		if ((result = getKeyByCacheEntry(d, tmp_blob, &tmp_blob_size)))
+		if ((result = getKeyByCacheEntry(d, (BYTE *)&tmp_blob, &tmp_blob_size)))
 			return result;
 
 		offset = 0;
@@ -96,7 +97,7 @@ get_current_version(TCPA_VERSION *version)
 		offset = sizeof(UINT16); // XXX hack
 		UnloadBlob_VERSION(&offset, resp, version);
 		free(resp);
-	} else if (result == TCPA_BAD_MODE) {
+	} else if (result == TCPA_E_BAD_MODE) {
 		/* if the TPM doesn't understand VERSION_VAL, try the 1.1 way */
 		capArea = TCPA_CAP_VERSION;
 		result = TCSP_GetCapability_Internal(InternalContext,
@@ -142,7 +143,7 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 				UnloadBlob_UINT32(&offset, v, resp, NULL);
 				break;
 			default:
-				result = TCS_E_FAIL;
+				result = TCSERR(TSS_E_FAIL);
 				break;
 		}
 		free(resp);
@@ -189,10 +190,10 @@ get_max_auths(UINT32 *auths)
 	if (*auths < 2) {
 		LogError("%s reported only %d auth available!", __FUNCTION__, *auths);
 		LogError1("Your TPM must be reset before the TCSD can be started.");
-		result = TSS_E_INTERNAL_ERROR;
+		result = TCSERR(TSS_E_INTERNAL_ERROR);
 	} else {
 		LogDebug("get_max_auths reports %u auth contexts found", *auths);
-		result = TCS_SUCCESS;
+		result = TSS_SUCCESS;
 	}
 
 	return result;
@@ -205,38 +206,38 @@ get_tpm_metrics(struct tpm_properties *p)
 	UINT32 subCap, rv = 0;
 
 	if ((result = get_current_version(&p->version)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	UINT32ToArray(TPM_ORD_SaveKeyContext, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_ORD, (BYTE *)&subCap, sizeof(UINT32), &rv)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	p->keyctx_swap = rv ? TRUE : FALSE;
 
 	rv = 0;
 	UINT32ToArray(TPM_ORD_SaveAuthContext, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_ORD, (BYTE *)&subCap, sizeof(UINT32), &rv)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	p->authctx_swap = rv ? TRUE : FALSE;
 
-	UINT32ToArray(TCPA_CAP_PROP_PCR, (BYTE *)&subCap);
+	UINT32ToArray(TPM_CAP_PROP_PCR, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_pcrs)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	UINT32ToArray(TCPA_CAP_PROP_DIR, (BYTE *)&subCap);
+	UINT32ToArray(TPM_CAP_PROP_DIR, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_dirs)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	UINT32ToArray(TCPA_CAP_PROP_SLOTS, (BYTE *)&subCap);
+	UINT32ToArray(TPM_CAP_PROP_SLOTS, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_keys)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, (BYTE *)&subCap);
+	UINT32ToArray(TPM_CAP_PROP_MANUFACTURER, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					(UINT32 *)&p->manufacturer)))
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	result = get_max_auths(&(p->num_auths));
 
@@ -245,7 +246,7 @@ get_tpm_metrics(struct tpm_properties *p)
 
 #if 0
 void
-setCorruptParamSize(BOOL b)
+setCorruptParamSize(TSS_BOOL b)
 {
 	corruptParamSize = b;
 }
@@ -395,7 +396,7 @@ purgeLog()
 
 #undef HOW_MANY_RESPONSES
 TSS_RESULT
-canILoadThisKey(TCPA_KEY_PARMS *parms, BOOL *b)
+canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 {
 	UINT16 subCapLength;
 	BYTE subCap[100];
@@ -450,15 +451,15 @@ internal_EvictByKeySlot(TCPA_KEY_HANDLE slot)
 TSS_RESULT
 clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 {
-	TSS_RESULT result = TCS_SUCCESS;
+	TSS_RESULT result = TSS_SUCCESS;
 	TCPA_KEY_HANDLE_LIST keyList;
 	int i;
 	BYTE *respData = 0;
 	UINT32 respDataSize = 0;
 	TCPA_CAPABILITY_AREA capArea = -1;
 	UINT16 offset = 0;
-	BOOL found = 0;
-	BOOL ret = FALSE;
+	TSS_BOOL found = 0;
+	TSS_BOOL ret = FALSE;
 	struct key_mem_cache *tmp;
 
 	capArea = TCPA_CAP_KEY_HANDLE;
@@ -523,7 +524,7 @@ clearKeysFromChip(TCS_CONTEXT_HANDLE hContext)
 		*/
 
 	}
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 /*============================================================================================= */
@@ -609,11 +610,10 @@ LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob, char *log)
 {
 	blob[*offset] = data;
 	(*offset)++;
-#if DEBUG
+#ifdef DEBUG
 	if (log)
 		LogDebug("%s: %c", log, data);
 #endif
-
 }
 
 void
@@ -621,14 +621,14 @@ UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob, char *log)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
-#if DEBUG
+#ifdef DEBUG
 	if (log)
 		LogDebug("%s: %c", log, *dataOut);
 #endif
 }
 
 void
-LoadBlob_BOOL(UINT16 * offset, BOOL data, BYTE * blob, char *log)
+LoadBlob_BOOL(UINT16 * offset, TSS_BOOL data, BYTE * blob, char *log)
 {
 	blob[*offset] = data;
 	(*offset)++;
@@ -639,7 +639,7 @@ LoadBlob_BOOL(UINT16 * offset, BOOL data, BYTE * blob, char *log)
 }
 
 void
-UnloadBlob_BOOL(UINT16 * offset, BOOL * dataOut, BYTE * blob, char *log)
+UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL * dataOut, BYTE * blob, char *log)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
@@ -655,13 +655,6 @@ LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object,
 {
 	memcpy(&container[*offset], object, size);
 	(*offset) += (UINT16) size;
-#if 0
-	/* commenting out for now, logs getting too chatty */
-	if (log && size) {
-		LogDebug1(log);
-		LogBlob(size, &container[firstOffset]);
-	}
-#endif
 }
 
 void
@@ -731,20 +724,20 @@ UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset,
 }
 
 void
-LoadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
+LoadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 {
 	LoadBlob_UINT32(offset, auth->AuthHandle, blob, "Auth AuthHandle");
-	LoadBlob(offset, TPM_NONCE_SIZE, blob, auth->NonceOdd.nonce, "Auth: NonceOdd");
+	LoadBlob(offset, TCPA_NONCE_SIZE, blob, auth->NonceOdd.nonce, "Auth: NonceOdd");
 	LoadBlob_BOOL(offset, auth->fContinueAuthSession, blob, "CAS");
-	LoadBlob(offset, TPM_AUTHDATA_SIZE, blob, auth->HMAC, "auth: HMAC");
+	LoadBlob(offset, TCPA_AUTHDATA_SIZE, blob, (BYTE *)&auth->HMAC, "auth: HMAC");
 }
 
 void
-UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TCS_AUTH * auth)
+UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 {
-	UnloadBlob(offset, TPM_NONCE_SIZE, blob, auth->NonceEven.nonce, "Nonce Even");
+	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, auth->NonceEven.nonce, "Nonce Even");
 	UnloadBlob_BOOL(offset, &auth->fContinueAuthSession, blob, "CAS");
-	UnloadBlob(offset, TPM_DIGEST_SIZE, blob, auth->HMAC, "Auth HMAC");
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&auth->HMAC, "Auth HMAC");
 	return;
 }
 
@@ -781,7 +774,7 @@ UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob,
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
 			LogError("malloc of %d bytes failed.", keyParms->parmSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms,
@@ -805,7 +798,7 @@ UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob,
 		store->key = (BYTE *)malloc(store->keyLength);
 		if (store->key == NULL) {
 			LogError("malloc of %d bytes failed.", store->keyLength);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		UnloadBlob(offset, store->keyLength, blob, store->key,
@@ -863,7 +856,7 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 		if (key->PCRInfo == NULL) {
 			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
 			free(key->algorithmParms.parms);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, "KEY PCRInfo");
 	}
@@ -884,7 +877,7 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 			free(key->algorithmParms.parms);
 			free(key->PCRInfo);
 			free(key->pubKey.key);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->encSize, blob, key->encData, "KEY encData");
 	}
@@ -939,7 +932,7 @@ UnloadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob,
 	key->data = (BYTE *)malloc(key->size);
         if (key->data == NULL) {
 		LogError("malloc of %d bytes failed.", key->size);
-                return TSS_E_OUTOFMEMORY;
+                return TCSERR(TSS_E_OUTOFMEMORY);
         }
 	UnloadBlob(offset, key->size, blob, key->data, "SYM KEY data");
 	return TSS_SUCCESS;
@@ -955,7 +948,7 @@ UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob,
 	pcr->pcrSelect = malloc(pcr->sizeOfSelect);
         if (pcr->pcrSelect == NULL) {
 		LogError("malloc of %d bytes failed.", pcr->sizeOfSelect);
-                return TSS_E_OUTOFMEMORY;
+                return TCSERR(TSS_E_OUTOFMEMORY);
         }
 	UnloadBlob(offset, pcr->sizeOfSelect, blob, pcr->pcrSelect,
 		   "PCR SEL pcrSel");
@@ -984,7 +977,7 @@ UnloadBlob_PCR_COMPOSITE(UINT16 *offset, BYTE *blob,
 	out->pcrValue = malloc(out->valueSize);
         if (out->pcrValue == NULL) {
 		LogError("malloc of %d bytes failed.", out->valueSize);
-                return TSS_E_OUTOFMEMORY;
+                return TCSERR(TSS_E_OUTOFMEMORY);
         }
 	UnloadBlob(offset, out->valueSize, blob, (BYTE *) out->pcrValue,
 		   "PCR COMP value");
@@ -995,9 +988,9 @@ void
 LoadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr)
 {
 	LoadBlob_PCR_SELECTION(offset, blob, pcr->pcrSelection);
-	LoadBlob(offset, TPM_DIGEST_SIZE, blob, pcr->digestAtRelease.digest,
+	LoadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtRelease.digest,
 		 "PCR_INFO digAtRel");
-	LoadBlob(offset, TPM_DIGEST_SIZE, blob, pcr->digestAtCreation.digest,
+	LoadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtCreation.digest,
 		 "PCR_INFO digAtCreate");
 }
 
@@ -1009,8 +1002,8 @@ UnloadBlob_PCR_INFO(UINT16 * offset, BYTE * blob,
 
 	if ((rc = UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
 		return rc;
-	UnloadBlob(offset, TPM_DIGEST_SIZE, blob, pcr->digestAtRelease.digest, "PCR_INFO digAtRel");
-	UnloadBlob(offset, TPM_DIGEST_SIZE, blob, pcr->digestAtCreation.digest, "PCR_INFO digAtCreate");
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtRelease.digest, "PCR_INFO digAtRel");
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtCreation.digest, "PCR_INFO digAtCreate");
 
 	return TSS_SUCCESS;
 }
@@ -1027,7 +1020,7 @@ UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob,
 		data->sealInfo = (BYTE *)calloc(1, data->sealInfoSize);
 		if (data->sealInfo == NULL) {
 			LogError("malloc of %d bytes failed.", data->sealInfoSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, data->sealInfoSize, blob, data->sealInfo, "seal info");
 	} else {
@@ -1040,7 +1033,7 @@ UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob,
 		data->encData = (BYTE *)calloc(1, data->encDataSize);
 		if (data->encData == NULL) {
 			LogError("malloc of %d bytes failed.", data->encDataSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, data->encDataSize, blob, data->encData, "encdata");
 	} else {
@@ -1068,11 +1061,11 @@ LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
 	UINT32 tempFlag = 0;
 
 	if ((*flags) & migratable)
-		tempFlag |= FLAG_MIGRATABLE;
+		tempFlag |= TSS_FLAG_MIGRATABLE;
 	if ((*flags) & redirection)
-		tempFlag |= FLAG_REDIRECTION;
+		tempFlag |= TSS_FLAG_REDIRECTION;
 	if ((*flags) & volatileKey)
-		tempFlag |= FLAG_VOLATILE;
+		tempFlag |= TSS_FLAG_VOLATILE;
 	LoadBlob_UINT32(offset, tempFlag, blob, "Flags");
 }
 
@@ -1107,8 +1100,8 @@ UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob,
 	if ((rc = UnloadBlob_KEY_PARMS(offset, blob, &certify->algorithmParms)))
 		return rc;
 
-	UnloadBlob(offset, TPM_DIGEST_SIZE, blob, certify->pubkeyDigest.digest, "pubkey digest");
-	UnloadBlob(offset, TPM_NONCE_SIZE, blob, certify->data.nonce, "data");
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, certify->pubkeyDigest.digest, "pubkey digest");
+	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, certify->data.nonce, "data");
 	UnloadBlob_BOOL(offset, &certify->parentPCRStatus, blob, "parent pcr status");
 	UnloadBlob_UINT32(offset, &certify->PCRInfoSize, blob, "pcr info size");
 
@@ -1116,7 +1109,7 @@ UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob,
 		certify->PCRInfo = (BYTE *)malloc(certify->PCRInfoSize);
 		if (certify->PCRInfo == NULL) {
 			LogError("malloc of %d bytes failed.", certify->PCRInfoSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, certify->PCRInfoSize, blob, certify->PCRInfo, "pcr info");
 	} else {
@@ -1139,7 +1132,7 @@ UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset,
 	list->handle = malloc(list->loaded * sizeof (UINT32));
         if (list->handle == NULL) {
 		LogError("malloc of %d bytes failed.", list->loaded * sizeof (UINT32));
-                return TSS_E_OUTOFMEMORY;
+                return TCSERR(TSS_E_OUTOFMEMORY);
         }
 
 	for (i = 0; i < list->loaded; i++) {

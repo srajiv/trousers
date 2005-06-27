@@ -21,8 +21,8 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "tss/tss.h"
-#include "tss/trousers.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "tspps.h"
@@ -43,7 +43,7 @@ UnloadBlob_KEY_PARMS_PS( UINT16* offset, BYTE* blob, TCPA_KEY_PARMS* keyParms )
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
 			LogError("malloc of %d bytes failed.", keyParms->parmSize);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		Trspi_UnloadBlob( offset, keyParms->parmSize, blob, keyParms->parms );
 	} else {
@@ -62,7 +62,7 @@ UnloadBlob_STORE_PUBKEY_PS( UINT16* offset, BYTE* blob, TCPA_STORE_PUBKEY* store
 		store->key = malloc(store->keyLength);
 		if (store->key == NULL) {
 			LogError("malloc of %d bytes failed.", store->keyLength);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		Trspi_UnloadBlob(offset, store->keyLength, blob, store->key);
 	} else {
@@ -91,7 +91,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 		key->PCRInfo = malloc( key->PCRInfoSize );
 		if (key->PCRInfo == NULL) {
 			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		Trspi_UnloadBlob( offset, key->PCRInfoSize, blob, key->PCRInfo );
 	} else {
@@ -106,7 +106,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 		key->encData = malloc( key->encSize );
 		if (key->encData == NULL) {
 			LogError("malloc of %d bytes failed.", key->encSize);
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		Trspi_UnloadBlob( offset, key->encSize, blob, key->encData );
 	} else {
@@ -125,10 +125,10 @@ read_data(int fd, void *data, UINT32 size)
 	rc = read(fd, data, size);
 	if (rc == -1) {
 		LogError("read of %d bytes: %s", size, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("read of %d bytes (only %d read)", size, rc);
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -142,10 +142,10 @@ write_data(int fd, void *data, UINT32 size)
 	rc = write(fd, data, size);
 	if (rc == -1) {
 		LogError("write of %d bytes: %s", size, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("write of %d bytes (only %d written)", size, rc);
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -283,7 +283,7 @@ cache_key(UINT32 offset, UINT16 flags,
 	if (tmp == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct key_disk_cache));
 		pthread_mutex_unlock(&disk_cache_lock);
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	tmp->next = key_disk_cache_head;
 	key_disk_cache_head = tmp;

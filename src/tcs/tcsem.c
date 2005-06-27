@@ -14,7 +14,7 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -39,12 +39,12 @@ TSS_RESULT
 event_log_init()
 {
 	if (tcs_event_log != NULL)
-		return TCS_SUCCESS;
+		return TSS_SUCCESS;
 
 	tcs_event_log = calloc(1, sizeof(struct event_log));
 	if (tcs_event_log == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct event_log));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	pthread_mutex_init(&(tcs_event_log->lock), NULL);
@@ -55,7 +55,7 @@ event_log_init()
 		LogError("malloc of %d bytes failed.",
 				tpm_metrics.num_pcrs * sizeof(struct event_wrapper *));
 		free(tcs_event_log);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	/* assign external event log sources here */
@@ -66,7 +66,7 @@ event_log_init()
 	tcs_event_log->kernel_source = NULL;
 #endif
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -93,14 +93,14 @@ event_log_final()
 	free(tcs_event_log->lists);
 	free(tcs_event_log);
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
 copy_pcr_event(TSS_PCR_EVENT *dest, TSS_PCR_EVENT *source)
 {
 	memcpy(dest, source, sizeof(TSS_PCR_EVENT));
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -116,7 +116,7 @@ event_log_add(TSS_PCR_EVENT *event, UINT32 *pNumber)
 	if (new == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct event_wrapper));
 		pthread_mutex_unlock(&(tcs_event_log->lock));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	if ((result = copy_pcr_event(&(new->event), event))) {
@@ -143,7 +143,7 @@ event_log_add(TSS_PCR_EVENT *event, UINT32 *pNumber)
 
 	pthread_mutex_unlock(&(tcs_event_log->lock));
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_PCR_EVENT *
@@ -193,18 +193,18 @@ TCS_LogPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if(Event.ulPcrIndex >= tpm_metrics.num_pcrs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if (tcsd_options.kernel_pcrs & (1 << Event.ulPcrIndex)) {
 		LogInfo("PCR %d is configured to be kernel controlled. Event logging denied.",
 				Event.ulPcrIndex);
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	if (tcsd_options.firmware_pcrs & (1 << Event.ulPcrIndex)) {
 		LogInfo("PCR %d is configured to be firmware controlled. Event logging denied.",
 				Event.ulPcrIndex);
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	return event_log_add(&Event, pNumber);
@@ -228,12 +228,12 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 
 		if (tcs_event_log->kernel_source != NULL) {
 			if (tcs_event_log->kernel_source->open((void *)source, &log_handle))
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if (tcs_event_log->kernel_source->get_entry(log_handle, PcrIndex,
 						pNumber, ppEvent)) {
 				tcs_event_log->kernel_source->close(log_handle);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 
 			tcs_event_log->kernel_source->close(log_handle);
@@ -241,19 +241,19 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 			LogError("No source for externel kernel events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
 					TCSD_CONFIG_FILE);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else if (tcsd_options.firmware_pcrs & (1 << PcrIndex)) {
 		source = tcsd_options.firmware_log_file;
 
 		if (tcs_event_log->firmware_source != NULL) {
 			if (tcs_event_log->firmware_source->open((void *)source, &log_handle))
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if (tcs_event_log->firmware_source->get_entry(log_handle, PcrIndex,
 						pNumber, ppEvent)) {
 				tcs_event_log->firmware_source->close(log_handle);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 
 			tcs_event_log->firmware_source->close(log_handle);
@@ -261,14 +261,14 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 			LogError("No source for externel firmware events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
 					TCSD_CONFIG_FILE);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
 		LogError("PCR index %d not flagged as kernel or firmware controlled.", PcrIndex);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -284,7 +284,7 @@ TCS_GetPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if(PcrIndex >= tpm_metrics.num_pcrs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	/* if this is a kernel or firmware controlled PCR, call an external routine */
         if ((tcsd_options.kernel_pcrs & (1 << PcrIndex)) ||
@@ -306,13 +306,13 @@ TCS_GetPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 		if (*ppEvent == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT));
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		event = get_pcr_event(PcrIndex, *pNumber);
 		if (event == NULL) {
 			free(*ppEvent);
-			return TSS_E_BAD_PARAMETER;
+			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 
 		if ((result = copy_pcr_event(*ppEvent, event))) {
@@ -321,7 +321,7 @@ TCS_GetPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 	}
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 /* This routine will handle creating the TSS_PCR_EVENT structures from log
@@ -343,12 +343,12 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 
 		if (tcs_event_log->kernel_source != NULL) {
 			if (tcs_event_log->kernel_source->open((void *)source, &log_handle))
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if (tcs_event_log->kernel_source->get_entries_by_pcr(log_handle, PcrIndex,
 						FirstEvent, pEventCount, ppEvents)) {
 				tcs_event_log->kernel_source->close(log_handle);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 
 			tcs_event_log->kernel_source->close(log_handle);
@@ -356,19 +356,19 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 			LogError("No source for externel kernel events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
 					TCSD_CONFIG_FILE);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else if (tcsd_options.firmware_pcrs & (1 << PcrIndex)) {
 		source = tcsd_options.firmware_log_file;
 
 		if (tcs_event_log->firmware_source != NULL) {
 			if (tcs_event_log->firmware_source->open((void *)source, &log_handle))
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if (tcs_event_log->firmware_source->get_entries_by_pcr(log_handle, PcrIndex,
 						FirstEvent, pEventCount, ppEvents)) {
 				tcs_event_log->firmware_source->close(log_handle);
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 
 			tcs_event_log->firmware_source->close(log_handle);
@@ -376,14 +376,14 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 			LogError("No source for externel firmware events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
 					TCSD_CONFIG_FILE);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
 		LogError("PCR index %d not flagged as kernel or firmware controlled.", PcrIndex);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -401,7 +401,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if (PcrIndex >= tpm_metrics.num_pcrs)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	/* if this is a kernel or firmware controlled PCR, call an external routine */
         if ((tcsd_options.kernel_pcrs & (1 << PcrIndex)) ||
@@ -426,12 +426,12 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	lastEventNumber = MIN(lastEventNumber, *pEventCount);
 
 	if (FirstEvent > lastEventNumber)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if (lastEventNumber == 0) {
 		*pEventCount = 0;
 		*ppEvents = NULL;
-		return TCS_SUCCESS;
+		return TSS_SUCCESS;
 	}
 
 	/* FirstEvent is 0 indexed see TSS 1.1b spec section 4.7.2.2.3. That means that
@@ -441,7 +441,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (*ppEvents == NULL) {
 		LogError("malloc of %d bytes failed.",
 				sizeof(TSS_PCR_EVENT) * (lastEventNumber - FirstEvent));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	pthread_mutex_lock(&(tcs_event_log->lock));
@@ -462,7 +462,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	*pEventCount = eventIndex;
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 /* XXX needs modification for external event sources */
@@ -495,7 +495,7 @@ TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 	if (*ppEvents == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * numEvents);
 		pthread_mutex_unlock(&(tcs_event_log->lock));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	numEvents = 0;

@@ -14,16 +14,15 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <wchar.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tss/trousers.h"
-
-extern AnObject *objectList;
 
 /*
  *  popup_GetSecret()
@@ -53,14 +52,14 @@ popup_GetSecret(UINT32 new_pin, UNICODE *popup_str, void *auth_hash)
 	/* pin the area where the secret will be put in memory */
 	if (pin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH)) {
 		LogError1("Failed to pin secret in memory.");
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if (new_pin) {
 		if (DisplayNewPINWindow(secret, w_popup))
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else if (DisplayPINWindow(secret, w_popup))
-		return TSS_E_INTERNAL_ERROR;
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	/* allow a 0 length password here, as spec'd by the TSSWG */
 	Trspi_Hash(TSS_HASH_SHA1, strlen(secret), secret, (char *)auth_hash);
@@ -72,50 +71,9 @@ popup_GetSecret(UINT32 new_pin, UNICODE *popup_str, void *auth_hash)
 	return TSS_SUCCESS;
 }
 
+#if 0
 TSS_RESULT
-policy_UsesAuth(TSS_HPOLICY hPolicy, BOOL * ret)
-{
-	/******************
-	 *	An important thing to remember is that although a
-	 *	storage key might say authDataUsage = 0, it may have a
-	 *	usage policy with it.  We have found this to be the case
-	 *	for things like createKey.  For this reason, if it is a keyObject,
-	 *	we must check the bit in the object rather than the policy itself.
-	 *
-	 *	This is really only useful for Key Objects and only for the usage auth
-	 *	so that limits both our usage in the TSP including this function.
-	 *
-	 *	A weird case to condider is if secret_TakeOwnership calls this funct..
-	 *	must return TRUE for the owner auth;
-	 ***********************/
-
-	/*
-	 * This function should only be called on objects that it makes sense
-	 * to use auth on (TPM, Key, Encrypted Data), since the default is TRUE.
-	 */
-
-	AnObject *index;
-
-	LogDebug1("Checking if policy uses auth");
-	for (index = (AnObject *) objectList; index; next(index)) {
-		if (index->objectType == TSS_OBJECT_TYPE_RSAKEY && index->memPointer != NULL) {
-			if (((TCPA_RSAKEY_OBJECT *) index->memPointer)->usagePolicy == hPolicy) {
-				LogDebug1("Found policy object");
-				*ret = ((TCPA_RSAKEY_OBJECT *) index->memPointer)->usesAuth;
-				LogDebug("Policy uses auth = 0x%.2X", *ret);
-				return TSS_SUCCESS;
-			}
-		} else if (index->objectType == TSS_OBJECT_TYPE_TPM &&
-				((TCPA_TPM_OBJECT *)index->memPointer)->policy == hPolicy) {
-			break;
-		}
-	}
-	*ret = TRUE;
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, BOOL *answer)
+secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, TSS_BOOL *answer)
 {
 	LogDebug1("Has Secret Expired");
 	if (policyObject->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
@@ -131,7 +89,7 @@ secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, BOOL *answer)
 
 		if (t == ((time_t)-1)) {
 			LogError("time failed: %s", strerror(errno));
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		/* curtime - SecretTimer is the number of seconds elapsed since we
 		 * started the timer. SecretCounter is the number of seconds the
@@ -146,7 +104,7 @@ secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, BOOL *answer)
 		}
 	} else {
 		LogError1("Policy's Secret mode is not set!");
-		return TSS_E_INVALID_OBJ_ACCESS;
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 	}
 
 	LogDebug("has expired = 0x%.2X", *answer);
@@ -160,59 +118,33 @@ secret_DecSecretCounter(TCPA_POLICY_OBJECT * policy)
 		return;
 	--policy->SecretCounter;
 }
+#endif
 
 TSS_RESULT
-secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * auth)
+secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
 {
 	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_BOOL bExpired;
+	UINT32 mode;
 	TCPA_SECRET secret;
 
-	TCS_CONTEXT_HANDLE tcsContext;
-	TSP_INTERNAL_POLICY_OBJECT *policyObject;
-	AnObject *object;
-	BOOL bExpired;
-	BOOL useAuth;
-
-	LogDebug1("PerformAuth OIAP");
-
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL || object->memPointer == NULL) {
-		LogDebug1("problem with policy object");
-		return TSS_E_INVALID_HANDLE;
-	}
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY) {
-		LogDebug1("Not a policy Object");
-		return TSS_E_INVALID_HANDLE;
-	}
-
-	policyObject = object->memPointer;
-
-	if ((result = policy_UsesAuth(hPolicy, &useAuth)))
-		return result;
-
-	if (useAuth == FALSE) {
-		LogDebug1("nothing to do, doesn't use auth");
-		return TSS_SUCCESS;
-	}
-
-	tcsContext = obj_getTcsContext(hPolicy);
-	if (tcsContext == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
-
-	/* ---  This validates that the secret can be used */
-	if ((result = secret_HasSecretExpired(&policyObject->p, &bExpired)))
+	/* This validates that the secret can be used */
+	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
 		return result;
 
 	if (bExpired == TRUE)
-		return TSS_E_INVALID_OBJ_ACCESS;
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	/* ---  OIAP */
+	if ((result = obj_policy_get_tcs_context(hPolicy, &tcsContext)))
+		return result;
+
 	if ((result = Init_AuthNonce(tcsContext, auth)))
 		return result;
 
 	/* added retry logic */
 	if ((result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven))) {
-		if (result == TCPA_RESOURCES) {
+		if (result == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
 				/* POSIX sleep time, { secs, nanosecs } */
@@ -221,83 +153,54 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * 
 				nanosleep(&t, NULL);
 
 				result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven);
-			} while (result == TCPA_RESOURCES && ++retry < AUTH_RETRY_COUNT);
+			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
 		if (result)
 			return result;
 	}
 
-	switch (policyObject->p.SecretMode) {
-	case TSS_SECRET_MODE_CALLBACK:
-		result = policyObject->cb.Tspicb_CallbackHMACAuth(NULL, hPolicy,	/* for now */
-					  1,
-					  auth->fContinueAuthSession,
-					  FALSE,
-					  20,
-					  auth->NonceEven.nonce,
-					  auth->NonceOdd.nonce,
-					  NULL, NULL, 20, hashDigest.digest, auth->HMAC);
-		break;
-	case TSS_SECRET_MODE_SHA1:
-	case TSS_SECRET_MODE_PLAIN:
-		LogDebug1("TSP has secret");
-		if ((result = internal_GetSecret(hPolicy, &secret, TRUE)))
-			break;
-
-		HMAC_Auth(secret.secret,	/* policyObject->Secret,  */
-			  hashDigest.digest, auth);
-		break;
-
-	case TSS_SECRET_MODE_POPUP:
-		LogDebug1("Popup policy");
-		if ((result = popup_GetSecret(FALSE, policyObject->p.popupString, &secret)))
-			break;
-
-		HMAC_Auth(secret.secret,	/* policyObject->Secret,  */
-			  hashDigest.digest, auth);
-		break;
-
-	default:
-		result = TSS_E_POLICY_NO_SECRET;
-		break;
-	}
-
-	if (result) {
-		TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
+	if ((result = obj_policy_get_mode(hPolicy, &mode)))
 		return result;
+
+	switch (mode) {
+		case TSS_SECRET_MODE_CALLBACK:
+			result = obj_policy_do_hmac(hPolicy, TRUE,
+					auth->fContinueAuthSession,
+					FALSE,
+					20,
+					auth->NonceEven.nonce,
+					auth->NonceOdd.nonce,
+					NULL, NULL, 20,
+					hashDigest->digest,
+					(BYTE *)&auth->HMAC);
+			break;
+		case TSS_SECRET_MODE_SHA1:
+		case TSS_SECRET_MODE_PLAIN:
+		case TSS_SECRET_MODE_POPUP:
+			if ((result = obj_policy_get_secret(hPolicy, &secret)))
+				return result;
+
+			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
+			break;
+		default:
+			result = TSPERR(TSS_E_POLICY_NO_SECRET);
+			break;
 	}
 
-	secret_DecSecretCounter(&policyObject->p);
-	return TSS_SUCCESS;
+	if (result)
+		return result;
+
+	return obj_policy_dec_counter(hPolicy);
 }
 
+#if 0
+/* moved to obj_policy_validate_auth_oiap() */
 TSS_RESULT
-secret_ValidateAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH * auth)
+obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
 {
 	TSS_RESULT result;
 	TCPA_SECRET secret;
-	TSP_INTERNAL_POLICY_OBJECT *policyObject;
-	AnObject *object;
-	BOOL useAuth;
-
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->memPointer == NULL) {
-		LogError("mem pointer for policy object 0x%x is NULL", hPolicy);
-		return TSS_E_INTERNAL_ERROR;
-	}
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	policyObject = object->memPointer;
-
-	if ((result = policy_UsesAuth(hPolicy, &useAuth)))
-		return result;
-
-	if (useAuth == FALSE)
-		return 0;
 
 	switch (policyObject->p.SecretMode) {
 	case TSS_SECRET_MODE_CALLBACK:
@@ -308,359 +211,224 @@ secret_ValidateAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST hashDigest, TCS_AUTH *
 					      20,
 					      auth->NonceEven.nonce,
 					      auth->NonceOdd.nonce,
-					      NULL, NULL, 20, hashDigest.digest, auth->HMAC)))
+					      NULL, NULL, 20, hashDigest.digest, (BYTE *)&auth->HMAC)))
 			return result;
 		break;
 	case TSS_SECRET_MODE_SHA1:
 	case TSS_SECRET_MODE_PLAIN:
-		if ((result = internal_GetSecret(hPolicy, &secret, FALSE)))
+		if ((result = obj_policy_get_secret(hPolicy, &secret, FALSE)))
 			return result;
 
-		if (validateReturnAuth(secret.secret, hashDigest.digest, auth))
-			return TSS_E_TSP_AUTHFAIL;
+		if (validateReturnAuth(secret.authdata, hashDigest.digest, auth))
+			return TSPERR(TSS_E_TSP_AUTHFAIL);
 		break;
 	case TSS_SECRET_MODE_POPUP:
 		if ((result = popup_GetSecret(FALSE, policyObject->p.popupString, &secret)))
 			return result;
 
-		if (validateReturnAuth(secret.secret, hashDigest.digest, auth))
-			return TSS_E_TSP_AUTHFAIL;
+		if (validateReturnAuth(secret.authdata, hashDigest.digest, auth))
+			return TSPERR(TSS_E_TSP_AUTHFAIL);
 		break;
 	default:
-		return TSS_E_POLICY_NO_SECRET;
+		return TSPERR(TSS_E_POLICY_NO_SECRET);
 		break;
 	}
 
 	return TSS_SUCCESS;
 }
+#endif
 
 TSS_RESULT
 secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		       TSS_HPOLICY hMigrationPolicy, TSS_HOBJECT hKey,
 		       UINT16 osapType, UINT32 osapData,
 		       TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
-		       BYTE sharedSecret[20], TCS_AUTH * auth, TCPA_NONCE * nonceEvenOSAP)
+		       BYTE *sharedSecret, TPM_AUTH * auth, TCPA_NONCE * nonceEvenOSAP)
 {
-	TSP_INTERNAL_POLICY_OBJECT *keyPolicyObject;
-/* 	TCPA_POLICY_OBJECT* encPolicyObject; */
-	TSP_INTERNAL_POLICY_OBJECT *usagePolicyObject;
-	TSP_INTERNAL_POLICY_OBJECT *migPolicyObject;
-	AnObject *object;
-	BOOL bExpired;
-/* 	BOOL usesUsageAuth; */
-
-	TSS_RESULT result;
+	TSS_BOOL bExpired;
 	TCPA_SECRET keySecret;
-/* 	TCPA_SECRET encSecret; */
 	TCPA_SECRET usageSecret;
 	TCPA_SECRET migSecret;
-	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
+	UINT32 keyMode, usageMode, migMode;
 
-	if (tcsContext == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
+	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
 
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	keyPolicyObject = object->memPointer;
-
-	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	usagePolicyObject = object->memPointer;
-
-/* 	if( result = policy_UsesAuth( hUsagePolicy, &usesUsageAuth )) */
-/* 		return result; */
-
-	object = getAnObjectByHandle(hMigrationPolicy);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	migPolicyObject = object->memPointer;
-
-	/* This validates that the secret can be used */
-	if ((result = secret_HasSecretExpired(&keyPolicyObject->p, &bExpired)))
+	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
 		return result;
 
 	if (bExpired == TRUE)
-		return TSS_E_INVALID_OBJ_ACCESS;
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	/* check the usage policy secret */
-	if ((result = secret_HasSecretExpired(&usagePolicyObject->p, &bExpired)))
+	if ((result = obj_policy_has_expired(hUsagePolicy, &bExpired)))
 		return result;
 
 	if (bExpired == TRUE)
-		return TSS_E_INVALID_OBJ_ACCESS;
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	/* check the migration policy secret */
-	if ((result = secret_HasSecretExpired(&migPolicyObject->p, &bExpired)))
+	if ((result = obj_policy_has_expired(hMigrationPolicy, &bExpired)))
 		return result;
 
 	if (bExpired == TRUE)
-		return TSS_E_INVALID_OBJ_ACCESS;
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	/* ---  If any of them is a callback */
-	if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    migPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
-		/* ---  And they're not all callback */
-		if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    usagePolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    migPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK)
-			return TSS_E_BAD_PARAMETER;	/* error...they should all be callback if one is callback */
+	if ((result = obj_policy_get_tcs_context(hPolicy, &tcsContext)))
+		return result;
 
+	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
+		return result;
+
+	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
+		return result;
+
+	if ((result = obj_policy_get_mode(hMigrationPolicy, &migMode)))
+		return result;
+
+	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
+	    usageMode == TSS_SECRET_MODE_CALLBACK ||
+	    migMode == TSS_SECRET_MODE_CALLBACK) {
+		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
+		    usageMode != TSS_SECRET_MODE_CALLBACK ||
+		    migMode != TSS_SECRET_MODE_CALLBACK)
+			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
-/* 		encPolicyObject->SecretMode != TSS_SECRET_MODE_CALLBACK ) */
 
-	if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode != TSS_SECRET_MODE_CALLBACK) {
+		if ((result = obj_policy_get_secret(hPolicy, &keySecret)))
+			return result;
 
-		if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_SHA1 ||
-		    keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_NONE) {
-			if ((result = internal_GetSecret(hPolicy, &keySecret, 1)))
-				return result;
-		} else if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_POPUP) {
-			if ((result = popup_GetSecret(hPolicy, keyPolicyObject->p.popupString, &keySecret.secret)))
-				return result;
-		} else {
-			LogError1("Key Policy's Secret mode is not set.");
-			return TSS_E_POLICY_NO_SECRET;
-		}
+		if ((result = obj_policy_get_secret(hUsagePolicy, &usageSecret)))
+			return result;
 
-		if (usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_SHA1 ||
-		    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_NONE) {
-			if ((result = internal_GetSecret(hUsagePolicy, &usageSecret, 1)))
-				return result;
-		} else if (usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_POPUP) {
-			if ((result = popup_GetSecret(hUsagePolicy, usagePolicyObject->p.popupString,
-						&usageSecret.secret)))
-				return result;
-		} else {
-			LogError1("Key Policy's Secret mode is not set.");
-			return TSS_E_POLICY_NO_SECRET;
-		}
+		if ((result = obj_policy_get_secret(hMigrationPolicy, &migSecret)))
+			return result;
 
-		if (migPolicyObject->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    migPolicyObject->p.SecretMode == TSS_SECRET_MODE_SHA1 ||
-		    migPolicyObject->p.SecretMode == TSS_SECRET_MODE_NONE) {
-			if ((result = internal_GetSecret(hMigrationPolicy, &migSecret, 1)))
-				return result;
-		} else if (migPolicyObject->p.SecretMode == TSS_SECRET_MODE_POPUP) {
-			if ((result = popup_GetSecret(hMigrationPolicy, migPolicyObject->p.popupString,
-						&migSecret.secret)))
-				return result;
-		} else {
-			LogError1("Key Policy's Secret mode is not set.");
-			return TSS_E_POLICY_NO_SECRET;
-		}
-
-		if ((result = OSAP_Calc(tcsContext, osapType, osapData, keySecret.secret,	/* wrap policy- usage */
-				       usageSecret.secret,	/* encSecret.secret,    //key policy - usage */
-				       migSecret.secret,	/* encSecret.secret,    //key policy - migration */
+		if ((result = OSAP_Calc(tcsContext, osapType, osapData, keySecret.authdata,
+				       usageSecret.authdata,
+				       migSecret.authdata,
 				       encAuthUsage, encAuthMig, sharedSecret, auth)))
 			return result;
-	} else if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
-		/* call osap here */
+	} else {
 		if ((result = TCSP_OSAP(tcsContext, osapType, osapData, auth->NonceOdd,
 				  &auth->AuthHandle, &auth->NonceEven, nonceEvenOSAP)))
 			return result;
 
-		if ((result = keyPolicyObject->cb.Tspicb_CallbackXorEnc(NULL, 0,	/* hEncPolicy,       //????? */
-					    hKey,	/* object ????? */
-					    0,	/* pupose secret ???? */
-					    20,
-					    auth->NonceEven.nonce,
-					    NULL,
-					    nonceEvenOSAP->nonce,
-					    auth->NonceOdd.nonce,
-					    20, encAuthUsage->encauth, encAuthMig->encauth)))
+		if ((result = obj_policy_do_xor(hPolicy, NULL_HOBJECT, hKey,
+						FALSE, 20,
+						auth->NonceEven.nonce, NULL,
+						nonceEvenOSAP->nonce,
+						auth->NonceOdd.nonce, 20,
+						encAuthUsage->authdata,
+						encAuthMig->authdata)))
 			return result;
-	} else
-		return TSS_E_POLICY_NO_SECRET;
+	}
 
-	return 0;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
 secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			TSS_HPOLICY hMigPolicy, TSS_HOBJECT hKey,
-			BYTE sharedSecret[20], TCS_AUTH * auth,
-			BYTE * hashDigest, TCPA_NONCE nonceEvenOSAP)
+			BYTE sharedSecret[20], TPM_AUTH * auth,
+			BYTE * hashDigest, TCPA_NONCE *nonceEvenOSAP)
 {
-	TSP_INTERNAL_POLICY_OBJECT *keyPolicyObject;
-	TSP_INTERNAL_POLICY_OBJECT *usagePolicyObject;
-	TSP_INTERNAL_POLICY_OBJECT *migPolicyObject;
-
-	AnObject *object;
-
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
+	UINT32 keyMode, usageMode, migMode;
 
-	if (tcsContext == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
+	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
+		return result;
 
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
+	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
+		return result;
 
-	keyPolicyObject = object->memPointer;
-
-	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	usagePolicyObject = object->memPointer;
-
-	object = getAnObjectByHandle(hMigPolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	migPolicyObject = object->memPointer;
+	if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
+		return result;
 
 	/* ---  If any of them is a callback */
-	if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    migPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
+	    usageMode == TSS_SECRET_MODE_CALLBACK ||
+	    migMode == TSS_SECRET_MODE_CALLBACK) {
 		/* ---  And they're not all callback */
-		if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    usagePolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    migPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK)
-			return TSS_E_BAD_PARAMETER;	/* error...they should all be callback if one is callback */
-
+		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
+		    usageMode != TSS_SECRET_MODE_CALLBACK ||
+		    migMode != TSS_SECRET_MODE_CALLBACK)
+			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
-/* 	if( keyPolicyObject->SecretMode == TSS_SECRET_MODE_CALLBACK && */
-/* 		encPolicyObject->SecretMode != TSS_SECRET_MODE_CALLBACK ) */
-/* 		return  TSS_E_BAD_PARAMETER ;		//error...they should both be callback if one is callback */
 
-	if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK) {
-#if 0
-		if (keyPolicyObject->SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    keyPolicyObject->SecretMode == TSS_SECRET_MODE_SHA1) {
-			if (result = internal_GetSecret(hPolicy, &keySecret, 1))
-				return result;
-		} else if (keyPolicyObject->SecretMode == TSS_SECRET_MODE_POPUP) {
-			if (result = popup_GetSecret(hPolicy, &keySecret.secret))
-				return result;
-		} else
-			return 0x99;	/* not yet */
-
-		if (encPolicyObject->SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    encPolicyObject->SecretMode == TSS_SECRET_MODE_SHA1) {
-			if (result = internal_GetSecret(hEncPolicy, &encSecret, 1))
-				return result;
-		} else if (encPolicyObject->SecretMode == TSS_SECRET_MODE_POPUP) {
-			if (result = popup_GetSecret(hEncPolicy, &encSecret.secret))
-				return result;
-		} else
-			return 0x99;	/* not yet */
-#endif
-		HMAC_Auth(sharedSecret, hashDigest, auth);
-	} else if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
-		if ((result = keyPolicyObject->cb.Tspicb_CallbackHMACAuth(NULL, hPolicy,	/* for now */
-					      1,	/* not verify    */
-					      auth->fContinueAuthSession,
-					      TRUE,
-					      20,
-					      auth->NonceEven.nonce,
-					      NULL,
-					      nonceEvenOSAP.nonce,
-					      auth->NonceOdd.nonce, 20, hashDigest, auth->HMAC)))
+	if (keyMode == TSS_SECRET_MODE_CALLBACK) {
+		if ((result = obj_policy_do_hmac(hPolicy,
+						TRUE,
+						auth->fContinueAuthSession,
+						TRUE,
+						20,
+						auth->NonceEven.nonce,
+						NULL,
+						nonceEvenOSAP->nonce,
+						auth->NonceOdd.nonce, 20,
+						hashDigest,
+						(BYTE *)&auth->HMAC)))
 			return result;
-	} else
-		return TSS_E_POLICY_NO_SECRET;
+	} else {
+		HMAC_Auth(sharedSecret, hashDigest, auth);
+	}
 
-	secret_DecSecretCounter(&keyPolicyObject->p);
-	secret_DecSecretCounter(&usagePolicyObject->p);
-	secret_DecSecretCounter(&migPolicyObject->p);
-	return 0;
+	if ((result = obj_policy_dec_counter(hPolicy)))
+		return result;
+
+	if ((result = obj_policy_dec_counter(hUsagePolicy)))
+		return result;
+
+	if ((result = obj_policy_dec_counter(hMigPolicy)))
+		return result;
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
 secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			 TSS_HPOLICY hMigPolicy, BYTE sharedSecret[20],
-			 TCS_AUTH * auth, BYTE * hashDigest, TCPA_NONCE nonceEvenOSAP)
+			 TPM_AUTH * auth, BYTE * hashDigest, TCPA_NONCE *nonceEvenOSAP)
 {
-	TSP_INTERNAL_POLICY_OBJECT *keyPolicyObject;
-	TSP_INTERNAL_POLICY_OBJECT *usagePolicyObject;
-	TSP_INTERNAL_POLICY_OBJECT *migPolicyObject;
-	AnObject *object;
-
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext = obj_getTcsContext(hPolicy);
+	UINT32 keyMode, usageMode, migMode;
 
-	if (tcsContext == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
+	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
+		return result;
 
-	object = getAnObjectByHandle(hPolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
+	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
+		return result;
 
-	keyPolicyObject = object->memPointer;
-
-	object = getAnObjectByHandle(hUsagePolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	usagePolicyObject = object->memPointer;
-
-	object = getAnObjectByHandle(hMigPolicy);
-	if (object == NULL || object->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-		return TSS_E_INVALID_HANDLE;
-
-	migPolicyObject = object->memPointer;
+	if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
+		return result;
 
 	/* ---  If any of them is a callback */
-	if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    usagePolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK ||
-	    migPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
+	    usageMode == TSS_SECRET_MODE_CALLBACK ||
+	    migMode == TSS_SECRET_MODE_CALLBACK) {
 		/* ---  And they're not all callback */
-		if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    usagePolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK ||
-		    migPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK)
-			return TSS_E_BAD_PARAMETER;	/* error...they should all be callback if one is callback */
-
+		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
+		    usageMode != TSS_SECRET_MODE_CALLBACK ||
+		    migMode != TSS_SECRET_MODE_CALLBACK)
+			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
-/* 	if( keyPolicyObject->SecretMode == TSS_SECRET_MODE_CALLBACK && */
-/* 		encPolicyObject->SecretMode != TSS_SECRET_MODE_CALLBACK ) */
-/* 		return  TSS_E_BAD_PARAMETER ;		//error...they should both be callback if one is callback */
 
-	if (keyPolicyObject->p.SecretMode != TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode != TSS_SECRET_MODE_CALLBACK) {
 		if (validateReturnAuth(sharedSecret, hashDigest, auth))
-			return TSS_E_TSP_AUTHFAIL;
-	} else if (keyPolicyObject->p.SecretMode == TSS_SECRET_MODE_CALLBACK) {
-		if ((result = keyPolicyObject->cb.Tspicb_CallbackHMACAuth(NULL, hPolicy,	/* for now */
-					      0,
-					      auth->fContinueAuthSession,
-					      TRUE,
-					      20,
-					      auth->NonceEven.nonce,
-					      NULL,
-					      nonceEvenOSAP.nonce,
-					      auth->NonceOdd.nonce, 20, hashDigest, auth->HMAC)))
+			return TSPERR(TSS_E_TSP_AUTHFAIL);
+	} else {
+		if ((result = obj_policy_do_hmac(hPolicy,
+						0,
+						auth->fContinueAuthSession,
+						TRUE,
+						20,
+						auth->NonceEven.nonce,
+						NULL,
+						nonceEvenOSAP->nonce,
+						auth->NonceOdd.nonce, 20,
+						hashDigest,
+						(BYTE *)&auth->HMAC)))
 			return result;
-	} else
-		return TSS_E_POLICY_NO_SECRET;
+	}
 
 	return TSS_SUCCESS;
 }
@@ -669,11 +437,11 @@ TSS_RESULT
 secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		     TSS_HTPM hTPM,
 		     TSS_HKEY hKeySRK,
-		     TCS_AUTH * auth,
+		     TPM_AUTH * auth,
 		     UINT32 * encOwnerAuthLength,
 		     BYTE * encOwnerAuth, UINT32 * encSRKAuthLength, BYTE * encSRKAuth)
 {
-	TSS_RESULT rc;
+	TSS_RESULT result;
 	UINT32 endorsementKeySize;
 	BYTE *endorsementKey;
 	TCPA_KEY dummyKey;
@@ -688,16 +456,15 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	TSS_HPOLICY hOwnerPolicy;
 	UINT32 srkKeyBlobLength;
 	BYTE *srkKeyBlob;
-	AnObject *anObject;
-	TSP_INTERNAL_POLICY_OBJECT *ownerPolicy;
-	TSP_INTERNAL_POLICY_OBJECT *srkPolicy;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
+	UINT32 ownerMode, srkMode;
 
-	tcsContext = obj_getTcsContext(hTPM);
-	tspContext = obj_getTspContext(hTPM);
-	if (tcsContext == NULL_HCONTEXT || tspContext == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
+	if ((result = obj_tpm_get_tcs_context(hTPM, &tcsContext)))
+		return result;
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
 
 	/*************************************************
 	 *	First, get the policy objects and check them for how
@@ -706,113 +473,138 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	 **************************************************/
 
 	/* ---  First get the Owner Policy */
-	if ((rc = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
-		return rc;
+	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
+		return result;
 
+#if 0
 	anObject = getAnObjectByHandle(hOwnerPolicy);
 	if (anObject == NULL || anObject->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	ownerPolicy = anObject->memPointer;
-
+#endif
 	/* ---  Now get the SRK Policy */
 
-	if ((rc = Tspi_GetPolicyObject(hKeySRK, TSS_POLICY_USAGE, &hSrkPolicy)))
-		return rc;
+	if ((result = Tspi_GetPolicyObject(hKeySRK, TSS_POLICY_USAGE, &hSrkPolicy)))
+		return result;
+#if 0
 	anObject = getAnObjectByHandle(hSrkPolicy);
 	if (anObject == NULL || anObject->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	srkPolicy = anObject->memPointer;
+#endif
+	if ((result = obj_policy_get_mode(hOwnerPolicy, &ownerMode)))
+		return result;
+
+	if ((result = obj_policy_get_mode(hSrkPolicy, &srkMode)))
+		return result;
 
 	/* ---  If the policy callback's aren't the same, that's an error if one is callback */
-	if (srkPolicy->p.SecretMode == TSS_SECRET_MODE_CALLBACK &&
-	    ownerPolicy->p.SecretMode != TSS_SECRET_MODE_CALLBACK) {
-		LogError1("Policy callback modes for SRK policy and Owner policy differ");
-		return TSS_E_INTERNAL_ERROR;
+	if (srkMode == TSS_SECRET_MODE_CALLBACK ||
+	    ownerMode == TSS_SECRET_MODE_CALLBACK) {
+		if (srkMode != TSS_SECRET_MODE_CALLBACK ||
+		    ownerMode != TSS_SECRET_MODE_CALLBACK) {
+			LogError1("Policy callback modes for SRK policy and "
+					"Owner policy differ");
+			return TSPERR(TSS_E_BAD_PARAMETER);
+		}
 	}
 
-	if (ownerPolicy->p.SecretMode != TSS_SECRET_MODE_CALLBACK) {
+	if (ownerMode != TSS_SECRET_MODE_CALLBACK) {
 		/* ---  First, get the Endorsement Public Key for Encrypting */
-		if ((rc = Tspi_GetAttribData(hEndorsementPubKey,
+		if ((result = Tspi_GetAttribData(hEndorsementPubKey,
 					    TSS_TSPATTRIB_KEY_BLOB,
 					    TSS_TSPATTRIB_KEYBLOB_BLOB,
 					    &endorsementKeySize, &endorsementKey)))
-			return rc;
+			return result;
 
 		/* ---  now stick it in a Key Structure */
 		offset = 0;
 		Trspi_UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
 
+#if 0
 		/* ---  Now get the secrets */
-		if (ownerPolicy->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    ownerPolicy->p.SecretMode == TSS_SECRET_MODE_SHA1) {
-			if ((rc = internal_GetSecret(hOwnerPolicy, &ownerSecret, 1)))
-				return rc;
-		} else if (ownerPolicy->p.SecretMode == TSS_SECRET_MODE_POPUP) {
-			if ((rc = popup_GetSecret(FALSE, ownerPolicy->p.popupString, ownerSecret.secret)))
-				return rc;
+		if (ownerMode == TSS_SECRET_MODE_PLAIN ||
+		    ownerMode == TSS_SECRET_MODE_SHA1) {
+			if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret)))
+				return result;
+		} else if (ownerMode == TSS_SECRET_MODE_POPUP) {
+			if ((result = popup_GetSecret(FALSE, ownerPolicy->p.popupString, ownerSecret.authdata)))
+				return result;
 		} else {
 			LogError1("Key Policy's Secret mode is not set.");
-			return TSS_E_POLICY_NO_SECRET;	/* not yet */
+			return TSPERR(TSS_E_POLICY_NO_SECRET);	/* not yet */
 		}
 
-		if (srkPolicy->p.SecretMode == TSS_SECRET_MODE_PLAIN ||
-		    srkPolicy->p.SecretMode == TSS_SECRET_MODE_SHA1) {
-			if ((rc = internal_GetSecret(hSrkPolicy, &srkSecret, 1)))
-				return rc;
-		} else if (srkPolicy->p.SecretMode == TSS_SECRET_MODE_POPUP) {
-			if ((rc = popup_GetSecret(FALSE, srkPolicy->p.popupString, srkSecret.secret)))
-				return rc;
+		if (srkMode == TSS_SECRET_MODE_PLAIN ||
+		    srkMode == TSS_SECRET_MODE_SHA1) {
+			if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
+				return result;
+		} else if (srkMode == TSS_SECRET_MODE_POPUP) {
+			if ((result = popup_GetSecret(FALSE, srkPolicy->p.popupString, srkSecret.authdata)))
+				return result;
 		} else {
 			LogError1("Key Policy's Secret mode is not set.");
-			return TSS_E_POLICY_NO_SECRET;
+			return TSPERR(TSS_E_POLICY_NO_SECRET);
 		}
+#else
+		if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret)))
+			return result;
 
+		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
+			return result;
+#endif
 		/* ---   Encrypt the Owner Authorization */
-		if ((rc = Tspi_TPM_GetRandom(hTPM, 20, &random)))
-			return rc;
+		if ((result = Tspi_TPM_GetRandom(hTPM, 20, &random)))
+			return result;
 		memcpy(randomSeed, random, 20);
 		free_tspi(tspContext, random);
 
-		Trspi_RSA_Encrypt(ownerSecret.secret,
-				       20,	/* sizeof(tpmObject->ownerAuth), //dataToEncryptLen,  //in */
-				       encOwnerAuth,	/* out */
-				       encOwnerAuthLength,	/* *encryptedDataLen, //out */
-				       dummyKey.pubKey.key,	/* endorsementKey, //pubKey.pubKey.key, */
-				       dummyKey.pubKey.keyLength);	/* endorsementKeySize, //pubKey.pubKey.keyLength,  //unsigned int keysize,  */
+		Trspi_RSA_Encrypt(ownerSecret.authdata,
+				       20,
+				       encOwnerAuth,
+				       encOwnerAuthLength,
+				       dummyKey.pubKey.key,
+				       dummyKey.pubKey.keyLength);
 
 		/* ---  Encrypt the SRK Authorization */
-		if ((rc = Tspi_TPM_GetRandom(hTPM, 20, &random)))
-			return rc;
+		if ((result = Tspi_TPM_GetRandom(hTPM, 20, &random)))
+			return result;
 
 		memcpy(randomSeed, random, 20);
 		free_tspi(tspContext, random);
 
-		Trspi_RSA_Encrypt(srkSecret.secret,
-				       20,	/* sizeof(tpmObject->SRKAuth), //dataToEncryptLen,  //in */
-				       encSRKAuth,	/* out */
-				       encSRKAuthLength,	/* *encryptedDataLen, //out */
-				       dummyKey.pubKey.key,	/* endorsementKey, //pubKey.pubKey.key, */
-				       dummyKey.pubKey.keyLength);	/* endorsementKeySize, //pubKey.pubKey.keyLength,  //unsigned int keysize,  */
-	} else {		/* ---    If the owner Policy isn't provided */
-
+		Trspi_RSA_Encrypt(srkSecret.authdata,
+				       20,
+				       encSRKAuth,
+				       encSRKAuthLength,
+				       dummyKey.pubKey.key,
+				       dummyKey.pubKey.keyLength);
+	} else {
 		*encOwnerAuthLength = 256;
 		*encSRKAuthLength = 256;
-		if ((rc = ownerPolicy->cb.Tspicb_CallbackTakeOwnership(NULL, 0, hEndorsementPubKey,
+#if 0
+		if ((result = ownerPolicy->cb.Tspicb_CallbackTakeOwnership(NULL, 0, hEndorsementPubKey,
 					       *encOwnerAuthLength, encOwnerAuth)))
-			return rc;
+			return result;
+#else
+		if ((result = obj_policy_do_takeowner(hOwnerPolicy, hTPM,
+						hEndorsementPubKey, *encOwnerAuthLength,
+						encOwnerAuth)))
+			return result;
+#endif
 	}
 
-	if ((rc = Tspi_GetAttribData(hKeySRK,
+	if ((result = Tspi_GetAttribData(hKeySRK,
 				    TSS_TSPATTRIB_KEY_BLOB,
 				    TSS_TSPATTRIB_KEYBLOB_BLOB,
 				    &srkKeyBlobLength,
 				    &srkKeyBlob)))
-		return rc;
-/* ================  Authorizatin Digest Calculation */
-/* ===	Hash first the following: */
+		return result;
 
+	/* ================  Authorizatin Digest Calculation */
+	/* ===	Hash first the following: */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
 	Trspi_LoadBlob_UINT16(&offset, TCPA_PID_OWNER, hashblob);
@@ -826,8 +618,8 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 	/* ===  HMAC for the final digest */
 
-	if ((rc = secret_PerformAuth_OIAP(hOwnerPolicy, digest, auth)))
-		return rc;
+	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, &digest, auth)))
+		return result;
 
 	return TSS_SUCCESS;
 }

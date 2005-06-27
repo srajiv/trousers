@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -35,7 +35,7 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
     )
 {
 	TSS_RESULT result;
-	BOOL is_reg;
+	TSS_BOOL is_reg;
 
 	LogDebug1("TCS_RegisterKey");
 	if ((result = ctx_verify_context(hContext)))
@@ -44,29 +44,29 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/*---	Check if parent is registered here */
 	if (isUUIDRegistered(WrappingKeyUUID, &is_reg) != TSS_SUCCESS) {
 		LogDebug1("Parent not found");
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	if (is_reg == FALSE) {
 		LogDebug1("Wrapping UUID is not registered");
-		return TCS_E_KEY_NOT_REGISTERED;
+		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	}
 
 	/*---	Check if key is already regisitered */
 	if (isUUIDRegistered(KeyUUID, &is_reg) != TSS_SUCCESS) {
 		LogError1("Failed checking if UUID is registered.");
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if (is_reg == TRUE) {
 		LogDebug1("UUID is already registered");
-		return TCS_E_KEY_ALREADY_REGISTERED;
+		return TCSERR(TSS_E_KEY_ALREADY_REGISTERED);
 	}
 
 	/*---	Go ahead and store it in system persistant storage */
 	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID, rgbKey, cKeySize))) {
 		LogError1("Error writing key to file");
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	LogDebug1("Leaving TCS_RegisterKey");
@@ -93,18 +93,18 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
     )
 {
-	TSS_RESULT result = TCS_SUCCESS;
+	TSS_RESULT result = TSS_SUCCESS;
 	UINT32 count = 0, i;
 	TSS_KM_KEYINFO *ret = NULL;
 	TSS_UUID tmp_uuid;
 	struct key_disk_cache *disk_ptr, *tmp_ptrs[MAX_KEY_CHILDREN];
 	struct key_mem_cache *mem_ptr;
-	BOOL is_reg = FALSE;
+	TSS_BOOL is_reg = FALSE;
 
 	LogDebug1("Enum Reg Keys");
 
 	if (pcKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -116,8 +116,8 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		if (is_reg == FALSE) {
 			/* This return code is not listed as possible in the TSS 1.1 spec,
-			 * but it makes more sense than just TCS_SUCCESS or TCS_E_FAIL */
-			return TCS_E_KEY_NOT_REGISTERED;
+			 * but it makes more sense than just TCS_SUCCESS or TSS_E_FAIL */
+			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 		}
 	}
 
@@ -140,7 +140,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			if (ret == NULL) {
 				LogError1("Malloc Failure");
 				count = 0;
-				result = TSS_E_OUTOFMEMORY;
+				result = TCSERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 		} else {
@@ -209,7 +209,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			if (ret == NULL) {
 				LogError1("Malloc Failure");
 				count = 0;
-				result = TSS_E_OUTOFMEMORY;
+				result = TCSERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 		} else {
@@ -264,7 +264,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE tcpaKeyBlob[1024];
 	TCPA_KEY tcpaKey;
 	UINT16 keySize = sizeof (tcpaKeyBlob);
-	TSS_UUID *parentUUID;
+	TSS_UUID parentUUID;
 
 	/* This should be set in case we return before the malloc */
 	*ppKeyInfo = NULL;
@@ -273,16 +273,16 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if ((result = getRegisteredKeyByUUID(KeyUUID, tcpaKeyBlob, &keySize))) {
-		return TCS_E_KEY_NOT_REGISTERED;
+		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	}
 
 	if ((result = getParentUUIDByUUID(KeyUUID, &parentUUID)))
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 
 	*ppKeyInfo = malloc(sizeof(TSS_KM_KEYINFO));
 	if (*ppKeyInfo == NULL) {
 		LogError1("Malloc Failure.");
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	offset = 0;
@@ -302,7 +302,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	(*ppKeyInfo)->ulVendorDataLength = 0;
 	(*ppKeyInfo)->rgbVendorData = 0;
 
-	memcpy(&((*ppKeyInfo)->parentKeyUUID), parentUUID, sizeof(TSS_UUID));
+	memcpy(&((*ppKeyInfo)->parentKeyUUID), &parentUUID, sizeof(TSS_UUID));
 	return TSS_SUCCESS;
 }
 
@@ -322,12 +322,12 @@ TCS_GetRegisteredKeyBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	keySize = sizeof (buffer);
 	if ((result = getRegisteredKeyByUUID(KeyUUID, buffer, &keySize)))
-		return TCS_E_KEY_NOT_REGISTERED;
+		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 	*prgbKey = getSomeMemory(keySize, hContext);
 	if (*prgbKey == NULL) {
 		LogError("malloc of %d bytes failed.", keySize);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	} else {
 		memcpy(*prgbKey, buffer, keySize);
 	}
@@ -341,7 +341,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 			    UINT32 cWrappedKeyBlobSize,	/* in */
 			    BYTE * rgbWrappedKeyBlob,	/* in */
-			    TCS_AUTH * pAuth,	/* in, out */
+			    TPM_AUTH * pAuth,	/* in, out */
 			    TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 			    TCS_KEY_HANDLE * phKeyHMAC	/* out */
     )
@@ -355,7 +355,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_STORE_PUBKEY *myPubKey;
 	TCPA_STORE_PUBKEY *parentPubKey = NULL;
 	TCPA_KEY_HANDLE parentKeySlot;
-	BOOL needToSendPacket = TRUE, canLoad;
+	TSS_BOOL needToSendPacket = TRUE, canLoad;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	cWrappedKeyBlobSize = 0;
@@ -375,7 +375,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		key = malloc(sizeof(TCPA_KEY));
 		if (key == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		offset = 0;
@@ -400,7 +400,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if ((parentKeySlot = getSlotByHandle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
 			parentPubKey = getPubBySlot(hUnwrappingKey);
 			if (parentPubKey == NULL) {
-				result = TCS_E_KM_LOADFAILED;
+				result = TCSERR(TCS_E_KM_LOADFAILED);
 				break;
 			}
 			/* Otherwise, try to load it using the shim */
@@ -542,7 +542,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogError1("Error marking key as loaded");
 			destroy_key_refs(key);
 			free(key);
-			return TSS_E_INTERNAL_ERROR;
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		if (pAuth == NULL) {
@@ -581,7 +581,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 keyslot;
 	TSS_RESULT result;
 	UINT16 offset;
-	TSS_UUID *parentUuid;
+	TSS_UUID parentUuid;
 	BYTE keyBlob[0x1000];
 	UINT16 keySize = sizeof (keyBlob);
 	TCPA_KEY myKey;
@@ -600,7 +600,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 ***********************************************************************/
 
 	if (getRegisteredKeyByUUID(KeyUUID, keyBlob, &keySize))
-		return TCS_E_KEY_NOT_REGISTERED;
+		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 	/*---	Now that there is a key, unload it for later use */
 	offset = 0;
@@ -616,7 +616,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (getSlotByHandle(*phKeyTCSI) != NULL_TPM_HANDLE) {
 			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
 				LogError1("Error marking key as loaded");
-				return TSS_E_INTERNAL_ERROR;
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			/* its loaded now */
 			return TSS_SUCCESS;
@@ -625,12 +625,12 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	Get my parent's UUID.  Since My key is registered, my parent should be as well. */
 	if ((result = getParentUUIDByUUID(KeyUUID, &parentUuid)))
-		return TCS_E_KM_LOADFAILED;
+		return TCSERR(TCS_E_KM_LOADFAILED);
 
 	/*---	Get the parentPublic key from the mem cache.
 	 * If this is NULL, the parent isn't loaded yet
 	 */
-	parentPub = getPubByUuid(parentUuid);
+	parentPub = getPubByUuid(&parentUuid);
 
 	/*********************************************************************
 	 *	At this point the parent should be loaded.  If the parent hasn't been loaded
@@ -642,13 +642,13 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/*---	If no parentPublic information is in the cache, then need to load the parent. */
 	if (parentPub == NULL) {
 		/*---	Load the parent by it's UUID */
-		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, parentUuid,
+		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, &parentUuid,
 					NULL, &parentTCSKeyHandle)))
 			return result;
 	}
 	/*---	Parent is already loaded, or was loaded at some time */
 	else {
-		if ((result = LoadKeyShim(hContext, parentPub, parentUuid, &parentKeySlot)))
+		if ((result = LoadKeyShim(hContext, parentPub, &parentUuid, &parentKeySlot)))
 			return result;
 		parentTCSKeyHandle = getAnyHandleBySlot(parentKeySlot);
 	}
@@ -693,7 +693,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    BYTE * keyInfo,	/* in */
 			    UINT32 * keyDataSize,	/* out */
 			    BYTE ** keyData,	/* out */
-			    TCS_AUTH * pAuth	/* in, out */
+			    TPM_AUTH * pAuth	/* in, out */
     )
 {
 	UINT16 offset;
@@ -705,38 +705,31 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Create Wrap Key");
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-			break;
+	if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+		return result;
 
-		/* Since hWrappingKey must already be loaded, we can fail immediately if
-		 * getSlotByHandle() fails.*/
-		parentSlot = getSlotByHandle_lock(hWrappingKey);
-		if (parentSlot == NULL_TPM_HANDLE) {
-			result = TCS_E_FAIL;
-			break;
-		}
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, parentSlot, txBlob, "parent handle");
-		LoadBlob(&offset, TPM_ENCAUTH_SIZE, txBlob, KeyUsageAuth.encauth, "data usage encauth");
-		LoadBlob(&offset, TPM_ENCAUTH_SIZE, txBlob,
-			 KeyMigrationAuth.encauth, "data mig encauth");
-		LoadBlob(&offset, keyInfoSize, txBlob, keyInfo, "Key");
-		LoadBlob_Auth(&offset, txBlob, pAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_CreateWrapKey, txBlob);
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-
-	} while (0);
-	if (result) {
-		auth_mgr_release_auth(pAuth->AuthHandle);
+	/* Since hWrappingKey must already be loaded, we can fail immediately if
+	 * getSlotByHandle() fails.*/
+	parentSlot = getSlotByHandle_lock(hWrappingKey);
+	if (parentSlot == NULL_TPM_HANDLE) {
+		result = TCSERR(TSS_E_FAIL);
 		return result;
 	}
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, parentSlot, txBlob, "parent handle");
+	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, KeyUsageAuth.authdata, "data usage encauth");
+	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob,
+			KeyMigrationAuth.authdata, "data mig encauth");
+	LoadBlob(&offset, keyInfoSize, txBlob, keyInfo, "Key");
+	LoadBlob_Auth(&offset, txBlob, pAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
+			TPM_ORD_CreateWrapKey, txBlob);
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -753,7 +746,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*keyData = getSomeMemory(*keyDataSize, hContext);
 		if (*keyData == NULL) {
 			LogError("malloc of %d bytes failed.", *keyDataSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			/*===	Reset the offset and load it into the outbuf */
 			memcpy(*keyData, &txBlob[10], *keyDataSize);
@@ -777,7 +770,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 TSS_RESULT
 TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TCS_KEY_HANDLE hKey,	/* in */
-			TCS_AUTH * pAuth,	/* in, out */
+			TPM_AUTH * pAuth,	/* in, out */
 			UINT32 * pcPubKeySize,	/* out */
 			BYTE ** prgbPubKey	/* out */
     )
@@ -790,46 +783,39 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Get pub key");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
+	if ((result = ctx_verify_context(hContext)))
+		return result;
 
-		if (pAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
+	if (pAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
+	}
 
-		if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
-			result = TCS_E_KM_LOADFAILED;
-			break;
-		}
-#if 0
-		keySlot = getSlotByHandle_lock(hKey);
-		if (keySlot == NULL_TPM_HANDLE) {
-			result = TCS_E_KM_LOADFAILED;
-			break;
-		}
-#endif
-		offset = 10;
-		LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-		if (pAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, pAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
-		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-	if (result) {
-		if (pAuth != NULL)
-			auth_mgr_release_auth(pAuth->AuthHandle);
+	if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
+		result = TCSERR(TCS_E_KM_LOADFAILED);
 		return result;
 	}
+#if 0
+	keySlot = getSlotByHandle_lock(hKey);
+	if (keySlot == NULL_TPM_HANDLE) {
+		result = TCSERR(TCS_E_KM_LOADFAILED);
+		return result;
+	}
+#endif
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
+	if (pAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, pAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
+	} else {
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -843,7 +829,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*prgbPubKey = getSomeMemory(*pcPubKeySize, hContext);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %d bytes failed.", *pcPubKeySize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			memcpy(*prgbPubKey, &txBlob[10], *pcPubKeySize);
 		}
@@ -867,7 +853,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				srkKey.pubKey.key = malloc(0x100);
 				if (srkKey.pubKey.key == NULL) {
 					LogError1("Malloc Failure.");
-					return TSS_E_OUTOFMEMORY;
+					return TCSERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(srkKey.pubKey.key, pubContainer.pubKey.key, 0x100);
 
@@ -876,7 +862,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				srkKey.algorithmParms.parms = malloc(pubContainer.algorithmParms.parmSize);
 				if (srkKey.algorithmParms.parms == NULL) {
 					LogError1("Malloc Failure.");
-					return TSS_E_OUTOFMEMORY;
+					return TCSERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(srkKey.algorithmParms.parms,
 				       pubContainer.algorithmParms.parms,
@@ -890,7 +876,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 				version = getCurrentVersion();
 				if (version == NULL)
-					return TCS_E_FAIL;
+					return TCSERR(TSS_E_FAIL);
 
 				memcpy(&srkKey.ver, version, sizeof (TCPA_VERSION));
 				offset = 0;
@@ -920,7 +906,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						srkKey.pubKey.key = malloc(0x100);
 						if (srkKey.pubKey.key == NULL) {
 							LogError1("Malloc Failure.");
-							return TSS_E_OUTOFMEMORY;
+							return TCSERR(TSS_E_OUTOFMEMORY);
 						}
 					}
 
@@ -954,8 +940,8 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 			   TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
 			   UINT32 idKeyInfoSize,	/*in */
 			   BYTE * idKeyInfo,	/*in */
-			   TCS_AUTH * pSrkAuth,	/* in, out */
-			   TCS_AUTH * pOwnerAuth,	/* in, out */
+			   TPM_AUTH * pSrkAuth,	/* in, out */
+			   TPM_AUTH * pOwnerAuth,	/* in, out */
 			   UINT32 * idKeySize,	/* out */
 			   BYTE ** idKey,	/* out */
 			   UINT32 * pcIdentityBindingSize,	/* out */
@@ -971,58 +957,42 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	/*    TCPA_DIGEST digest; */
-	/*    BYTE hashBlob[512]; */
 	TCPA_KEY idKeyContainer;
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering makeidentity");
-	LogDebug1("SM DEBUG <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< @TCS");
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (pSrkAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth");
-		}
-
-		if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
-			break;
-
-		offset = 0;
-		/*                LoadBlob( &offset, cLabelSize, hashBlob, rgbLabel, NULL ); */
-		/*                LoadBlob( &offset, cPrivacyCAPubKeySize, hashBlob, rgbPrivacyCAPubKey, NULL ); */
-
-		LogDebug1("Now buidling Parm block\n");
-		offset = 10;
-		/*LoadBlob( &offset, idKeyInfoSize, txBlob, idKeyInfo, "idKeyInfo" );  */
-		LoadBlob(&offset, TPM_ENCAUTH_SIZE, txBlob, identityAuth.encauth, "encAuth");
-		/*LoadBlob_UINT32( &offset, 20, txBlob, "label size"); */
-		LoadBlob(&offset, 20, txBlob, IDLabel_PrivCAHash.digest, "label");
-		LoadBlob(&offset, idKeyInfoSize, txBlob, idKeyInfo, "idKeyInfo");
-		if (pSrkAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, pSrkAuth);
-			LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset, TPM_ORD_MakeIdentity, txBlob);
-		} else {
-			LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_MakeIdentity, txBlob);
-		}
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-
-	if (result) {
-		if (pSrkAuth != NULL)
-			auth_mgr_release_auth(pSrkAuth->AuthHandle);
-		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (pSrkAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth");
 	}
+
+	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
+		return result;
+
+	offset = 0;
+
+	offset = 10;
+	/*LoadBlob( &offset, idKeyInfoSize, txBlob, idKeyInfo, "idKeyInfo" );  */
+	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, identityAuth.authdata, "encAuth");
+	/*LoadBlob_UINT32( &offset, 20, txBlob, "label size"); */
+	LoadBlob(&offset, 20, txBlob, IDLabel_PrivCAHash.digest, "label");
+	LoadBlob(&offset, idKeyInfoSize, txBlob, idKeyInfo, "idKeyInfo");
+	if (pSrkAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, pSrkAuth);
+		LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset, TPM_ORD_MakeIdentity, txBlob);
+	} else {
+		LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_MakeIdentity, txBlob);
+	}
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1039,7 +1009,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 		*idKey = getSomeMemory(*idKeySize, hContext);
 		if (*idKey == NULL) {
 			LogError("malloc of %d bytes failed.", *idKeySize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			/*LogResult( "idKey size",*idKeySize); */
 			memcpy(*idKey, &txBlob[10], *idKeySize);
@@ -1049,7 +1019,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 		*prgbIdentityBinding = getSomeMemory(*pcIdentityBindingSize, hContext);
 		if (*prgbIdentityBinding == NULL) {
 			LogError("malloc of %d bytes failed.", *pcIdentityBindingSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			UnloadBlob(&offset, *pcIdentityBindingSize, txBlob,
 					*prgbIdentityBinding, "id bind");
@@ -1094,7 +1064,7 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_A
 		pubKey.key = malloc(pubKey.keyLength);
 		if (pubKey.key == NULL) {
 			LogError("malloc of %d bytes failed.", pubKey.keyLength);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			memcpy(pubKey.key, rgbPublicInfo, pubKey.keyLength);
 		}
@@ -1103,24 +1073,24 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_A
 		result = getRegisteredUuidByPub(&pubKey, &uuid);
 		free(pubKey.key);
 		if (result)
-			return TCS_E_KEY_NOT_REGISTERED;
+			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 		/*---	Use the UUID to get the Key */
 		keyContainerSize = sizeof (keyContainer);
 		if ((result = getRegisteredKeyByUUID(uuid, keyContainer, &keyContainerSize)))
-			return TCS_E_KEY_NOT_REGISTERED;
+			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 		/*--	Put it in the output parm's */
 		*keySize = keyContainerSize;
 		*keyBlob = getSomeMemory(*keySize, tcsContext);
 		if (*keyBlob == NULL) {
 			LogError("malloc of %d bytes failed.", *keySize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
 			memcpy(*keyBlob, keyContainer, *keySize);
 		}
 	} else {
-		return TCS_E_FAIL;	/*don't know how to support yet */
+		return TCSERR(TSS_E_FAIL);	/*don't know how to support yet */
 	}
 
 	return result;

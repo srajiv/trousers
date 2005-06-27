@@ -14,214 +14,213 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <wchar.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
+#include "trousers_types.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tss/trousers.h"
 
 TSS_RESULT
-Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
-		TSS_HOBJECT hParentObject,	/*  in */
-		TSS_HPOLICY hNewPolicy	/*  in */
+Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
+		TSS_HOBJECT hParentObject,	/* in */
+		TSS_HPOLICY hNewPolicy		/* in */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
-/* 	TCPA_KEY			*keyObjectToChange; */
 	TCPA_ENCAUTH encAuthUsage;
 	TCPA_ENCAUTH encAuthMig;
 	BYTE sharedSecret[20];
-	TCS_AUTH auth1;
-	TCS_AUTH auth2;
+	TPM_AUTH auth1;
+	TPM_AUTH auth2;
 	UINT16 offset;
 	BYTE hashBlob[0x1000];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	UINT32 keyHandle;
-	UINT32 objectType;
 	TSS_HPOLICY hPolicy;
 	TSS_HPOLICY hParentPolicy;
 	TCPA_NONCE nonceEvenOSAP;
-	AnObject *object;
 	UINT32 dataBlobLength;
 	BYTE *dataBlob;
 	TCPA_STORED_DATA storedData;
 	UINT32 keyToChangeHandle;
 	BYTE oldEncData[256];
 	UINT32 objectLength;
-/* 	BYTE				*objectToChange; */
 	TCPA_KEY keyToChange;
 	BYTE *keyBlob;
 	UINT32 newEncSize;
 	BYTE *newEncData;
 	TSS_HCONTEXT tspContext;
 
-	/* //////////////////////////////////////////////////////////////////////////// */
-	/* Perform the initial checks */
-	/* If the parent Object is Null */
-	/*      -       Trying to change the TPM Auth */
-	/*      -       This requires Owner Authorization */
-	/* If the parent Object is not Null */
-	/*      -       Trying to change the auth of an entity */
-	/* If the ObjectToChange is the SRK, then the parent must be the TPM Object */
+	/* /////////////////////////////////////////////////////////////////
+	 * Perform the initial checks
+	 * If the parent Object is Null
+	 *      -       Trying to change the TPM Auth
+	 *      -       This requires Owner Authorization
+	 * If the parent Object is not Null
+	 *      -       Trying to change the auth of an entity
+	 * If the ObjectToChange is the SRK, then the parent must be the TPM
+	 *  Object
+	 * */
 
-	LogDebug1("Tspi_ChangeAuth");
-	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+		return result;
 
-	if (hParentObject == NULL_HOBJECT) {
-		if ((result = obj_isConnected_2(hObjectToChange, hNewPolicy, &tcsContext)))
-			return result;
-	} else {
-		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &tcsContext)))
-			return result;
-	}
-	/* what is the object type? */
-	objectType = getObjectTypeByHandle(hObjectToChange);
+	if (!obj_is_rsakey(hParentPolicy))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	if (objectType == TSS_OBJECT_TYPE_TPM) {	/*  if TPM Owner Auth change */
-		LogDebug1("Object Type TPM");
+	if (obj_is_tpm(hObjectToChange)) {/*  if TPM Owner Auth change */
 		/* get the owner policy */
-		if ((result = Tspi_GetPolicyObject(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hObjectToChange, &hPolicy)))
 			return result;
 
-		/* ////////////////////////////////////////////////////////////////////// */
+		/* //////////////////////////////////////////////////////// */
 		/* Now Calculate the authorization */
 		if ((result =
 		    secret_PerformXOR_OSAP(hPolicy, hNewPolicy, hNewPolicy,
 					   hObjectToChange, TCPA_ET_OWNER, 0,
 					   &encAuthUsage, &encAuthMig,
-					   sharedSecret, &auth1, &nonceEvenOSAP)))
+					   sharedSecret, &auth1,
+					   &nonceEvenOSAP)))
 			return result;
 
-		/* calculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
+		/* calculate auth data */
 		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner,
+				hashBlob);
 		Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.authdata);
 		Trspi_LoadBlob_UINT16(&offset, TCPA_ET_OWNER, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
 		    secret_PerformAuth_OSAP(hPolicy, hNewPolicy, hNewPolicy,
 					    hObjectToChange, sharedSecret,
-					    &auth1, digest.digest, nonceEvenOSAP)))
+					    &auth1, digest.digest,
+					    &nonceEvenOSAP)))
 			return result;
 
 		if ((result = TCSP_ChangeAuthOwner(tcsContext,
 						  TCPA_PID_ADCP,
-						  encAuthUsage, TCPA_ET_OWNER, &auth1)))
+						  encAuthUsage, TCPA_ET_OWNER,
+						  &auth1)))
 			return result;
 
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner,
+					hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OSAP(hPolicy, hNewPolicy, hNewPolicy,
-					     sharedSecret, &auth1, digest.digest, nonceEvenOSAP)))
+		if ((result = secret_ValidateAuth_OSAP(hPolicy, hNewPolicy,
+						       hNewPolicy,
+						       sharedSecret, &auth1,
+						       digest.digest,
+						       &nonceEvenOSAP)))
 			return result;
 
-	}
-
-	else if (objectType == TSS_OBJECT_TYPE_RSAKEY) {
-		LogDebug1("Object Type RSAKEY");
-
+	} else if (obj_is_rsakey(hObjectToChange)) {
 		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
 		if (keyToChangeHandle == NULL_HKEY)
-			return TSS_E_KEY_NOT_LOADED;
+			return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-		if (keyToChangeHandle == FIXED_SRK_KEY_HANDLE) {
+		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 			LogDebug1("SRK Handle");
 			/* get the owner policy */
-			if ((result = Tspi_GetPolicyObject(hParentObject, TSS_POLICY_USAGE, &hParentPolicy)))
+			if ((result = obj_rsakey_get_policy(hParentObject,
+							   TSS_POLICY_USAGE,
+							   &hParentPolicy, NULL)))
 				return result;
 
-			/* ////////////////////////////////////////////////////////////////////// */
+			/* //////////////////////////////////////////////// */
 			/* Now Calculate the authorization */
 			if ((result =
 			    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
 						   hNewPolicy, hParentObject,
 						   TCPA_ET_OWNER, 0,
 						   &encAuthUsage, &encAuthMig,
-						   sharedSecret, &auth1, &nonceEvenOSAP)))
+						   sharedSecret, &auth1,
+						   &nonceEvenOSAP)))
 				return result;
 
-			/* calculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
+			/* calculate auth data */
 			offset = 0;
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner,
+						hashBlob);
 			Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-			Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+			Trspi_LoadBlob(&offset, 20, hashBlob,
+					encAuthUsage.authdata);
 			Trspi_LoadBlob_UINT16(&offset, TCPA_ET_SRK, hashBlob);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if ((result =
 			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
 						    hNewPolicy, hParentObject,
 						    sharedSecret, &auth1,
-						    digest.digest, nonceEvenOSAP)))
+						    digest.digest,
+						    &nonceEvenOSAP)))
 				return result;
 
 			if ((result = TCSP_ChangeAuthOwner(tcsContext,
 							  TCPA_PID_ADCP,
-							  encAuthUsage, TCPA_ET_SRK, &auth1)))
+							  encAuthUsage,
+							  TCPA_ET_SRK,
+							  &auth1)))
 				return result;
 
 			/* ---  Validate the Auth's */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner, hashBlob);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner,
+						hashBlob);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if ((result =
 			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 						     hNewPolicy, sharedSecret,
-						     &auth1, digest.digest, nonceEvenOSAP)))
+						     &auth1, digest.digest,
+						     &nonceEvenOSAP)))
 				return result;
-
-		} else {	/* if( != FIXED_SRK_KEY_HANDLE */
-
-			LogDebug1("Regular key");
-
-			/*  get the secret for the parent */
-			if ((result = Tspi_GetPolicyObject(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
+		} else {
+			if ((result = obj_rsakey_get_policy(hObjectToChange,
+							TSS_POLICY_USAGE,
+							&hPolicy, NULL)))
 				return result;
 
 			/*  get the parent secret */
-			if ((result = Tspi_GetPolicyObject(hParentObject, TSS_POLICY_USAGE, &hParentPolicy)))
+			if ((result = obj_rsakey_get_policy(hParentObject,
+							   TSS_POLICY_USAGE,
+							   &hParentPolicy, NULL)))
 				return result;
 
-			/*  get the keyObject  */
-			/* object = getAnObjectByHandle( hObjectToChange ); */
-			/* if( object == NULL ) */
-			/*              return TSS_E_INVALID_HANDLE; */
-			/*      if(( keyObjectToChange = object->memPointer ) == NULL ) */
-			/*              return  TSS_E_INTERNAL_ERROR ; */
-
-			result = Tspi_GetAttribData(hObjectToChange, TSS_TSPATTRIB_KEY_BLOB,
-					       TSS_TSPATTRIB_KEYBLOB_BLOB, &objectLength, &keyBlob);
-			if (result) {
-				LogDebug("Tspi_GetAttribData failed. result=0x%x", result);
+			if ((result = obj_rsakey_get_blob(hObjectToChange,
+						&objectLength, &keyBlob)))
 				return result;
-			}
 
 			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyToChange))) {
-				LogDebug("Trspi_UnloadBlob_KEY failed. result=0x%x", result);
+			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset,
+							keyBlob,
+							&keyToChange))) {
+				LogDebug("Trspi_UnloadBlob_KEY failed. "
+						"result=0x%x", result);
 				return result;
 			}
 
 			keyHandle = getTCSKeyHandle(hParentObject);
 			if (keyHandle == NULL_HKEY)
-				return TSS_E_KEY_NOT_LOADED;
+				return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-			if (keyHandle == FIXED_SRK_KEY_HANDLE) {
+			if (keyHandle == TPM_KEYHND_SRK) {
 				if ((result =
 				    secret_PerformXOR_OSAP(hParentPolicy,
 							   hNewPolicy,
@@ -231,7 +230,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 							   keyHandle,
 							   &encAuthUsage,
 							   &encAuthMig,
-							   sharedSecret, &auth1, &nonceEvenOSAP)))
+							   sharedSecret,
+							   &auth1,
+							   &nonceEvenOSAP)))
 					return result;
 			} else {
 				if ((result =
@@ -243,62 +244,76 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 							   keyHandle,
 							   &encAuthUsage,
 							   &encAuthMig,
-							   sharedSecret, &auth1, &nonceEvenOSAP)))
+							   sharedSecret,
+							   &auth1,
+							   &nonceEvenOSAP)))
 					return result;
 			}
 
-			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
+			/* caluculate auth data */
 			offset = 0;
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth,
+					hashBlob);
 			Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-			Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+			Trspi_LoadBlob(&offset, 20, hashBlob,
+					encAuthUsage.authdata);
 			Trspi_LoadBlob_UINT16(&offset, TCPA_ET_KEY, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, keyToChange.encSize, hashBlob);
-			Trspi_LoadBlob(&offset, keyToChange.encSize, hashBlob, keyToChange.encData);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob_UINT32(&offset, keyToChange.encSize,
+					hashBlob);
+			Trspi_LoadBlob(&offset, keyToChange.encSize, hashBlob,
+					keyToChange.encData);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if ((result =
 			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
 						    hNewPolicy, hParentObject,
 						    sharedSecret, &auth1,
-						    digest.digest, nonceEvenOSAP)))
+						    digest.digest,
+						    &nonceEvenOSAP)))
 				return result;
 
-			if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth2))) {
-				TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
+			if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
+								&auth2))) {
+				TCSP_TerminateHandle(tcsContext,
+							auth1.AuthHandle);
 				return result;
 			}
 
 			/* ---  for replacing PS */
 			memcpy(oldEncData, keyToChange.encData, 0x100);
 
-			if ((result = TCSP_ChangeAuth(tcsContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
-						     TCPA_ET_KEY,	/*  in */
-						     keyToChange.encSize,	/*  in */
-						     keyToChange.encData, &auth1,	/*  in, out */
-						     &auth2,	/*  in, out     // in */
-						     &newEncSize,	/* keyToChange.encSize,      // out */
-						     &newEncData	/* keyToChange.encData       // out */
-						)))
+			if ((result = TCSP_ChangeAuth(tcsContext, keyHandle,
+						      TCPA_PID_ADCP, encAuthUsage,
+						      TCPA_ET_KEY,
+						      keyToChange.encSize,
+						      keyToChange.encData, &auth1,
+						      &auth2, &newEncSize,
+						      &newEncData)))
 				return result;
 
 			/* ---  Validate the Auth's */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth,
+						hashBlob);
 			Trspi_LoadBlob_UINT32(&offset, newEncSize, hashBlob);
-			Trspi_LoadBlob(&offset, newEncSize, hashBlob, newEncData);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob(&offset, newEncSize, hashBlob,
+					newEncData);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if ((result =
 			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 						     hNewPolicy, sharedSecret,
-						     &auth1, digest.digest, nonceEvenOSAP))) {
+						     &auth1, digest.digest,
+						     &nonceEvenOSAP))) {
 				free(newEncData);
 				return result;
 			}
 
-			if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth2)))
+			if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
+								&auth2)))
 				return result;
 
 			memcpy(keyToChange.encData, newEncData, newEncSize);
@@ -308,77 +323,84 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 			Trspi_LoadBlob_KEY(&offset, keyBlob, &keyToChange);
 			objectLength = offset;
 
-			if ((result =
-			    Tspi_SetAttribData(hObjectToChange,
-					       TSS_TSPATTRIB_KEY_BLOB,
-					       TSS_TSPATTRIB_KEYBLOB_BLOB, objectLength, keyBlob)))
+			if ((result = obj_rsakey_set_tcpakey(hObjectToChange,
+					       objectLength, keyBlob)))
 				return result;
 
-			/* XXX replace with valid impl if we really want to touch the PS here */
-			//keyreg_replaceEncData_PS(oldEncData, keyToChange.encData);
+			/* XXX replace with valid impl if we really want to
+			 * touch the PS here */
+			//keyreg_replaceEncData_PS(oldEncData,
+			//                          keyToChange.encData);
 		}
-	}
-
-	else if (objectType == TSS_OBJECT_TYPE_ENCDATA) {
+	} else if (obj_is_encdata(hObjectToChange)) {
 
 		/*  get the secret for the parent */
-		if ((result = Tspi_GetPolicyObject(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
+		if ((result = obj_encdata_get_policy(hObjectToChange,
+						   TSS_POLICY_USAGE,
+						   &hPolicy)))
 			return result;
 
 		/*  get the parent secret */
-		if ((result = Tspi_GetPolicyObject(hParentObject, TSS_POLICY_USAGE, &hParentPolicy)))
+		if ((result = obj_rsakey_get_policy(hParentObject,
+						   TSS_POLICY_USAGE,
+						   &hParentPolicy, NULL)))
 			return result;
 
 		/*  get the data Object  */
-		if ((result = Tspi_GetAttribData(hObjectToChange, TSS_TSPATTRIB_ENCDATA_BLOB,
-				   TSS_TSPATTRIB_ENCDATABLOB_BLOB, &dataBlobLength, &dataBlob)))
+		if ((result = obj_encdata_get_data(hObjectToChange,
+						 &dataBlobLength, &dataBlob)))
 			return result;
 
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset, dataBlob, &storedData)))
+		if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset,
+							   dataBlob,
+							   &storedData)))
 			return result;
 
 		keyHandle = getTCSKeyHandle(hParentObject);
 		if (keyHandle == NULL_HKEY)
-			return TSS_E_KEY_NOT_LOADED;
+			return TSPERR(TSS_E_KEY_NOT_LOADED);
 
 		if ((result =
 		    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
 					   hNewPolicy, hParentObject,
 					   TCPA_ET_KEYHANDLE, keyHandle,
 					   &encAuthUsage, &encAuthMig,
-					   sharedSecret, &auth1, &nonceEvenOSAP)))
+					   sharedSecret, &auth1,
+					   &nonceEvenOSAP)))
 			return result;
 
-		/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
+		/* caluculate auth data */
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
 		Trspi_LoadBlob_UINT16(&offset, TCPA_PID_ADCP, hashBlob);
-		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.encauth);
+		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.authdata);
 		Trspi_LoadBlob_UINT16(&offset, TCPA_ET_DATA, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, storedData.encDataSize, hashBlob);
-		Trspi_LoadBlob(&offset, storedData.encDataSize, hashBlob, storedData.encData);
+		Trspi_LoadBlob(&offset, storedData.encDataSize, hashBlob,
+				storedData.encData);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
 		    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
 					    hNewPolicy, hParentObject,
-					    sharedSecret, &auth1, digest.digest, nonceEvenOSAP)))
+					    sharedSecret, &auth1,
+					    digest.digest, &nonceEvenOSAP)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth2))) {
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
+							&auth2))) {
 			TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
 			return result;
 		}
 
-		if ((result = TCSP_ChangeAuth(tcsContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,	/*  in */
-					     TCPA_ET_DATA,	/*  in */
-					     storedData.encDataSize,	/*  in */
-					     storedData.encData, &auth1,	/*  in, out */
-					     &auth2,	/*  in, out     // in */
-					     &newEncSize,	/*  out */
-					     &newEncData	/*  out */
-					)))
+		if ((result = TCSP_ChangeAuth(tcsContext, keyHandle,
+					      TCPA_PID_ADCP, encAuthUsage,
+					     TCPA_ET_DATA,
+					     storedData.encDataSize,
+					     storedData.encData, &auth1,
+					     &auth2, &newEncSize,
+					     &newEncData)))
 			return result;
 
 		/* ---  Validate the Auth's */
@@ -392,12 +414,13 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 		if ((result =
 		    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 					     hNewPolicy, sharedSecret, &auth1,
-					     digest.digest, nonceEvenOSAP))) {
+					     digest.digest, &nonceEvenOSAP))) {
 			free(newEncData);
 			return result;
 		}
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth2)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
+							&auth2)))
 			return result;
 
 		memcpy(storedData.encData, newEncData, newEncSize);
@@ -406,44 +429,51 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/*  in */
 
 		offset = 0;
 		Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
-		Tspi_SetAttribData(hObjectToChange, TSS_TSPATTRIB_ENCDATA_BLOB,
-				   TSS_TSPATTRIB_ENCDATABLOB_BLOB, offset, dataBlob);
+		if ((result = obj_encdata_set_data(hObjectToChange,
+						 offset, dataBlob)))
+			return result;
 
-	} else
-		return TSS_E_BAD_PARAMETER;
+	} else if (obj_is_policy(hObjectToChange) || obj_is_hash(hObjectToChange) ||
+		    obj_is_pcrs(hObjectToChange) || obj_is_context(hObjectToChange)) {
+		return TSPERR(TSS_E_BAD_PARAMETER);
+	} else {
+		return TSPERR(TSS_E_INVALID_HANDLE);
+	}
 
+#if 0
 	object = getAnObjectByHandle(hNewPolicy);
 	if (object == NULL || object->memPointer == NULL) {
-		LogError("Couldn't find an internal object with handle 0x%x", hNewPolicy);
-		return TSS_E_INTERNAL_ERROR;
+		LogError("Couldn't find an internal object with handle 0x%x",
+				hNewPolicy);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-	((TSP_INTERNAL_POLICY_OBJECT *)object->memPointer)->p.PolicyType = TSS_POLICY_USAGE;
+	((TSP_INTERNAL_POLICY_OBJECT *)object->memPointer)->p.PolicyType =
+							TSS_POLICY_USAGE;
+#else
+	if ((result = obj_policy_set_type(hNewPolicy, TSS_POLICY_USAGE)))
+		return result;
+#endif
 
-	Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
-
-	return TSS_SUCCESS;
+	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
 }
 
 TSS_RESULT
-Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
-		    TSS_HOBJECT hParentObject,	/*  in */
-		    TSS_HKEY hIdentKey,	/*  in */
-		    TSS_HPOLICY hNewPolicy	/*  in */
+Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
+		    TSS_HOBJECT hParentObject,		/* in */
+		    TSS_HKEY hIdentKey,			/* in */
+		    TSS_HPOLICY hNewPolicy		/* in */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
-	TCPA_KEY *keyObjectToChange;
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	UINT16 offset;
 	BYTE hashBlob[0x1000];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	UINT32 keyHandle;
 	UINT32 idHandle;
-	UINT32 objectType;
 	TSS_HPOLICY hPolicy;
 	TSS_HPOLICY hParentPolicy;
-	AnObject *object;
 	UINT32 keyToChangeHandle;
 	TCPA_NONCE antiReplay;
 	UINT32 bytesRequested;
@@ -481,64 +511,45 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 	BYTE *dataObject;
 	UINT32 dataObjectSize;
 	UINT16 entityType;
-	BOOL useAuth;
-	TCS_AUTH *pAuth;
+	TSS_BOOL useAuth = TRUE; // XXX
+	TPM_AUTH *pAuth;
 	BYTE dataBlob[1024];
 	TSS_HCONTEXT tspContext;
 
-	if ((result = obj_checkType_1(hNewPolicy, TSS_OBJECT_TYPE_POLICY)))
+	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hNewPolicy)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+		return result;
 
-	if (hParentObject == NULL_HOBJECT) {
-		return TSS_E_BAD_PARAMETER;
-	} else {
-		if ((result = obj_isConnected_3(hObjectToChange, hParentObject, hNewPolicy, &tcsContext)))
-			return result;
-	}
-
-	/* /////////////////////////////////////////////////////////////////// */
 	/*  grab all of the needed handles */
-
 	idHandle = getTCSKeyHandle(hIdentKey);
 	if (idHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
 	/*  get the secret for the parent */
-	if ((result = Tspi_GetPolicyObject(hIdentKey, TSS_POLICY_USAGE, &hPolicy)))
+	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
+						&hPolicy, &useAuth)))
 		return result;
 
 	/*  get the parent secret */
-	if ((result = Tspi_GetPolicyObject(hParentObject, TSS_POLICY_USAGE, &hParentPolicy)))
+	if ((result = Tspi_GetPolicyObject(hParentObject, TSS_POLICY_USAGE,
+						&hParentPolicy)))
 		return result;
 
 	/*  get the keyObject  */
-	object = getAnObjectByHandle(hObjectToChange);
-	if (object == NULL)
-		return TSS_E_INVALID_HANDLE;
-	if ((keyObjectToChange = object->memPointer) == NULL) {
-		LogError1("internal object pointer for object to change not found!");
-		return TSS_E_INTERNAL_ERROR;
-	}
-
 	keyHandle = getTCSKeyHandle(hParentObject);
 	if (keyHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-	/* ////////////////////////////////////////////////////////////////////// */
-
-	/* what is the object type? */
-	objectType = getObjectTypeByHandle(hObjectToChange);
-
-	if ((objectType == TSS_OBJECT_TYPE_RSAKEY) || objectType == TSS_OBJECT_TYPE_ENCDATA) {
+	if (obj_is_rsakey(hObjectToChange) ||
+	    obj_is_encdata(hObjectToChange)) {
 
 		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
 
-		if (keyToChangeHandle == FIXED_SRK_KEY_HANDLE) {
+		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 		} else {
 
 			/*  generate container for ephemeral key */
@@ -549,7 +560,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			keyParms.parms = malloc(12);
 			if (keyParms.parms == NULL) {
 				LogError("malloc of %d bytes failed.", 12);
-				return TSS_E_OUTOFMEMORY;
+				return TSPERR(TSS_E_OUTOFMEMORY);
 			}
 			memcpy(keyParms.parms, ephParms, 12);
 
@@ -558,25 +569,25 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext,	/*  in */
-				       bytesRequested,	/*  in */
-				       &randomBytes	/*  out */
-			    );
+			TCSP_GetRandom(tcsContext, bytesRequested,
+					&randomBytes);
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 
-			/* caluculate auth data HASH(ord, usageauth, migrationauth, keyinfo) */
+			/* caluculate auth data */
 			offset = 0;
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset,
+					      TPM_ORD_ChangeAuthAsymStart,
+					      hashBlob);
 			Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
 			Trspi_LoadBlob_KEY_PARMS(&offset, hashBlob, &keyParms);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-
-			if ((result = policy_UsesAuth(hPolicy, &useAuth)))
-				return result;
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if (useAuth) {
-				if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &auth))) {
+				if ((result = secret_PerformAuth_OIAP(hPolicy,
+								      &digest,
+								      &auth))) {
 					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 					return result;
 				}
@@ -585,150 +596,164 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymStart(tcsContext,	/*  in */
-							      idHandle,	/*  in */
-							      antiReplay,	/*  in */
-							      tempSize,	/*  in */
-							      tempKey,	/*  in */
-							      pAuth,	/*  in, out */
-							      &KeySizeOut,	/*  out */
-							      &KeyDataOut,	/*  out */
-							      &CertifyInfoSize,	/*  out */
-							      &CertifyInfo,	/*  out */
-							      &sigSize,	/*  out */
-							      &sig,	/*  out */
-							      &ephHandle	/*  out */
-			    )))
+			if ((result = TCSP_ChangeAuthAsymStart(tcsContext,
+							      idHandle,
+							      antiReplay,
+							      tempSize,
+							      tempKey,
+							      pAuth,
+							      &KeySizeOut,
+							      &KeyDataOut,
+							      &CertifyInfoSize,
+							      &CertifyInfo,
+							      &sigSize,
+							      &sig,
+							      &ephHandle)))
 				return result;
 
 			/* ---  Validate the Auth's */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymStart, hashBlob);
-			Trspi_LoadBlob(&offset, CertifyInfoSize, hashBlob, CertifyInfo);
+			Trspi_LoadBlob_UINT32(&offset,
+					      TPM_ORD_ChangeAuthAsymStart,
+					      hashBlob);
+			Trspi_LoadBlob(&offset, CertifyInfoSize, hashBlob,
+					CertifyInfo);
 			Trspi_LoadBlob_UINT32(&offset, sigSize, hashBlob);
 			Trspi_LoadBlob(&offset, sigSize, hashBlob, sig);
 			Trspi_LoadBlob_UINT32(&offset, ephHandle, hashBlob);
-			Trspi_LoadBlob(&offset, KeySizeOut, hashBlob, KeyDataOut);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+			Trspi_LoadBlob(&offset, KeySizeOut, hashBlob,
+					KeyDataOut);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
 
 			if (useAuth) {
-				if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &auth)))
+				if ((result = obj_policy_validate_auth_oiap(hPolicy,
+								       &digest,
+								       &auth)))
 					return result;
 			}
 
 			/*  generate random data for asymfinish */
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext,	/*  in */
-				       bytesRequested,	/*  in */
-				       &randomBytes	/*  out */
-			    );
+			TCSP_GetRandom(tcsContext, bytesRequested,
+				       &randomBytes);
 			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext,	/*  in */
-				       bytesRequested,	/*  in */
-				       &randomBytes	/*  out */
-			    );
+			TCSP_GetRandom(tcsContext, bytesRequested,
+				       &randomBytes);
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext,	/*  in */
-				       bytesRequested,	/*  in */
-				       &randomBytes	/*  out */
-			    );
+			TCSP_GetRandom(tcsContext, bytesRequested,
+				       &randomBytes);
 			memcpy(seed, randomBytes, 20);
 			free_tspi(tspContext, randomBytes);
 
 			if ((result = Tspi_GetPolicyObject(hObjectToChange,
-							  TSS_POLICY_USAGE, &hOldPolicy)))
+							  TSS_POLICY_USAGE,
+							  &hOldPolicy)))
 				return result;
 
-			if ((result = internal_GetSecret(hNewPolicy, &newSecret, 0)))
+			if ((result = obj_policy_get_secret(hNewPolicy, &newSecret)))
 				return result;
-			if ((result = internal_GetSecret(hOldPolicy, &oldSecret, 0)))
+			if ((result = obj_policy_get_secret(hOldPolicy, &oldSecret)))
 				return result;
 
-			/* ////////////////////////////////////////////////////////////////////////// */
-			/* Encrypt the ChangeAuthValidate structure with the ephemeral key */
+			/* //////////////////////////////////////////////// */
+			/* Encrypt the ChangeAuthValidate structure with the
+			 * ephemeral key */
 
-			memcpy(caValidate.newAuthSecret.secret, newSecret.secret, 20);
+			memcpy(caValidate.newAuthSecret.authdata,
+					newSecret.authdata, 20);
 
 			offset = 0;
-			Trspi_LoadBlob_CHANGEAUTH_VALIDATE(&offset, hashBlob, &caValidate);
+			Trspi_LoadBlob_CHANGEAUTH_VALIDATE(&offset, hashBlob,
+								&caValidate);
 			caValidSize = offset;
 
 			offset = 0;
-			Trspi_UnloadBlob_KEY(tspContext, &offset, KeyDataOut, &ephemeralKey);
+			Trspi_UnloadBlob_KEY(tspContext, &offset, KeyDataOut,
+						&ephemeralKey);
 
-			Trspi_RSA_Encrypt(hashBlob,	/* in */
-				       caValidSize,	/* in */
-				       a1,	/* out */
-				       &a1Size,	/* out */
+			Trspi_RSA_Encrypt(hashBlob, caValidSize, a1, &a1Size,
 				       ephemeralKey.pubKey.key,
 				       ephemeralKey.pubKey.keyLength);
 
-			Trspi_HMAC(TSS_HASH_SHA1, 20, oldSecret.secret,	/* old secret */
-				 20, newSecret.secret, newAuthLink.digest);
+			Trspi_HMAC(TSS_HASH_SHA1, 20, oldSecret.authdata,
+					 20, newSecret.authdata,
+					 newAuthLink.digest);
 
-			if (objectType == TSS_OBJECT_TYPE_RSAKEY) {
-				if ((result = Tspi_GetAttribData(hObjectToChange,
-						   TSS_TSPATTRIB_KEY_BLOB,
-						   TSS_TSPATTRIB_KEYBLOB_BLOB,
+			if (obj_is_rsakey(hObjectToChange)) {
+				if ((result = obj_rsakey_get_blob(hObjectToChange,
 						   &keyObjectSize, &keyObject)))
 					return result;
 
 				offset = 0;
-				Trspi_UnloadBlob_KEY(tspContext, &offset, keyObject, &keyContainer);
+				Trspi_UnloadBlob_KEY(tspContext, &offset,
+							keyObject, &keyContainer);
 
 				encObjectSize = keyContainer.encSize;
 				encObject = malloc(encObjectSize);
 				if (encObject == NULL) {
-					LogError("malloc of %d bytes failed.", encObjectSize);
-					return TSS_E_OUTOFMEMORY;
+					LogError("malloc of %d bytes failed.",
+							encObjectSize);
+					return TSPERR(TSS_E_OUTOFMEMORY);
 				}
-				memcpy(encObject, keyContainer.encData, encObjectSize);
+				memcpy(encObject, keyContainer.encData,
+						encObjectSize);
 				entityType = TCPA_ET_KEY;
 			} else {
-				if ((result = Tspi_GetAttribData(hObjectToChange,
-						   TSS_TSPATTRIB_ENCDATA_BLOB,
-						   TSS_TSPATTRIB_ENCDATABLOB_BLOB,
+				if ((result = obj_encdata_get_data(hObjectToChange,
 						   &dataObjectSize, &dataObject)))
 					return result;
 
 				offset = 0;
-				if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset,
-						       dataObject, &dataContainer)))
+				if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext,
+								&offset, dataObject,
+								&dataContainer)))
 					return result;
 
 				encObjectSize = dataContainer.encDataSize;
 				encObject = malloc(encObjectSize);
 				if (encObject == NULL) {
-					LogError("malloc of %d bytes failed.", encObjectSize);
-					return TSS_E_OUTOFMEMORY;
+					LogError("malloc of %d bytes failed.",
+							encObjectSize);
+					return TSPERR(TSS_E_OUTOFMEMORY);
 				}
-				memcpy(encObject, dataContainer.encData, encObjectSize);
+				memcpy(encObject, dataContainer.encData,
+						encObjectSize);
 				entityType = TCPA_ET_DATA;
 			}
 
 			offset = 0;
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
+			Trspi_LoadBlob_UINT32(&offset,
+					      TPM_ORD_ChangeAuthAsymFinish,
+					      hashBlob);
 			Trspi_LoadBlob_UINT16(&offset, entityType, hashBlob);
-			Trspi_LoadBlob(&offset, 20, hashBlob, newAuthLink.digest);
+			Trspi_LoadBlob(&offset, 20, hashBlob,
+					newAuthLink.digest);
 			Trspi_LoadBlob_UINT32(&offset, a1Size, hashBlob);
 			Trspi_LoadBlob(&offset, a1Size, hashBlob, a1);
 			Trspi_LoadBlob_UINT32(&offset, encObjectSize, hashBlob);
-			Trspi_LoadBlob(&offset, encObjectSize, hashBlob, encObject);
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-
-			if ((result = policy_UsesAuth(hParentPolicy, &useAuth))) {
+			Trspi_LoadBlob(&offset, encObjectSize, hashBlob,
+					encObject);
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob,
+					digest.digest);
+#if 0
+			/* XXX */
+			if ((result = policy_UsesAuth(hParentPolicy,
+							&useAuth))) {
 				free(encObject);
 				return result;
 			}
-
+#endif
 			if (useAuth) {
-				if ((result = secret_PerformAuth_OIAP(hParentPolicy, digest, &auth))) {
-					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
+				if ((result = secret_PerformAuth_OIAP(hParentPolicy,
+								&digest, &auth))) {
+					TCSP_TerminateHandle(tcsContext,
+							     auth.AuthHandle);
 					free(encObject);
 					return result;
 				}
@@ -737,23 +762,23 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymFinish(tcsContext,	/*  in */
-							       keyHandle,	/*  in */
-							       ephHandle,	/*  in */
-							       entityType,	/*  in */
-							       newAuthLink,	/*  in */
-							       a1Size,	/*  in */
-							       a1,	/*  in */
-							       encObjectSize,	/*  in */
-							       encObject,	/*  in */
-							       pAuth,	/*  in, out */
-							       &encDataSizeOut,	/*  out */
-							       &encDataOut,	/*  out */
-							       &saltNonce,	/*  out */
-							       &changeProof	/*  out */
-			    ))) {
+			if ((result = TCSP_ChangeAuthAsymFinish(tcsContext,
+							       keyHandle,
+							       ephHandle,
+							       entityType,
+							       newAuthLink,
+							       a1Size,
+							       a1,
+							       encObjectSize,
+							       encObject,
+							       pAuth,
+							       &encDataSizeOut,
+							       &encDataOut,
+							       &saltNonce,
+							       &changeProof))) {
 				if (useAuth)
-					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
+					TCSP_TerminateHandle(tcsContext,
+							     pAuth->AuthHandle);
 				free(encObject);
 				return result;
 			}
@@ -761,892 +786,542 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/*  in */
 			/* ---  Validate the Auth's */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthAsymFinish, hashBlob);
-			Trspi_LoadBlob_UINT32(&offset, encDataSizeOut, hashBlob);
-			Trspi_LoadBlob(&offset, encDataSizeOut, hashBlob, encDataOut);
+			Trspi_LoadBlob_UINT32(&offset,
+					      TPM_ORD_ChangeAuthAsymFinish,
+					      hashBlob);
+			Trspi_LoadBlob_UINT32(&offset, encDataSizeOut,
+						hashBlob);
+			Trspi_LoadBlob(&offset, encDataSizeOut, hashBlob,
+					encDataOut);
 			Trspi_LoadBlob(&offset, 20, hashBlob, saltNonce.nonce);
 			Trspi_LoadBlob(&offset, 20, hashBlob, changeProof.digest);
 			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 			if (useAuth) {
-				if ((result = secret_ValidateAuth_OIAP(hParentPolicy, digest, &auth))) {
+				if ((result = obj_policy_validate_auth_oiap(hParentPolicy,
+									&digest,
+									&auth))) {
 					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
 					return result;
 				}
 			}
 
-			if (entityType == TCPA_ET_KEY || entityType == TCPA_ET_KEYHANDLE) {
+			if (entityType == TCPA_ET_KEY ||
+			    entityType == TCPA_ET_KEYHANDLE) {
 				/* XXX replace with valid impl */
 				//keyreg_replaceEncData_PS(encObject, encDataOut);
 
-				memcpy(keyContainer.encData, encDataOut, encDataSizeOut);
+				memcpy(keyContainer.encData, encDataOut,
+						encDataSizeOut);
 				keyContainer.encSize = encDataSizeOut;
 
 				offset = 0;
-				Trspi_LoadBlob_KEY(&offset, keyObject, &keyContainer);
-				Tspi_SetAttribData(hObjectToChange,
-						   TSS_TSPATTRIB_KEY_BLOB,
-						   TSS_TSPATTRIB_KEYBLOB_BLOB, offset, keyObject);
+				Trspi_LoadBlob_KEY(&offset, keyObject,
+							&keyContainer);
+				obj_rsakey_set_tcpakey(hObjectToChange,
+						   offset, keyObject);
 			}
 			if (entityType == TCPA_ET_DATA) {
-				memcpy(dataContainer.encData, encDataOut, encDataSizeOut);
+				memcpy(dataContainer.encData, encDataOut,
+						encDataSizeOut);
 				dataContainer.encDataSize = encDataSizeOut;
 
 				offset = 0;
-				Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &dataContainer);
-				Tspi_SetAttribData(hObjectToChange,
-						   TSS_TSPATTRIB_ENCDATA_BLOB,
-						   TSS_TSPATTRIB_ENCDATABLOB_BLOB,
+				Trspi_LoadBlob_STORED_DATA(&offset, dataBlob,
+							   &dataContainer);
+				obj_encdata_set_data(hObjectToChange,
 						   offset, dataBlob);
 
 			}
 		}
-	}
+	} else
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	else
-		return TSS_E_BAD_PARAMETER;
-
-	Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
-
-	return TSS_SUCCESS;
+	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
 }
 
 TSS_RESULT
-Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/*  in */
-		     TSS_FLAG attribFlag,	/*  in */
-		     TSS_FLAG subFlag,	/*  in */
-		     UINT32 ulAttrib	/*  in */
+Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
+		     TSS_FLAG attribFlag,	/* in */
+		     TSS_FLAG subFlag,		/* in */
+		     UINT32 ulAttrib		/* in */
     )
 {
-	AnObject *object = NULL;
-	TCPA_CONTEXT_OBJECT *ctxObj;
-	TCPA_RSAKEY_OBJECT *rsaObj;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
+	TSS_RESULT result;
 
-	switch (getObjectTypeByHandle(hObject)) {
-	case 0:
-		return TSS_E_INVALID_HANDLE;
-	case TSS_OBJECT_TYPE_RSAKEY:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		rsaObj = object->memPointer;
-
+	if (obj_is_rsakey(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_KEY_REGISTER) {
-			if (subFlag != 0)
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			if (subFlag)
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
 			if (ulAttrib == TSS_TSPATTRIB_KEYREGISTER_USER)
-				rsaObj->persStorageType = TSS_PS_TYPE_USER;
+				result = obj_rsakey_set_pstype(hObject, TSS_PS_TYPE_USER);
 			else if (ulAttrib == TSS_TSPATTRIB_KEYREGISTER_SYSTEM)
-				rsaObj->persStorageType = TSS_PS_TYPE_SYSTEM;
+				result = obj_rsakey_set_pstype(hObject, TSS_PS_TYPE_SYSTEM);
 			else if (ulAttrib == TSS_TSPATTRIB_KEYREGISTER_NO)
-				rsaObj->persStorageType = TSS_PS_TYPE_NO;
+				result = obj_rsakey_set_pstype(hObject, TSS_PS_TYPE_NO);
 			else
-				return TSS_E_INVALID_ATTRIB_DATA;
-
-			break;
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_INFO) {
-
 			switch (subFlag) {
 				case TSS_TSPATTRIB_KEYINFO_USAGE:
-					if ((UINT16)ulAttrib != TSS_KEYUSAGE_BIND &&
-						(UINT16)ulAttrib != TSS_KEYUSAGE_IDENTITY &&
-						(UINT16)ulAttrib != TSS_KEYUSAGE_LEGACY &&
-						(UINT16)ulAttrib != TSS_KEYUSAGE_SIGN &&
-						(UINT16)ulAttrib != TSS_KEYUSAGE_STORAGE &&
-						(UINT16)ulAttrib != TSS_KEYUSAGE_AUTHCHANGE) {
-						return TSS_E_INVALID_ATTRIB_DATA;
+					if (ulAttrib != TSS_KEYUSAGE_BIND &&
+					    ulAttrib != TSS_KEYUSAGE_IDENTITY &&
+					    ulAttrib != TSS_KEYUSAGE_LEGACY &&
+					    ulAttrib != TSS_KEYUSAGE_SIGN &&
+					    ulAttrib != TSS_KEYUSAGE_STORAGE &&
+					    ulAttrib != TSS_KEYUSAGE_AUTHCHANGE) {
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 					}
-					rsaObj->tcpaKey.keyUsage = (UINT16) ulAttrib;
+
+					result = obj_rsakey_set_usage(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_MIGRATABLE:
-					if (ulAttrib)
-						rsaObj->tcpaKey.keyFlags |= migratable;
-					else
-						rsaObj->tcpaKey.keyFlags &= (~migratable);
+					if (ulAttrib != TRUE && ulAttrib != FALSE)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_migratable(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_REDIRECTED:
-					if (ulAttrib)
-						rsaObj->tcpaKey.keyFlags |= redirection;
-					else
-						rsaObj->tcpaKey.keyFlags &= (~redirection);
+					if (ulAttrib != TRUE && ulAttrib != FALSE)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_redirected(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_VOLATILE:
-					if (ulAttrib)
-						rsaObj->tcpaKey.keyFlags |= volatileKey;
-					else
-						rsaObj->tcpaKey.keyFlags &= (~volatileKey);
+					if (ulAttrib != TRUE && ulAttrib != FALSE)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_volatile(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_AUTHDATAUSAGE:
-					rsaObj->tcpaKey.authDataUsage = (BYTE) ulAttrib;
-					rsaObj->usesAuth = (BOOL) ulAttrib;
+					if (ulAttrib != TRUE && ulAttrib != FALSE)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_authdata_usage(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_ALGORITHM:
-					rsaObj->tcpaKey.algorithmParms.algorithmID = ulAttrib;
+					result = obj_rsakey_set_alg(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_ENCSCHEME:
-					rsaObj->tcpaKey.algorithmParms.encScheme = (UINT16) ulAttrib;
+					if (ulAttrib != TSS_ES_NONE &&
+					    ulAttrib != TSS_ES_RSAESPKCSV15 &&
+					    ulAttrib != TSS_ES_RSAESOAEP_SHA1_MGF1)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_es(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_SIGSCHEME:
-					rsaObj->tcpaKey.algorithmParms.sigScheme = (UINT16) ulAttrib;
+					if (ulAttrib != TSS_SS_NONE &&
+					    ulAttrib != TSS_SS_RSASSAPKCS1V15_SHA1 &&
+					    ulAttrib != TSS_SS_RSASSAPKCS1V15_DER)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_rsakey_set_ss(hObject, ulAttrib);
 					break;
-
 				default:
-					return TSS_E_INVALID_ATTRIB_SUBFLAG;
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
-
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
-			/*if( subFlag == TSS_TSPATTRIB_KEYINFO_RSA_KEYSIZE )
-			  {
-			  UINT32ToArray( ulAttrib, rsaObj->tcpaKey.algorithmParms.parms );
-			  }
-			  else */ if (subFlag ==
-					  TSS_TSPATTRIB_KEYINFO_RSA_PRIMES) {
-				  UINT32ToArray(ulAttrib, &rsaObj->tcpaKey.algorithmParms.parms[4]);
-			  } else
-				  return TSS_E_INVALID_ATTRIB_SUBFLAG;
-
+			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_PRIMES) {
+				result = obj_rsakey_set_num_primes(hObject, ulAttrib);
+			} else
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		break;
-	case TSS_OBJECT_TYPE_POLICY:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+	} else if (obj_is_policy(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_HMAC) {
 			if (ulAttrib == 0)
-				return TSS_E_INVALID_ATTRIB_DATA;
-			pObj->cb.Tspicb_CallbackHMACAuth = (TSS_RESULT (*)(
-						PVOID,TSS_HOBJECT,
-						TSS_BOOL,UINT32,
-						TSS_BOOL,UINT32,
-						BYTE *,BYTE *,
-						BYTE *,BYTE *,
-						UINT32,BYTE *,
-						BYTE *))ulAttrib;
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+			result = obj_policy_set_cb_hmac(hObject, (PVOID)ulAttrib);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC) {
 			if (ulAttrib == 0)
-				return TSS_E_INVALID_ATTRIB_DATA;
-			pObj->cb.Tspicb_CallbackXorEnc = (TSS_RESULT (*)(
-						PVOID,TSS_HOBJECT,
-						TSS_HOBJECT,TSS_FLAG,
-						UINT32,BYTE *,
-						BYTE *,BYTE *,
-						BYTE *,UINT32,
-						BYTE *,BYTE *))ulAttrib;
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+			result = obj_policy_set_cb_xor(hObject, (PVOID)ulAttrib);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP) {
 			if (ulAttrib == 0)
-				return TSS_E_INVALID_ATTRIB_DATA;
-			pObj->cb.Tspicb_CallbackTakeOwnership = (TSS_RESULT (*)(
-						PVOID,TSS_HOBJECT,
-						TSS_HKEY,UINT32,
-						BYTE *))ulAttrib;
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+			result = obj_policy_set_cb_takeowner(hObject, (PVOID)ulAttrib);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM) {
 			if (ulAttrib == 0)
-				return TSS_E_INVALID_ATTRIB_DATA;
-			pObj->cb.Tspicb_CallbackChangeAuthAsym = (TSS_RESULT (*)(
-						PVOID,TSS_HOBJECT,
-						TSS_HKEY,UINT32,
-						UINT32,BYTE *,
-						BYTE *))ulAttrib;
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+			result = obj_policy_set_cb_changeauth(hObject, (PVOID)ulAttrib);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_SECRET_LIFETIME) {
 			if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-				pObj->p.SecretCounter = 0;
-				pObj->p.SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
-				pObj->p.SecretTimer = 0;
+				result = obj_policy_set_lifetime(hObject);
 			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-				pObj->p.SecretCounter = ulAttrib;
-				pObj->p.SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER;
-				pObj->p.SecretTimer = 0;
+				result = obj_policy_set_counter(hObject, ulAttrib);
 			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-				time_t t = time(NULL);
-
-				if (t == ((time_t)-1)) {
-					LogError("time failed: %s", strerror(errno));
-					return TSS_E_INTERNAL_ERROR;
-				}
-				/* for mode time, we'll use the SecretCounter variable to hold
-				 * the number of seconds we're valid and the SecretTimer var to
-				 * record the current timestamp. This should protect against
-				 * overflows.
-				 */
-				pObj->p.SecretCounter = ulAttrib;
-				pObj->p.SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER;
-				pObj->p.SecretTimer = t;
+				result = obj_policy_set_timer(hObject, ulAttrib);
+			} else {
+				result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
 		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		break;
-	case TSS_OBJECT_TYPE_CONTEXT:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+	} else if (obj_is_context(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-		if (subFlag != 0)
-			return TSS_E_INVALID_ATTRIB_SUBFLAG;
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		ctxObj = object->memPointer;
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		if (subFlag)
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
 		if (ulAttrib == TSS_TSPATTRIB_CONTEXT_NOT_SILENT)
-			ctxObj->silentMode = ulAttrib;
+			result = obj_context_set_mode(hObject, ulAttrib);
 		else if (ulAttrib == TSS_TSPATTRIB_CONTEXT_SILENT) {
-			if (anyPopupPolicies(hObject))
-				return TSS_E_SILENT_CONTEXT;
-			ctxObj->silentMode = ulAttrib;
+			if (obj_context_has_popups(hObject))
+				return TSPERR(TSS_E_SILENT_CONTEXT);
+			result = obj_context_set_mode(hObject, ulAttrib);
 		} else
-			return TSS_E_INVALID_ATTRIB_DATA;
-
-		break;
-	default:
-		return TSS_E_BAD_PARAMETER;
-		break;
+			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+	} else {
+		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
+		    obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
-	return TSS_SUCCESS;
+
+	return result;
 }
 
 TSS_RESULT
-Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/*  in */
-		     TSS_FLAG attribFlag,	/*  in */
-		     TSS_FLAG subFlag,	/*  in */
-		     UINT32 * pulAttrib	/*  out */
+Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
+		     TSS_FLAG attribFlag,	/* in */
+		     TSS_FLAG subFlag,		/* in */
+		     UINT32 * pulAttrib		/* out */
     )
 {
-	AnObject *object = NULL;
-	TCPA_CONTEXT_OBJECT *ctxObj;
-	TCPA_RSAKEY_OBJECT *rsaObj;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
 	UINT32 attrib;
+	TSS_RESULT result;
 
 	if (pulAttrib == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	switch (getObjectTypeByHandle(hObject)) {
-	case 0:
-		return TSS_E_INVALID_HANDLE;
-	case TSS_OBJECT_TYPE_RSAKEY:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INTERNAL_ERROR;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		rsaObj = object->memPointer;
-
+	if (obj_is_rsakey(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_KEY_REGISTER) {
 			if (subFlag != 0)
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			if (rsaObj->persStorageType == TSS_PS_TYPE_USER)
+			if ((result = obj_rsakey_get_pstype(hObject, &attrib)))
+				return result;
+
+			if (attrib == TSS_PS_TYPE_USER)
 				*pulAttrib = TSS_TSPATTRIB_KEYREGISTER_USER;
-			else if (rsaObj->persStorageType == TSS_PS_TYPE_SYSTEM)
+			else if (attrib == TSS_PS_TYPE_SYSTEM)
 				*pulAttrib = TSS_TSPATTRIB_KEYREGISTER_SYSTEM;
-			else if (rsaObj->persStorageType == TSS_PS_TYPE_NO)
-				*pulAttrib = TSS_TSPATTRIB_KEYREGISTER_NO;
 			else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
-			break;
+				*pulAttrib = TSS_TSPATTRIB_KEYREGISTER_NO;
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_INFO) {
 			switch (subFlag) {
-				case TSS_TSPATTRIB_KEYINFO_USAGE:
-					*pulAttrib = rsaObj->tcpaKey.keyUsage;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_MIGRATABLE:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & migratable ? TRUE : FALSE;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_REDIRECTED:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & redirection ? TRUE : FALSE;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_VOLATILE:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags & volatileKey ? TRUE : FALSE;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_AUTHDATAUSAGE:
-					*pulAttrib = rsaObj->tcpaKey.authDataUsage ? TRUE : FALSE;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_ALGORITHM:
-					*pulAttrib = rsaObj->tcpaKey.algorithmParms.algorithmID;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_ENCSCHEME:
-					*pulAttrib = rsaObj->tcpaKey.algorithmParms.encScheme;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_SIGSCHEME:
-					*pulAttrib = rsaObj->tcpaKey.algorithmParms.sigScheme;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_KEYFLAGS:
-					*pulAttrib = rsaObj->tcpaKey.keyFlags;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_AUTHUSAGE:
-					*pulAttrib = rsaObj->tcpaKey.authDataUsage;
-					break;
-				case TSS_TSPATTRIB_KEYINFO_SIZE:
-					*pulAttrib = rsaObj->tcpaKey.pubKey.keyLength;
-					break;
-
-				default:
-					return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			case TSS_TSPATTRIB_KEYINFO_USAGE:
+				if ((result = obj_rsakey_get_usage(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_MIGRATABLE:
+				*pulAttrib = obj_rsakey_is_migratable(hObject);
+				break;
+			case TSS_TSPATTRIB_KEYINFO_REDIRECTED:
+				*pulAttrib = obj_rsakey_is_redirected(hObject);
+				break;
+			case TSS_TSPATTRIB_KEYINFO_VOLATILE:
+				*pulAttrib = obj_rsakey_is_volatile(hObject);
+				break;
+			case TSS_TSPATTRIB_KEYINFO_AUTHUSAGE:
+				/* fall through */
+			case TSS_TSPATTRIB_KEYINFO_AUTHDATAUSAGE:
+				if ((result = obj_rsakey_get_authdata_usage(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_ALGORITHM:
+				if ((result = obj_rsakey_get_alg(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_ENCSCHEME:
+				if ((result = obj_rsakey_get_es(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_SIGSCHEME:
+				if ((result = obj_rsakey_get_ss(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_KEYFLAGS:
+				if ((result = obj_rsakey_get_flags(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_KEYINFO_SIZE:
+				if ((result = obj_rsakey_get_length(hObject, pulAttrib)))
+					return result;
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
-
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_KEYSIZE) {
-				attrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).keyLength;
-				*pulAttrib = endian32(attrib);
+				if ((result = obj_rsakey_get_length(hObject, pulAttrib)))
+					return result;
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_PRIMES) {
-				attrib = (*(TCPA_RSA_KEY_PARMS *)(rsaObj->tcpaKey.algorithmParms.parms)).numPrimes;
-				*pulAttrib = endian32(attrib);
-			} else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
-
+				if ((result = obj_rsakey_get_num_primes(hObject, pulAttrib)))
+					return result;
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
 		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		break;
-	case TSS_OBJECT_TYPE_POLICY:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-		if (object->objectType != TSS_OBJECT_TYPE_POLICY)
-			return TSS_E_BAD_PARAMETER;
-
-		pObj = (TSP_INTERNAL_POLICY_OBJECT *)object->memPointer;
-
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+	} else if (obj_is_policy(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_HMAC) {
-			*pulAttrib = (UINT32)pObj->cb.Tspicb_CallbackHMACAuth;
+			if ((result = obj_policy_get_cb_hmac(hObject, pulAttrib)))
+				return result;
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC) {
-			*pulAttrib = (UINT32)pObj->cb.Tspicb_CallbackXorEnc;
+			if ((result = obj_policy_get_cb_xor(hObject, pulAttrib)))
+				return result;
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP) {
-			*pulAttrib = (UINT32)pObj->cb.Tspicb_CallbackTakeOwnership;
+			if ((result = obj_policy_get_cb_takeowner(hObject, pulAttrib)))
+				return result;
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM) {
-			*pulAttrib = (UINT32)pObj->cb.Tspicb_CallbackChangeAuthAsym;
+			if ((result = obj_policy_get_cb_changeauth(hObject, pulAttrib)))
+				return result;
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_SECRET_LIFETIME) {
+			if ((result = obj_policy_get_lifetime(hObject, &attrib)))
+				return result;
+
 			if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-				if (pObj->p.SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS)
+				if (attrib == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS)
 					*pulAttrib = TRUE;
 				else
 					*pulAttrib = FALSE;
 			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-				if (pObj->p.SecretLifetime != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
-					return TSS_E_BAD_PARAMETER;
-				*pulAttrib = pObj->p.SecretCounter;
+				if (attrib != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
+					return TSPERR(TSS_E_BAD_PARAMETER);
+				if ((result = obj_policy_get_counter(hObject, pulAttrib)))
+					return result;
 			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-				int seconds_elapsed;
-				time_t t = time(NULL);
-
-				if (pObj->p.SecretLifetime != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER)
-					return TSS_E_BAD_PARAMETER;
-
-				if (t == ((time_t)-1)) {
-					LogError("time failed: %s", strerror(errno));
-					return TSS_E_INTERNAL_ERROR;
-				}
-				/* curtime - SecretTimer is the number of seconds elapsed since we
-				 * started the timer. SecretCounter is the number of seconds the
-				 * secret is valid.  If seconds_elapsed > SecretCounter, we've
-				 * expired.
-				 */
-				seconds_elapsed = t - pObj->p.SecretTimer;
-				if ((UINT32)seconds_elapsed >= pObj->p.SecretCounter) {
-					*pulAttrib = 0;
-				} else {
-					*pulAttrib = pObj->p.SecretCounter - seconds_elapsed;
-				}
+				if ((result = obj_policy_get_secs_until_expired(hObject, pulAttrib)))
+					return result;
 			} else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		break;
-	case TSS_OBJECT_TYPE_CONTEXT:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+	} else if (obj_is_context(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-		if (subFlag != 0)
-			return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		if (subFlag)
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		ctxObj = (TCPA_CONTEXT_OBJECT *)object->memPointer;
-
-		*pulAttrib = ctxObj->silentMode;
-
-		break;
-	default:
-		return TSS_E_BAD_PARAMETER;
-		break;
+		if ((result = obj_context_get_mode(hObject, pulAttrib)))
+			return result;
+	} else {
+		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
+		    obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
-	return TSS_SUCCESS;
+
+	return result;
 }
 
 TSS_RESULT
-Tspi_SetAttribData(TSS_HOBJECT hObject,	/*  in */
-		   TSS_FLAG attribFlag,	/*  in */
-		   TSS_FLAG subFlag,	/*  in */
-		   UINT32 ulAttribDataSize,	/*  in */
-		   BYTE * rgbAttribData	/*  in */
+Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
+		   TSS_FLAG attribFlag,		/* in */
+		   TSS_FLAG subFlag,		/* in */
+		   UINT32 ulAttribDataSize,	/* in */
+		   BYTE * rgbAttribData		/* in */
     )
 {
-	AnObject *object = NULL;
-	TCPA_RSAKEY_OBJECT *rsaObj = NULL;
-	TCPA_ENCDATA_OBJECT *encDataObject = NULL;
-	TCPA_POLICY_OBJECT *policyObject = NULL;
-	UINT16 offset;
-	UINT32 type;
-	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 
-	LogDebug1("Tspi_SetAttribData");
-
-	if ((tspContext = obj_getTspContext(hObject)) == NULL_HCONTEXT)
-		return TSS_E_INVALID_HANDLE;
-
-	type = getObjectTypeByHandle(hObject);
-	switch (type) {
-	case 0:
-		LogDebug1("object type not found");
-		return TSS_E_INVALID_HANDLE;
-		break;
-		/* -------------------------------       */
-	case TSS_OBJECT_TYPE_RSAKEY:
+	if (obj_is_rsakey(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_KEY_BLOB)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		rsaObj = object->memPointer;
-		if (rsaObj == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset,
-							rgbAttribData, &rsaObj->tcpaKey))) {
-				LogDebug("Trspi_UnloadBlob_KEY failed. result=0x%x", result);
-				return result;
-			}
-
-			rsaObj->usesAuth = rsaObj->tcpaKey.authDataUsage;
+			result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize, rgbAttribData);
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-			if (rsaObj->tcpaKey.pubKey.key)
-				free_tspi(tspContext, rsaObj->tcpaKey.pubKey.key);
-			rsaObj->tcpaKey.pubKey.keyLength = ulAttribDataSize;
-
-			rsaObj->tcpaKey.pubKey.key = calloc_tspi(tspContext, ulAttribDataSize);
-			if (rsaObj->tcpaKey.pubKey.key == NULL) {
-				LogError("malloc of %d bytes failed.", ulAttribDataSize);
-				return TSS_E_OUTOFMEMORY;
-			}
-			memcpy(rsaObj->tcpaKey.pubKey.key, rgbAttribData, ulAttribDataSize);
+			result = obj_rsakey_set_pubkey(hObject, ulAttribDataSize, rgbAttribData);
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-			if (rsaObj->tcpaKey.encData)
-				free_tspi(tspContext, rsaObj->tcpaKey.encData);
-			rsaObj->tcpaKey.encSize = ulAttribDataSize;
-
-			rsaObj->tcpaKey.encData = calloc_tspi(tspContext, ulAttribDataSize);
-			if (rsaObj->tcpaKey.encData == NULL) {
-				LogError("malloc of %d bytes failed.", ulAttribDataSize);
-				return TSS_E_OUTOFMEMORY;
-			}
-			memcpy(rsaObj->tcpaKey.encData, rgbAttribData, ulAttribDataSize);
+			result = obj_rsakey_set_privkey(hObject, ulAttribDataSize, rgbAttribData);
 		} else {
-			return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		}
-		break;
-	case TSS_OBJECT_TYPE_ENCDATA:
-		LogDebug1("TSS_OBJECT_TYPE_ENCDATA");
-
+	} else if (obj_is_encdata(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_ENCDATA_BLOB)
-			return TSS_E_INVALID_ATTRIB_FLAG;
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		if (subFlag != TSS_TSPATTRIB_ENCDATABLOB_BLOB)
-			return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		encDataObject = object->memPointer;
-		if (encDataObject == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		encDataObject->encryptedDataLength = ulAttribDataSize;
-		memcpy(encDataObject->encryptedData, rgbAttribData, ulAttribDataSize);
-
-		break;
-	case TSS_OBJECT_TYPE_POLICY:
-		LogDebug1("TSS_OBJECT_TYPE_POLICY");
-
+		result = obj_encdata_set_data(hObject, ulAttribDataSize, rgbAttribData);
+	} else if (obj_is_policy(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		policyObject = object->memPointer;
-		if (policyObject == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
 		/* check to see if the passed in data can fit in our UNICODE array */
 		if ((ulAttribDataSize/sizeof(UNICODE)) >= UI_MAX_POPUP_STRING_LENGTH)
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 
-		policyObject->popupStringLength = ulAttribDataSize / sizeof(UNICODE);
-		wcsncpy(policyObject->popupString, (UNICODE *)rgbAttribData, policyObject->popupStringLength);
-		break;
-	default:
-		return TSS_E_BAD_PARAMETER;
-		break;
+		result = obj_policy_set_string(hObject, ulAttribDataSize, rgbAttribData);
+	} else {
+		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
+		    obj_is_pcrs(hObject) || obj_is_context(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
-Tspi_GetAttribData(TSS_HOBJECT hObject,	/*  in */
-		   TSS_FLAG attribFlag,	/*  in */
-		   TSS_FLAG subFlag,	/*  in */
-		   UINT32 * pulAttribDataSize,	/*  out  */
-		   BYTE ** prgbAttribData	/*  out */
+Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
+		   TSS_FLAG attribFlag,		/* in */
+		   TSS_FLAG subFlag,		/* in */
+		   UINT32 * pulAttribDataSize,	/* out */
+		   BYTE ** prgbAttribData	/* out */
     )
 {
-	UINT16 offset = 0xffff;
-	AnObject *object = NULL;
-	TCPA_RSAKEY_OBJECT *rsaObj;
-	TCPA_ENCDATA_OBJECT *encDataObj;
-	TCPA_CONTEXT_OBJECT *ctxObj;
-	TSP_INTERNAL_POLICY_OBJECT *pObj;
-	BYTE tempBuf[1024];
-	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
-	UINT32 size;
 
 	if (pulAttribDataSize == NULL || prgbAttribData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	LogDebug1("Tspi_GetAttribData");
-
-	if ((result = obj_checkSession_1(hObject)))
-		return result;
-
-	if ((tspContext = obj_getTspContext(hObject)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	switch (getObjectTypeByHandle(hObject)) {
-	case 0:
-		LogDebug1("Invalid object");
-		return TSS_E_INVALID_HANDLE;
-	case TSS_OBJECT_TYPE_RSAKEY:
-		LogDebug1("Object type RSAKEY");
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-		rsaObj = object->memPointer;
-
+	if (obj_is_rsakey(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_KEY_BLOB) {
-			LogDebug1("TSS_TSPATTRIB_KEY_BLOB");
 			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-				LogDebug1("TSS_TSPATTRIB_KEYBLOB_BLOB");
-				offset = 0;
-				Trspi_LoadBlob_KEY(&offset, tempBuf, &rsaObj->tcpaKey);
+				result = obj_rsakey_get_blob(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-				offset = rsaObj->tcpaKey.encSize;
-				memcpy(tempBuf, rsaObj->tcpaKey.encData, offset);
+				result = obj_rsakey_get_priv_blob(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-				offset = rsaObj->tcpaKey.pubKey.keyLength;
-				memcpy(tempBuf, rsaObj->tcpaKey.pubKey.key, offset);
+				result = obj_rsakey_get_pub_blob(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else {
-				LogDebug1("invalid subflag");
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_INFO) {
-			LogDebug1("TSS_TSPATTRIB_KEY_INFO");
 			if (subFlag != TSS_TSPATTRIB_KEYINFO_VERSION)
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			offset = 0;
-			Trspi_LoadBlob_TCPA_VERSION(&offset, tempBuf, rsaObj->tcpaKey.ver);
+			result = obj_rsakey_get_version(hObject,
+					pulAttribDataSize,
+					prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
-			LogDebug1("TSS_TSPATTRIB_RSAKEY_INFO");
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
-				offset = (*(TCPA_RSA_KEY_PARMS *)
-						(rsaObj->tcpaKey.algorithmParms.parms)).exponentSize;
+				result = obj_rsakey_get_exponent(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_MODULUS) {
-				offset = rsaObj->tcpaKey.pubKey.keyLength;
+				return TSPERR(TSS_E_NOTIMPL);
 			} else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_UUID) {
-			LogDebug1("TSS_TSPATTRIB_KEY_UUID");
-			if (subFlag != 0)
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+			if (subFlag)
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			offset = 0;
-			Trspi_LoadBlob_UUID(&offset, tempBuf, rsaObj->uuid);
+			result = obj_rsakey_get_uuid(hObject,
+					pulAttribDataSize,
+					prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_PCR) {
-			LogDebug1("TSS_TSPATTRIB_KEY_PCR");
 			if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATCREATION) {
-				return TSS_E_NOTIMPL;
+				result = obj_rsakey_get_pcr_atcreation(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATRELEASE) {
-				return TSS_E_NOTIMPL;
+				result = obj_rsakey_get_pcr_atrelease(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYPCR_SELECTION) {
-				return TSS_E_NOTIMPL;
+				result = obj_rsakey_get_pcr_selection(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		if (offset == 0)
-			return TSS_E_INVALID_ATTRIB_DATA;
-
-		*pulAttribDataSize = offset;
-		*prgbAttribData = calloc_tspi(tspContext, offset);
-		if (*prgbAttribData == NULL) {
-			LogError("malloc of %d bytes failed.", offset);
-			return TSS_E_OUTOFMEMORY;
-		}
-		memcpy(*prgbAttribData, tempBuf, offset);
-
-		break;
-		/* ---------------------------------------------------------------------------- */
-	case TSS_OBJECT_TYPE_ENCDATA:
-		LogDebug1("TSS_OBJECT_TYPE_ENCDATA");
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-		if (object->memPointer == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-		encDataObj = (TCPA_ENCDATA_OBJECT *)object->memPointer;
-		/* ------------------------------------ */
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+	} else if (obj_is_encdata(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_ENCDATA_BLOB) {
-			LogDebug1("TSS_TSPATTRIB_ENCDATA_BLOB");
 			if (subFlag != TSS_TSPATTRIB_ENCDATABLOB_BLOB)
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
-			*pulAttribDataSize = encDataObj->encryptedDataLength;
-			*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
-			if (*prgbAttribData == NULL) {
-				LogError("malloc of %d bytes failed.", *pulAttribDataSize);
-				return TSS_E_OUTOFMEMORY;
-			}
-			memcpy(*prgbAttribData, encDataObj->encryptedData, *pulAttribDataSize);
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
+			result = obj_encdata_get_data(hObject,
+					pulAttribDataSize,
+					prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_ENCDATA_PCR) {
-			LogDebug1("TSS_TSPATTRIB_ENCDATA_PCR");
-			if (encDataObj->usePCRs == 0)
-				return TSS_E_BAD_PARAMETER;
 			if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATCREATION) {
-				*pulAttribDataSize = 20;
-				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
-				if (*prgbAttribData == NULL) {
-					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
-					return TSS_E_OUTOFMEMORY;
-				}
-				memcpy(*prgbAttribData, encDataObj->pcrInfo.digestAtCreation.digest, 20);
-			}
-#if 0
-			else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE) {
-				*pulAttribDataSize = 20;
-				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
-				if (*prgbAttribData == NULL) {
-					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
-					return TSS_E_OUTOFMEMORY;
-				}
-				memcpy(*prgbAttribData,	encDataObj->pcrInfo.digestAtRelease.digest, 20);
+				result = obj_encdata_get_pcr_atcreation(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_RELEASE) {
+				result = obj_encdata_get_pcr_atrelease(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_SELECTION) {
-				offset = 0;
-				Trspi_LoadBlob_PCR_SELECTION(&offset, tempBuf, encDataObj->pcrInfo.pcrSelection);
-				*pulAttribDataSize = offset;
-				*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
-				if (*prgbAttribData == NULL) {
-					LogError("malloc of %d bytes failed.", *pulAttribDataSize);
-					return TSS_E_OUTOFMEMORY;
-				}
-				memcpy(*prgbAttribData, tempBuf, *pulAttribDataSize);
+				result = obj_encdata_get_pcr_selection(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
-#endif
-			else
-				return TSS_E_INVALID_ATTRIB_SUBFLAG;
-		} else
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		break;
-		/* ---------------------------------------------------------------------------- */
-	case TSS_OBJECT_TYPE_CONTEXT:
-		LogDebug1("TSS_OBJECT_TYPE_CONTEXT");
-		if (attribFlag != TSS_TSPATTRIB_CONTEXT_MACHINE_NAME)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-
-		if (object->memPointer == NULL) {
-			LogError("internal context object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-		ctxObj = object->memPointer;
-
-		/* allocate the number of bytes, not UNICODE characters */
-		*pulAttribDataSize = (ctxObj->machineNameLength + 1) * sizeof(UNICODE);
-		*prgbAttribData = calloc_tspi(tspContext, *pulAttribDataSize);
-		if (*prgbAttribData == NULL) {
-			LogError("malloc of %d bytes failed.", *pulAttribDataSize);
-			return TSS_E_OUTOFMEMORY;
-		}
-		/* return the UNICODE string and the number of _bytes_ in it, not the
-		 * number of UNICODE characters in it.
-		 */
-		wcsncpy((UNICODE *)*prgbAttribData, ctxObj->machineName, ctxObj->machineNameLength);
-		break;
-	case TSS_OBJECT_TYPE_POLICY:
-		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
-			return TSS_E_INVALID_ATTRIB_FLAG;
-
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL)
-			return TSS_E_INVALID_HANDLE;
-
-		if (object->memPointer == NULL) {
-			LogError("internal policy object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-		pObj = object->memPointer;
-
-		size = MIN(UI_MAX_POPUP_STRING_LENGTH, (pObj->p.popupStringLength + 1)) * sizeof(UNICODE);
-
-		if (pObj->p.popupStringLength > 0) {
-			*prgbAttribData = calloc_tspi(tspContext, size);
-			if (*prgbAttribData == NULL) {
-				LogError("malloc of %d bytes failed.", size);
-				return TSS_E_OUTOFMEMORY;
-			}
-
-			memcpy(*prgbAttribData, pObj->p.popupString, size);
-			*pulAttribDataSize = size;
 		} else {
-			*prgbAttribData = NULL;
-			*pulAttribDataSize = 0;
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		}
-		break;
-	default:
-		return TSS_E_BAD_PARAMETER;
-		break;
+	} else if (obj_is_context(hObject)) {
+		if (attribFlag != TSS_TSPATTRIB_CONTEXT_MACHINE_NAME)
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+
+		result = obj_context_get_machine_name(hObject,
+					pulAttribDataSize, prgbAttribData);
+	} else if (obj_is_policy(hObject)) {
+		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+
+		result = obj_policy_get_string(hObject,
+					pulAttribDataSize, prgbAttribData);
+	} else {
+		if (obj_is_tpm(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
-	return TSS_SUCCESS;
+
+	return result;
 }
 
 TSS_RESULT
-Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/*  in */
-		     TSS_FLAG policyType,	/*  in */
-		     TSS_HPOLICY * phPolicy	/*  out */
+Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
+		     TSS_FLAG policyType,	/* in */
+		     TSS_HPOLICY * phPolicy	/* out */
     )
 {
-	AnObject *object = NULL;
-	TCPA_RSAKEY_OBJECT *rsaObj;
-	TCPA_TPM_OBJECT *tpmObj;
-	TCPA_CONTEXT_OBJECT *ctxObj;
-	TCPA_ENCDATA_OBJECT *encDataObj;
+	TSS_RESULT result;
 
 	if (phPolicy == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	switch (getObjectTypeByHandle(hObject)) {
-	case 0:
-		return TSS_E_INVALID_HANDLE;
-		break;
-	case TSS_OBJECT_TYPE_RSAKEY:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
+	if (policyType != TSS_POLICY_USAGE &&
+	    policyType != TSS_POLICY_MIGRATION)
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-		rsaObj = object->memPointer;
-		if (policyType == TSS_POLICY_USAGE)
-			*phPolicy = rsaObj->usagePolicy;
-		else if (policyType == TSS_POLICY_MIGRATION)
-			*phPolicy = rsaObj->migPolicy;
+	if (obj_is_rsakey(hObject)) {
+		result = obj_rsakey_get_policy(hObject, policyType, phPolicy, NULL);
+	} else if (obj_is_tpm(hObject)) {
+		result = obj_tpm_get_policy(hObject, phPolicy);
+	} else if (obj_is_context(hObject)) {
+		result = obj_context_get_policy(hObject, phPolicy);
+	} else if (obj_is_encdata(hObject)) {
+		result = obj_encdata_get_policy(hObject, policyType, phPolicy);
+	} else {
+		if (obj_is_policy(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
-			return TSS_E_BAD_PARAMETER;
-		break;
-	case TSS_OBJECT_TYPE_TPM:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		tpmObj = object->memPointer;
-		*phPolicy = tpmObj->policy;
-		break;
-	case TSS_OBJECT_TYPE_CONTEXT:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		ctxObj = object->memPointer;
-		*phPolicy = ctxObj->policy;
-		break;
-	case TSS_OBJECT_TYPE_ENCDATA:
-		object = getAnObjectByHandle(hObject);
-		if (object == NULL) {
-			LogError("internal object pointer for handle 0x%x not found!", hObject);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		encDataObj = object->memPointer;
-		if (policyType == TSS_POLICY_USAGE)
-			*phPolicy = encDataObj->usagePolicy;
-		else if (policyType == TSS_POLICY_MIGRATION)
-			*phPolicy = encDataObj->migPolicy;
-		else
-			return TSS_E_BAD_PARAMETER;
-		break;
-	default:
-		return TSS_E_BAD_PARAMETER;
-		break;
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
-	return TSS_SUCCESS;
+
+	return result;
 }
 

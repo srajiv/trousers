@@ -12,20 +12,18 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tss/trousers.h"
-
-TSS_UUID SRK_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 1 } };
 
 TSS_RESULT
-Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
-			      TSS_HKEY hKey,	/*  in */
-			      TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
+			      TSS_HKEY hKey,			/* in */
+			      TSS_VALIDATION * pValidationData	/* in, out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -40,25 +38,20 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	UINT16 offset;
 	TCPA_DIGEST hash;
 	BYTE hashBlob[1024];
-	AnObject *anObject;
-	TCPA_RSAKEY_OBJECT *keyObject;
 	UINT32 newEKSize;
 	BYTE *newEK;
 	TSS_HCONTEXT tspContext;
+	TCPA_KEY_PARMS keyParms;
+	TCPA_STORE_PUBKEY pubKey;
 
 
-	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_2(hTPM, hKey, &tcsContext)))
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	if ((result = Tspi_GetAttribData(hKey,
-					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, &ekSize, &ek)))
+	if ((result = obj_rsakey_get_blob(hKey, &ekSize, &ek)))
 		return result;
 
 	offset = 0;
@@ -72,13 +65,12 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		verifyInternally = 1;
 
 	if (verifyInternally) {
-/* 		memset( antiReplay.nonce, 0xBB, 20 );		//change to random */
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError1("Failed to create random nonce");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
-		memcpy(antiReplay.nonce, pValidationData->rgbExternalData, 20);
+		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
 
 	if ((result = TCSP_CreateEndorsementKeyPair(tcsContext, antiReplay,
 						   ekSize, ek, &newEKSize, &newEK, &digest)))
@@ -91,40 +83,45 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 
-		if (memcmp(hash.digest, digest.digest, 20)) {
+		if (memcmp(hash.digest, digest.digest, TCPA_SHA1_160_HASH_LEN)) {
 			LogError1("Internal verification failed");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
-		pValidationData->ulDataLength = newEKSize;
-		pValidationData->rgbData = calloc_tspi(tspContext, newEKSize);
-		if (pValidationData->rgbData == NULL) {
+		pValidationData->DataLength = newEKSize;
+		pValidationData->Data = calloc_tspi(tspContext, newEKSize);
+		if (pValidationData->Data == NULL) {
 			LogError("malloc of %d bytes failed.", newEKSize);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbData, newEK, newEKSize);
-		memcpy(&pValidationData->rgbData[ekSize], antiReplay.nonce, 20);
+		memcpy(pValidationData->Data, newEK, newEKSize);
+		memcpy(&pValidationData->Data[ekSize], antiReplay.nonce,
+				TCPA_SHA1_160_HASH_LEN);
 
-		pValidationData->ulValidationLength = 20;
-		pValidationData->rgbValidationData = calloc_tspi(tspContext, 20);
+		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		pValidationData->ValidationData = calloc_tspi(tspContext,
+							TCPA_SHA1_160_HASH_LEN);
 		if (pValidationData == NULL) {
-			LogError("malloc of %d bytes failed.", 20);
-			return TSS_E_OUTOFMEMORY;
+			LogError("malloc of %d bytes failed.",
+					TCPA_SHA1_160_HASH_LEN);
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbValidationData, digest.digest, 20);
-	}
-	anObject = getAnObjectByHandle(hKey);
-	if (anObject == NULL || anObject->memPointer == NULL) {
-		LogError1("internal object not found with handle matching hKey");
-		return TSS_E_INTERNAL_ERROR;
+		memcpy(pValidationData->ValidationData, digest.digest,
+				TCPA_SHA1_160_HASH_LEN);
 	}
 
-	keyObject = anObject->memPointer;
-
+	/* unload the blob into our local objects, then store inside hKey */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, newEK, &keyObject->tcpaKey.algorithmParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, newEK, &keyParms)))
 		return result;
-	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, newEK, &keyObject->tcpaKey.pubKey)))
+
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, newEK, &pubKey)))
+		return result;
+
+	if ((result = obj_rsakey_set_key_parms(hKey, &keyParms)))
+		return result;
+
+	if ((result = obj_rsakey_set_pubkey(hKey, pubKey.keyLength, pubKey.key)))
 		return result;
 
 	free(newEK);
@@ -133,16 +130,16 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
-			      BOOL fOwnerAuthorized,	/*  in */
-			      TSS_VALIDATION * pValidationData, /* in, out */
-			      TSS_HKEY * phEndorsementPubKey	/*  out */
+Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
+			      TSS_BOOL fOwnerAuthorized,	/* in */
+			      TSS_VALIDATION *pValidationData,	/* in, out */
+			      TSS_HKEY *phEndorsementPubKey	/* out */
     )
 {
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
-	TCS_AUTH ownerAuth;
+	TPM_AUTH ownerAuth;
 	UINT16 offset;
 	BYTE hashblob[1000];
 	TSS_HPOLICY hPolicy;
@@ -151,35 +148,29 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 	TCPA_NONCE antiReplay;
 	TCPA_DIGEST checkSum;
 	TSS_HOBJECT retKey;
-	TCPA_RSAKEY_OBJECT *keyObject;
 	TSS_HCONTEXT tspContext;
-	AnObject *tmpObj = NULL;
 	TCPA_PUBKEY pubKey;
+	TCPA_KEY_PARMS keyParms;
 
 
 	if (phEndorsementPubKey == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
-
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT) {
-		LogError1("Unable to get TSP handle from TCS context");
-		return TSS_E_INTERNAL_ERROR;
-	}
 
 	if (fOwnerAuthorized) {
-		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
 			return result;
 
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &ownerAuth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &ownerAuth)))
 			return result;
 
 		if ((result = TCSP_OwnerReadPubek(tcsContext, &ownerAuth, &pubEKSize, &pubEK)))
@@ -191,19 +182,19 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		Trspi_LoadBlob(&offset, pubEKSize, hashblob, pubEK);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &ownerAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &ownerAuth)))
 			return result;
 	} else {
 		if (pValidationData == NULL) {
 			if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 				LogDebug1("Failed to generate random nonce");
-				return TSS_E_INTERNAL_ERROR;
+				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
-			if (pValidationData->ulExternalDataLength != SHA1_HASH_SIZE)
-				return TSS_E_BAD_PARAMETER;
+			if (pValidationData->DataLength != TCPA_SHA1_160_HASH_LEN)
+				return TSPERR(TSS_E_BAD_PARAMETER);
 
-			memcpy(antiReplay.nonce, pValidationData->rgbExternalData, SHA1_HASH_SIZE);
+			memcpy(antiReplay.nonce, &pValidationData->ExternalData, TCPA_SHA1_160_HASH_LEN);
 		}
 
 		/* call down to the TPM */
@@ -214,11 +205,11 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 		if (pValidationData == NULL) {
 			offset = 0;
 			Trspi_LoadBlob(&offset, pubEKSize, hashblob, pubEK);
-			Trspi_LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
+			Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashblob, antiReplay.nonce);
 			Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 			/* check validation of the entire pubkey structure */
-			if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE)) {
+			if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
 				/* validation failed, unload the pubEK in order to hash
 				 * just the pubKey portion of the pubEK. This is done on
 				 * Atmel chips specifically.
@@ -228,55 +219,62 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 
 				offset = 0;
 				Trspi_LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
-				Trspi_LoadBlob(&offset, SHA1_HASH_SIZE, hashblob, antiReplay.nonce);
+				Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashblob, antiReplay.nonce);
 				Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-				if (memcmp(digest.digest, checkSum.digest, SHA1_HASH_SIZE))
-					return TSS_E_VALIDATION_FAILED;
+				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN))
+					return TSPERR(TSS_E_VALIDATION_FAILED);
 			}
 		} else {
 			/* validate the entire TCPA_PUBKEY structure */
-			pValidationData->ulDataLength = pubEKSize + SHA1_HASH_SIZE;
-			pValidationData->rgbData = calloc_tspi(tspContext, pValidationData->ulDataLength);
-			if (pValidationData->rgbData == NULL) {
-				LogError("malloc of %d bytes failed.", pValidationData->ulDataLength);
-				return TSS_E_OUTOFMEMORY;
+			pValidationData->DataLength = pubEKSize + TCPA_SHA1_160_HASH_LEN;
+			pValidationData->Data = calloc_tspi(tspContext, pValidationData->DataLength);
+			if (pValidationData->Data == NULL) {
+				LogError("malloc of %d bytes failed.", pValidationData->DataLength);
+				return TSPERR(TSS_E_OUTOFMEMORY);
 			}
 
-			memcpy(pValidationData->rgbData, pubEK, pValidationData->ulDataLength);
-			memcpy(&(pValidationData->rgbData[pValidationData->ulDataLength]),
-					antiReplay.nonce, SHA1_HASH_SIZE);
+			memcpy(pValidationData->Data, pubEK, pValidationData->DataLength);
+			memcpy(&(pValidationData->Data[pValidationData->DataLength]),
+					antiReplay.nonce, TCPA_SHA1_160_HASH_LEN);
 
-			pValidationData->ulValidationLength = SHA1_HASH_SIZE;
-			pValidationData->rgbValidationData = calloc_tspi(tspContext, SHA1_HASH_SIZE);
-			if (pValidationData->rgbValidationData == NULL) {
-				LogError("malloc of %d bytes failed.", SHA1_HASH_SIZE);
-				return TSS_E_OUTOFMEMORY;
+			pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+			pValidationData->ValidationData = calloc_tspi(tspContext, TCPA_SHA1_160_HASH_LEN);
+			if (pValidationData->ValidationData == NULL) {
+				LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
+				return TSPERR(TSS_E_OUTOFMEMORY);
 			}
 
-			memcpy(pValidationData->rgbValidationData, checkSum.digest, SHA1_HASH_SIZE);
+			memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
 		}
 	}
 
-	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_RSAKEY,
-					TSS_KEY_SIZE_2048 | TSS_KEY_TYPE_LEGACY, &retKey)))
+	if ((result = obj_rsakey_add(tspContext,
+					TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY, &retKey)))
 		return result;
-
+#if 0
 	tmpObj = getAnObjectByHandle(retKey);
-	if (tmpObj && tmpObj->memPointer) {
-		keyObject = tmpObj->memPointer;
-	} else {
-		free(pubEK);
-		LogError1("internal mem pointer for key is invalid!");
-		return TSS_E_INTERNAL_ERROR;
-	}
+	keyObject = tmpObj->memPointer;
 
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, pubEK, &keyObject->tcpaKey.algorithmParms)))
 		return result;
 	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, pubEK, &keyObject->tcpaKey.pubKey)))
 		return result;
+#else
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, pubEK, &keyParms)))
+		return result;
 
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, pubEK, &pubKey.pubKey)))
+		return result;
+
+	if ((result = obj_rsakey_set_key_parms(retKey, &keyParms)))
+		return result;
+
+	if ((result = obj_rsakey_set_pubkey(retKey, pubKey.pubKey.keyLength, pubKey.pubKey.key)))
+		return result;
+#endif
 	*phEndorsementPubKey = retKey;
 
 	free(pubEK);
@@ -285,12 +283,12 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
-		       TSS_HKEY hKeySRK,	/*  in */
-		       TSS_HKEY hEndorsementPubKey	/*  in */
+Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
+		       TSS_HKEY hKeySRK,		/* in */
+		       TSS_HKEY hEndorsementPubKey	/* in */
     )
 {
-	TCS_AUTH privAuth;
+	TPM_AUTH privAuth;
 
 	BYTE encOwnerAuth[256];
 	UINT32 encOwnerAuthLength;
@@ -300,7 +298,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 
 	BYTE hashblob[1024];
 	TCPA_DIGEST digest;
-	TSS_RESULT rc;
+	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 	UINT32 srkKeyBlobLength;
 	BYTE *srkKeyBlob;
@@ -316,28 +314,19 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 	 *******************************/
 
 	if (hEndorsementPubKey == NULL_HKEY) {
-		if ((rc = Tspi_TPM_GetPubEndorsementKey(hTPM, FALSE, NULL, &hPubEK))) {
-			return rc;
+		if ((result = Tspi_TPM_GetPubEndorsementKey(hTPM, FALSE, NULL, &hPubEK))) {
+			return result;
 		}
 	} else {
 		hPubEK = hEndorsementPubKey;
 	}
 
-	/* ---  Get context */
-	if ((rc =
-	    obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
-				       TSS_OBJECT_TYPE_RSAKEY,
-				       hPubEK, TSS_OBJECT_TYPE_RSAKEY)))
-		return rc;
-
-	if ((rc = obj_isConnected_3(hTPM, hKeySRK, hPubEK, &tcsContext)))
-		return rc;
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
 
 	/* ---  Get the srkKeyData */
-	if ((rc = Tspi_GetAttribData(hKeySRK,
-				    TSS_TSPATTRIB_KEY_BLOB,
-				    TSS_TSPATTRIB_KEYBLOB_BLOB, &srkKeyBlobLength, &srkKeyBlob)))
-		return rc;
+	if ((result = obj_rsakey_get_blob(hKeySRK, &srkKeyBlobLength, &srkKeyBlob)))
+		return result;
 
 	/* ---  Oh boy...hardcoded blob stuff */
 	/* ---  Need to check for Atmel bug where authDataUsage is changed */
@@ -350,22 +339,22 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 	 *		use the callback function to encrypt the secrets
 	 *******************************/
 
-	if ((rc = secret_TakeOwnership(hPubEK,	/* ---  Handle to the public key */
-				      hTPM,	/* ---  Handle to the TPM object */
-				      hKeySRK,	/* ---  Handle to the SRK Key Object */
-				      &privAuth,	/* ---  The auth Structure already init'd */
-				      &encOwnerAuthLength,	/* ---  The out size */
-				      encOwnerAuth,	/* ---  The encrypted Owner Auth */
-				      &encSRKAuthLength,	/* --- */
-				      encSRKAuth)))	/* ---      The encrypted SRK Auth */
-		return rc;
+	if ((result = secret_TakeOwnership(hPubEK,
+				      hTPM,
+				      hKeySRK,
+				      &privAuth,
+				      &encOwnerAuthLength,
+				      encOwnerAuth,
+				      &encSRKAuthLength,
+				      encSRKAuth)))
+		return result;
 
 	/****************************
 	 *	Now, take ownership is ready to call.  The auth structure should be complete
 	 *		and the encrypted data structures should be ready
 	 *******************************/
 
-	if ((rc = TCSP_TakeOwnership(tcsContext,
+	if ((result = TCSP_TakeOwnership(tcsContext,
 				TCPA_PID_OWNER,
 				encOwnerAuthLength,
 				encOwnerAuth,
@@ -376,25 +365,25 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 				&privAuth,
 				&newSrkBlobSize,
 				&newSrkBlob)))
-		return rc;
+		return result;
 
 	/****************************
 	 *	The final step is to validate the return Auth
 	 *******************************/
 
 	offset = 0;
-	Trspi_LoadBlob_UINT32(&offset, rc, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
 	Trspi_LoadBlob(&offset, newSrkBlobSize, hashblob, newSrkBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((rc = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy))) {
+	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy))) {
 		free(newSrkBlob);
-		return rc;
+		return result;
 	}
-	if ((rc = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &privAuth))) {
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &privAuth))) {
 		free(newSrkBlob);
-		return rc;
+		return result;
 	}
 
 	/* ---  Now that it's all happy, stuff the keyBlob into the object */
@@ -404,31 +393,30 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,	/*  in */
 		newSrkBlob[10] = oldAuthDataUsage;	/* this will fix it  */
 	}
 
-	Tspi_SetAttribData(hKeySRK, TSS_TSPATTRIB_KEY_BLOB,
-			   TSS_TSPATTRIB_KEYBLOB_BLOB, newSrkBlobSize, newSrkBlob);
+	obj_rsakey_set_tcpakey(hKeySRK, newSrkBlobSize, newSrkBlob);
 	free(newSrkBlob);
 
-	return rc;
+	return result;
 }
 
 TSS_RESULT
-Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
-				TSS_HKEY hKeySRK,	/*  in */
-				TSS_HKEY hCAPubKey,	/*  in */
-				UINT32 ulIdentityLabelLength,	/*  in  */
-				BYTE * rgbIdentityLabelData,	/*  in */
-				TSS_HKEY hIdentityKey,	/*  in */
-				TSS_HKEY hSymKey,	/*  in */
-				UINT32 * pulTcpaIdentityReqLength,	/*  out */
-				BYTE ** prgbTcpaIdentityReq	/*  out */
+Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
+				TSS_HKEY hKeySRK,			/* in */
+				TSS_HKEY hCAPubKey,			/* in */
+				UINT32 ulIdentityLabelLength,		/* in  */
+				BYTE * rgbIdentityLabelData,		/* in */
+				TSS_HKEY hIdentityKey,			/* in */
+				TSS_HKEY hSymKey,			/* in */
+				UINT32 * pulTcpaIdentityReqLength,	/* out */
+				BYTE ** prgbTcpaIdentityReq		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ENCAUTH encAuthUsage;
 	TCPA_ENCAUTH encAuthMig;
 	BYTE sharedSecret[20];
-	TCS_AUTH srkAuth;
-	TCS_AUTH ownerAuth;
+	TPM_AUTH srkAuth;
+	TPM_AUTH ownerAuth;
 	TCPA_PUBKEY pubkey;
 	TCPA_RESULT result;
 	UINT16 offset;
@@ -459,33 +447,28 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	UINT32 symKeySize;
 	BYTE *symKey;
 	TSS_HPOLICY hIDMigPolicy;
-	UINT32 usesAuth;
-	TCS_AUTH *pSrkAuth = &srkAuth;
+	TSS_BOOL usesAuth;
+	TPM_AUTH *pSrkAuth = &srkAuth;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	LogDebug1("SM DEBUG 1");
-
-	if ((result = obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM, hKeySRK,
-				       TSS_OBJECT_TYPE_RSAKEY, hCAPubKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	/* ---        Get and verify the context */
-	if ((result = obj_isConnected_3(hTPM, hKeySRK, hCAPubKey, &tcsContext)))
+	/* Get and verify the context */
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	/* ---        Get Policies */
-	if ((result = Tspi_GetPolicyObject(hKeySRK, TSS_POLICY_USAGE, &hSRKPolicy)))
+	/* Get Policies */
+	if ((result = obj_rsakey_get_policy(hKeySRK, TSS_POLICY_USAGE,
+					    &hSRKPolicy, &usesAuth)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy)))
 		return result;
 
-	if ((result = Tspi_GetPolicyObject(hCAPubKey, TSS_POLICY_USAGE, &hCAPolicy)))
+	if ((result = obj_rsakey_get_policy(hCAPubKey, TSS_POLICY_USAGE, &hCAPolicy, NULL)))
 		return result;
 
 	if ((result = Tspi_GetPolicyObject(hIdentityKey, TSS_POLICY_USAGE, &hIDPolicy)))
@@ -494,10 +477,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	if ((result = Tspi_GetPolicyObject(hIdentityKey, TSS_POLICY_MIGRATION, &hIDMigPolicy)))
 		return result;
 
-	/*  Hash the label */
+	/* Hash the label */
 	Trspi_Hash(TSS_HASH_SHA1, ulIdentityLabelLength, rgbIdentityLabelData, chosenIDHash.digest);
 
-	/* ---        Get Key blobs */
+	/* Get Key blobs */
 	if ((result = Tspi_GetAttribData(hIdentityKey,
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, &idKeySize, &idKey)))
@@ -508,7 +491,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 					TSS_TSPATTRIB_KEYBLOB_BLOB, &caKeySize, &caKey)))
 		return result;
 
-	/* ---        Take the PUBKEY portion out of the TCPA_KEY caPubKey and put it into 'pubkey' */
+	/* Take the PUBKEY portion out of the TCPA_KEY caPubKey and put it into 'pubkey' */
 	offset = 0;
 	Trspi_UnloadBlob_KEY(tspContext, &offset, caKey, &keyContainer);
 
@@ -520,9 +503,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	offset = 0;
 	Trspi_UnloadBlob_PUBKEY(tspContext, &offset, caPubKey, &pubkey);
 
-	/* ---        Start OSAP */
+	/* Start OSAP */
 	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
-				   TCPA_ET_OWNER, FIXED_SRK_KEY_HANDLE,
+				   TCPA_ET_OWNER, TPM_KEYHND_SRK,
 				   &encAuthUsage, &encAuthMig, sharedSecret,
 				   &ownerAuth, &nonceEvenOSAP)))
 		return result;
@@ -531,27 +514,22 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
-	Trspi_LoadBlob(&offset, 20, hashblob, encAuthUsage.encauth);
+	Trspi_LoadBlob(&offset, 20, hashblob, encAuthUsage.authdata);
 	Trspi_LoadBlob(&offset, 20, hashblob, chosenIDHash.digest);
 	Trspi_LoadBlob(&offset, idKeySize, hashblob, idKey);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if (((result = policy_UsesAuth(hSRKPolicy, &usesAuth))))
-		return result;
-
-	LogDebug1("SM DEBUG 2");
-
 	/* ---        Do the Auth's */
-	if (usesAuth == FALSE) {
-		pSrkAuth = NULL;
-	} else {
-		if ((result = secret_PerformAuth_OIAP(hSRKPolicy, digest, &srkAuth)))
+	if (usesAuth) {
+		if ((result = secret_PerformAuth_OIAP(hSRKPolicy, &digest, &srkAuth)))
 			return result;
 		pSrkAuth = &srkAuth;
+	} else {
+		pSrkAuth = NULL;
 	}
 
 	if ((result = secret_PerformAuth_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
-				    sharedSecret, &ownerAuth, digest.digest, nonceEvenOSAP))) {
+				    sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP))) {
 		TCSP_TerminateHandle(tcsContext, srkAuth.AuthHandle);
 		return result;
 	}
@@ -561,24 +539,23 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	/* ---        Send the Command */
 	/* tcs/tcskcm.c:1479:TCPA_RESULT TCSP_MakeIdentity  */
 
-	if ((result = TCSP_MakeIdentity(tcsContext,	/*  in  */
-				       encAuthUsage,	/*  in */
-				       chosenIDHash,	/*  in */
-				       idKeySize,	/* in */
-				       idKey,	/* in */
-				       pSrkAuth,	/*  in, out */
-				       &ownerAuth,	/*  in, out */
-				       &idKeySize,	/*  out */
-				       &idKey,	/*  out */
-				       &pcIdentityBindingSize,	/*  out */
-				       &prgbIdentityBinding,	/*  out */
-				       &pcEndorsementCredentialSize,	/*  out */
-				       &prgbEndorsementCredential,	/*  out */
-				       &pcPlatformCredentialSize,	/*  out */
-				       &prgbPlatformCredential,	/*  out */
-				       &NpcConformanceCredentialSize,	/*  out */
-				       &prgbConformanceCredential	/*  out */
-				)))
+	if ((result = TCSP_MakeIdentity(tcsContext,
+				       encAuthUsage,
+				       chosenIDHash,
+				       idKeySize,
+				       idKey,
+				       pSrkAuth,
+				       &ownerAuth,
+				       &idKeySize,
+				       &idKey,
+				       &pcIdentityBindingSize,
+				       &prgbIdentityBinding,
+				       &pcEndorsementCredentialSize,
+				       &prgbEndorsementCredential,
+				       &pcPlatformCredentialSize,
+				       &prgbPlatformCredential,
+				       &NpcConformanceCredentialSize,
+				       &prgbConformanceCredential)))
 		return result;
 
 	LogDebug("SM DEBUG 3B rc=%d", result);
@@ -608,13 +585,13 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	LogDebug1("SM DEBUG 3C");
 
 	if ((result = secret_ValidateAuth_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy,
-				     sharedSecret, &ownerAuth, digest.digest, nonceEvenOSAP)))
+				     sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP)))
 		return result;
 
 	LogDebug1("SM DEBUG 3D");
 
 	if (usesAuth == TRUE) {
-		if ((result = secret_ValidateAuth_OIAP(hSRKPolicy, digest, &srkAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy, &digest, &srkAuth)))
 			return result;
 	}
 
@@ -633,9 +610,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	/*  encrypt the symmetric key with the identity pubkey */
 	/*  generate the symmetric key */
 	tAESSIZE = 16;
-	if ((result = Tspi_TPM_GetRandom(hTPM,	/*  in */
-					tAESSIZE,	/*  in 3DES size */
-					&tAESkey	/*  out */
+	if ((result = Tspi_TPM_GetRandom(hTPM,
+					tAESSIZE,
+					&tAESkey
 				)))
 		return result;
 
@@ -650,10 +627,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	/*  encrypt the aeskey */
 	/*  tspi/spi_data.c:3:TSS_RESULT Tspi_Data_Bind */
 
-	if ((result = Tspi_Data_Bind(hEncData,	/*  in */
-				    hCAPubKey,	/*  in */
-				    tAESSIZE,	/*  in */
-				    tAESkey	/*  in */
+	if ((result = Tspi_Data_Bind(hEncData,
+				    hCAPubKey,
+				    tAESSIZE,
+				    tAESkey
 				)))
 		return result;
 
@@ -674,7 +651,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 	keyContainer.encData = malloc(tAESSIZE);
 	if (keyContainer.encData == NULL) {
 		LogError("malloc of %d bytes failed.", tAESSIZE);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	memcpy(keyContainer.encData, tAESkey, tAESSIZE);
@@ -691,31 +668,22 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,	/*  in */
 
 	LogDebug1("SM DEBUG 7");
 
-#if 0
-	////////////////////////////////////////////////////////////////////////////
-	// Now 3DES encrypt the rest of the credentials
-	//
-	//
-	//    AES_Encrypt( All the creds )
-	//
-	//    push resulting blob into prgbTcpaIdentityReq
-	//
-#endif
-
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
-			  TSS_HKEY hIdentKey,	/*  in */
-			  UINT32 ulAsymCAContentsBlobLength,	/*  in */
-			  BYTE * rgbAsymCAContentsBlob,	/*  in */
-			  UINT32 * pulCredentialLength,	/*  out */
-			  BYTE ** prgbCredential	/*  out */
+Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
+			  TSS_HKEY hIdentKey,			/* in */
+			  UINT32 ulAsymCAContentsBlobLength,	/* in */
+			  BYTE * rgbAsymCAContentsBlob,		/* in */
+			  UINT32 ulSymCAAttestationBlobLength,	/* in */
+			  BYTE * rgbSymCAAttestationBlob,	/* in */
+			  UINT32 * pulCredentialLength,		/* out */
+			  BYTE ** prgbCredential		/* out */
     )
 {
-	TCS_AUTH idKeyAuth;
-	TCS_AUTH ownerAuth;
+	TPM_AUTH idKeyAuth;
+	TPM_AUTH ownerAuth;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hIDPolicy, hTPMPolicy;
 	UINT16 offset;
@@ -723,30 +691,24 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
 	TCS_KEY_HANDLE tcsKeyHandle;
-	UINT32 usesAuth;
-	TCS_AUTH *pIDKeyAuth;
+	TSS_BOOL usesAuth;
+	TPM_AUTH *pIDKeyAuth;
 
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hIdentKey,
-				       TSS_OBJECT_TYPE_RSAKEY)))
-		return result;
-
-	if ((result = obj_isConnected_2(hTPM, hIdentKey, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
 	if (tcsKeyHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-	if ((result = Tspi_GetPolicyObject(hIdentKey, TSS_POLICY_USAGE, &hIDPolicy)))
+	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
+					    &hIDPolicy, &usesAuth)))
 		return result;
 
-	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy)))
-		return result;
-
-	if ((result = policy_UsesAuth(hIDPolicy, &usesAuth)))
+	if ((result = obj_tpm_get_policy(hTPM, &hTPMPolicy)))
 		return result;
 
 	offset = 0;
@@ -755,28 +717,28 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, ulAsymCAContentsBlobLength, hashblob, rgbAsymCAContentsBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if (usesAuth == 1) {
-		if ((result = secret_PerformAuth_OIAP(hIDPolicy, digest, &idKeyAuth)))
+	if (usesAuth) {
+		if ((result = secret_PerformAuth_OIAP(hIDPolicy, &digest, &idKeyAuth)))
 			return result;
 		pIDKeyAuth = &idKeyAuth;
 	} else {
 		pIDKeyAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hTPMPolicy, digest, &ownerAuth))) {
-		if (usesAuth == 1)
+	if ((result = secret_PerformAuth_OIAP(hTPMPolicy, &digest, &ownerAuth))) {
+		if (usesAuth == TRUE)
 			TCSP_TerminateHandle(tcsContext, idKeyAuth.AuthHandle);
 		return result;
 	}
 
-	if ((result = TCSP_ActivateTPMIdentity(tcsContext,	/* in */
-					      tcsKeyHandle,	/* in */
-					      ulAsymCAContentsBlobLength,/* in */
-					      rgbAsymCAContentsBlob,	/* in */
-					      pIDKeyAuth,	/* in, out */
-					      &ownerAuth,	/* in, out */
-					      pulCredentialLength,	/* out */
-					      prgbCredential)))	/* out */
+	if ((result = TCSP_ActivateTPMIdentity(tcsContext,
+					      tcsKeyHandle,
+					      ulAsymCAContentsBlobLength,
+					      rgbAsymCAContentsBlob,
+					      pIDKeyAuth,
+					      &ownerAuth,
+					      pulCredentialLength,
+					      prgbCredential)))
 		return result;
 
 	offset = 0;
@@ -785,38 +747,35 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, *pulCredentialLength, hashblob, *prgbCredential);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if (usesAuth == 1) {
-		if ((result = secret_ValidateAuth_OIAP(hIDPolicy, digest, &idKeyAuth)))
+	if (usesAuth == TRUE) {
+		if ((result = obj_policy_validate_auth_oiap(hIDPolicy, &digest, &idKeyAuth)))
 			return result;
 	}
 
-	if ((result = secret_ValidateAuth_OIAP(hTPMPolicy, digest, &ownerAuth)))
+	if ((result = obj_policy_validate_auth_oiap(hTPMPolicy, &digest, &ownerAuth)))
 		return result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
-		    BOOL fForcedClear	/*  in */
+Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
+		    TSS_BOOL fForcedClear	/* in */
     )
 {
 	TCPA_RESULT result;
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_DIGEST hashDigest;
 	BYTE *hashBlob;
 	UINT16 offset;
 	TSS_HPOLICY hPolicy;
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if (!fForcedClear) {	/*  TPM_OwnerClear */
-		if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
 			return result;
 
 		/* ===  Now do some Hash'ing */
@@ -824,14 +783,14 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 		/* ===  hashDigest now has the hash result       */
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerClear(tcsContext, &auth)))
@@ -842,14 +801,14 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 	} else {
 		if ((result = TCSP_ForceClear(tcsContext)))
@@ -859,12 +818,12 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
-		   TSS_FLAG statusFlag,	/*  in */
-		   BOOL fTpmState	/*  in */
+Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
+		   TSS_FLAG statusFlag,	/* in */
+		   TSS_BOOL fTpmState	/* in */
     )
 {
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	TSS_RESULT result;
 	BYTE *hashBlob;
 	UINT16 offset;
@@ -872,13 +831,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
-		return result;
-
-	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
 		return result;
 
 	switch (statusFlag) {
@@ -887,14 +843,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisableOwnerClear(tcsContext, &auth)))
@@ -904,14 +860,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisableOwnerClear, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
@@ -922,7 +878,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TSS_BOOL));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TSS_BOOL));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
@@ -930,7 +886,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerSetDisable(tcsContext, fTpmState, &auth)))
@@ -940,14 +896,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(8);
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerSetDisable, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
 	case TSS_TPMSTATUS_PHYSICALDISABLE:
@@ -970,14 +926,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisablePubekRead(tcsContext, &auth)))
@@ -987,14 +943,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DisablePubekRead, hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
 #ifndef TSS_COMPLIANCE
@@ -1020,14 +976,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/*  in */
 		break;
 #endif
 	default:
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
 	}
 
 	return result;
 }
 
-BOOL
+TSS_BOOL
 MakeMeABOOL(UINT32 i)
 {
 	if (i)
@@ -1036,7 +992,7 @@ MakeMeABOOL(UINT32 i)
 		return FALSE;
 }
 
-BOOL
+TSS_BOOL
 InvertMe(UINT32 i)
 {
 	if (i)
@@ -1046,24 +1002,20 @@ InvertMe(UINT32 i)
 }
 
 TSS_RESULT
-Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
-		   TSS_FLAG statusFlag,	/*  in */
-		   BOOL * pfTpmState	/*  out */
+Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
+		   TSS_FLAG statusFlag,		/* in */
+		   TSS_BOOL * pfTpmState	/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 	UINT32 nonVolFlags;
 	UINT32 volFlags;
-	LogDebug1("Tspi_TPM_GetStatus");
 
 	if (pfTpmState == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
@@ -1114,7 +1066,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,	/*  in */
 		break;
 
 	default:
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
 	}
 
@@ -1128,25 +1080,22 @@ Tspi_TPM_SelfTestFull(TSS_HTPM hTPM	/*  in */
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	return TCSP_SelfTestFull(tcsContext);
 }
 
 TSS_RESULT
-Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
-			 TSS_HKEY hKey,	/*  in */
-			 TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
+			 TSS_HKEY hKey,				/* in */
+			 TSS_VALIDATION *pValidationData	/* in, out */
     )
 {
 
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
-	TCS_AUTH keyAuth;
+	TPM_AUTH keyAuth;
 	UINT16 offset = 0;
 	BYTE *hashBlob;
 	TCPA_DIGEST hash;
@@ -1159,28 +1108,24 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 	BYTE *keyData = NULL;
 	UINT32 keyDataSize;
 	TCPA_KEY keyContainer;
-	TCS_AUTH *pKeyAuth;
-	BOOL useAuth;
+	TPM_AUTH *pKeyAuth;
+	TSS_BOOL useAuth;
 	TSS_HCONTEXT tspContext;
 
-	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_2(hTPM, hKey, &tcsContext)))
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
-		return result;
-
-	if ((result = policy_UsesAuth(hPolicy, &useAuth)))
+	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
+					    &hPolicy, &useAuth)))
 		return result;
 
 	keyTCSKeyHandle = getTCSKeyHandle(hKey);
 	if (keyTCSKeyHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
 	if (pValidationData == NULL)
 		verifyInternally = 1;
@@ -1188,10 +1133,10 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError1("Failed creating random nonce");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
-		memcpy(antiReplay.nonce, pValidationData->rgbExternalData, 20);
+		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
 
 	if (useAuth) {
 		LogDebug1("Uses Auth");
@@ -1200,7 +1145,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
@@ -1208,7 +1153,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, hash, &keyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &hash, &keyAuth)))
 			return result;
 		pKeyAuth = &keyAuth;
 	} else {
@@ -1216,13 +1161,12 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		pKeyAuth = NULL;
 	}
 
-	if ((result = TCSP_CertifySelfTest(tcsContext,	/*  in */
-					  keyTCSKeyHandle,	/* hCertifyingKey,                     // in */
-					  antiReplay,	/*  in */
-					  pKeyAuth,	/* &keyAuth,                          // in, out */
-					  &outDataSize,	/*  out  data signature */
-					  &outData	/*  out */
-	    )))
+	if ((result = TCSP_CertifySelfTest(tcsContext,
+					  keyTCSKeyHandle,
+					  antiReplay,
+					  pKeyAuth,
+					  &outDataSize,
+					  &outData)))
 		return result;
 
 	/* =============================== */
@@ -1232,7 +1176,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		hashBlob = malloc((3 * sizeof(UINT32)) + outDataSize);
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", (3 * sizeof(UINT32)) + outDataSize);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
@@ -1241,7 +1185,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, hash, &keyAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hash, &keyAuth)))
 			return result;
 	}
 
@@ -1249,7 +1193,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 			LogError1("Failed call to GetAttribData to get key blob");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		offset = 0;
@@ -1260,7 +1204,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE)
 					+ strlen("Test Passed"));
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob(&offset, strlen("Test Passed"), hashBlob, "Test Passed");
 		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
@@ -1273,27 +1217,27 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 outData, outDataSize))) {
 			free(outData);
-			return TSS_E_VERIFICATION_FAILED;
+			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
 
 	} else {
-		pValidationData->ulDataLength = sizeof(TCPA_NONCE) + sizeof(UINT32) + strlen("Test Passed");
-		pValidationData->rgbData = calloc_tspi(tspContext, pValidationData->ulDataLength);
-		if (pValidationData->rgbData == NULL) {
-			LogError("malloc of %d bytes failed.", pValidationData->ulDataLength);
-			return TSS_E_OUTOFMEMORY;
+		pValidationData->DataLength = sizeof(TCPA_NONCE) + sizeof(UINT32) + strlen("Test Passed");
+		pValidationData->Data = calloc_tspi(tspContext, pValidationData->DataLength);
+		if (pValidationData->Data == NULL) {
+			LogError("malloc of %d bytes failed.", pValidationData->DataLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
-		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->rgbData, "Test Passed");
-		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->rgbData, antiReplay.nonce);
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->rgbData);
-		pValidationData->ulValidationLength = outDataSize;
-		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
-		if (pValidationData->rgbValidationData == NULL) {
-			LogError("malloc of %d bytes failed.", pValidationData->ulValidationLength);
-			return TSS_E_OUTOFMEMORY;
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->Data, "Test Passed");
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->Data, antiReplay.nonce);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->Data);
+		pValidationData->ValidationDataLength = outDataSize;
+		pValidationData->ValidationData = calloc_tspi(tspContext, outDataSize);
+		if (pValidationData->ValidationData == NULL) {
+			LogError("malloc of %d bytes failed.", pValidationData->ValidationDataLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
+		memcpy(pValidationData->ValidationData, outData, outDataSize);
 		free(outData);
 	}
 
@@ -1301,33 +1245,30 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetTestResult(TSS_HTPM hTPM,	/*  in */
-		       UINT32 * pulTestResultLength,	/*  out */
-		       BYTE ** prgbTestResult	/*  out */
+Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
+		       UINT32 * pulTestResultLength,	/* out */
+		       BYTE ** prgbTestResult		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
 	if (pulTestResultLength == NULL || prgbTestResult == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	return TCSP_GetTestResult(tcsContext, pulTestResultLength, prgbTestResult);
 }
 
 TSS_RESULT
-Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
-		       TSS_FLAG capArea,	/*  in */
-		       UINT32 ulSubCapLength,	/*  in */
-		       BYTE * rgbSubCap,	/*  in */
-		       UINT32 * pulRespDataLength,	/*  out */
-		       BYTE ** prgbRespData	/*  out */
+Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
+		       TSS_FLAG capArea,		/* in */
+		       UINT32 ulSubCapLength,		/* in */
+		       BYTE * rgbSubCap,		/* in */
+		       UINT32 * pulRespDataLength,	/* out */
+		       BYTE ** prgbRespData		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1342,22 +1283,19 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
-
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
 
 	/* Verify the caps and subcaps */
 	switch (capArea) {
 	case TSS_TPMCAP_ORD:
 		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_ORD;
 		tcsSubCap = *(UINT32 *)rgbSubCap;
@@ -1367,37 +1305,37 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		break;
 	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
 		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_ALG;
 		tcsSubCap = *(UINT32 *)rgbSubCap;
 		break;
 	case TSS_TPMCAP_PROPERTY:	/*     Determines a physical property of the TPM. */
 		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_PROPERTY;
 		tcsSubCapContainer = *(UINT32 *)rgbSubCap;
 
 		if (tcsSubCapContainer == TSS_TPMCAP_PROP_PCR) {
-			tcsSubCap = TCPA_CAP_PROP_PCR;
+			tcsSubCap = TPM_CAP_PROP_PCR;
 			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_DIR) {
-			tcsSubCap = TCPA_CAP_PROP_DIR;
+			tcsSubCap = TPM_CAP_PROP_DIR;
 			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SLOTS) {
-			tcsSubCap = TCPA_CAP_PROP_SLOTS;
+			tcsSubCap = TPM_CAP_PROP_SLOTS;
 			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
-			tcsSubCap = TCPA_CAP_PROP_MANUFACTURER;
+			tcsSubCap = TPM_CAP_PROP_MANUFACTURER;
 		} else
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
 	case TSS_TPMCAP_VERSION:	/*      Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
 		break;
 	default:
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
 	}
 
@@ -1410,7 +1348,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		respData = calloc_tspi(tspContext, respLen);
 		if (respData == NULL) {
 			LogError("malloc of %d bytes failed.", respLen);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
 		offset = 0;
@@ -1429,7 +1367,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 		if (*prgbRespData == NULL) {
 			free(respData);
 			LogError("malloc of %d bytes failed.", respLen);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
 		*pulRespDataLength = respLen;
@@ -1445,14 +1383,14 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
-			     TSS_HTPM hKey,	/*  in */
-			     TSS_FLAG capArea,	/*  in */
-			     UINT32 ulSubCapLength,	/*  in */
-			     BYTE * rgbSubCap,	/*  in */
-			     TSS_VALIDATION * pValidationData,	/*  in, out */
-			     UINT32 * pulRespDataLength,	/*  out */
-			     BYTE ** prgbRespData	/*  out */
+Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
+			     TSS_HTPM hKey,			/* in */
+			     TSS_FLAG capArea,			/* in */
+			     UINT32 ulSubCapLength,		/* in */
+			     BYTE * rgbSubCap,			/* in */
+			     TSS_VALIDATION * pValidationData,	/* in, out */
+			     UINT32 * pulRespDataLength,	/* out */
+			     BYTE ** prgbRespData		/* out */
     )
 {
 #if 1
@@ -1460,9 +1398,9 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	 * Function was found to have a vulnerability, so implementation is not
 	 * required by the TSS 1.1b spec.
 	 */
-	return TSS_E_NOTIMPL;
+	return TSPERR(TSS_E_NOTIMPL);
 #else
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	BYTE *hashBlob;
@@ -1483,22 +1421,19 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	TCPA_KEY keyContainer;
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hKey, TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hKey);
 	if (tcsKeyHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-	if ((result = Tspi_GetPolicyObject(hKey, TSS_POLICY_USAGE, &hPolicy)))
+	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, NULL)))
 		return result;
 
 	/* ---          Verify the caps and subcaps */
@@ -1507,11 +1442,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
 		tcsCapArea = TCPA_CAP_ALG;
 		break;
-/* 	case TSS_TPMCAP_FLAG://	Queries whether a flag is on or off. */
-		/* ---  this is getCapOwner */
-		/*      ---             This flag is removed */
-/* 		return TSS_SUCCESS; */
-/* 		break; */
 	case TSS_TPMCAP_PROPERTY:	/*     Determines a physical property of the TPM. */
 		tcsCapArea = TCPA_CAP_PROPERTY;
 		tcsSubCapContainer = Decode_UINT32(rgbSubCap);
@@ -1524,7 +1454,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
 			UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, tcsSubCap);
 		} else
-			return TSS_E_BAD_PARAMETER;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
 	case TSS_TPMCAP_VERSION:	/*      Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
@@ -1532,7 +1462,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 
 	default:
 
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	}
 
@@ -1544,13 +1474,12 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		verifyInternally = 1;
 
 	if (verifyInternally) {
-/* 		memset( antiReplay.nonce, 0xBB, 20 );		//change to random */
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError1("Failed creating random nonce");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
-		memcpy(antiReplay.nonce, pValidationData->rgbData, sizeof(TCPA_NONCE));
+		memcpy(antiReplay.nonce, pValidationData->Data, sizeof(TCPA_NONCE));
 
 	/* ===  Now do some Hash'ing */
 	offset = 0;
@@ -1558,7 +1487,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	if (hashBlob == NULL) {
 		LogError("malloc of %d bytes failed.", (3 * sizeof(UINT32)) + sizeof(TCPA_NONCE)
 				+ ulSubCapLength);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
 	Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
@@ -1569,18 +1498,18 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	free(hashBlob);
 	/* ===  hashDigest now has the hash result       */
 	/* ===  HMAC */
-	if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 		return result;
 
-	if ((result = TCSP_GetCapabilitySigned(tcsContext,	/*  in */
-					      tcsKeyHandle, antiReplay,	/*  in */
-					      tcsCapArea,	/* capArea,                 // in */
-					      ulSubCapLength,	/*  in */
-					      rgbSubCap,	/*  in */
-					      &auth, &version, pulRespDataLength,	/*  out */
-					      prgbRespData,	/*  out */
-					      &sigSize,	/* &pValidationData->ulValidationLength, */
-					      &sig))) {	/* &pValidationData->rgbValidationData )) */
+	if ((result = TCSP_GetCapabilitySigned(tcsContext,
+					      tcsKeyHandle, antiReplay,
+					      tcsCapArea,
+					      ulSubCapLength,
+					      rgbSubCap,
+					      &auth, &version, pulRespDataLength,
+					      prgbRespData,
+					      &sigSize,
+					      &sig))) {
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		return result;
 	}
@@ -1592,7 +1521,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 		LogError("malloc of %d bytes failed.", 20 + *pulRespDataLength + sigSize);
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		free(sig);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetCapabilitySigned, hashBlob);
@@ -1604,7 +1533,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 	free(hashBlob);
 
-	if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth))) {
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth))) {
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		free(sig);
 		return result;
@@ -1616,7 +1545,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			LogError1("Failed call to GetAttribData to get key blob");
-			return TSS_E_INTERNAL_ERROR;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		offset = 0;
@@ -1628,7 +1557,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 			LogError("malloc of %d bytes failed.", *pulRespDataLength + sizeof(TCPA_NONCE));
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob(&offset, *pulRespDataLength, hashBlob, *prgbRespData);
 		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
@@ -1641,29 +1570,29 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 					 sig, sigSize))) {
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
-			return TSS_E_VERIFICATION_FAILED;
+			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
 
 	} else {
-		pValidationData->ulDataLength = *pulRespDataLength + 20;
-		pValidationData->rgbData = calloc_tspi(tspContext, *pulRespDataLength);
-		if (pValidationData->rgbData == NULL) {
+		pValidationData->DataLength = *pulRespDataLength + 20;
+		pValidationData->Data = calloc_tspi(tspContext, *pulRespDataLength);
+		if (pValidationData->Data == NULL) {
 			LogError("malloc of %d bytes failed.", *pulRespDataLength);
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbData, *prgbRespData, *pulRespDataLength);
-		memcpy(&pValidationData->rgbData[(*pulRespDataLength)], antiReplay.nonce, 20);
-		pValidationData->ulValidationLength = sigSize;
-		pValidationData->rgbValidationData = calloc_tspi(tspContext, sigSize);
-		if (pValidationData->rgbValidationData == NULL) {
+		memcpy(pValidationData->Data, *prgbRespData, *pulRespDataLength);
+		memcpy(&pValidationData->Data[(*pulRespDataLength)], antiReplay.nonce, 20);
+		pValidationData->ValidationDataLength = sigSize;
+		pValidationData->ValidationData = calloc_tspi(tspContext, sigSize);
+		if (pValidationData->ValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", sigSize);
 			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbValidationData, sig, sigSize);
+		memcpy(pValidationData->ValidationData, sig, sigSize);
 	}
 
 	return TSS_SUCCESS;
@@ -1671,72 +1600,69 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,	/*  in */
-				  BOOL fGenerateRndNumber,	/*  in */
-				  UINT32 * pulRndNumberLength,	/*  out */
-				  BYTE ** prgbRndNumber,	/*  out */
-				  UINT32 * pulArchiveDataLength,	/*  out */
-				  BYTE ** prgbArchiveData	/*  out */
+Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
+				  TSS_BOOL fGenerateRndNumber,		/* in */
+				  UINT32 * pulRndNumberLength,		/* out */
+				  BYTE ** prgbRndNumber,		/* out */
+				  UINT32 * pulArchiveDataLength,	/* out */
+				  BYTE ** prgbArchiveData		/* out */
     )
 {
 	if (pulRndNumberLength == NULL || prgbRndNumber == NULL ||
 	    pulArchiveDataLength == NULL || prgbArchiveData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	return TSS_E_NOTIMPL;
+	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
 Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM	/*  in */
     )
 {
-	return TSS_E_NOTIMPL;
+	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,	/*  in */
-			       TSS_HKEY hMaintenanceKey,	/*  in */
-			       TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,			/* in */
+			       TSS_HKEY hMaintenanceKey,	/* in */
+			       TSS_VALIDATION * pValidationData	/* in, out */
     )
 {
 	if (pValidationData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	return TSS_E_NOTIMPL;
+	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,	/*  in */
-				TSS_HKEY hMaintenanceKey,	/*  in */
-				TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
+				TSS_HKEY hMaintenanceKey,		/* in */
+				TSS_VALIDATION * pValidationData	/* in, out */
     )
 {
 	if (pValidationData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	return TSS_E_NOTIMPL;
+	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
-		   UINT32 ulRandomDataLength,	/*  in */
-		   BYTE ** prgbRandomData	/*  out */
+Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
+		   UINT32 ulRandomDataLength,	/* in */
+		   BYTE ** prgbRandomData	/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
 	if (prgbRandomData == NULL || ulRandomDataLength > 4096)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
 
 	if (ulRandomDataLength == 0)
 		return TSS_SUCCESS;
-
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
-		return result;
 
 	if ((result = TCSP_GetRandom(tcsContext, ulRandomDataLength, prgbRandomData)))
 		return result;
@@ -1745,21 +1671,18 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_StirRandom(TSS_HTPM hTPM,	/*  in */
-		    UINT32 ulEntropyDataLength,	/*  in */
-		    BYTE * rgbEntropyData	/*  in */
+Tspi_TPM_StirRandom(TSS_HTPM hTPM,		/* in */
+		    UINT32 ulEntropyDataLength,	/* in */
+		    BYTE * rgbEntropyData	/* in */
     )
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 
 	if (ulEntropyDataLength > 0 && rgbEntropyData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = TCSP_StirRandom(tcsContext, ulEntropyDataLength, rgbEntropyData)))
@@ -1769,11 +1692,11 @@ Tspi_TPM_StirRandom(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
-				  TSS_HKEY hMigrationKey,	/*  in */
-				  TSS_MIGRATION_SCHEME migrationScheme,	/*  in */
-				  UINT32 * pulMigTicketLength,	/*  out */
-				  BYTE ** prgbMigTicket	/*  out */
+Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
+				  TSS_HKEY hMigrationKey,		/* in */
+				  TSS_MIGRATION_SCHEME migrationScheme,	/* in */
+				  UINT32 * pulMigTicketLength,		/* out */
+				  BYTE ** prgbMigTicket			/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1786,21 +1709,17 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 	BYTE *migrationKeyBlob;
 	TCPA_KEY tcpaKey;
 	BYTE pubKeyBlob[0x1000];
-	TCS_AUTH ownerAuth;
+	TPM_AUTH ownerAuth;
 	UINT32 pubKeySize;
 	TSS_HCONTEXT tspContext;
 
 	if (pulMigTicketLength == NULL || prgbMigTicket == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM, hMigrationKey,
-				       TSS_OBJECT_TYPE_RSAKEY)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	/*  get the tpm Policy */
@@ -1808,9 +1727,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 		return result;
 
 	/*  Get the migration key blob */
-	if ((result = Tspi_GetAttribData(hMigrationKey,
-					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB,
+	if ((result = obj_rsakey_get_blob(hMigrationKey,
 					&migrationKeySize, &migrationKeyBlob)))
 		return result;
 
@@ -1832,17 +1749,17 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, pubKeySize, hashblob, pubKeyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, digest, &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, &digest, &ownerAuth)))
 		return result;
 
 	/* ---  Send command */
-	if ((result = TCSP_AuthorizeMigrationKey(tcsContext,	/*  in */
-						migrationScheme,	/*  in */
-						pubKeySize,	/*  in */
-						pubKeyBlob,	/*  in */
-						&ownerAuth,	/*  in, out */
-						pulMigTicketLength,	/*  out */
-						prgbMigTicket	/*  out */
+	if ((result = TCSP_AuthorizeMigrationKey(tcsContext,
+						migrationScheme,
+						pubKeySize,
+						pubKeyBlob,
+						&ownerAuth,
+						pulMigTicketLength,
+						prgbMigTicket
 	    ))) {
 		TCSP_TerminateHandle(tcsContext, ownerAuth.AuthHandle);
 		return result;
@@ -1855,7 +1772,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, *pulMigTicketLength, hashblob, *prgbMigTicket);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = secret_ValidateAuth_OIAP(hOwnerPolicy, digest, &ownerAuth))) {
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth))) {
 		TCSP_TerminateHandle(tcsContext, ownerAuth.AuthHandle);
 		return result;
 	}
@@ -1864,10 +1781,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetEvent(TSS_HTPM hTPM,	/*  in */
-		  UINT32 ulPcrIndex,	/*  in */
-		  UINT32 ulEventNumber,	/*  in */
-		  TSS_PCR_EVENT * pPcrEvent	/*  out */
+Tspi_TPM_GetEvent(TSS_HTPM hTPM,		/* in */
+		  UINT32 ulPcrIndex,		/* in */
+		  UINT32 ulEventNumber,		/* in */
+		  TSS_PCR_EVENT * pPcrEvent	/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1875,12 +1792,9 @@ Tspi_TPM_GetEvent(TSS_HTPM hTPM,	/*  in */
 	TSS_PCR_EVENT *event = NULL;
 
 	if (pPcrEvent == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = TCS_GetPcrEvent(tcsContext, ulPcrIndex, &ulEventNumber, &event)))
@@ -1893,11 +1807,11 @@ Tspi_TPM_GetEvent(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetEvents(TSS_HTPM hTPM,	/*  in */
-		   UINT32 ulPcrIndex,	/*  in */
-		   UINT32 ulStartNumber,	/*  in */
-		   UINT32 * pulEventNumber,	/*  in, out */
-		   TSS_PCR_EVENT ** prgbPcrEvents	/*  out */
+Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
+		   UINT32 ulPcrIndex,			/* in */
+		   UINT32 ulStartNumber,		/* in */
+		   UINT32 * pulEventNumber,		/* in, out */
+		   TSS_PCR_EVENT ** prgbPcrEvents	/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1905,12 +1819,9 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,	/*  in */
 	TSS_PCR_EVENT *events = NULL;
 
 	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = TCS_GetPcrEventsByPcr(tcsContext, ulPcrIndex, ulStartNumber, pulEventNumber, &events)))
@@ -1922,36 +1833,33 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_GetEventLog(TSS_HTPM hTPM,	/*  in */
-		     UINT32 * pulEventNumber,	/*  out */
-		     TSS_PCR_EVENT ** prgbPcrEvents	/*  out */
+Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
+		     UINT32 * pulEventNumber,		/* out */
+		     TSS_PCR_EVENT ** prgbPcrEvents	/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
 	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
-		return result;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	return TCS_GetPcrEventLog(tcsContext, pulEventNumber, prgbPcrEvents);
 }
 
 TSS_RESULT
-Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
-	       TSS_HKEY hIdentKey,	/*  in */
-	       TSS_HPCRS hPcrComposite,	/*  in */
-	       TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
+	       TSS_HKEY hIdentKey,		/* in */
+	       TSS_HPCRS hPcrComposite,		/* in */
+	       TSS_VALIDATION * pValidationData	/* in, out */
     )
 {
 	TCPA_RESULT result;
-	TCS_AUTH privAuth;
-	TCS_AUTH *pPrivAuth = &privAuth;
+	TPM_AUTH privAuth;
+	TPM_AUTH *pPrivAuth = &privAuth;
 	UINT16 offset;
 	BYTE hashBlob[1000];
 	TCPA_DIGEST digest;
@@ -1959,80 +1867,66 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HPOLICY hPolicy;
 	TCPA_NONCE antiReplay;
-	AnObject *anObject;
-	TCPA_PCR_OBJECT *pcrObject;
 	UINT32 pcrDataSize;
-	BYTE *pcrData = NULL;
-	BOOL verifyInternally = 0;
+	BYTE pcrData[128];
+	TCPA_PCR_SELECTION pcrSelect;
+	TSS_BOOL verifyInternally = 0;
 	UINT32 validationLength = 0;
 	BYTE *validationData = NULL;
 	UINT32 pcrDataOutSize;
 	BYTE *pcrDataOut;
-
-	/*  james */
 	UINT32 keyDataSize;
 	BYTE *keyData;
 	TCPA_KEY keyContainer;
 	BYTE quoteinfo[1024];
-	UINT32 usesAuth;
+	TSS_BOOL usesAuth;
 	TSS_HCONTEXT tspContext;
 
-	if (hPcrComposite == NULL_HPCRS) {
-		if ((result = obj_checkType_2(hTPM, TSS_OBJECT_TYPE_TPM,
-					       hIdentKey, TSS_OBJECT_TYPE_RSAKEY)))
-			return result;
-		if ((result = obj_isConnected_2(hTPM, hIdentKey, &tcsContext)))
-			return result;
-	} else {
-		if ((result = obj_checkType_3(hTPM, TSS_OBJECT_TYPE_TPM,
-					       hIdentKey,
-					       TSS_OBJECT_TYPE_RSAKEY,
-					       hPcrComposite, TSS_OBJECT_TYPE_PCRS)))
-			return result;
-		if ((result = obj_isConnected_3(hTPM, hIdentKey, hPcrComposite, &tcsContext)))
-			return result;
-	}
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+		return result;
+
+	if (hPcrComposite && !obj_is_pcrs(hPcrComposite))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (pValidationData == NULL)
 		verifyInternally = TRUE;
 
+	/*  get the identKey Policy */
+	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
+					    &hPolicy, &usesAuth)))
+		return result;
+
 	/*  get the Identity TCS keyHandle */
 	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
 	if (tcsKeyHandle == NULL_HKEY)
-		return TSS_E_KEY_NOT_LOADED;
-
-	/*  get the PCR data */
-
-	/*  get the identKey Policy */
-	if ((result = Tspi_GetPolicyObject(hIdentKey, TSS_POLICY_USAGE, &hPolicy)))
-		return result;
-
-	anObject = getAnObjectByHandle(hPcrComposite);
-	if (anObject == NULL || anObject->memPointer == NULL)
-		return TSS_E_INVALID_HANDLE;
-	pcrObject = anObject->memPointer;
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
 			return result;
 	} else {
-		memcpy(antiReplay.nonce, pValidationData->rgbExternalData, 20);
+		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
 	}
 
 	pcrDataSize = 0;
-	if (hPcrComposite != 0) {
+	if (hPcrComposite) {
 		offset = 0;
+#if 0
 		pcrData = calloc_tspi(tspContext, 512);
 		if (pcrData == NULL) {
 			LogError("malloc of %d bytes failed.", 512);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-/* 		Trspi_LoadBlob_PCR_SELECTION( &offset, pcrData, pcrObject->pcrComposite.select ); */
-		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, pcrObject->select);
+#else
+		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
+			return result;
+#endif
+		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
 		pcrDataSize = offset;
+		free_tspi(tspContext, pcrSelect.pcrSelect);
 	}
 
 	offset = 0;
@@ -2041,28 +1935,23 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	if ((result = policy_UsesAuth(hPolicy, &usesAuth))) {
-		return result;
-	}
-
-	if (usesAuth == FALSE) {
-		pPrivAuth = NULL;
-	} else {
-		if ((result = secret_PerformAuth_OIAP(hPolicy, digest, &privAuth))) {
+	if (usesAuth) {
+		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &privAuth))) {
 			return result;
 		}
 		pPrivAuth = &privAuth;
+	} else {
+		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Quote(tcsContext,	/*  in */
-				tcsKeyHandle,	/*  in */
-				antiReplay,	/*  in */
-				pcrDataSize,	/*  in, out */
-				pcrData,	/*  in, out */
-				pPrivAuth,	/*  in, out */
-				&pcrDataOutSize, &pcrDataOut, &validationLength,	/*  out */
-				&validationData	/*  out */
-	    )))
+	if ((result = TCSP_Quote(tcsContext,
+				tcsKeyHandle,
+				antiReplay,
+				pcrDataSize,
+				pcrData,
+				pPrivAuth,
+				&pcrDataOutSize, &pcrDataOut, &validationLength,
+				&validationData)))
 		return result;
 
 	offset = 0;
@@ -2073,8 +1962,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob(&offset, validationLength, hashBlob, validationData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	if (usesAuth) {
-		if ((result = secret_ValidateAuth_OIAP(hPolicy, digest, &privAuth))) {
+	if (usesAuth == TRUE) {
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
 			free(pcrDataOut);
 			free(validationData);
 			return result;
@@ -2121,28 +2010,29 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 		}
 
 	} else {
-		pValidationData->ulValidationLength = validationLength;
-		pValidationData->rgbValidationData = calloc_tspi(tspContext, validationLength);
-		if (pValidationData->rgbValidationData == NULL) {
+		pValidationData->ValidationDataLength = validationLength;
+		pValidationData->ValidationData = calloc_tspi(tspContext, validationLength);
+		if (pValidationData->ValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", validationLength);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbValidationData, validationData,
-		       pValidationData->ulValidationLength);
+		memcpy(pValidationData->ValidationData, validationData,
+		       pValidationData->ValidationDataLength);
 		free(validationData);
-		pValidationData->ulDataLength = pcrDataOutSize;
-		pValidationData->rgbData = calloc_tspi(tspContext, pcrDataOutSize);
-		if (pValidationData->rgbData == NULL) {
+		pValidationData->DataLength = pcrDataOutSize;
+		pValidationData->Data = calloc_tspi(tspContext, pcrDataOutSize);
+		if (pValidationData->Data == NULL) {
 			LogError("malloc of %d bytes failed.", pcrDataOutSize);
-			return TSS_E_OUTOFMEMORY;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->rgbData, pcrDataOut, pcrDataOutSize);
+		memcpy(pValidationData->Data, pcrDataOut, pcrDataOutSize);
 		free(pcrDataOut);
-		pValidationData->ulExternalDataLength = 20;
-		memcpy(pValidationData->rgbExternalData, antiReplay.nonce, 20);
+		pValidationData->DataLength = 20;
+		memcpy(&pValidationData->ExternalData, antiReplay.nonce, 20);
+#if 0
 		memcpy(&pValidationData->versionInfo,
 		       getCurrentVersion(tspContext), sizeof (TCPA_VERSION));
-
+#endif
 	}
 #if 0
 	//create sig validation structure
@@ -2168,13 +2058,13 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
-			UINT32 ulPcrIndex,        /* in */
-			UINT32 ulPcrDataLength,   /* in */
-			BYTE *pbPcrData,          /* in */
-			TSS_PCR_EVENT *pPcrEvent, /* in */
-			UINT32 * pulPcrValueLength,       /* out */
-			BYTE ** prgbPcrValue      /* out */
+Tspi_TPM_PcrExtend(TSS_HTPM hTPM,			/* in */
+			UINT32 ulPcrIndex,		/* in */
+			UINT32 ulPcrDataLength,		/* in */
+			BYTE *pbPcrData,		/* in */
+			TSS_PCR_EVENT *pPcrEvent,	/* in */
+			UINT32 * pulPcrValueLength,	/* out */
+			BYTE ** prgbPcrValue		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -2185,24 +2075,21 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
 	TSS_HCONTEXT tspContext;
 
 	if (pulPcrValueLength == NULL || prgbPcrValue == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if (ulPcrDataLength > 0 && pbPcrData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	inDigest = malloc(TPM_DIGEST_SIZE);
+	inDigest = malloc(TCPA_DIGEST_SIZE);
 	if (inDigest == NULL) {
-		LogError("malloc of %d bytes failed.", TPM_DIGEST_SIZE);
-		return TSS_E_OUTOFMEMORY;
+		LogError("malloc of %d bytes failed.", TCPA_DIGEST_SIZE);
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	if ((result = Trspi_Hash(TSS_HASH_SHA1, ulPcrDataLength, pbPcrData, inDigest)))
@@ -2214,31 +2101,15 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));
 	if (*prgbPcrValue == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(TCPA_PCRVALUE));
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	memcpy(*prgbPcrValue, &outDigest, sizeof(TCPA_PCRVALUE));
 	*pulPcrValueLength = sizeof(TCPA_PCRVALUE);
 
-	/* fill out the event structure and log it if its passed in */
+	/* log the event structure if its passed in */
 	if (pPcrEvent != NULL) {
-		TCPA_VERSION *ver = getCurrentVersion(hTPM);
-		if (ver == NULL) {
-			free(inDigest);
-			return TSS_E_INTERNAL_ERROR;
-		}
-
-		memcpy(&(pPcrEvent->versionInfo), ver, sizeof(TSS_VERSION));
-		pPcrEvent->ulPcrIndex = ulPcrIndex;
-		/* leave eventType untouched */
-		pPcrEvent->ulPcrValueLength = TPM_DIGEST_SIZE;
-		pPcrEvent->rgbPcrValue = inDigest;
-		/* leave ulEventLength untouched */
-		/* leave rgbEvent untouched */
-
 		if ((result = TCS_LogPcrEvent(tcsContext, *pPcrEvent, &number))) {
-			pPcrEvent->rgbPcrValue = NULL;
-			pPcrEvent->ulPcrValueLength = 0;
 			free(inDigest);
 		}
 	}
@@ -2247,10 +2118,10 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,    /* in */
 }
 
 TSS_RESULT
-Tspi_TPM_PcrRead(TSS_HTPM hTPM,	/*  in */
-		 UINT32 ulPcrIndex,	/*  in */
-		 UINT32 * pulPcrValueLength,	/*  out */
-		 BYTE ** prgbPcrValue	/*  out */
+Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
+		 UINT32 ulPcrIndex,		/* in */
+		 UINT32 *pulPcrValueLength,	/* out */
+		 BYTE **prgbPcrValue		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -2259,15 +2130,12 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,	/*  in */
 	TSS_HCONTEXT tspContext;
 
 	if (pulPcrValueLength == NULL || prgbPcrValue == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = TCSP_PcrRead(tcsContext, ulPcrIndex, &outDigest)))
@@ -2276,7 +2144,7 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,	/*  in */
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));
 	if (*prgbPcrValue == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(TCPA_PCRVALUE));
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(*prgbPcrValue, outDigest.digest, sizeof(TCPA_PCRVALUE));
 	*pulPcrValueLength = sizeof(TCPA_PCRVALUE);
@@ -2285,15 +2153,15 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
-		  UINT32 ulDirIndex,	/*  in */
-		  UINT32 ulDirDataLength,	/*  in */
-		  BYTE * rgbDirData	/*  in  */
+Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
+		  UINT32 ulDirIndex,		/* in */
+		  UINT32 ulDirDataLength,	/* in */
+		  BYTE * rgbDirData		/* in  */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
-	TCS_AUTH auth;
+	TPM_AUTH auth;
 	TCPA_DIGEST hashDigest;
 	UINT16 offset;
 	BYTE hashBlob[32];
@@ -2301,15 +2169,12 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	TCPA_DIRVALUE dirValue = { { 0 } };
 
 	if (rgbDirData == NULL && ulDirDataLength != 0)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
-		return result;
-
-	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
 		return result;
 
 #if 0
@@ -2327,12 +2192,12 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
 	/*  hashDigest now has the hash result       */
-	if ((result = secret_PerformAuth_OIAP(hPolicy, hashDigest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
 		return result;
 
-	if ((result = TCSP_DirWriteAuth(tcsContext,	/*  in */
-				       ulDirIndex,	/*  in */
-				       dirValue,	/*  in */
+	if ((result = TCSP_DirWriteAuth(tcsContext,
+				       ulDirIndex,
+				       dirValue,
 				       &auth))) {
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		return result;
@@ -2343,7 +2208,7 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
-	if ((result = secret_ValidateAuth_OIAP(hPolicy, hashDigest, &auth))) {
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth))) {
 		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		return result;
 	}
@@ -2351,10 +2216,10 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,	/*  in */
 }
 
 TSS_RESULT
-Tspi_TPM_DirRead(TSS_HTPM hTPM,	/*  in */
-		 UINT32 ulDirIndex,	/*  in */
-		 UINT32 * pulDirDataLength,	/*  out */
-		 BYTE ** prgbDirData	/*  out */
+Tspi_TPM_DirRead(TSS_HTPM hTPM,			/* in */
+		 UINT32 ulDirIndex,		/* in */
+		 UINT32 * pulDirDataLength,	/* out */
+		 BYTE ** prgbDirData		/* out */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -2363,27 +2228,24 @@ Tspi_TPM_DirRead(TSS_HTPM hTPM,	/*  in */
 	TSS_HCONTEXT tspContext;
 
 	if (pulDirDataLength == NULL || prgbDirData == NULL)
-		return TSS_E_BAD_PARAMETER;
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_checkType_1(hTPM, TSS_OBJECT_TYPE_TPM)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((tspContext = obj_getTspContext(hTPM)) == NULL_HCONTEXT)
-		return TSS_E_INTERNAL_ERROR;
-
-	if ((result = obj_isConnected_1(hTPM, &tcsContext)))
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = TCSP_DirRead(tcsContext,	/*  in */
-				  ulDirIndex,	/*  in */
-				  &dirValue)))	/*  out */
+	if ((result = TCSP_DirRead(tcsContext,
+				  ulDirIndex,
+				  &dirValue)))
 		return result;
 
 	*pulDirDataLength = 20;
 	*prgbDirData = calloc_tspi(tspContext, *pulDirDataLength);
 	if (*prgbDirData == NULL) {
 		LogError("malloc of %d bytes failed.", *pulDirDataLength);
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(*prgbDirData, dirValue.digest, *pulDirDataLength);
 	return TSS_SUCCESS;

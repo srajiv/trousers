@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -27,7 +27,7 @@ TCS_OpenContext_Internal(TCS_CONTEXT_HANDLE * hContext)	/* out  */
 {
 	*hContext = make_context();
 	if (*hContext == 0)
-		return TCS_E_FAIL;
+		return TCSERR(TSS_E_FAIL);
 
 #if 0
 	initKeyFile(*hContext);
@@ -61,5 +61,5 @@ TCS_FreeMemory_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	free(pMemory);
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }

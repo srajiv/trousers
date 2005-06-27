@@ -13,9 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "tsplog.h"
 #include "hosttable.h"
+#include "obj.h"
 
 struct host_table *ht = NULL;
 
@@ -25,7 +27,7 @@ host_table_init()
 	ht = calloc(1, sizeof(struct host_table));
 	if (ht == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct host_table));
-		return TSS_E_OUTOFMEMORY;
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	return TSS_SUCCESS;
@@ -34,6 +36,7 @@ host_table_init()
 void __attribute__ ((constructor)) my_init(void)
 {
 	host_table_init();
+	obj_list_init();
 }
 
 #if 0
@@ -70,7 +73,7 @@ add_table_entry(struct host_table_entry *entry, TCS_CONTEXT_HANDLE tcsContext)
 	for (hte = ht->entries; hte; hte = hte->next) {
 		if (hte->tcsContext == tcsContext) {
 			LogError("Tspi_Context_Connect() attempted on an already connected context!");
-			return TSS_E_CONNECTION_FAILED;
+			return TSPERR(TSS_E_CONNECTION_FAILED);
 		}
 	}
 

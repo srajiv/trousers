@@ -13,12 +13,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "memmgr.h"
 #include "tsplog.h"
+#include "obj.h"
 
 /* caller needs to lock memtable lock */
 struct memTable *
@@ -129,7 +130,7 @@ freeEntry(struct memTable *table, void *pointer)
 
 	}
 	LogError1("Internal error: pointer to allocated memory not found.");
-	return TSS_E_INTERNAL_ERROR;
+	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
 /*
@@ -139,14 +140,8 @@ freeEntry(struct memTable *table, void *pointer)
 void *
 calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 {
-
 	struct memTable *table = NULL;
 	struct memEntry *newEntry = NULL;
-
-#ifdef TSS_DEBUG
-	if (tspContext != obj_getTspContext(tspContext) || tspContext == NULL_HCONTEXT)
-		LogError("********** %s called with bad context! ************", __FUNCTION__);
-#endif
 
 	pthread_mutex_lock(&memtable_lock);
 
@@ -199,10 +194,6 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 	struct memTable *index;
 	TSS_RESULT result;
 
-#ifdef TSS_DEBUG
-	if (tspContext != obj_getTspContext(tspContext) || tspContext == NULL_HCONTEXT)
-		LogError("********** %s called with bad context! ************", __FUNCTION__);
-#endif
 	pthread_mutex_lock(&memtable_lock);
 
 	if (memPointer == NULL) {
@@ -211,19 +202,15 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 		return result;
 	}
 
-	index = getTable(tspContext);
-	if (index == NULL) {
+	if ((index = getTable(tspContext)) == NULL) {
 		pthread_mutex_unlock(&memtable_lock);
-		return TSS_E_INVALID_HANDLE;
+		return TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
 	/* just free one entry */
-	if ((result = freeEntry(index, memPointer))) {
-		pthread_mutex_unlock(&memtable_lock);
-		return result;
-	}
+	result = freeEntry(index, memPointer);
 
 	pthread_mutex_unlock(&memtable_lock);
 
-	return TSS_SUCCESS;
+	return result;
 }

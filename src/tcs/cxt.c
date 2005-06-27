@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -39,7 +39,7 @@ struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
 struct tcs_context *get_previous_context(TCS_CONTEXT_HANDLE);
 
 /*=========================================================================== */
-BOOL initContextHandle = 1;
+TSS_BOOL initContextHandle = 1;
 
 TCS_CONTEXT_HANDLE
 getNextHandle()
@@ -213,7 +213,7 @@ ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 	LogDebug("verifyContextExists for context %.8X", tcsContext);
 	if (tcsContext == InternalContext) {
 		LogDebug("Success: %.8X is an Internal Context", tcsContext);
-		return TCS_SUCCESS;
+		return TSS_SUCCESS;
 	}
 
 	pthread_mutex_lock(&tcs_ctx_lock);
@@ -224,11 +224,11 @@ ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 
 	if (c == NULL) {
 		LogDebug("Fail: Context %.8X not found", tcsContext);
-		return TCS_E_INVALID_CONTEXTHANDLE;
+		return TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 	}
 
 	LogDebug("Success: Context %.8X found.", tcsContext);
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 
@@ -259,7 +259,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle,
 {
 	struct tcs_context *c;
 	struct keys_loaded *k = NULL, *new;
-	TSS_RESULT result = TCS_E_FAIL;
+	TSS_RESULT result = TCSERR(TSS_E_FAIL);
 
 	pthread_mutex_lock(&tcs_ctx_lock);
 
@@ -273,7 +273,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle,
 				 * list of loaded keys and incremented that key's reference count,
 				 * so there's no need to do anything.
 				 */
-				result = TCS_SUCCESS;
+				result = TSS_SUCCESS;
 				break;
 			}
 
@@ -292,7 +292,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle,
 		if (new == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(struct keys_loaded));
 			pthread_mutex_unlock(&tcs_ctx_lock);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		new->key_handle = key_handle;

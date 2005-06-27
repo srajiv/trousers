@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "tcs_tsp.h"
 #include "tcs_internal_types.h"
 #include "tcs_int_literals.h"
@@ -21,6 +21,7 @@
 #include "req_mgr.h"
 #include "tcslog.h"
 
+#if 0
 #include "atmel.h"
 
 TCPA_RESULT
@@ -257,3 +258,4 @@ TSC_PhysicalPresence_Internal(UINT16 physPres)
 	return result;
 }
 
+#endif

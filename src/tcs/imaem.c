@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -74,8 +74,8 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 {
 	int pcr_value;
 	char page[IMA_READ_SIZE];
-	int i, error_path = 1, bytes_read, bytes_left, ptr = 0, tmp_ptr;
-	UINT32 seen_indices = 0, copied_events = 0;
+	int error_path = 1, bytes_read, bytes_left, ptr = 0, tmp_ptr;
+	UINT32 seen_indices = 0, copied_events = 0, i;
 	struct event_wrapper *list = calloc(1, sizeof(struct event_wrapper));
 	struct event_wrapper *cur = list;
 	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
@@ -86,7 +86,7 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 	}
 
 	if (*count == 0) {
-		result = TCS_SUCCESS;
+		result = TSS_SUCCESS;
 		goto free_list;
 	}
 
@@ -154,7 +154,7 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 		ptr += sizeof(int);
 
 		/* if the index is the one we're looking for, grab the entry */
-		if ((int)pcr_index == pcr_value) {
+		if (pcr_index == (UINT32)pcr_value) {
 			if (seen_indices >= first) {
 				/* grab this entry */
 				cur->event.rgbPcrValue = malloc(20);
@@ -224,7 +224,7 @@ copy_events:
 	}
 
 	cur = list;
-	for (i = 0; (UINT32)i < copied_events; i++) {
+	for (i = 0; i < copied_events; i++) {
 		memcpy(&((*events)[i]), &(cur->event), sizeof(TSS_PCR_EVENT));
 		cur = cur->next;
 	}
@@ -232,7 +232,7 @@ copy_events:
 	*count = copied_events;
 	/* assume we're in an error path until we get here */
 	error_path = 0;
-	result = TCS_SUCCESS;
+	result = TSS_SUCCESS;
 
 free_list:
 	cur = list->next;
@@ -309,7 +309,7 @@ ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent
 		memcpy(&pcr_value, &page[ptr], sizeof(int));
 		ptr += sizeof(int);
 
-		if ((int)pcr_index == pcr_value) {
+		if (pcr_index == (UINT32)pcr_value) {
 			if (seen_indices == *num) {
 				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 				if (*ppEvent == NULL) {
@@ -359,7 +359,7 @@ ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent
 				}
 
 				memcpy(e->rgbEvent, &page[tmp_ptr], e->ulEventLength);
-				result = TCS_SUCCESS;
+				result = TSS_SUCCESS;
 
 				break;
 			}

@@ -19,8 +19,9 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <wchar.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -51,11 +52,11 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	sd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sd == -1) {
 		LogError("socket: %s", strerror(errno));
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
 
-	memset(&addr, 0, sizeof (addr));
+	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(get_port());
 
@@ -64,7 +65,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	rc = wcstombs(szHostName, hte->wHostName, string_len);
 	if (rc == (size_t)(-1)) {
 		LogError1("Conversion of UNICODE hostname string failed.");
-		result = TSS_E_CONNECTION_FAILED;
+		result = TSPERR(TSS_E_CONNECTION_FAILED);
 		goto err_exit;
 	}
 
@@ -76,7 +77,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		/* if by hostname fails, try by dot notation */
 		if (inet_aton(szHostName, &addr.sin_addr) == 0) {
 			LogError("hostname %s does not resolve to a valid address.", szHostName);
-			result = TSS_E_CONNECTION_FAILED;
+			result = TSPERR(TSS_E_CONNECTION_FAILED);
 			goto err_exit;
 		}
 	} else {
@@ -88,28 +89,28 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	LogDebug1("Connecting");
 	if (connect(sd, (struct sockaddr *) &addr, sizeof (addr))) {
 		LogError("connect: %s", strerror(errno));
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
 
 	if (send(sd, data, dataLength, 0) < 0) {
 		LogError("send: %s", strerror(errno));
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
 
 	if ((returnSize = recv(sd, &loc_hdr, hdr_size - 1, 0)) < 0) {
 		LogError("recv: %s", strerror(errno));
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	} else if (returnSize == 0) {
 		LogError1("recv: No bytes returned from the TCSD.");
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
-	} else if (returnSize < (int)(2 * sizeof(UINT32))) {
+	} else if ((UINT32)returnSize < (2 * sizeof(UINT32))) {
 		LogError("TCSD returned too few bytes to report its packet size! (%d bytes)",
 				returnSize);
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	} else {
 		if (Decode_UINT32((BYTE *)&loc_hdr.result) == TSS_SUCCESS)
@@ -124,7 +125,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 			hdr_p = calloc(1, returnSize);
 			if (hdr_p == NULL) {
 				LogError("malloc of %d bytes failed", returnSize);
-				result = TSS_E_OUTOFMEMORY;
+				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto err_exit;
 			}
 
@@ -134,18 +135,18 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 				if ((returnSize = recv(sd, &hdr_p->data, returnSize - (hdr_size-1), 0)) < 0) {
 					LogError("recv: %s", strerror(errno));
 					free(hdr_p);
-					result = TSS_E_COMM_FAILURE;
+					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				} else if (returnSize == 0) {
 					LogError1("recv: No bytes returned....something went wrong");
 					free(hdr_p);
-					result = TSS_E_COMM_FAILURE;
+					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				}
 			}
 		} else {
 			LogError1("Packet received from TCSD has an invalid size field.");
-			result = TSS_E_COMM_FAILURE;
+			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		}
 		/* at this point the entire packet has been received */
@@ -181,7 +182,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 	while (sent_total < dataLength) {
 		if ((sent = send(hte->socket, &data[sent_total], (dataLength - sent_total), 0)) < 0) {
 			LogError("send: %s", strerror(errno));
-			result = TSS_E_COMM_FAILURE;
+			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		}
 		sent_total += sent;
@@ -192,11 +193,11 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 		if ((recd = recv(hte->socket, &(((BYTE *)&loc_hdr)[recd_total]),
 						(hdr_size - 1) - recd_total, 0)) < 0) {
 			LogError("Socket connection error: %s", strerror(errno));
-			result = TSS_E_COMM_FAILURE;
+			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		} else if (recd == 0) {
 			LogError1("Connection closed by the TCSD.");
-			result = TSS_E_COMM_FAILURE;
+			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		}
 		recd_total += recd;
@@ -218,7 +219,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 		hdr_p = calloc(1, returnSize);
 		if (hdr_p == NULL) {
 			LogError("malloc of %d bytes failed", returnSize);
-			result = TSS_E_OUTOFMEMORY;
+			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto err_exit;
 		}
 
@@ -241,12 +242,12 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 						 0)) < 0) {
 					LogError("Socket connection error: %s", strerror(errno));
 					free(hdr_p);
-					result = TSS_E_COMM_FAILURE;
+					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				} else if (recd == 0) {
 					LogError1("Connection closed by the TCSD.");
 					free(hdr_p);
-					result = TSS_E_COMM_FAILURE;
+					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				}
 				recd_total += recd;
@@ -255,7 +256,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 		}
 	} else {
 		LogError1("Packet received from TCSD has an invalid size field.");
-		result = TSS_E_COMM_FAILURE;
+		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
 	/* at this point the entire packet has been received */

@@ -16,7 +16,8 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "tss/tss.h"
+#include "trousers/tss.h"
+#include "trousers_types.h"
 #include "spi_internal_types.h"
 #include "tcs_internal_types.h"
 #include "tcs_tsp.h"
@@ -84,7 +85,7 @@ internal_BSOSAP(void)
 	offset = 10;
 	LoadBlob_UINT16(&offset, TCPA_ET_KEYHANDLE, txBlob, NULL);
 	LoadBlob_UINT32(&offset, SRK_TPM_HANDLE, txBlob, NULL);
-	LoadBlob(&offset, TPM_NONCE_SIZE, txBlob, nonce.nonce, NULL);
+	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonce.nonce, NULL);
 	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OSAP, txBlob);
 
 	result = req_mgr_submit_req(txBlob);
@@ -104,7 +105,7 @@ initDiskCache(void)
 	pthread_mutex_init(&disk_cache_lock, NULL);
 
 	if ((fd = get_file()) < 0)
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if ((rc = init_disk_cache(fd)))
 		return rc;
@@ -133,11 +134,11 @@ void
 initKeyFile(TCS_CONTEXT_HANDLE hContext)
 {
 	TCPA_RESULT result;
-	BOOL hasOwner;
+	TSS_BOOL hasOwner;
 	BYTE key[1024];
 	UINT16 keySize = sizeof (key);
 	int vendor;
-	static BOOL KeyFileInit = FALSE;
+	static TSS_BOOL KeyFileInit = FALSE;
 
 	/*******************************
 	 *	If there is no owner inthe chip, but a keyfile exists,
@@ -286,7 +287,7 @@ setParentByHandle(TCS_KEY_HANDLE tcs_handle, TCS_KEY_HANDLE p_tcs_handle)
 		}
 	}
 done:
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* XXX take a look at this function */
@@ -294,7 +295,7 @@ TCPA_RESULT
 ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 		TCPA_KEY_HANDLE * keySlot)
 {
-	TCPA_RESULT result = TCS_SUCCESS;
+	TCPA_RESULT result = TSS_SUCCESS;
 	TCPA_STORE_PUBKEY *myPub;
 
 	LogDebug1("ensureKeyIsLoaded");
@@ -308,7 +309,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 		myPub = getPubByHandle(keyHandle);
 		if (myPub == NULL) {
 			LogDebug1("Failed to find pub by handle");
-			result = TCS_E_KM_LOADFAILED;
+			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto done;
 		}
 
@@ -319,7 +320,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 
 		if (*keySlot == NULL_TPM_HANDLE) {
 			LogDebug1("Key slot is still invalid after ensureKeyIsLoaded");
-			result = TCS_E_KM_LOADFAILED;
+			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto done;
 		}
 	}
@@ -425,7 +426,7 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 			if (tmp_enc_data == NULL) {
 				LogError("malloc of %d bytes failed.", tmp->blob->encSize);
 				pthread_mutex_unlock(&mem_cache_lock);
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 
 			memcpy(tmp_enc_data, newEncData, tmp->blob->encSize);
@@ -437,7 +438,7 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 	}
 	pthread_mutex_unlock(&mem_cache_lock);
 	LogError1("Couldn't find requested encdata in mem cache");
-	return TSS_E_INTERNAL_ERROR;
+	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
 
 void
@@ -487,7 +488,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	entry = (struct key_mem_cache *)calloc(1, sizeof(struct key_mem_cache));
 	if (entry == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct key_mem_cache));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	entry->tcs_handle = tcs_handle;
@@ -501,7 +502,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	if (entry->blob == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
 		free(entry);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(entry->blob, key_blob, sizeof(TCPA_KEY));
 
@@ -512,7 +513,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 			LogError("malloc of %d bytes failed.", key_blob->algorithmParms.parmSize);
 			free(entry->blob);
 			free(entry);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(tmp_parms, key_blob->algorithmParms.parms, key_blob->algorithmParms.parmSize);
 		entry->blob->algorithmParms.parms = tmp_parms;
@@ -524,7 +525,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 		LogError("malloc of %d bytes failed.", key_blob->pubKey.keyLength);
 		free(entry->blob);
 		free(entry);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
 
@@ -536,7 +537,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 			free(entry->blob->pubKey.key);
 			free(entry->blob);
 			free(entry);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(entry->blob->encData, key_blob->encData, key_blob->encSize);
 	}
@@ -588,7 +589,7 @@ remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
 		}
 	}
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* custom add mem cache entry function called only at take ownership time, since
@@ -615,7 +616,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	entry = (struct key_mem_cache *)calloc(1, sizeof(struct key_mem_cache));
 	if (entry == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(struct key_mem_cache));
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	entry->tcs_handle = tcs_handle;
@@ -629,7 +630,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	if (entry->blob == NULL) {
 		LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
 		free(entry);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(entry->blob, key_blob, sizeof(TCPA_KEY));
 
@@ -640,7 +641,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 			LogError("malloc of %d bytes failed.", key_blob->algorithmParms.parmSize);
 			free(entry->blob);
 			free(entry);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(tmp_parms, key_blob->algorithmParms.parms, key_blob->algorithmParms.parmSize);
 		entry->blob->algorithmParms.parms = tmp_parms;
@@ -652,7 +653,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 		LogError("malloc of %d bytes failed.", key_blob->pubKey.keyLength);
 		free(entry->blob);
 		free(entry);
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
 
@@ -664,7 +665,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 			free(entry->blob->pubKey.key);
 			free(entry->blob);
 			free(entry);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(entry->blob->encData, key_blob->encData, key_blob->encSize);
 	}
@@ -702,7 +703,7 @@ setSlotBySlot(TCPA_KEY_HANDLE old_handle, TCPA_KEY_HANDLE new_handle)
 		}
 	}
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* only called from load key paths, so no locking */
@@ -722,7 +723,7 @@ setSlotByHandle(TCS_KEY_HANDLE tcs_handle, TCPA_KEY_HANDLE tpm_handle)
 		}
 	}
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* the beginnings of a key manager start here ;-) */
@@ -765,7 +766,7 @@ key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE hContext,
 TSS_RESULT
 key_mgr_load_by_blob(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hUnwrappingKey,
 		     UINT32 cWrappedKeyBlob, BYTE *rgbWrappedKeyBlob,
-		     TCS_AUTH *pAuth, TCS_KEY_HANDLE *phKeyTCSI, TCS_KEY_HANDLE *phKeyHMAC)
+		     TPM_AUTH *pAuth, TCS_KEY_HANDLE *phKeyTCSI, TCS_KEY_HANDLE *phKeyHMAC)
 {
 	TSS_RESULT result;
 
@@ -795,7 +796,7 @@ key_mgr_inc_ref_count(TCS_KEY_HANDLE key_handle)
 		}
 	}
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* de-reference one key.  This is called by the context routines, so
@@ -817,7 +818,7 @@ key_mgr_dec_ref_count(TCS_KEY_HANDLE key_handle)
 	}
 
 	pthread_mutex_unlock(&mem_cache_lock);
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* run through the global list and free any keys with reference counts of 0 */
@@ -869,7 +870,7 @@ setUuidsByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID *uuid, TSS_UUID *p_uuid)
 	}
 
 	pthread_mutex_unlock(&mem_cache_lock);
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 #endif
 
@@ -963,7 +964,7 @@ getParentPubByPub(TCPA_STORE_PUBKEY *pub)
 }
 
 #if 0
-BOOL
+TSS_BOOL
 isKeyInMemCache(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *tmp;
@@ -982,13 +983,13 @@ isKeyInMemCache(TCS_KEY_HANDLE tcs_handle)
 }
 #endif
 
-BOOL
+TSS_BOOL
 isKeyRegistered(TCPA_STORE_PUBKEY *pub)
 {
 	TSS_UUID *uuid;
 	int fd;
 	TSS_RESULT rc;
-	BOOL is_reg = FALSE;
+	TSS_BOOL is_reg = FALSE;
 
 	if ((fd = get_file()) < 0)
 		return FALSE;
@@ -1019,7 +1020,7 @@ getBlobByPub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 		}
 	}
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 #if 0
@@ -1039,7 +1040,7 @@ getBlobBySlot(TCPA_KEY_HANDLE tpm_handle, TCPA_KEY **ret_key)
 	}
 
 	pthread_mutex_unlock(&mem_cache_lock);
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 #endif
 
@@ -1086,7 +1087,7 @@ TSS_RESULT
 refreshTimeStampBySlot(TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
-	TSS_RESULT ret = TCS_E_FAIL;
+	TSS_RESULT ret = TCSERR(TSS_E_FAIL);
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		if (tmp->tpm_handle == tpm_handle) {
@@ -1130,15 +1131,14 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 		result = setSlotBySlot(tpm_handle_to_evict, NULL_TPM_HANDLE);
 	} else {
 		/* success if the key is already evicted */
-		return TCS_SUCCESS;
+		return TSS_SUCCESS;
 	}
 
 	return result;
 }
 
-/* XXX why ** if malloc isn't called? */
 TSS_RESULT
-getParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID **ret_uuid)
+getParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID *ret_uuid)
 {
 	struct key_disk_cache *disk_tmp;
 
@@ -1148,18 +1148,18 @@ getParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID **ret_uuid)
 	for (disk_tmp = key_disk_cache_head; disk_tmp; disk_tmp = disk_tmp->next) {
 		if ((disk_tmp->flags & CACHE_FLAG_VALID) &&
 				!memcmp(&disk_tmp->uuid, uuid, sizeof(TSS_UUID))) {
-			*ret_uuid = &disk_tmp->parent_uuid;
+			memcpy(ret_uuid, &disk_tmp->parent_uuid, sizeof(TSS_UUID));
 			pthread_mutex_unlock(&disk_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
 	pthread_mutex_unlock(&disk_cache_lock);
 
-	return TCS_E_FAIL;
+	return TCSERR(TSS_E_FAIL);
 }
 
 TSS_RESULT
-isUUIDRegistered(TSS_UUID *uuid, BOOL *is_reg)
+isUUIDRegistered(TSS_UUID *uuid, TSS_BOOL *is_reg)
 {
 	struct key_disk_cache *disk_tmp;
 
@@ -1203,13 +1203,13 @@ removeRegisteredKey(TSS_UUID *uuid)
 			 * disk before exiting or sth. */
 			tmp->flags &= ~CACHE_FLAG_VALID;
 			pthread_mutex_unlock(&disk_cache_lock);
-			return TCS_SUCCESS;
+			return TSS_SUCCESS;
 		}
 	}
 
 	pthread_mutex_unlock(&disk_cache_lock);
 
-	return TCS_E_KEY_NOT_REGISTERED;
+	return TCSERR(TCSERR(TSS_E_PS_KEY_NOTFOUND));
 }
 
 TSS_RESULT
@@ -1219,7 +1219,7 @@ getRegisteredKeyByUUID(TSS_UUID *uuid, BYTE *blob, UINT16 *blob_size)
         TSS_RESULT rc = TSS_SUCCESS;
 
         if ((fd = get_file()) < 0)
-                return TSS_E_INTERNAL_ERROR;
+                return TCSERR(TSS_E_INTERNAL_ERROR);
 
         rc = ps_get_key_by_uuid(fd, uuid, blob, blob_size);
 
@@ -1234,7 +1234,7 @@ getKeyByCacheEntry(struct key_disk_cache *c, BYTE *blob, UINT16 *blob_size)
         TSS_RESULT rc = TSS_SUCCESS;
 
         if ((fd = get_file()) < 0)
-                return TSS_E_INTERNAL_ERROR;
+                return TCSERR(TSS_E_INTERNAL_ERROR);
 
         rc = ps_get_key_by_cache_entry(fd, c, blob, blob_size);
 
@@ -1246,7 +1246,7 @@ TCPA_RESULT
 isPubRegistered(TCPA_STORE_PUBKEY *key)
 {
         int fd = -1;
-        BOOL answer;
+        TSS_BOOL answer;
 
         if ((fd = get_file()) < 0)
                 return FALSE;
@@ -1267,7 +1267,7 @@ getRegisteredUuidByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
 	TSS_RESULT ret;
 
         if ((fd = get_file()) < 0)
-                return TSS_E_INTERNAL_ERROR;
+                return TCSERR(TSS_E_INTERNAL_ERROR);
 
         ret = ps_get_uuid_by_pub(fd, pub, uuid);
 
@@ -1275,7 +1275,7 @@ getRegisteredUuidByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
         return ret;
 }
 
-BOOL
+TSS_BOOL
 isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 {
 	UINT16 offset;
@@ -1285,7 +1285,6 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 	BYTE *resp;
 	TSS_RESULT result;
 
-	LogDebug("isKeyLoaded for slot %.8X", keySlot);
 	if (keySlot == SRK_TPM_HANDLE) {
 		return TRUE;
 	}
@@ -1300,7 +1299,6 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 	free(resp);
 	for (i = 0; i < keyList.loaded; i++) {
 		if (keyList.handle[i] == keySlot) {
-			LogDebug1("Key is loaded");
 			free(keyList.handle);
 			return TRUE;	/* key is already loaded */
 		}
@@ -1336,9 +1334,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	 *	slot and return
 	 **************************************/
 
-	LogDebug1("LoadKeyShim");
 	keySlot = getSlotByPub(pubKey);
-	LogDebug("keyslot is 0x%.8X", keySlot);
 
 	if (keySlot != NULL_TPM_HANDLE && isKeyLoaded(keySlot)) {
 		*slotOut = keySlot;
@@ -1355,11 +1351,9 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	/*---	Check if the Key is in the memory cache */
 	parentPub = getParentPubByPub(pubKey);
 	if (parentPub == NULL) {
-		LogDebug1("Parent is not already loaded");
 		/*---	If parentUUID is not handed in, then this key was never loaded and isn't reg'd */
 		if (parentUuid == NULL) {
-			LogDebug1("Parent is not registered either");
-			return TCS_E_KM_LOADFAILED;
+			return TCSERR(TCS_E_KM_LOADFAILED);
 		}
 
 		/*---	This will try to load my parent by UUID */
@@ -1381,10 +1375,10 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	if (getBlobByPub(pubKey, &myKey) == 0) {
 		parentPub = getPubBySlot(parentSlot);
 		if (parentPub == NULL)
-			return TCS_E_KM_LOADFAILED;
+			return TCSERR(TCS_E_KM_LOADFAILED);
 		parentHandle = getTCSKeyHandleByPub(parentPub);
 		if (parentHandle == 0)
-			return TCS_E_KM_LOADFAILED;
+			return TCSERR(TCS_E_KM_LOADFAILED);
 
 		offset = 0;
 		LoadBlob_KEY(&offset, keyBlob, myKey);
@@ -1400,7 +1394,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	/*---	check registered */
 	else {
 		if (isPubRegistered(pubKey) == FALSE)
-			return TCS_E_KM_LOADFAILED;
+			return TCSERR(TCS_E_KM_LOADFAILED);
 		KeyUUID = getUuidByPub(pubKey);
 		if ((result = TCSP_LoadKeyByUUID_Internal
 					(hContext,	/* in */
@@ -1425,7 +1419,7 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *blob, UINT
 	UINT32 parent_ps;
 
         if ((fd = get_file()) < 0)
-                return TSS_E_INTERNAL_ERROR;
+                return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	/* this case needed for PS file init. if the key file doesn't yet exist, the
 	 * ps_get_parent_ps_type_by_uuid() call would fail. */
@@ -1451,7 +1445,7 @@ typedef struct tdKMList
 	TSS_KM_KEYINFO* kmInfo;
 	struct tdKMList* next;
 	struct tdKMList* parent;
-	BOOL freekmInfo;
+	TSS_BOOL freekmInfo;
 }KMList;
 
 KMNode *
@@ -1520,7 +1514,7 @@ KM_AddKeyToList(KMList ** list, TSS_UUID myUUID, TSS_UUID parentUUID,
 	KMList *currentKMList = createNewKMList();
 	if (currentKMList == NULL) {
 		LogError1("Malloc Failure.");
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(&(currentKMList->kmInfo->keyUUID), &myUUID, sizeof (TSS_UUID));
 	memcpy(&(currentKMList->kmInfo->parentKeyUUID), &parentUUID,
@@ -1538,7 +1532,7 @@ KM_AddKeyToList(KMList ** list, TSS_UUID myUUID, TSS_UUID parentUUID,
 		currentKMList->kmInfo->rgbVendorData =  malloc(vDataLength);
 		if (currentKMList->kmInfo->rgbVendorData == NULL) {
 			LogError1("Malloc Failure.");
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(currentKMList->kmInfo->rgbVendorData, vData, vDataLength);
 	}
@@ -1585,7 +1579,7 @@ KM_AddChildren(KMList * list, KMList * startPoint, KMNode ** graphPoint)
 			tempNode = createNewKMNode();
 			if (tempNode == NULL) {
 				LogError1("Malloc Failure.");
-				return TSS_E_OUTOFMEMORY;
+				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			tempNode->kmInfo = listIndex->kmInfo;
 			listIndex->freekmInfo = FALSE;
@@ -1626,7 +1620,7 @@ KM_BuildGraph(TSS_UUID * uuid, KMList * list, KMNode ** newGraph)
 	graphStart = createNewKMNode();
 	if (graphStart == NULL) {
 		LogError1("Malloc Failure.");
-		return TSS_E_OUTOFMEMORY;
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	graphStart->kmInfo = firstNode->kmInfo;
 	firstNode->freekmInfo = FALSE;

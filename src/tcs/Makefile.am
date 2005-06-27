@@ -1,14 +1,5 @@
 noinst_LIBRARIES=libtcs.a
 
-AM_OBJS=atmel.o cache.o cxt.o tcscm.o tcsem.o imaem.o tcskcm.o tcspbg.o tcs_utils.o log.o ps/ps_utils.o ps/tcsps.o req_mgr.o auth_mgr.o
-AM_CFLAGS=-DAPPID=\"TCS\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
-
-.c.o:
-	$(CC) $(CFLAGS) $(AM_CFLAGS) -c -o $@ $<
-
-libtcs.a: $(AM_OBJS)
-	ar -r libtcs.a $(AM_OBJS) ../tddl/libtddl.a
-
-clean:
-	rm -rf *.o *.lo *.so *.0 *.a ps/*.o
-
+libtcs_a_LIBADD=../tddl/libtddl.a
+libtcs_a_SOURCES=atmel.c cache.c cxt.c tcscm.c tcsem.c imaem.c tcskcm.c tcspbg.c tcs_utils.c log.c ps/ps_utils.c ps/tcsps.c req_mgr.c auth_mgr.c
+libtcs_a_CFLAGS=-DAPPID=\"TCS\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
