@@ -152,7 +152,9 @@ Trspi_LoadBlob_RSA_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_RSA_KEY_PARMS * 
 	Trspi_LoadBlob_UINT32(offset, parms->keyLength, blob);
 	Trspi_LoadBlob_UINT32(offset, parms->numPrimes, blob);
 	Trspi_LoadBlob_UINT32(offset, parms->exponentSize, blob);
-	Trspi_LoadBlob(offset, parms->exponentSize, blob, parms->exponent);
+
+	if (parms->exponentSize > 0)
+		Trspi_LoadBlob(offset, parms->exponentSize, blob, parms->exponent);
 }
 
 void
