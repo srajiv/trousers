@@ -173,24 +173,30 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
 	TSS_RESULT result = TSS_SUCCESS;
+	TCPA_SECRET null_secret;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
 
+	memset(&null_secret, 0, sizeof(TCPA_SECRET));
+
 	switch (policy->SecretMode) {
+		case TSS_SECRET_MODE_POPUP:
+			/* if the secret is still NULL, grab it using the GUI */
+			if (!memcmp(policy->Secret, &null_secret,
+						TCPA_SHA1_160_HASH_LEN)) {
+				if ((result = popup_GetSecret(hPolicy,
+							      policy->popupString,
+							      policy->Secret)))
+					break;
+			}
+			/* fall through */
 		case TSS_SECRET_MODE_PLAIN:
 		case TSS_SECRET_MODE_SHA1:
 		case TSS_SECRET_MODE_NONE:
 			memcpy(secret, policy->Secret, sizeof(TCPA_SECRET));
-			break;
-		case TSS_SECRET_MODE_POPUP:
-			result = popup_GetSecret(hPolicy, policy->popupString,
-						 policy->Secret);
-			if (result == TSS_SUCCESS)
-				memcpy(secret->authdata, policy->Secret,
-						TCPA_SHA1_160_HASH_LEN);
 			break;
 		default:
 			result = TSPERR(TSS_E_POLICY_NO_SECRET);
