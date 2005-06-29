@@ -1,4 +1,5 @@
 
+ - changed sprintf's to snprintf. Bug #1221932 closed.
  - Changed the TCPA_RSA_KEY_PARMS management at key creation time.
  - Re-implemented TSP object management.
  - Integrated TSSWG header files.
