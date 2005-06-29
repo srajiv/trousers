@@ -42,7 +42,7 @@ void LogBlobData( char* szDescriptor, unsigned long sizeOfBlob, unsigned char* b
 			syslog(LOG_DEBUG, temp );
 			memset( temp, 0, sizeof( temp ));
 		}
-		sprintf( oneByte, "%.2X ", blob[i] );
+		snprintf( oneByte, 8, "%.2X ", blob[i] );
 		strcat( temp, oneByte );
 	}
 	if( temp[2] != 0 )

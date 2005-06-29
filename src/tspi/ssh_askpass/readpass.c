@@ -149,7 +149,7 @@ DisplayNewPINWindow(char *string, UNICODE *w_popup)
 
 	while (result != TSS_SUCCESS) {
 		if (loop) {
-			sprintf(retry_string, "%s%s", retry_prefix, c_title);
+			snprintf(retry_string, 512, "%s%s", retry_prefix, c_title);
 			label = retry_string;
 		} else {
 			loop = 1;

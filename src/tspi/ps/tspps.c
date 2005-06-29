@@ -60,7 +60,7 @@ get_file()
 		return -1;
 	} else {
 		/* create the key file name */
-		sprintf(file_name, "%s%d", TSP_KEY_FILE_NAME, pgid);
+		snprintf(file_name, 256, "%s%d", TSP_KEY_FILE_NAME, pgid);
 	}
 
 	/* open and lock the file */
