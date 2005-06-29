@@ -26,27 +26,22 @@ int foreground = 0;
  *
  */
 
-void LogBlobData( char* szDescriptor, unsigned long sizeOfBlob, unsigned char* blob )
+void
+LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 {
-	char temp[1024];
-	char oneByte[8];
-	unsigned int i;
+	char temp[64];
+	int i;
 
 	openlog(szDescriptor, LOG_NDELAY|LOG_PID, LOG_LOCAL5);
-	memset( temp, 0, sizeof( temp ));
+	memset(temp, 0, sizeof(temp));
 
-	for( i = 0 ; i < sizeOfBlob ; i++ )
-	{
-		if( i && (( i & 0x0F ) == 0 ))
-		{
-			syslog(LOG_DEBUG, temp );
-			memset( temp, 0, sizeof( temp ));
+	for (i = 0; (unsigned long)i < sizeOfBlob; i++) {
+		if ((i > 0) && ((i % 16) == 0)) {
+			syslog(LOG_DEBUG, temp);
+			memset(temp, 0, sizeof(temp));
 		}
-		snprintf( oneByte, 8, "%.2X ", blob[i] );
-		strcat( temp, oneByte );
+		snprintf(&temp[(i%16)*3], 4, "%.2X ", blob[i]);
 	}
-	if( temp[2] != 0 )
-		syslog(LOG_DEBUG, temp );
 }
 
 
