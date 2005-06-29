@@ -1,4 +1,6 @@
 
+ - Fixed up the LogBlobData functions, no more strcat. Bug #1221974
+   closed.
  - changed sprintf's to snprintf. Bug #1221932 closed.
  - Changed the TCPA_RSA_KEY_PARMS management at key creation time.
  - Re-implemented TSP object management.
