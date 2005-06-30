@@ -1,4 +1,6 @@
 
+ - in obj_rsakey_set_es/ss, added mapping from TCPA numbers
+   to TSS numbers and vice versa.
  - added #includes in readpass.c to get rid of compile errors.
    (thanks Emily).
  - Fixed popup secret handling. Bug #1194607 closed.
