@@ -1,4 +1,5 @@
 
+ - Updated README with info on the 2.6.12 kernel device driver.
  - fixed bug in calculating pcr select size
  - fixed bug in init'ing PCRS, spi_utils.c:431
  - Changed TCPA sig schemes to TSS sig schemes in

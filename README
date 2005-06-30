@@ -38,9 +38,10 @@ BUILDING the TSS
     or,
 
   B Build and install the latest TPM device driver from sf.net/projects/tpmdd
-    either compiled in or loaded as a module. If you are doing this, trousers
-    should just work after a vanilla build. Follow the build instructions below
-    and read RUNNING The TSS, below.
+    either compiled in or loaded as a module. UPDATE: This driver is now included
+    in the vanilla 2.6.12 kernel!  If you are doing this, trousers should just work
+    after a vanilla build. Follow the build instructions below and read RUNNING the
+    TSS, below.
 
   To build trousers after you have the device driver installed:
 
