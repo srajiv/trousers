@@ -440,19 +440,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
-#if 0
-	object = getAnObjectByHandle(hNewPolicy);
-	if (object == NULL || object->memPointer == NULL) {
-		LogError("Couldn't find an internal object with handle 0x%x",
-				hNewPolicy);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-	((TSP_INTERNAL_POLICY_OBJECT *)object->memPointer)->p.PolicyType =
-							TSS_POLICY_USAGE;
-#else
 	if ((result = obj_policy_set_type(hNewPolicy, TSS_POLICY_USAGE)))
 		return result;
-#endif
 
 	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
 }

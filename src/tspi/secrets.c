@@ -476,24 +476,11 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
 		return result;
 
-#if 0
-	anObject = getAnObjectByHandle(hOwnerPolicy);
-	if (anObject == NULL || anObject->memPointer == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	ownerPolicy = anObject->memPointer;
-#endif
 	/* ---  Now get the SRK Policy */
 
 	if ((result = Tspi_GetPolicyObject(hKeySRK, TSS_POLICY_USAGE, &hSrkPolicy)))
 		return result;
-#if 0
-	anObject = getAnObjectByHandle(hSrkPolicy);
-	if (anObject == NULL || anObject->memPointer == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	srkPolicy = anObject->memPointer;
-#endif
 	if ((result = obj_policy_get_mode(hOwnerPolicy, &ownerMode)))
 		return result;
 
@@ -523,44 +510,13 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		offset = 0;
 		Trspi_UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
 
-#if 0
-		/* ---  Now get the secrets */
-		if (ownerMode == TSS_SECRET_MODE_PLAIN ||
-		    ownerMode == TSS_SECRET_MODE_SHA1) {
-			if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret)))
-				return result;
-		} else if (ownerMode == TSS_SECRET_MODE_POPUP) {
-			if ((result = popup_GetSecret(FALSE, ownerPolicy->p.popupString, ownerSecret.authdata)))
-				return result;
-		} else {
-			LogError1("Key Policy's Secret mode is not set.");
-			return TSPERR(TSS_E_POLICY_NO_SECRET);	/* not yet */
-		}
-
-		if (srkMode == TSS_SECRET_MODE_PLAIN ||
-		    srkMode == TSS_SECRET_MODE_SHA1) {
-			if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
-				return result;
-		} else if (srkMode == TSS_SECRET_MODE_POPUP) {
-			if ((result = popup_GetSecret(FALSE, srkPolicy->p.popupString, srkSecret.authdata)))
-				return result;
-		} else {
-			LogError1("Key Policy's Secret mode is not set.");
-			return TSPERR(TSS_E_POLICY_NO_SECRET);
-		}
-#else
 		if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret)))
 			return result;
 
 		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
 			return result;
-#endif
-		/* ---   Encrypt the Owner Authorization */
-		if ((result = Tspi_TPM_GetRandom(hTPM, 20, &random)))
-			return result;
-		memcpy(randomSeed, random, 20);
-		free_tspi(tspContext, random);
 
+		/* ---   Encrypt the Owner Authorization */
 		Trspi_RSA_Encrypt(ownerSecret.authdata,
 				       20,
 				       encOwnerAuth,
@@ -569,12 +525,6 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 				       dummyKey.pubKey.keyLength);
 
 		/* ---  Encrypt the SRK Authorization */
-		if ((result = Tspi_TPM_GetRandom(hTPM, 20, &random)))
-			return result;
-
-		memcpy(randomSeed, random, 20);
-		free_tspi(tspContext, random);
-
 		Trspi_RSA_Encrypt(srkSecret.authdata,
 				       20,
 				       encSRKAuth,
@@ -584,16 +534,10 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	} else {
 		*encOwnerAuthLength = 256;
 		*encSRKAuthLength = 256;
-#if 0
-		if ((result = ownerPolicy->cb.Tspicb_CallbackTakeOwnership(NULL, 0, hEndorsementPubKey,
-					       *encOwnerAuthLength, encOwnerAuth)))
-			return result;
-#else
 		if ((result = obj_policy_do_takeowner(hOwnerPolicy, hTPM,
 						hEndorsementPubKey, *encOwnerAuthLength,
 						encOwnerAuth)))
 			return result;
-#endif
 	}
 
 	if ((result = Tspi_GetAttribData(hKeySRK,
