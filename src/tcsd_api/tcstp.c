@@ -2147,7 +2147,103 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       UINT32 * outDataSize,	/* out */
 			       BYTE ** outData	/* out */
     ) {
-	return TSPERR(TSS_E_NOTIMPL);
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+	TPM_AUTH null_auth;
+	int i;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+	memset(&null_auth, 0, sizeof(TPM_AUTH));
+
+	data.ordinal = TCSD_ORD_CERTIFYKEY;
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &certHandle, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &keyHandle, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &antiReplay, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (certAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, certAuth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	} else {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, &null_auth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (keyAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 5, keyAuth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	} else {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 5, &null_auth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		i = 0;
+		if (certAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, certAuth, 0, hdr)) {
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+			}
+		}
+		if (keyAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, keyAuth, 0, hdr)) {
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+			}
+		}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, CertifyInfoSize, 0, hdr)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*CertifyInfo = (BYTE *) malloc(*CertifyInfoSize);
+		if (*CertifyInfo == NULL) {
+			LogError("Malloc of %d bytes failed.", *CertifyInfoSize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *CertifyInfo, *CertifyInfoSize, hdr)) {
+			free(*CertifyInfo);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, hdr)) {
+			free(*CertifyInfo);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*outData = (BYTE *) malloc(*outDataSize);
+		if (*outData == NULL) {
+			LogError("Malloc of %d bytes failed.", *outDataSize);
+			free(*CertifyInfo);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, hdr)) {
+			free(*CertifyInfo);
+			free(*outData);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+	}
+
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
