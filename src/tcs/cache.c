@@ -1118,7 +1118,8 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 		if (tmp->tpm_handle != NULL_TPM_HANDLE &&	/* not already evicted */
 		    tmp->tpm_handle != SRK_TPM_HANDLE &&	/* not the srk */
 		    tmp->tcs_handle != parent_tcs_handle &&	/* not my parent */
-		    tmp->time_stamp < smallestTimeStamp) {	/* is the smallest time stamp so far */
+		    tmp->time_stamp < smallestTimeStamp) {	/* is the smallest time
+								   stamp so far */
 			tpm_handle_to_evict = tmp->tpm_handle;
 			smallestTimeStamp = tmp->time_stamp;
 		}
