@@ -1,4 +1,10 @@
 
+ - fixed bug in calculating pcr select size
+ - fixed bug in init'ing PCRS, spi_utils.c:431
+ - Changed TCPA sig schemes to TSS sig schemes in
+   Hash_VerifySignature.
+ - Implemented Tspi_Context_GetKeyByPublicInfo on the TCS side.
+ - Fixed PS bug in storing the pub key data.
  - Implemented Tspi_Key_UnloadKey
  - Implemented the guts of Tspi_Key_CertifyKey, which now works
    in at least the case where both keys passed in are authless.
