@@ -263,7 +263,7 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
-	bytes_to_hold = (num_pcrs / 8) + 1;
+	bytes_to_hold = num_pcrs / 8;
 
 	/* Is the current select object going to be interpretable
 	 * by the TPM?  If the select object is of a size equal to
