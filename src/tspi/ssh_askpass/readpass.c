@@ -13,8 +13,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "trousers/tss.h"
+#include "trousers_types.h"
 #include "tsplog.h"
 
 /* SSH_ASKPASS_EXE is defined at configure time */
