@@ -362,11 +362,10 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 }
 
 TSS_RESULT
-ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
+ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
 {
         int rc;
         UINT32 file_offset = 0;
-	UINT16 offset;
         struct key_disk_cache *tmp;
 	BYTE tmp_buffer[4096];
 
@@ -427,15 +426,15 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
                         return rc;
                 }
 
-		*ret_key = (TCPA_KEY *)malloc(sizeof(TCPA_KEY));
+		*ret_key = malloc(tmp->blob_size);
 		if (*ret_key == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
+			LogError("malloc of %d bytes failed.", tmp->blob_size);
                         pthread_mutex_unlock(&disk_cache_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
-		offset = 0;
-		rc = UnloadBlob_KEY_PS(&offset, tmp_buffer, *ret_key);
+		memcpy(*ret_key, tmp_buffer, tmp->blob_size);
+		*size = tmp->blob_size;
 
                 pthread_mutex_unlock(&disk_cache_lock);
                 return rc;
@@ -468,7 +467,7 @@ ps_write_key(int fd,
 		BYTE *key_blob,
 		UINT32 key_blob_size)
 {
-	BYTE pub_key[2048];
+	//BYTE pub_key[2048];
 	TCPA_KEY key;
 	UINT16 offset, pub_key_size, cache_flags = CACHE_FLAG_VALID;
 	int rc = 0;
@@ -481,12 +480,11 @@ ps_write_key(int fd,
 	offset = 0;
 	if ((rc = UnloadBlob_KEY_PS(&offset, key_blob, &key)))
 		return rc;
-
+#if 0
 	offset = 0;
 	LoadBlob_STORE_PUBKEY((UINT16 *)&offset, pub_key, &key.pubKey);
-
-	/* offset is incremented sizeof(pub_key) bytes by LoadBlob_STORE_PUBKEY */
-	pub_key_size = offset;
+#endif
+	pub_key_size = key.pubKey.keyLength;
 
         if ((rc = write_key_init(fd, pub_key_size, key_blob_size)) < 0)
                 return rc;
@@ -532,7 +530,8 @@ ps_write_key(int fd,
 	}
 
 	/* [BYTE[]   pub_data0       ] */
-        if ((rc = write_data(fd, (void *)pub_key, pub_key_size))) {
+        //if ((rc = write_data(fd, (void *)pub_key, pub_key_size))) {
+        if ((rc = write_data(fd, (void *)key.pubKey.key, pub_key_size))) {
 		LogError("%s", __FUNCTION__);
 		return rc;
 	}
