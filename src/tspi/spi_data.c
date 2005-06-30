@@ -42,6 +42,9 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 	if (rgbDataToBind == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
+	if (!obj_is_encdata(hEncData))
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
 	if ((result = obj_rsakey_get_tsp_context(hEncKey, &tspContext)))
 		return result;
 
