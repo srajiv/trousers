@@ -115,8 +115,6 @@ TSS_RESULT add_mem_cache_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
 TSS_RESULT remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle);
 TSS_RESULT setSlotBySlot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
 TSS_RESULT setSlotByHandle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
-//void removeCacheEntryByHandle(TCS_KEY_HANDLE);
-//void setUuidsByPub(TCPA_STORE_PUBKEY *, TSS_UUID *, TSS_UUID *);
 TCPA_KEY_HANDLE getSlotByHandle(TCS_KEY_HANDLE);
 TCPA_KEY_HANDLE getSlotByHandle_lock(TCS_KEY_HANDLE);
 TCPA_KEY_HANDLE getSlotByPub(TCPA_STORE_PUBKEY *);
@@ -124,16 +122,14 @@ TCS_KEY_HANDLE getTCSKeyHandleByPub(TCPA_STORE_PUBKEY *);
 TCPA_STORE_PUBKEY *getParentPubByPub(TCPA_STORE_PUBKEY *);
 TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT getBlobByPub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
-//TSS_RESULT setParentPubByPub(TCPA_STORE_PUBKEY *, TCPA_STORE_PUBKEY *);
 TCS_KEY_HANDLE getAnyHandleBySlot(TCPA_KEY_HANDLE);
-//TCS_KEY_HANDLE getKeyHandleByUuid(TSS_UUID *);
 TSS_RESULT evictFirstKey(TCS_KEY_HANDLE);
 TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT removeRegisteredKeyFromFile(TSS_UUID *);
-/*TSS_RESULT removeRegisteredKeyNode(TSS_UUID *);*/
 TSS_RESULT getRegisteredKeyByUUID(TSS_UUID *, BYTE *, UINT16 *);
 TSS_RESULT isPubRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT getRegisteredUuidByPub(TCPA_STORE_PUBKEY *, TSS_UUID **);
+TSS_RESULT getRegisteredKeyByPub(TCPA_STORE_PUBKEY *, UINT32 *, BYTE **);
 TSS_BOOL isKeyLoaded(TCPA_KEY_HANDLE);
 TSS_RESULT LoadKeyShim(TCS_CONTEXT_HANDLE, TCPA_STORE_PUBKEY *, TSS_UUID *,TCPA_KEY_HANDLE *);
 TSS_RESULT writeRegisteredKeyToFile(TSS_UUID *, TSS_UUID *, BYTE *, UINT32);
@@ -143,14 +139,7 @@ TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
 TSS_RESULT destroyKeyFile(void);
 void destroy_key_refs(TCPA_KEY *);
 
-#if 0
-int KM_GetHierarchy(TSS_UUID *, KMNode **);
-void KM_DestroyKMList(struct tdKMList *list);
-void KM_DestroyKMNode(KMNode * list);
-#endif
-
-/*******************************************************************************************************/
-/*---	cxt.c */
+/* cxt.c */
 
 TSS_RESULT freeSomeMemory(TCS_CONTEXT_HANDLE, void *);
 void *getSomeMemory(unsigned long, TCS_CONTEXT_HANDLE);
@@ -164,9 +153,7 @@ TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 TCS_CONTEXT_HANDLE make_context();
 void destroy_context(TCS_CONTEXT_HANDLE);
 
-
-/*******************************************************************************************************/
-/*---	tcs_utils.c */
+/* tcs_utils.c */
 
 TSS_RESULT get_current_version(TCPA_VERSION *);
 
