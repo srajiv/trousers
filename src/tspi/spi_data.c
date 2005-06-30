@@ -266,10 +266,12 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	/* ---  If PCR's are of interest */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
-		/* XXX */
-		if ((result = generateCompositeFromTPM(tcsContext,
-						   &pcrSelect,
-						   &digAtCreation)))
+		if ((result = obj_pcrs_get_composite(hPcrComposite,
+						&digAtCreation)))
+			return result;
+
+		if ((result = obj_pcrs_get_selection(hPcrComposite,
+						&pcrSelect)))
 			return result;
 
 		offset = 0;
