@@ -123,11 +123,11 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,		/* in */
 	if ((result = obj_hash_get_value(hHash, &hashDataSize, &hashData)))
 		return result;
 
-	if (sigScheme == TCPA_SS_RSASSAPKCS1v15_SHA1) {
+	if (sigScheme == TSS_SS_RSASSAPKCS1V15_SHA1) {
 		result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
 				pubKey, pubKeySize,
 				rgbSignature, ulSignatureLength);
-	} else if (sigScheme == TCPA_SS_RSASSAPKCS1v15_DER) {
+	} else if (sigScheme == TSS_SS_RSASSAPKCS1V15_DER) {
 		result = Trspi_Verify(TSS_HASH_OTHER, hashData, hashDataSize,
 				pubKey, pubKeySize,
 				rgbSignature, ulSignatureLength);
