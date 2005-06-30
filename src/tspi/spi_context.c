@@ -914,16 +914,29 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		offset = 0;
 		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob,
 				&keyContainer);
-		if (keyContainer.pubKey.keyLength == 0x100)
-			flag |= TSS_KEY_SIZE_2048;
-		else if (keyContainer.pubKey.keyLength == 0x80)
-			flag |= TSS_KEY_SIZE_1024;
-		else if (keyContainer.pubKey.keyLength == 0x40)
-			flag |= TSS_KEY_SIZE_512;
-		else {
-			LogError1("Key was not a known keylength.");
-			free_tspi(tspContext, keyBlob);
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+		switch (keyContainer.pubKey.keyLength) {
+			case 2048:
+				flag |= TSS_KEY_SIZE_16384;
+				break;
+			case 1024:
+				flag |= TSS_KEY_SIZE_8192;
+				break;
+			case 512:
+				flag |= TSS_KEY_SIZE_4096;
+				break;
+			case 256:
+				flag |= TSS_KEY_SIZE_2048;
+				break;
+			case 128:
+				flag |= TSS_KEY_SIZE_1024;
+				break;
+			case 64:
+				flag |= TSS_KEY_SIZE_512;
+				break;
+			default:
+				LogError1("Key was not a known keylength.");
+				free(keyBlob);
+				return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		if (keyContainer.keyUsage == TPM_KEY_SIGNING)
@@ -962,16 +975,17 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 
 		/* ---  Create a new Key Object */
 		if ((result = obj_rsakey_add(tspContext, flag, &keyOutHandle))) {
-			Tspi_Context_FreeMemory(tspContext, keyBlob);
+			free(keyBlob);
 			return result;
 		}
 		/* ---  Stick the info into this net KeyObject */
 		if ((result = obj_rsakey_set_tcpakey(keyOutHandle,
 						 keyBlobSize, keyBlob))) {
-			free_tspi(tspContext, keyBlob);
+			free(keyBlob);
 			return result;
 		}
 
+		free(keyBlob);
 		*phKey = keyOutHandle;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		return TSPERR(TSS_E_NOTIMPL);	/* TODO */
