@@ -446,8 +446,6 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	BYTE *endorsementKey;
 	TCPA_KEY dummyKey;
 	UINT16 offset;
-	BYTE *random;
-	BYTE randomSeed[20];
 	TCPA_SECRET ownerSecret;
 	TCPA_SECRET srkSecret;
 	BYTE hashblob[1024];
