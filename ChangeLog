@@ -1,4 +1,6 @@
 
+ - added #includes in readpass.c to get rid of compile errors.
+   (thanks Emily).
  - Fixed popup secret handling. Bug #1194607 closed.
  - Fixed up the LogBlobData functions, no more strcat. Bug #1221974
    closed.
