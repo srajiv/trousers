@@ -1276,6 +1276,21 @@ getRegisteredUuidByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
         return ret;
 }
 
+TSS_RESULT
+getRegisteredKeyByPub(TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **key)
+{
+        int fd = -1;
+	TSS_RESULT ret;
+
+        if ((fd = get_file()) < 0)
+                return TCSERR(TSS_E_INTERNAL_ERROR);
+
+        ret = ps_get_key_by_pub(fd, pub, size, key);
+
+        put_file(fd);
+        return ret;
+}
+
 TSS_BOOL
 isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 {
