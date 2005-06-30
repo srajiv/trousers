@@ -42,7 +42,7 @@ TSS_RESULT	   ps_get_tpm_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCPA_KEY_HANDLE
 TSS_RESULT	   ps_get_tcs_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE *);
 TSS_RESULT	   ps_get_parent_tcs_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE *);
 TCPA_STORE_PUBKEY *ps_get_pub_by_tcs_handle(int, TCS_KEY_HANDLE);
-TSS_RESULT	   ps_get_key_by_pub(int, TCPA_STORE_PUBKEY *, TCPA_KEY **);
+TSS_RESULT	   ps_get_key_by_pub(int, TCPA_STORE_PUBKEY *, UINT32 *, BYTE **);
 TSS_RESULT	   removeRegisteredKey(TSS_UUID *);
 int		   init_disk_cache(int fd);
 int		   close_disk_cache(int fd);
