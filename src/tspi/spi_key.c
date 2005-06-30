@@ -23,7 +23,7 @@
 #include "obj.h"
 
 TSS_RESULT
-Tspi_Key_UnloadKey(TSS_HKEY hKey)	/*  in */
+Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 {
 	TSS_HCONTEXT tcsContext;
 	TSS_RESULT result;
@@ -35,8 +35,8 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/*  in */
 }
 
 TSS_RESULT
-Tspi_Key_LoadKey(TSS_HKEY hKey,			/*  in */
-		 TSS_HKEY hUnwrappingKey	/*  in */
+Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
+		 TSS_HKEY hUnwrappingKey	/* in */
     )
 {
 
@@ -88,12 +88,12 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/*  in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_LoadKeyByBlob(tcsContext,	/*  in */
-					parentTCSKeyHandle,	/* hUnwrappingKey,          // in */
-					keySize,	/*  in */
-					keyBlob,	/*  in */
-					pAuth,	/* &auth,                // in, out */
-					&phKey,	/*   this may change.....what to do with the handle? */
+	if ((result = TCSP_LoadKeyByBlob(tcsContext,
+					parentTCSKeyHandle,
+					keySize,
+					keyBlob,
+					pAuth,
+					&phKey,
 					&keyslot)))
 		return result;
 
@@ -107,18 +107,6 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/*  in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth)))
 			return result;
 	}
-#if 0
-	else {
-		if (result = TCSP_LoadKeyByBlob(tcsContext,	// in
-						parentTCSKeyHandle,	//hUnwrappingKey,           // in
-						keySize,	// in
-						keyBlob,	// in
-						NULL,	// in, out
-						&phKey,	//  this may change.....what to do with the handle?
-						&keyslot))
-			return result;
-	}
-#endif
 
 	LogDebug1("Adding key to table");
 	addKeyHandle(phKey, hKey);
@@ -171,12 +159,11 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_GetPubKey(tcsContext,	/*  in */
-				    tcsKeyHandle,	/* hKey,                          // in */
-				    pAuth,	/* &auth,                        // in, out */
-				    pulPubKeyLength,	/*  out */
-				    prgbPubKey	/*  out */
-	    )))
+	if ((result = TCSP_GetPubKey(tcsContext,
+				    tcsKeyHandle,
+				    pAuth,
+				    pulPubKeyLength,
+				    prgbPubKey)))
 		return result;
 
 	if (usesAuth) {
@@ -201,9 +188,9 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 }
 
 TSS_RESULT
-Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
-		    TSS_HKEY hCertifyingKey,	/*  in */
-		    TSS_VALIDATION * pValidationData	/*  in, out */
+Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
+		    TSS_HKEY hCertifyingKey,		/* in */
+		    TSS_VALIDATION * pValidationData	/* in, out */
     )
 {
 
@@ -212,7 +199,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	TPM_AUTH certAuth;
 	TPM_AUTH keyAuth;
 	UINT16 offset = 0;
-	BYTE *hashBlob;
+	BYTE hashBlob[1024];
 	TCPA_DIGEST hash;
 	TCPA_NONCE antiReplay;
 	UINT32 CertifyInfoSize;
@@ -228,8 +215,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	TCPA_KEY keyContainer;
 	TSS_BOOL useAuthCert;
 	TSS_BOOL useAuthKey;
-	void *pCertAuth = &certAuth;
-	void *pKeyAuth = &keyAuth;
+	TPM_AUTH *pCertAuth = &certAuth;
+	TPM_AUTH *pKeyAuth = &keyAuth;
 	TSS_HCONTEXT tspContext;
 
 
@@ -260,7 +247,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 
 	if (verifyInternally) {
 		LogDebug1("Internal Verify");
-		memset(antiReplay.nonce, 0xBB, 20);	/* change to random */
+		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
+			return result;
 	} else {
 		LogDebug1("External Verify");
 		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
@@ -271,22 +259,12 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 
 	/* ===  now setup the auth's */
 	if (useAuthCert || useAuthKey) {
-		hashBlob = malloc(24);
-		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 24);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifyKey, hashBlob);
 		Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
-		free(hashBlob);
 	}
-#if 0
-	else {
-		pKeyAuth = pCertAuth = NULL;
-	}
-#endif
+
 	if (useAuthKey) {
 		if ((result = secret_PerformAuth_OIAP(hPolicy, &hash, &keyAuth)))
 			return result;
@@ -302,17 +280,16 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	} else
 		pCertAuth = NULL;
 
-	if ((result = TCSP_CertifyKey(tcsContext,	/*  in */
-				     certifyTCSKeyHandle,	/* hCertifyingKey,                 // in */
-				     keyTCSKeyHandle,	/* hKey,                       // in */
-				     antiReplay,	/*  in */
-				     pCertAuth,	/* &certAuth,                        // in, out */
-				     pKeyAuth,	/* &keyAuth,                          // in, out */
-				     &CertifyInfoSize,	/*  out */
-				     &CertifyInfo,	/*  out */
-				     &outDataSize,	/*  out  data signature */
-				     &outData	/*  out */
-				))) {
+	if ((result = TCSP_CertifyKey(tcsContext,
+				     certifyTCSKeyHandle,
+				     keyTCSKeyHandle,
+				     antiReplay,
+				     pCertAuth,
+				     pKeyAuth,
+				     &CertifyInfoSize,
+				     &CertifyInfo,
+				     &outDataSize,
+				     &outData))) {
 		if (useAuthKey)
 			TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 		if (useAuthCert)
@@ -324,18 +301,12 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,	/*  in */
 	/*      validate auth */
 	if (useAuthCert || useAuthKey) {
 		offset = 0;
-		hashBlob = malloc(1024);
-		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 1024);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifyKey, hashBlob);
 		Trspi_LoadBlob(&offset, CertifyInfoSize, hashBlob, CertifyInfo);
 		Trspi_LoadBlob_UINT32(&offset, outDataSize, hashBlob);
 		Trspi_LoadBlob(&offset, outDataSize, hashBlob, outData);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
-		free(hashBlob);
 		if (useAuthKey) {
 			if ((result = obj_policy_validate_auth_oiap(hPolicy, &hash, &keyAuth))) {
 				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
@@ -575,10 +546,8 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 
 	/* ---  Complete the Auth Structure */
 	if ((result = secret_PerformAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy, hKey,
-				    sharedSecret, &auth, digest.digest, &nonceEvenOSAP))) {
-		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
+				    sharedSecret, &auth, digest.digest, &nonceEvenOSAP)))
 		return result;
-	}
 
 	/* ---  Now call the function */
 	if ((result = TCSP_CreateWrapKey(tcsContext,
@@ -587,10 +556,8 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 					encAuthMig,
 					keySize,
 					keyBlob,
-					&newKeySize, &newKey, &auth))) {
-		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
+					&newKeySize, &newKey, &auth)))
 		return result;
-	}
 
 	/* ---  Validate the Authorization before using the new key */
 	offset = 0;
@@ -600,7 +567,6 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 	if ((result = secret_ValidateAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
 				     sharedSecret, &auth, digest.digest, &nonceEvenOSAP))) {
-		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
 		free(newKey);
 		return result;
 	}
@@ -613,7 +579,6 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 #else
 	if ((result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey))) {
 #endif
-		TCSP_TerminateHandle(hWrapPolicy, auth.AuthHandle);
 		free(newKey);
 		return result;
 	}
