@@ -1044,16 +1044,15 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 }
 
 TSS_RESULT
-TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/* in */
+TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,
+					   TCPA_ALGORITHM_ID algID,	/* in */
 					   UINT32 ulPublicInfoLength,	/* in */
 					   BYTE * rgbPublicInfo,	/* in */
-					   UINT32 * keySize, BYTE ** keyBlob)
+					   UINT32 * keySize,		/* out */
+					   BYTE ** keyBlob)		/* out */
 {
 	TCPA_STORE_PUBKEY pubKey;
-	UINT16 keyContainerSize;
-	BYTE keyContainer[1024];
-	TSS_RESULT result = TSS_SUCCESS;
-	TSS_UUID *uuid;
+	TSS_RESULT result = TCSERR(TSS_E_FAIL);
 
 	if ((result = ctx_verify_context(tcsContext)))
 		return result;
@@ -1069,28 +1068,10 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_A
 			memcpy(pubKey.key, rgbPublicInfo, pubKey.keyLength);
 		}
 
-		/*---	Get the UUID from the Registered File */
-		result = getRegisteredUuidByPub(&pubKey, &uuid);
-		free(pubKey.key);
-		if (result)
+		if ((result = getRegisteredKeyByPub(&pubKey, keySize, keyBlob))) {
+			LogDebug1("Public key data not found in PS");
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
-
-		/*---	Use the UUID to get the Key */
-		keyContainerSize = sizeof (keyContainer);
-		if ((result = getRegisteredKeyByUUID(uuid, keyContainer, &keyContainerSize)))
-			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
-
-		/*--	Put it in the output parm's */
-		*keySize = keyContainerSize;
-		*keyBlob = getSomeMemory(*keySize, tcsContext);
-		if (*keyBlob == NULL) {
-			LogError("malloc of %d bytes failed.", *keySize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			memcpy(*keyBlob, keyContainer, *keySize);
 		}
-	} else {
-		return TCSERR(TSS_E_FAIL);	/*don't know how to support yet */
 	}
 
 	return result;
