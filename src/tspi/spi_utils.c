@@ -429,7 +429,7 @@ init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
 	}
 
 	if ((select->pcrSelect = calloc_tspi(obj_lookupTspContext(tcsContext),
-						num / 8))) {
+						num / 8)) == NULL) {
 		LogError("malloc of %d bytes failed.", num / 8);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
