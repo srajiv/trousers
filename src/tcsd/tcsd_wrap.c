@@ -3555,6 +3555,73 @@ tcs_wrap_CertifyKey(struct tcsd_thread_data *data,
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
+				      struct tsp_packet *tsp_data,
+				      struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_RESULT result;
+	UINT32 algId, ulPublicInfoLength, keySize;
+	BYTE *rgbPublicInfo, *keyBlob;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &algId, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &ulPublicInfoLength, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	rgbPublicInfo = (BYTE *) calloc(1, ulPublicInfoLength);
+	if (rgbPublicInfo == NULL) {
+		LogError("malloc of %d bytes failed.", ulPublicInfoLength);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicInfo, ulPublicInfoLength, tsp_data)) {
+		free(rgbPublicInfo);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = TCSP_GetRegisteredKeyByPublicInfo_Internal(hContext, algId,
+			ulPublicInfoLength, rgbPublicInfo, &keySize, &keyBlob);
+
+	free(rgbPublicInfo);
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(UINT32) + keySize);
+		if (*hdr == NULL) {
+			free(keyBlob);
+			LogError("malloc of %d bytes failed.", size +
+						sizeof(UINT32) + keySize);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &keySize, 0, *hdr)) {
+			free(*hdr);
+			free(keyBlob);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, keyBlob, keySize, *hdr)) {
+			free(*hdr);
+			free(keyBlob);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		free(keyBlob);
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+
+	return TSS_SUCCESS;
+}
+
 
 /* -------------------- */
 /*	Dispatch	*/
@@ -3577,7 +3644,7 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_EnumRegisteredKeys}, /*  7  Seiji Munetoh Added */
 	{tcs_wrap_Error}, /*  8 */
 	{tcs_wrap_GetRegisteredKeyBlob}, /*  9 */
-	{tcs_wrap_Error}, /* 10 */
+	{tcs_wrap_GetRegisteredKeyByPublicInfo}, /* 10 */
 	{tcs_wrap_LoadKeyByBlob}, /* 11 */
 	{tcs_wrap_LoadKeyByUUID}, /* 12 */
 	{tcs_wrap_EvictKey}, /* 13 */
