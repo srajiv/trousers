@@ -1,4 +1,6 @@
 
+ - Implemented the guts of Tspi_Key_CertifyKey, which now works
+   in at least the case where both keys passed in are authless.
  - in obj_rsakey_set_es/ss, added mapping from TCPA numbers
    to TSS numbers and vice versa.
  - added #includes in readpass.c to get rid of compile errors.
