@@ -1585,12 +1585,6 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (certAuth && certAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(certAuth->AuthHandle);
-
-	if (keyAuth && keyAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(keyAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
 					&certifyContainer);
@@ -1614,16 +1608,11 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		if (certAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, certAuth);
-			if (result)
-				auth_mgr_release_auth(certAuth->AuthHandle);
 		}
 		if (keyAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, keyAuth);
-			if (result)
-				auth_mgr_release_auth(keyAuth->AuthHandle);
 		}
 	}
-/*	AppendAudit(0, TPM_ORD_CertifyKey, result); */
 	LogResult("Certify Key", result);
 	return result;
 }
