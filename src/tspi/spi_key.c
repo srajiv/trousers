@@ -25,13 +25,17 @@
 TSS_RESULT
 Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 {
+	TCS_KEY_HANDLE hTcsKey;
 	TSS_HCONTEXT tcsContext;
 	TSS_RESULT result;
 
 	if ((result = obj_rsakey_is_connected(hKey, &tcsContext)))
 		return result;
 
-	return TSPERR(TSS_E_NOTIMPL);
+	if ((hTcsKey = getTCSKeyHandle(hKey)) == NULL_HKEY)
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
+
+	return TCSP_EvictKey(tcsContext, hTcsKey);
 }
 
 TSS_RESULT
