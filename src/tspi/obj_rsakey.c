@@ -423,7 +423,22 @@ obj_rsakey_get_es(TSS_HKEY hKey, UINT32 *es)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*es = rsakey->tcpaKey.algorithmParms.encScheme;
+
+	/* translate TPM numbers to TSS numbers */
+	switch (rsakey->tcpaKey.algorithmParms.encScheme) {
+		case TCPA_ES_NONE:
+			*es = TSS_ES_NONE;
+			break;
+		case TCPA_ES_RSAESPKCSv15:
+			*es = TSS_ES_RSAESPKCSV15;
+			break;
+		case TCPA_ES_RSAESOAEP_SHA1_MGF1:
+			*es = TSS_ES_RSAESOAEP_SHA1_MGF1;
+			break;
+		default:
+			*es = rsakey->tcpaKey.algorithmParms.encScheme;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
@@ -441,7 +456,21 @@ obj_rsakey_set_es(TSS_HKEY hKey, UINT32 es)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	rsakey->tcpaKey.algorithmParms.encScheme = es;
+	/* translate TSS numbers to TPM numbers */
+	switch (es) {
+		case TSS_ES_NONE:
+			rsakey->tcpaKey.algorithmParms.encScheme = TCPA_ES_NONE;
+			break;
+		case TSS_ES_RSAESPKCSV15:
+			rsakey->tcpaKey.algorithmParms.encScheme = TCPA_ES_RSAESPKCSv15;
+			break;
+		case TSS_ES_RSAESOAEP_SHA1_MGF1:
+			rsakey->tcpaKey.algorithmParms.encScheme = TCPA_ES_RSAESOAEP_SHA1_MGF1;
+			break;
+		default:
+			rsakey->tcpaKey.algorithmParms.encScheme = es;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
@@ -458,7 +487,23 @@ obj_rsakey_get_ss(TSS_HKEY hKey, UINT32 *ss)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*ss = rsakey->tcpaKey.algorithmParms.sigScheme;
+
+	/* translate TPM numbers to TSS numbers */
+	switch (rsakey->tcpaKey.algorithmParms.sigScheme) {
+		case TCPA_SS_NONE:
+			*ss = TSS_SS_NONE;
+			break;
+		case TCPA_SS_RSASSAPKCS1v15_SHA1:
+			*ss = TSS_SS_RSASSAPKCS1V15_SHA1;
+			break;
+		case TCPA_SS_RSASSAPKCS1v15_DER:
+			*ss = TSS_SS_RSASSAPKCS1V15_DER;
+			break;
+		default:
+			*ss = rsakey->tcpaKey.algorithmParms.sigScheme;
+			break;
+	}
+
 
 	obj_list_put(&rsakey_list);
 
@@ -476,7 +521,21 @@ obj_rsakey_set_ss(TSS_HKEY hKey, UINT32 ss)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	rsakey->tcpaKey.algorithmParms.sigScheme = ss;
+	/* translate TSS numbers to TPM numbers */
+	switch (ss) {
+		case TSS_SS_NONE:
+			rsakey->tcpaKey.algorithmParms.sigScheme = TCPA_SS_NONE;
+			break;
+		case TSS_SS_RSASSAPKCS1V15_SHA1:
+			rsakey->tcpaKey.algorithmParms.sigScheme = TCPA_SS_RSASSAPKCS1v15_SHA1;
+			break;
+		case TSS_SS_RSASSAPKCS1V15_DER:
+			rsakey->tcpaKey.algorithmParms.sigScheme = TCPA_SS_RSASSAPKCS1v15_DER;
+			break;
+		default:
+			rsakey->tcpaKey.algorithmParms.sigScheme = ss;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
