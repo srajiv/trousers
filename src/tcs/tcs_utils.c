@@ -458,8 +458,7 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 	UINT32 respDataSize = 0;
 	TCPA_CAPABILITY_AREA capArea = -1;
 	UINT16 offset = 0;
-	TSS_BOOL found = 0;
-	TSS_BOOL ret = FALSE;
+	TSS_BOOL found = FALSE;
 	struct key_mem_cache *tmp;
 
 	capArea = TCPA_CAP_KEY_HANDLE;
@@ -471,18 +470,32 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 	if ((result = UnloadBlob_KEY_HANDLE_LIST(&offset, respData, &keyList)))
 		return result;
 
+#ifdef TSS_DEBUG
+	LogDebug1("Loaded TPM key handles:");
 	for (i = 0; i < keyList.loaded; i++) {
-		/* as long as we're only called from evictFirstKey(), we don't need to lock here */
+		LogDebug("%d: %x", i, keyList.handle[i]);
+	}
+
+	LogDebug1("Loaded TCSD key handles:");
+	i=0;
+	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
+		LogDebug("%d: %x", i, tmp->tpm_handle);
+		i++;
+	}
+#endif
+
+	for (i = 0; i < keyList.loaded; i++) {
+		/* as long as we're only called from evictFirstKey(), we don't
+		 * need to lock here */
 		for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 			if (tmp->tpm_handle == keyList.handle[i]) {
-				found = 1;
+				found = TRUE;
 				break;
 			}
 		}
 		if (found)
-			found = 0;
+			found = FALSE;
 		else {
-			ret = 1;
 			if ((result = internal_EvictByKeySlot(keyList.handle[i])))
 				return result;
 		}
