@@ -1,4 +1,7 @@
 
+* TROUSERS_0_2_0
+
+ - removed unused code and added debugging in clearUnusedKeys().
  - Updated README with info on the 2.6.12 kernel device driver.
  - fixed bug in calculating pcr select size
  - fixed bug in init'ing PCRS, spi_utils.c:431
