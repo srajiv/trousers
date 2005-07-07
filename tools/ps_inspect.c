@@ -34,8 +34,6 @@
  * [BYTE[]   vendor_data0           ]
  * [...]
  *
- * In B, version must be > 0.
- *
  */
 
 
@@ -47,7 +45,7 @@
 #include <trousers/tss.h>
 
 #define PRINTERR(...)	fprintf(stderr, ##__VA_ARGS__)
-#define PRINT		printf
+#define PRINT(...)	printf("PS " __VA_ARGS__)
 
 /* any number of keys found that's greater than MAX_NUM_LIKELY_KEYS
  * will trigger some logic
@@ -82,8 +80,8 @@ version_0_print(FILE *f)
 	int i, rc;
 	UINT32 *u32 = (UINT32 *)buf;
 
-	PRINT("PS version:        0\n");
-	PRINT("PS number of keys: %u\n", *u32);
+	PRINT("version:        0\n");
+	PRINT("number of keys: %u\n", *u32);
 
 	for (i = 0; (UINT32)i < *u32; i++) {
 		if ((rc = printkey_0(i, f)))
@@ -99,8 +97,8 @@ version_1_print(FILE *f)
 	int i, rc;
 	UINT32 *u32 = (UINT32 *)&buf[1];
 
-	PRINT("PS version:        1\n");
-	PRINT("PS number of keys: %u\n", *u32);
+	PRINT("version:        1\n");
+	PRINT("number of keys: %u\n", *u32);
 
 	for (i = 0; (UINT32)i < *u32; i++) {
 		if ((rc = printkey_1(i, f)))
@@ -115,15 +113,21 @@ inspect(FILE *f)
 {
 	int members = 0;
 	UINT32 *num_keys;
+	TSS_UUID SRK_UUID = TSS_UUID_SRK;
 
-	if ((members = fread(buf, 5, 1, f)) != 1) {
-		PRINTERR("fread: %s", strerror(errno));
+	/* do the initial read, which should include sizeof(TSS_UUID)
+	 * + sizeof(UINT32) + 1 bytes */
+	if ((members = fread(buf, 21, 1, f)) != 1) {
+		PRINTERR("fread: %s\n", strerror(errno));
 		return -1;
 	}
 
 	if (buf[0] == '\1') {
 		num_keys = (UINT32 *)&buf[1];
-		if (*num_keys == 0 || *num_keys > MAX_NUM_LIKELY_KEYS)
+		if (*num_keys == 0)
+			goto version0;
+
+		if (memcmp(&buf[5], &SRK_UUID, sizeof(TSS_UUID)))
 			goto version0;
 
 		return version_1_print(f);
@@ -143,9 +147,11 @@ main(int argc, char ** argv)
 		usage(argv[0]);
 
 	if ((f = fopen(argv[1], "r")) == NULL) {
-		PRINTERR("fopen: %s", strerror(errno));
+		PRINTERR("fopen(%s): %s\n", argv[1], strerror(errno));
 		return -1;
 	}
+
+	PRINT("filename: %s\n", argv[1]);
 
 	rc = inspect(f);
 
