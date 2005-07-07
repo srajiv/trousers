@@ -39,8 +39,6 @@
  */
 
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -69,11 +67,13 @@ usage(char *argv0)
 int
 printkey_0(int num, FILE *f)
 {
+	return 0;
 }
 
 int
 printkey_1(int num, FILE *f)
 {
+	return 0;
 }
 
 int
@@ -85,8 +85,8 @@ version_0_print(FILE *f)
 	PRINT("PS version:        0\n");
 	PRINT("PS number of keys: %u\n", *u32);
 
-	for (i = 0; i < *u32; i++) {
-		if (rc = printkey_0(i, f))
+	for (i = 0; (UINT32)i < *u32; i++) {
+		if ((rc = printkey_0(i, f)))
 			return rc;
 	}
 
@@ -102,8 +102,8 @@ version_1_print(FILE *f)
 	PRINT("PS version:        1\n");
 	PRINT("PS number of keys: %u\n", *u32);
 
-	for (i = 0; i < *u32; i++) {
-		if (rc = printkey_1(i, f))
+	for (i = 0; (UINT32)i < *u32; i++) {
+		if ((rc = printkey_1(i, f)))
 			return rc;
 	}
 
