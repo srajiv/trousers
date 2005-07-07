@@ -1,1 +1,1 @@
-SUBDIRS = src man dist
+SUBDIRS = src man dist tools
