@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
+#include "tsplog.h"
 
 /*
  * LogBlobData()
@@ -30,16 +30,20 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	char temp[64];
 	int i;
 
-	openlog(szDescriptor, LOG_NDELAY|LOG_PID, LOG_LOCAL5);
+#ifndef TSS_DEBUG
+#error Logging data to stdout in non-debugging context!
+#endif
+
 	memset(temp, 0, sizeof(temp));
 
 	for (i = 0; (unsigned long)i < sizeOfBlob; i++) {
 		if ((i > 0) && ((i % 16) == 0))	{
-			syslog(LOG_DEBUG, temp);
+			fprintf(stdout, "%s\n", temp);
 			memset(temp, 0, sizeof(temp));
 		}
 		snprintf(&temp[(i%16)*3], 4, "%.2X ", blob[i]);
 	}
+	fprintf(stdout, "%s\n", temp);
 }
 
 
