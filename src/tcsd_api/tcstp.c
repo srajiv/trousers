@@ -191,7 +191,6 @@ sendTCSDPacket(struct host_table_entry *hte,
 	UINT16 offset = 0;
 	struct tcsd_packet_hdr *tmp_hdr;
 
-	LogDebug1("sendTCSDPacket");
 	Trspi_LoadBlob_UINT32(&offset, dataToSend->ordinal, transmitBuffer);
 	offset += sizeof(UINT32);		/* skip the size */
 	Trspi_LoadBlob_UINT16(&offset, dataToSend->numParms, transmitBuffer);

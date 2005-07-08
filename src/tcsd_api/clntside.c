@@ -177,8 +177,6 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 	int returnSize, sent_total = 0, sent = 0, recd_total = 0, recd = 0;
 	TSS_RESULT result;
 
-	LogDebug1("Sending Packet");
-
 	while (sent_total < dataLength) {
 		if ((sent = send(hte->socket, &data[sent_total], (dataLength - sent_total), 0)) < 0) {
 			LogError("send: %s", strerror(errno));
