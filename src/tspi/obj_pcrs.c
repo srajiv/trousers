@@ -295,6 +295,21 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 		}
 	}
 
+#ifdef TSS_DEBUG
+	{
+		int i;
+		for (i = 0; i < pcrs->select.sizeOfSelect * 8; i++) {
+			if (pcrs->select.pcrSelect[i/8] & (1 << (i % 8))) {
+				LogDebug("PCR%d: Selected", i);
+				LogBlobData(APPID, TCPA_SHA1_160_HASH_LEN,
+					    (unsigned char *)&pcrs->pcrs[i]);
+			} else {
+				LogDebug("PCR%d: Not Selected", i);
+			}
+		}
+	}
+#endif
+
 	result = calcCompositeHash(&pcrs->select, pcrs->pcrs, comp);
 
 done:
