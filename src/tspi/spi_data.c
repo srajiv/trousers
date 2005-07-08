@@ -274,6 +274,11 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 						&pcrSelect)))
 			return result;
 
+		LogDebug1("Digest at Creation:");
+		LogBlobData(APPID, sizeof(digAtCreation), &digAtCreation);
+
+		//reverse_byte_order(pcrSelect.pcrSelect, pcrSelect.sizeOfSelect);
+
 		offset = 0;
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
