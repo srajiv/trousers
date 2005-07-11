@@ -1,6 +1,6 @@
 
  - modified calcCompositeHash for accepting incomplete pcr
-   select structures.
+   select structures & to fill out the structure correctly.
 
 * TROUSERS_0_2_0
 
