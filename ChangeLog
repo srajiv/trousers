@@ -1,4 +1,7 @@
 
+ - modified calcCompositeHash for accepting incomplete pcr
+   select structures.
+
 * TROUSERS_0_2_0
 
  - removed unused code and added debugging in clearUnusedKeys().
