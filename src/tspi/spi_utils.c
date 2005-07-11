@@ -394,24 +394,29 @@ calcCompositeHash(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_
 	UINT16 offset = 0;
 	UINT16 sizeOffset = 0;
 
-	sizeOffset = 0;
-	Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, temp, select);
-	offset = sizeOffset + 4;
+	if (select->sizeOfSelect > 0) {
+		sizeOffset = 0;
+		Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, temp, select);
+		offset = sizeOffset + 4;
 
-	for (size = 0; size < select->sizeOfSelect; size++) {
-		for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
-			if (select->pcrSelect[size] & mask) {
-				memcpy(&temp[(numPCRs * 20) + offset],
-				       arrayOfPcrs[numPCRs].digest, 20);
-				numPCRs++;
+		for (size = 0; size < select->sizeOfSelect; size++) {
+			for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
+				if (select->pcrSelect[size] & mask) {
+					memcpy(&temp[(numPCRs * 20) + offset],
+							arrayOfPcrs[numPCRs].digest, 20);
+					numPCRs++;
+				}
 			}
+		}
+
+		if (numPCRs > 0) {
+			offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
+			UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &temp[sizeOffset]);
+
+			Trspi_Hash(TSS_HASH_SHA1, offset, temp, digestOut->digest);
 		}
 	}
 
-	offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
-	UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &temp[sizeOffset]);
-
-	Trspi_Hash(TSS_HASH_SHA1, offset, temp, digestOut->digest);
 	return TSS_SUCCESS;
 }
 
