@@ -403,7 +403,8 @@ calcCompositeHash(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_
 			for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
 				if (select->pcrSelect[size] & mask) {
 					memcpy(&temp[(numPCRs * 20) + offset],
-							arrayOfPcrs[numPCRs].digest, 20);
+					       arrayOfPcrs[index + (size * 8)].digest,
+					       20);
 					numPCRs++;
 				}
 			}
@@ -807,4 +808,3 @@ Spi_UnloadBlob_KEY(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 
 	return result;
 }
-
