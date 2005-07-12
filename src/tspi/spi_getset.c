@@ -74,9 +74,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	if (!obj_is_rsakey(hParentPolicy))
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
 	if (obj_is_tpm(hObjectToChange)) {/*  if TPM Owner Auth change */
 		/* get the owner policy */
 		if ((result = obj_tpm_get_policy(hObjectToChange, &hPolicy)))
