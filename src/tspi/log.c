@@ -13,6 +13,8 @@
 #include <string.h>
 #include "tsplog.h"
 
+#ifdef TSS_DEBUG
+
 /*
  * LogBlobData()
  *
@@ -24,15 +26,12 @@
  *
  */
 
+
 void
 LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 {
 	char temp[64];
 	int i;
-
-#ifndef TSS_DEBUG
-#error Logging data to stdout in non-debugging context!
-#endif
 
 	memset(temp, 0, sizeof(temp));
 
@@ -46,4 +45,4 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	fprintf(stdout, "%s\n", temp);
 }
 
-
+#endif
