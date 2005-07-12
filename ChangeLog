@@ -1,4 +1,7 @@
 
+ - fixed bug in Tspi_ChangeAuth where parent object was
+   assumed to be an rsakey.
+ - fixed debug logging of data.
  - modified calcCompositeHash for accepting incomplete pcr
    select structures & to fill out the structure correctly.
 
