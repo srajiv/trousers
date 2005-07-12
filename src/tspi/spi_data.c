@@ -275,7 +275,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 			return result;
 
 		LogDebug1("Digest at Creation:");
-		LogBlobData(APPID, sizeof(digAtCreation), (BYTE *)&digAtCreation);
+		LogDebugData(sizeof(digAtCreation), (BYTE *)&digAtCreation);
 
 		offset = 0;
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
