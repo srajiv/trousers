@@ -1,4 +1,5 @@
 
+ - added 64bit stuff to configure.in
  - fixed bug in Tspi_ChangeAuth where parent object was
    assumed to be an rsakey.
  - fixed debug logging of data.
