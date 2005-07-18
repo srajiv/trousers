@@ -72,7 +72,8 @@ add_table_entry(struct host_table_entry *entry, TCS_CONTEXT_HANDLE tcsContext)
 
 	for (hte = ht->entries; hte; hte = hte->next) {
 		if (hte->tcsContext == tcsContext) {
-			LogError("Tspi_Context_Connect() attempted on an already connected context!");
+			LogError1("Tspi_Context_Connect() attempted on an "
+					"already connected context!");
 			return TSPERR(TSS_E_CONNECTION_FAILED);
 		}
 	}
@@ -102,6 +103,8 @@ remove_table_entry(TCS_CONTEXT_HANDLE tcsContext)
 		if (hte->tcsContext == tcsContext) {
 			if (prev != NULL)
 				prev->next = hte->next;
+			else
+				ht->entries = NULL;
 			free(hte);
 			break;
 		}
