@@ -1,4 +1,6 @@
 
+ - Bugfix in remove_table_entry. Host table head was left
+   pointing at free'd memory.
  - corrected comment in spi_context.c.
  - added 64bit stuff to configure.in
  - fixed bug in Tspi_ChangeAuth where parent object was
