@@ -78,7 +78,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
 
 	/* see if we've already called connect with this context */
 	if ((result = obj_context_is_connected(tspContext, &tcsHandle)) == TSS_SUCCESS) {
-		LogError("attempted to call %s on an already connected"
+		LogError("attempted to call %s on an already connected "
 			 "context!", __FUNCTION__);
 		return TSPERR(TSS_E_CONNECTION_FAILED);
 	} else if (result != TSPERR(TSS_E_NO_CONNECTION))
