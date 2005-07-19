@@ -529,10 +529,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	}
 
 	if ((result = secret_PerformAuth_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
-				    sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP))) {
-		TCSP_TerminateHandle(tcsContext, srkAuth.AuthHandle);
+				    sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP)))
 		return result;
-	}
 
 	LogDebug1("SM DEBUG 3");
 
@@ -725,11 +723,8 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		pIDKeyAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hTPMPolicy, &digest, &ownerAuth))) {
-		if (usesAuth == TRUE)
-			TCSP_TerminateHandle(tcsContext, idKeyAuth.AuthHandle);
+	if ((result = secret_PerformAuth_OIAP(hTPMPolicy, &digest, &ownerAuth)))
 		return result;
-	}
 
 	if ((result = TCSP_ActivateTPMIdentity(tcsContext,
 					      tcsKeyHandle,
@@ -1509,17 +1504,14 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 					      &auth, &version, pulRespDataLength,
 					      prgbRespData,
 					      &sigSize,
-					      &sig))) {
-		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
+					      &sig)))
 		return result;
-	}
 
 	/* ============validate return auth */
 	offset = 0;
 	hashBlob = malloc(20 + *pulRespDataLength + sigSize);
 	if (hashBlob == NULL) {
 		LogError("malloc of %d bytes failed.", 20 + *pulRespDataLength + sigSize);
-		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		free(sig);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -1534,7 +1526,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	free(hashBlob);
 
 	if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth))) {
-		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 		free(sig);
 		return result;
 	}
@@ -1542,7 +1533,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	if (verifyInternally) {
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
-			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			LogError1("Failed call to GetAttribData to get key blob");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1555,7 +1545,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		hashBlob = malloc(*pulRespDataLength + sizeof(TCPA_NONCE));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", *pulRespDataLength + sizeof(TCPA_NONCE));
-			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1568,7 +1557,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		if ((result = Trspi_Verify(TSS_HASH_SHA1, hashDigest.digest, 20,
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 sig, sigSize))) {
-			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
@@ -1578,7 +1566,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		pValidationData->Data = calloc_tspi(tspContext, *pulRespDataLength);
 		if (pValidationData->Data == NULL) {
 			LogError("malloc of %d bytes failed.", *pulRespDataLength);
-			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1588,7 +1575,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		pValidationData->ValidationData = calloc_tspi(tspContext, sigSize);
 		if (pValidationData->ValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", sigSize);
-			TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
 			free(sig);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1759,11 +1745,8 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 						pubKeyBlob,
 						&ownerAuth,
 						pulMigTicketLength,
-						prgbMigTicket
-	    ))) {
-		TCSP_TerminateHandle(tcsContext, ownerAuth.AuthHandle);
+						prgbMigTicket)))
 		return result;
-	}
 
 	/* ---  Validate Auth */
 	offset = 0;
@@ -1772,10 +1755,8 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	Trspi_LoadBlob(&offset, *pulMigTicketLength, hashblob, *prgbMigTicket);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth))) {
-		TCSP_TerminateHandle(tcsContext, ownerAuth.AuthHandle);
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
 		return result;
-	}
 
 	return TSS_SUCCESS;
 }
@@ -2198,21 +2179,15 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	if ((result = TCSP_DirWriteAuth(tcsContext,
 				       ulDirIndex,
 				       dirValue,
-				       &auth))) {
-		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
+				       &auth)))
 		return result;
-	}
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
-	if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth))) {
-		TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
-		return result;
-	}
-	return result;
+	return obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth);
 }
 
 TSS_RESULT
