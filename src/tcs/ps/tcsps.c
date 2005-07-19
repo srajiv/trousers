@@ -345,7 +345,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 
 		*ret_uuid == (TSS_UUID *)malloc(sizeof(TSS_UUID));
 		if (*ret_uuid == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", sizeof(TSS_UUID));
                         pthread_mutex_unlock(&disk_cache_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -465,7 +465,7 @@ ps_write_key(int fd,
 		TSS_UUID *parent_uuid,
 		UINT32 *parent_ps,
 		BYTE *key_blob,
-		UINT32 key_blob_size)
+		UINT16 key_blob_size)
 {
 	//BYTE pub_key[2048];
 	TCPA_KEY key;

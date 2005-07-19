@@ -424,7 +424,7 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
 			tmp_enc_data = (BYTE *)malloc(tmp->blob->encSize);
 			if (tmp_enc_data == NULL) {
-				LogError("malloc of %d bytes failed.", tmp->blob->encSize);
+				LogError("malloc of %u bytes failed.", tmp->blob->encSize);
 				pthread_mutex_unlock(&mem_cache_lock);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
@@ -510,7 +510,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	if (key_blob->algorithmParms.parmSize) {
 		BYTE *tmp_parms = (BYTE *)malloc(key_blob->algorithmParms.parmSize);
 		if (tmp_parms == NULL) {
-			LogError("malloc of %d bytes failed.", key_blob->algorithmParms.parmSize);
+			LogError("malloc of %u bytes failed.", key_blob->algorithmParms.parmSize);
 			free(entry->blob);
 			free(entry);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -522,7 +522,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	/* allocate space for the public key */
 	entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
 	if (entry->blob->pubKey.key == NULL) {
-		LogError("malloc of %d bytes failed.", key_blob->pubKey.keyLength);
+		LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
 		free(entry->blob);
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
@@ -533,7 +533,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	if (key_blob->encSize != 0) {
 		entry->blob->encData = (BYTE *)malloc(key_blob->encSize);
 		if (entry->blob->encData == NULL) {
-			LogError("malloc of %d bytes failed.", key_blob->encSize);
+			LogError("malloc of %u bytes failed.", key_blob->encSize);
 			free(entry->blob->pubKey.key);
 			free(entry->blob);
 			free(entry);
@@ -638,7 +638,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	if (key_blob->algorithmParms.parmSize) {
 		BYTE *tmp_parms = (BYTE *)malloc(key_blob->algorithmParms.parmSize);
 		if (tmp_parms == NULL) {
-			LogError("malloc of %d bytes failed.", key_blob->algorithmParms.parmSize);
+			LogError("malloc of %u bytes failed.", key_blob->algorithmParms.parmSize);
 			free(entry->blob);
 			free(entry);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -650,7 +650,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	/* allocate space for the public key */
 	entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
 	if (entry->blob->pubKey.key == NULL) {
-		LogError("malloc of %d bytes failed.", key_blob->pubKey.keyLength);
+		LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
 		free(entry->blob);
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
@@ -661,7 +661,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	if (key_blob->encSize != 0) {
 		entry->blob->encData = (BYTE *)malloc(key_blob->encSize);
 		if (entry->blob->encData == NULL) {
-			LogError("malloc of %d bytes failed.", key_blob->encSize);
+			LogError("malloc of %u bytes failed.", key_blob->encSize);
 			free(entry->blob->pubKey.key);
 			free(entry->blob);
 			free(entry);
@@ -1433,6 +1433,7 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *blob, UINT
         int fd = -1;
         TSS_RESULT rc;
 	UINT32 parent_ps;
+	UINT16 short_blob_size = (UINT16)blob_size;
 
         if ((fd = get_file()) < 0)
                 return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -1446,7 +1447,7 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *blob, UINT
 			return rc;
 	}
 
-        rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, blob_size);
+        rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, short_blob_size);
 
         put_file(fd);
         return TSS_SUCCESS;
