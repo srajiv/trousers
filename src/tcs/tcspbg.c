@@ -506,7 +506,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*KeySizeOut = offset - tempSize;
 		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
 		if (*KeyDataOut == NULL) {
-			LogError("malloc of %u bytes failed.", *KeyDataOut);
+			LogError("malloc of %u bytes failed.", *KeySizeOut);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*KeyDataOut, &txBlob[offset - *KeySizeOut], *KeySizeOut);
