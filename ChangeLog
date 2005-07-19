@@ -1,4 +1,7 @@
 
+ - Use @PACKAGE_BUGREPORT@ instead of a static email addr in
+   manpages.
+ - Added man page for tcsd.conf in section 5.
  - Bugfix in remove_table_entry. Host table head was left
    pointing at free'd memory.
  - corrected comment in spi_context.c.
