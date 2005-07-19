@@ -63,7 +63,7 @@ UnloadBlob_KEY_PARMS_PS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 	else {
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
-			LogError1("Malloc failure.");
+			LogError("malloc of %u bytes failed.", keyParms->parmSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 		UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms, NULL);
@@ -83,7 +83,7 @@ UnloadBlob_STORE_PUBKEY_PS(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 	} else {
 		store->key = malloc(store->keyLength);
 		if (store->key == NULL) {
-			LogError1("Malloc failure.");
+			LogError("malloc of %u bytes failed.", store->keyLength);
 			return TSS_E_OUTOFMEMORY;
 		}
 		UnloadBlob(offset, store->keyLength, blob, store->key, NULL);
@@ -112,7 +112,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 	else {
 		key->PCRInfo = malloc(key->PCRInfoSize);
 		if (key->PCRInfo == NULL) {
-			LogError1("Malloc failure.");
+			LogError("malloc of %u bytes failed.", key->PCRInfoSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 		UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, NULL);
@@ -128,7 +128,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 	else {
 		key->encData = malloc(key->encSize);
 		if (key->encData == NULL) {
-			LogError1("Malloc failure.");
+			LogError("malloc of %u bytes failed.", key->encSize);
 			return TSS_E_OUTOFMEMORY;
 		}
 		UnloadBlob(offset, key->encSize, blob, key->encData, NULL);
@@ -421,7 +421,6 @@ init_disk_cache(int fd)
 	int valid_keys = 0;
 #endif
 
-	assert(num_keys < INT_MAX);
 	pthread_mutex_lock(&disk_cache_lock);
 
 	if (num_keys == 0) {
@@ -431,7 +430,8 @@ init_disk_cache(int fd)
 	} else {
 		key_disk_cache_head = tmp = calloc(1, sizeof(struct key_disk_cache));
 		if (tmp == NULL) {
-			LogError1("Malloc failure.");
+			LogError("malloc of %d bytes failed.",
+						sizeof(struct key_disk_cache));
 			rc = -1;
 			goto err_exit;
 		}
@@ -477,7 +477,7 @@ init_disk_cache(int fd)
 			goto err_exit;
 		}
 
-		assert(tmp->pub_data_size <= 2048);
+		DBG_ASSERT(tmp->pub_data_size <= 2048 && tmp->pub_data_size > 0);
 
 		/* blob size */
 		if ((rc = read_data(fd, &tmp->blob_size, sizeof(UINT16)))) {
@@ -485,7 +485,7 @@ init_disk_cache(int fd)
 			goto err_exit;
 		}
 
-		assert(tmp->blob_size <= 4096);
+		DBG_ASSERT(tmp->blob_size <= 4096 && tmp->blob_size > 0);
 
 		/* cache flags */
 		if ((rc = read_data(fd, &tmp->flags, sizeof(UINT16)))) {
