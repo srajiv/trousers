@@ -138,7 +138,8 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (count != 0) {
 			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
 			if (ret == NULL) {
-				LogError1("Malloc Failure");
+				LogError("malloc of %d bytes failed.",
+						(count * sizeof(TSS_KM_KEYINFO)));
 				count = 0;
 				result = TCSERR(TSS_E_OUTOFMEMORY);
 				goto done;
@@ -207,7 +208,8 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (count != 0) {
 			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
 			if (ret == NULL) {
-				LogError1("Malloc Failure");
+				LogError("malloc of %d bytes failed.",
+						(count * sizeof(TSS_KM_KEYINFO)));
 				count = 0;
 				result = TCSERR(TSS_E_OUTOFMEMORY);
 				goto done;
@@ -281,7 +283,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	*ppKeyInfo = malloc(sizeof(TSS_KM_KEYINFO));
 	if (*ppKeyInfo == NULL) {
-		LogError1("Malloc Failure.");
+		LogError("malloc of %d bytes failed.", sizeof(TSS_KM_KEYINFO));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -733,9 +735,6 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (pAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pAuth->AuthHandle);
 
 	if (!result) {
 		/*===	First get the data from the packet */

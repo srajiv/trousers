@@ -123,7 +123,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*srkKeySize = offset - 10;
 		*srkKey = getSomeMemory(*srkKeySize, hContext);	/*this is that memory leak problem */
 		if (*srkKey == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *srkKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (srkKeyContainer.authDataUsage != oldAuthDataUsage) {
@@ -298,12 +298,6 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-	if (entityAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(entityAuth->AuthHandle);
-
-
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob,
 				  "out data size");
@@ -401,9 +395,6 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	AppendAudit(0, TPM_ORD_ChangeAuthOwner, result);
 	LogResult("ChangeAuthOwner", result);
 	return result;
@@ -497,7 +488,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*CertifyInfoSize = offset - 10;
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
 		if (*CertifyInfo == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*CertifyInfo, &txBlob[offset - *CertifyInfoSize],
@@ -505,7 +496,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
@@ -515,7 +506,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*KeySizeOut = offset - tempSize;
 		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
 		if (*KeyDataOut == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *KeyDataOut);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*KeyDataOut, &txBlob[offset - *KeySizeOut], *KeySizeOut);
@@ -601,7 +592,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  "outDataSize");
 		*encDataOut = getSomeMemory(*encDataSizeOut, hContext);
 		if (*encDataOut == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *encDataSizeOut);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *encDataSizeOut, txBlob,
@@ -742,12 +733,6 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (idKeyAuth && idKeyAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(idKeyAuth->AuthHandle);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		offset += 6;
 		UnloadBlob_UINT16(&offset, (UINT16 *) SymmetricKeySize,
@@ -756,7 +741,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		*SymmetricKey = getSomeMemory(*SymmetricKeySize, hContext);
 		if (*SymmetricKey == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey, "sym key");
@@ -917,22 +902,19 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp);
 		*pcrDataSizeOut = offset - 10;
 		*pcrDataOut = getSomeMemory(*pcrDataSizeOut, hContext);
 		if (*pcrDataOut == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *pcrDataSizeOut);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pcrDataOut, &txBlob[10], *pcrDataSizeOut);
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sigsize");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
@@ -981,11 +963,6 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-#if 0
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-#endif
 
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -1099,9 +1076,6 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (pubAuth && pubAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pubAuth->AuthHandle);
-
 	if (!result) {
 		TSS_RESULT tmp_result;
 		if ((tmp_result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
@@ -1110,7 +1084,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 /*		UnloadBlob_UINT32( &offset, SealedDataSize, txBlob, "sealed data size" ); */
 		*SealedData = getSomeMemory(*SealedDataSize, hContext);
 		if (*SealedData == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *SealedDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*SealedData, &txBlob[10], *SealedDataSize);
@@ -1180,17 +1154,12 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (parentAuth && parentAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(parentAuth->AuthHandle);
-	if (dataAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(dataAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_UINT32(&offset, DataSize, txBlob,
 				  "sealed data size");
 		*Data = getSomeMemory(*DataSize, hContext);
 		if (*Data == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *DataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *DataSize, txBlob, *Data, "sealed data");
@@ -1250,9 +1219,6 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "out data size");
@@ -1347,11 +1313,6 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (parentAuth && parentAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(parentAuth->AuthHandle);
-	if (entityAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(entityAuth->AuthHandle);
-
 	if (result == 0) {
 		UnloadBlob_UINT32(&offset, randomSize, txBlob, "random size");
 		*random = getSomeMemory(*randomSize, hContext);
@@ -1430,9 +1391,6 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (parentAuth && parentAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(parentAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob,
 				  "out data size");
@@ -1489,9 +1447,6 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container);
@@ -1669,9 +1624,6 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
@@ -1814,7 +1766,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		LogDebug1("TSS_TCSCAP_VERSION");
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", 4);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
@@ -1826,7 +1778,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*respSize = 1;
 		*resp = getSomeMemory(1, hContext);
 		if (*resp == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d byte failed.", 1);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		(*resp)[0] = INTERNAL_CAP_TCS_PERSSTORAGE;
@@ -1840,7 +1792,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			*respSize = 1;
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
-				LogError1("Malloc Failure.");
+				LogError("malloc of %d byte failed.", 1);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
@@ -1849,7 +1801,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			*respSize = 1;
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
-				LogError1("Malloc Failure.");
+			LogError("malloc of %d byte failed.", 1);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
@@ -1862,7 +1814,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		LogDebug1("TSS_TCSCAP_MANUFACTURER");
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", 4);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*resp, mfg, 4);
@@ -2006,22 +1958,19 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_VERSION(&offset, txBlob, Version);
 		UnloadBlob_UINT32(&offset, respSize, txBlob, "respSize");
 		*resp = getSomeMemory(*respSize, hContext);
 		if (*resp == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *respSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
@@ -2064,9 +2013,6 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (pOwnerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_VERSION(&offset, txBlob, pVersion);
@@ -2118,7 +2064,8 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*endorsementKeySize = offset - 10;
 		*endorsementKey = getSomeMemory(*endorsementKeySize, hContext);
 		if (*endorsementKey == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.",
+							 *endorsementKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*endorsementKey, &txBlob[10], *endorsementKeySize);
@@ -2164,7 +2111,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pubEndorsementKeySize = (UINT32) (offset - 10);
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
@@ -2206,9 +2153,6 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
@@ -2245,16 +2189,13 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		offset = 10;
 		UnloadBlob_PUBKEY(&offset, txBlob, &container);
 		*pubEndorsementKeySize = offset - 10;
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
@@ -2339,14 +2280,11 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", *sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
@@ -2385,7 +2323,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "data size");
 		*outData = getSomeMemory(*outDataSize, hContext);
 		if (*outData == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("malloc of %d bytes failed.", *outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *outDataSize, txBlob, *outData, "outdata");
@@ -2427,9 +2365,6 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
@@ -2465,9 +2400,6 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2505,9 +2437,6 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2737,16 +2666,14 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		offset = 10;
 		if (dataInSize != 0) {
 			UnloadBlob_UINT32(&offset, dataOutSize, txBlob, "size");
 			*dataOut = getSomeMemory(*dataOutSize, hContext);
 			if (*dataOut == NULL) {
-				LogError1("Malloc Failure.");
+				LogError("malloc of %u bytes failed.",
+								 *dataOutSize);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
@@ -2805,9 +2732,6 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (privAuth && privAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
 	if (!result) {
 		offset = 10;
 		if (privAuth != NULL)
@@ -2848,9 +2772,6 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
 		offset = 10;
@@ -2916,16 +2837,14 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-
 	if (!result) {
 		offset = 10;
 		if (dataInSize != 0) {
 			UnloadBlob_UINT32(&offset, dataOutSize, txBlob, "vendor data size");
 			*dataOut = getSomeMemory(*dataOutSize, hContext);
 			if (*dataOut == NULL) {
-				LogError1("Malloc Failure.");
+				LogError("malloc of %u bytes failed.",
+								 *dataOutSize);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
@@ -2962,9 +2881,6 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (ownerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
 
 	if (!result) {
 		offset = 10;

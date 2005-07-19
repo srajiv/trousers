@@ -276,11 +276,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		pKeyAuth = NULL;
 
 	if (useAuthCert) {
-		if ((result = secret_PerformAuth_OIAP(hCertPolicy, &hash, &certAuth))) {
-			if (useAuthKey)
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
+		if ((result = secret_PerformAuth_OIAP(hCertPolicy, &hash, &certAuth)))
 			return result;
-		}
 	} else
 		pCertAuth = NULL;
 
@@ -795,11 +792,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	} else {
 		pParentAuth = NULL;
 	}
-	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, &digest, &entityAuth))) {
-		if (useAuth)
-			TCSP_TerminateHandle(tcsContext, parentAuth.AuthHandle);
+	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, &digest, &entityAuth)))
 		return result;
-	}
 
 	parentHandle = getTCSKeyHandle(hParentKey);
 	if (parentHandle == NULL_HKEY)
@@ -810,12 +804,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 					parentHandle, migAuth.migrationScheme, ulMigTicketLength,
 					rgbMigTicket, tcpaKey.encSize, tcpaKey.encData, pParentAuth,
 					&entityAuth, pulRandomLength, prgbRandom,
-					pulMigrationBlobLength, prgbMigrationBlob))) {
-			if (pParentAuth)
-				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
+					pulMigrationBlobLength, prgbMigrationBlob)))
 			return result;
-		}
 	} else {
 		if ((result = TCSP_CreateMigrationBlob(tcsContext,
 						parentHandle, migAuth.migrationScheme,
@@ -823,12 +813,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 						storedData.encDataSize, storedData.encData,
 						pParentAuth, &entityAuth, pulRandomLength,
 						prgbRandom, pulMigrationBlobLength,
-						prgbMigrationBlob))) {
-			if (pParentAuth)
-				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
+						prgbMigrationBlob)))
 			return result;
-		}
 	}
 
 	offset = 0;
@@ -840,19 +826,11 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	Trspi_LoadBlob(&offset, *pulMigrationBlobLength, hashblob, *prgbMigrationBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
-		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth))) {
-			if (pParentAuth)
-				TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
-			TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
+		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
 			return result;
-		}
 	}
-	if ((result = obj_policy_validate_auth_oiap(hMigratePolicy, &digest, &entityAuth))) {
-		if (pParentAuth)
-			TCSP_TerminateHandle(tcsContext, pParentAuth->AuthHandle);
-		TCSP_TerminateHandle(tcsContext, entityAuth.AuthHandle);
+	if ((result = obj_policy_validate_auth_oiap(hMigratePolicy, &digest, &entityAuth)))
 		return result;
-	}
 
 	if (migAuth.migrationScheme == TSS_MS_REWRAP) {
 		if (migratingKey) {
