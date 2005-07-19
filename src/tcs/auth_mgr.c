@@ -263,8 +263,9 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 		}
 	}
 
-	/* this TSP has already opened its max open auth handles, so deny another open */
-	if (opened >= 2)
+	/* If this TSP has already opened its max open auth handles, deny
+	 *  another open */
+	if (opened >= MAX(2, auth_mgr.max_auth_sessions/2))
 		return FALSE;
 
 	/* if we have one opened already and there's a slot available, ok */
