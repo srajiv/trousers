@@ -45,9 +45,10 @@ TCS_CloseContext_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	auth_mgr_close_context(hContext);
-
 	destroy_context(hContext);
+
+	/* close all auth handles associated with hContext */
+	auth_mgr_close_context(hContext);
 
 	key_mgr_ref_count();
 
