@@ -72,7 +72,7 @@ tcsd_threads_init(void)
 	/* allocate each thread's data structure */
 	tm->thread_data = calloc(tcsd_options.num_threads, sizeof(struct tcsd_thread_data));
 	if (tm->thread_data == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %u bytes failed.",
 			 tcsd_options.num_threads * sizeof(struct tcsd_thread_data));
 		free(tm);
 		return TCSERR(TSS_E_OUTOFMEMORY);

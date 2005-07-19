@@ -224,7 +224,7 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	tmp_hdr = calloc(1, totalSize);
 	if (tmp_hdr == NULL) {
-		LogError("malloc of %d bytes failed.", totalSize);
+		LogError("malloc of %u bytes failed.", totalSize);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -346,7 +346,7 @@ Atmel_TPM_GetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		}
 		*stateValue = (unsigned char *) malloc(*stateSize);
 		if (*stateValue == NULL) {
-			LogError("Malloc of %d bytes failed.", *stateSize);
+			LogError("malloc of %u bytes failed.", *stateSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -423,7 +423,7 @@ TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
 		}
 		*keyBlob = (BYTE *) malloc(*keySize);
 		if (*keyBlob == NULL) {
-			LogError("Malloc of %d bytes failed.", *keySize);
+			LogError("malloc of %u bytes failed.", *keySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -806,7 +806,7 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 		}
 		*ppKeyHierarchy = malloc(*pcKeyHierarchySize * sizeof(TSS_KM_KEYINFO));
 		if (*ppKeyHierarchy == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcKeyHierarchySize);
+			LogError("malloc of %u bytes failed.", *pcKeyHierarchySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -863,7 +863,7 @@ TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 		}
 		*prgbKey = malloc(*pcKeySize);
 		if (*prgbKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcKeySize);
+			LogError("malloc of %u bytes failed.", *pcKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1045,7 +1045,7 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		}
 		*keyData = (BYTE *) malloc(*keyDataSize);
 		if (*keyData == NULL) {
-			LogError("Malloc of %d bytes failed.", *keyDataSize);
+			LogError("malloc of %u bytes failed.", *keyDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1110,7 +1110,7 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 
 		*prgbPubKey = (BYTE *) malloc(*pcPubKeySize);
 		if (*prgbPubKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcPubKeySize);
+			LogError("malloc of %u bytes failed.", *pcPubKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1195,7 +1195,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*idKey = (BYTE *) malloc(*idKeySize);
 		if (*idKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *idKeySize);
+			LogError("malloc of %u bytes failed.", *idKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1212,7 +1212,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*prgbIdentityBinding = (BYTE *) malloc(*pcIdentityBindingSize);
 		if (*prgbIdentityBinding == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcIdentityBindingSize);
+			LogError("malloc of %u bytes failed.", *pcIdentityBindingSize);
 			free(*idKey);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
@@ -1232,7 +1232,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*prgbEndorsementCredential = (BYTE *) malloc(*pcEndorsementCredentialSize);
 		if (*prgbEndorsementCredential == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcEndorsementCredentialSize);
+			LogError("malloc of %u bytes failed.", *pcEndorsementCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -1255,7 +1255,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*prgbPlatformCredential = (BYTE *) malloc(*pcPlatformCredentialSize);
 		if (*prgbPlatformCredential == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcPlatformCredentialSize);
+			LogError("malloc of %u bytes failed.", *pcPlatformCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -1281,7 +1281,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*prgbConformanceCredential = (BYTE *) malloc(*pcConformanceCredentialSize);
 		if (*prgbConformanceCredential == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcConformanceCredentialSize);
+			LogError("malloc of %u bytes failed.", *pcConformanceCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -1385,7 +1385,7 @@ TCSP_TakeOwnership_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 		*srkKey = (BYTE *) malloc(*srkKeySize);
 		if (*srkKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *srkKeySize);
+			LogError("malloc of %u bytes failed.", *srkKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1537,7 +1537,7 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE contextHandl
 
 		*outData = (BYTE *) malloc(*outDataSize);
 		if (*outData == NULL) {
-			LogError("Malloc of %d bytes failed.", *outDataSize);
+			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1790,7 +1790,7 @@ TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in *
 
 		*pcrDataOut = (BYTE *) malloc(*pcrDataSizeOut);
 		if (*pcrDataOut == NULL) {
-			LogError("Malloc of %d bytes failed.", *pcrDataSizeOut);
+			LogError("malloc of %u bytes failed.", *pcrDataSizeOut);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1806,7 +1806,7 @@ TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in *
 		}
 		*sig = (BYTE *) malloc(*sigSize);
 		if (*sig == NULL) {
-			LogError("Malloc of %d bytes failed.", *sigSize);
+			LogError("malloc of %u bytes failed.", *sigSize);
 			free(*pcrDataOut);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
@@ -1962,7 +1962,7 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		*SealedData = (BYTE *) malloc(*SealedDataSize);
 		if (*SealedData == NULL) {
-			LogError("Malloc of %d bytes failed.", *SealedDataSize);
+			LogError("malloc of %u bytes failed.", *SealedDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2051,7 +2051,7 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 
 		*Data = (BYTE *) calloc_tspi(tspContext, *DataSize);
 		if (*Data == NULL) {
-			LogError("Malloc of %d bytes failed.", *DataSize);
+			LogError("malloc of %u bytes failed.", *DataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2120,7 +2120,7 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 
 		*outData = (BYTE *) calloc_tspi(tspContext, *outDataSize);
 		if (*outData == NULL) {
-			LogError("Malloc of %d bytes failed.", *outDataSize);
+			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2255,7 +2255,7 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 		*CertifyInfo = (BYTE *) malloc(*CertifyInfoSize);
 		if (*CertifyInfo == NULL) {
-			LogError("Malloc of %d bytes failed.", *CertifyInfoSize);
+			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2272,7 +2272,7 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 		*outData = (BYTE *) malloc(*outDataSize);
 		if (*outData == NULL) {
-			LogError("Malloc of %d bytes failed.", *outDataSize);
+			LogError("malloc of %u bytes failed.", *outDataSize);
 			free(*CertifyInfo);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
@@ -2344,7 +2344,7 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		*sig = (BYTE *) malloc(*sigSize);
 		if (*sig == NULL) {
-			LogError("Malloc of %d bytes failed.", *sigSize);
+			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
@@ -2392,7 +2392,7 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 		}
 		*randomBytes = (BYTE *) calloc_tspi(tspContext, bytesRequested);
 		if (*randomBytes == NULL) {
-			LogError("Malloc of %d bytes failed.", bytesRequested);
+			LogError("malloc of %u bytes failed.", bytesRequested);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2474,7 +2474,7 @@ TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 		*resp = (BYTE *) malloc(*respSize);
 		if (*resp == NULL) {
-			LogError("Malloc of %d bytes failed.", *respSize);
+			LogError("malloc of %u bytes failed.", *respSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2531,7 +2531,7 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 		*resp = (BYTE *) calloc_tspi(tspContext, *respSize);
 		if (*resp == NULL) {
-			LogError("Malloc of %d bytes failed.", *respSize);
+			LogError("malloc of %u bytes failed.", *respSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2643,7 +2643,7 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 
 		*endorsementKey = (BYTE *) malloc(*endorsementKeySize);
 		if (*endorsementKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *endorsementKeySize);
+			LogError("malloc of %u bytes failed.", *endorsementKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2697,7 +2697,7 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 
 		*pubEndorsementKey = (BYTE *) malloc(*pubEndorsementKeySize);
 		if (*pubEndorsementKey == NULL) {
-			LogError("Malloc of %d bytes failed.", *pubEndorsementKeySize);
+			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2786,7 +2786,7 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
 
                 *pubEndorsementKey = (BYTE *) malloc(*pubEndorsementKeySize);
                 if (*pubEndorsementKey == NULL) {
-                        LogError("Malloc of %d bytes failed.", *pubEndorsementKeySize);
+                        LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
                         result = TSPERR(TSS_E_OUTOFMEMORY);
                         goto done;
                 }
@@ -2874,7 +2874,7 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 		}
 		*sig = (BYTE *) malloc(*sigSize);
 		if (*sig == NULL) {
-			LogError("Malloc of %d bytes failed.", *sigSize);
+			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -2925,7 +2925,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 		*outData = calloc_tspi(tspContext, *outDataSize);
 		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", *outDataSize);
+			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
