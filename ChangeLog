@@ -1,4 +1,14 @@
 
+ - change assert to DBG_ASSERT in tcs/ps files, also
+   assert that data sizes are > 0 when read off disk.
+ - Lots of malloc error logging changes where %d should
+   have been %u in the print statment.
+ - auth_mgr.c: allow a TSP to open a max of max_auths/2
+   sessions before its denied any more, for TPMs that
+   can handle a lot of auth sessions.
+ - Big-endian fixes for the persistent store functions.
+   Trousers now runs fine on ppc64, for example.
+ - BUG 1226617: Audit of code for auth handle termination.
  - Use @PACKAGE_BUGREPORT@ instead of a static email addr in
    manpages.
  - Added man page for tcsd.conf in section 5.
