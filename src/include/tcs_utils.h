@@ -49,6 +49,7 @@ extern struct tpm_properties tpm_metrics;
 	((tpm_metrics.version.major == maj) && (tpm_metrics.version.minor == min))
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 #ifdef TSS_DEBUG
 #define DBG_ASSERT(x)	assert(x)
