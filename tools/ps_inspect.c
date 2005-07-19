@@ -12,8 +12,8 @@
  * [UINT32   num_keys_on_disk]
  * [TSS_UUID uuid0           ]
  * [TSS_UUID uuid_parent0    ]
- * [UINT32   pub_data_size0  ]
- * [UINT32   blob_size0      ]
+ * [UINT16   pub_data_size0  ]
+ * [UINT16   blob_size0      ]
  * [UINT16   cache_flags0    ]
  * [BYTE[]   pub_data0       ]
  * [BYTE[]   blob0           ]
@@ -47,13 +47,8 @@
 #define PRINTERR(...)	fprintf(stderr, ##__VA_ARGS__)
 #define PRINT(...)	printf("PS " __VA_ARGS__)
 
-/* any number of keys found that's greater than MAX_NUM_LIKELY_KEYS
- * will trigger some logic
- */
-#define MAX_NUM_LIKELY_KEYS	25
-
 /* one global buffer we read into from the PS file */
-unsigned char buf[4096];
+unsigned char buf[1024];
 
 void
 usage(char *argv0)
@@ -62,14 +57,59 @@ usage(char *argv0)
 	exit(-1);
 }
 
-int
-printkey_0(int num, FILE *f)
+void
+print_hex(BYTE *buf, UINT32 len)
 {
+	UINT32 i = 0, j;
+
+	while (i < len) {
+		for (j=0; (j < 4) && (i < len); j++, i+=4)
+			printf("%02x%02x%02x%02x ",
+				buf[i] & 0xff, buf[i+1] & 0xff,
+				buf[i+2] & 0xff, buf[i+3] & 0xff);
+		printf("\n");
+	}
+}
+
+
+int
+printkey_0(int i, FILE *f)
+{
+	UINT16 pub_data_size, blob_size, cache_flags;
+	int members;
+
+	PRINT("uuid%d: ", i);
+	print_hex(buf, sizeof(TSS_UUID));
+
+	PRINT("parent uuid%d: ", i);
+	print_hex(&buf[sizeof(TSS_UUID)], sizeof(TSS_UUID));
+
+	pub_data_size = *(UINT16 *)&buf[(2 * sizeof(TSS_UUID))];
+	blob_size = *(UINT16 *)&buf[(2 * sizeof(TSS_UUID)) + sizeof(UINT16)];
+	cache_flags = *(UINT16 *)&buf[2*sizeof(TSS_UUID) + 2*sizeof(UINT16)];
+
+	PRINT("pub_data_size%d: %hu\n", i, pub_data_size);
+	PRINT("blob_size%d: %hu\n", i, blob_size);
+	PRINT("cache_flags%d: %02hx\n", i, cache_flags);
+
+	/* trash buf, we've got what we needed from it */
+	if ((members = fread(buf, pub_data_size + blob_size,
+			1, f)) != 1) {
+		PRINTERR("fread: %s: %d members read\n", strerror(errno), members);
+		return -1;
+	}
+
+	PRINT("pub_data%d:\n", i);
+	print_hex(buf, pub_data_size);
+
+	PRINT("blob%d:\n", i);
+	print_hex(&buf[pub_data_size], blob_size);
+
 	return 0;
 }
 
 int
-printkey_1(int num, FILE *f)
+printkey_1(FILE *f)
 {
 	return 0;
 }
@@ -77,13 +117,39 @@ printkey_1(int num, FILE *f)
 int
 version_0_print(FILE *f)
 {
-	int i, rc;
-	UINT32 *u32 = (UINT32 *)buf;
+	int rc, members = 0;
+	UINT32 i, u32 = *(UINT32 *)buf;
 
 	PRINT("version:        0\n");
-	PRINT("number of keys: %u\n", *u32);
+	PRINT("number of keys: %u\n", u32);
 
-	for (i = 0; (UINT32)i < *u32; i++) {
+	/* The +- 1's below account for the byte we read in to determine
+	 * if the PS file had a version byte at the beginning */
+
+	/* align the beginning of the buffer with the beginning of the key */
+	memcpy(buf, &buf[4], sizeof(TSS_UUID) + 1);
+
+	/* read in the rest of the first key's header */
+	if ((members = fread(&buf[sizeof(TSS_UUID) + 1],
+			sizeof(TSS_UUID) + (3 * sizeof(UINT16)) - 1,
+			1, f)) != 1) {
+		PRINTERR("fread: %s\n", strerror(errno));
+		return -1;
+	}
+
+	if (printkey_0(0, f)) {
+		PRINTERR("printkey_0 failed.\n");
+		return -1;
+	}
+
+	for (i = 1; i < u32; i++) {
+		/* read in subsequent key's headers */
+		if ((members = fread(buf, 2*sizeof(TSS_UUID) + 3*sizeof(UINT16),
+					1, f)) != 1) {
+			PRINTERR("fread: %s\n", strerror(errno));
+			return -1;
+		}
+
 		if ((rc = printkey_0(i, f)))
 			return rc;
 	}
@@ -94,14 +160,14 @@ version_0_print(FILE *f)
 int
 version_1_print(FILE *f)
 {
-	int i, rc;
-	UINT32 *u32 = (UINT32 *)&buf[1];
+	int rc;
+	UINT32 i, *u32 = (UINT32 *)&buf[1];
 
 	PRINT("version:        1\n");
 	PRINT("number of keys: %u\n", *u32);
 
-	for (i = 0; (UINT32)i < *u32; i++) {
-		if ((rc = printkey_1(i, f)))
+	for (i = 0; i < (*u32 - 1); i++) {
+		if ((rc = printkey_1(f)))
 			return rc;
 	}
 
@@ -117,7 +183,9 @@ inspect(FILE *f)
 
 	/* do the initial read, which should include sizeof(TSS_UUID)
 	 * + sizeof(UINT32) + 1 bytes */
-	if ((members = fread(buf, 21, 1, f)) != 1) {
+	if ((members = fread(buf,
+			sizeof(TSS_UUID) + sizeof(UINT32) + 1,
+			1, f)) != 1) {
 		PRINTERR("fread: %s\n", strerror(errno));
 		return -1;
 	}
