@@ -168,9 +168,11 @@ AC_OUTPUT(dist/tcsd.conf \
 	  src/tcsd/Makefile \
 	  tools/Makefile \
 	  man/man8/tcsd.8 \
+	  man/man5/tcsd.conf.5 \
 	  dist/Makefile \
 	  man/Makefile \
 	  man/man3/Makefile \
+	  man/man5/Makefile \
 	  man/man8/Makefile)
 
 echo "CFLAGS=$CFLAGS"
