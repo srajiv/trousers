@@ -355,7 +355,7 @@ ps_write_key(int fd,
 		TSS_UUID *parent_uuid,
 		UINT32 *parent_ps,
 		BYTE *key_blob,
-		UINT32 key_blob_size)
+		UINT16 key_blob_size)
 {
 	BYTE pub_key[2048];
 	TCPA_KEY key;

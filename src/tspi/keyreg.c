@@ -54,11 +54,18 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 {
 	int fd = -1;
 	TSS_RESULT rc;
+	UINT16 short_blob_size = (UINT16)blob_size;
+
+	if (blob_size > USHRT_MAX) {
+		LogError("Blob data beign written to disk is too large(%u "
+			 "bytes)!", blob_size);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	if ((fd = get_file()) < 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, blob_size);
+	rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, short_blob_size);
 
 	put_file(fd);
 	return TSS_SUCCESS;
