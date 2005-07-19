@@ -36,7 +36,7 @@ TSS_RESULT	   ps_get_key_by_cache_entry(int, struct key_disk_cache *, BYTE *, UI
 TSS_RESULT	   ps_get_parent_ps_type_by_uuid(int, TSS_UUID *, UINT32 *);
 TSS_RESULT	   ps_is_pub_registered(int, TCPA_STORE_PUBKEY *, TSS_BOOL *);
 TSS_RESULT	   ps_get_uuid_by_pub(int, TCPA_STORE_PUBKEY *, TSS_UUID **);
-TSS_RESULT	   ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT32);
+TSS_RESULT	   ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT16);
 TCPA_STORE_PUBKEY *ps_get_pub_by_tpm_handle(int, TCPA_KEY_HANDLE);
 TSS_RESULT	   ps_get_tpm_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCPA_KEY_HANDLE *);
 TSS_RESULT	   ps_get_tcs_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE *);

@@ -36,6 +36,6 @@ TSS_RESULT ps_get_key_by_uuid(int, TSS_UUID *, BYTE *, UINT16 *);
 TSS_RESULT ps_get_parent_ps_type_by_uuid(int, TSS_UUID *, UINT32 *);
 TSS_RESULT ps_is_pub_registered(int, TCPA_STORE_PUBKEY *, TSS_BOOL *);
 TSS_RESULT ps_get_uuid_by_pub(int, TCPA_STORE_PUBKEY *, TSS_UUID **);
-TSS_RESULT ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT32);
+TSS_RESULT ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT16);
 
 #endif
