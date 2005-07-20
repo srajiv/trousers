@@ -89,7 +89,6 @@ print_hex(BYTE *buf, UINT32 len)
 	}
 }
 
-
 int
 printkey_0(int i, FILE *f)
 {
@@ -127,8 +126,45 @@ printkey_0(int i, FILE *f)
 }
 
 int
-printkey_1(FILE *f)
+printkey_1(int i, FILE *f)
 {
+	UINT16 pub_data_size, blob_size, cache_flags;
+	UINT32 vendor_data_size;
+	int members;
+
+	PRINT("uuid%d: ", i);
+	print_hex(buf, sizeof(TSS_UUID));
+
+	PRINT("parent uuid%d: ", i);
+	print_hex(&buf[sizeof(TSS_UUID)], sizeof(TSS_UUID));
+
+	pub_data_size = *(UINT16 *)&buf[(2 * sizeof(TSS_UUID))];
+	blob_size = *(UINT16 *)&buf[(2 * sizeof(TSS_UUID)) + sizeof(UINT16)];
+	vendor_data_size = *(UINT32 *)&buf[(2 * sizeof(TSS_UUID)) + 2*sizeof(UINT16)];
+	cache_flags = *(UINT16 *)&buf[2*sizeof(TSS_UUID) + sizeof(UINT16) + sizeof(UINT32)];
+
+	PRINT("pub_data_size%d: %hu\n", i, pub_data_size);
+	PRINT("blob_size%d: %hu\n", i, blob_size);
+	PRINT("vendor_data_size%d: %u\n", i, vendor_data_size);
+	PRINT("cache_flags%d: %02hx\n", i, cache_flags);
+
+	/* trash buf, we've got what we needed from it */
+	if ((members = fread(buf, pub_data_size + blob_size + vendor_data_size,
+			1, f)) != 1) {
+		PRINTERR("fread: %s: %d members read\n", strerror(errno), members);
+		return -1;
+	}
+
+	PRINT("pub_data%d:\n", i);
+	print_hex(buf, pub_data_size);
+
+	PRINT("blob%d:\n", i);
+	print_hex(&buf[pub_data_size], blob_size);
+
+	PRINT("vendor_data%d:\n", i);
+	if (vendor_data_size > 0)
+		print_hex(&buf[pub_data_size + blob_size], vendor_data_size);
+
 	return 0;
 }
 
@@ -178,14 +214,37 @@ version_0_print(FILE *f)
 int
 version_1_print(FILE *f)
 {
-	int rc;
-	UINT32 i, *u32 = (UINT32 *)&buf[1];
+	int rc, members = 0;
+	UINT32 i, u32 = *(UINT32 *)&buf[1];
 
 	PRINT("version:        1\n");
-	PRINT("number of keys: %u\n", *u32);
+	PRINT("number of keys: %u\n", u32);
 
-	for (i = 0; i < (*u32 - 1); i++) {
-		if ((rc = printkey_1(f)))
+	/* align the beginning of the buffer with the beginning of the key */
+	memcpy(buf, &buf[5], sizeof(TSS_UUID));
+
+	/* read in the rest of the first key's header */
+	if ((members = fread(&buf[sizeof(TSS_UUID)],
+			sizeof(TSS_UUID) + (3 * sizeof(UINT16)) + sizeof(UINT32),
+			1, f)) != 1) {
+		PRINTERR("fread: %s\n", strerror(errno));
+		return -1;
+	}
+
+	if (printkey_1(0, f)) {
+		PRINTERR("printkey_1 failed.\n");
+		return -1;
+	}
+
+	for (i = 1; i < u32; i++) {
+		/* read in subsequent key's headers */
+		if ((members = fread(buf, 2*sizeof(TSS_UUID) + 3*sizeof(UINT16)
+					+ sizeof(UINT32), 1, f)) != 1) {
+			PRINTERR("fread: %s\n", strerror(errno));
+			return -1;
+		}
+
+		if ((rc = printkey_1(i, f)))
 			return rc;
 	}
 
@@ -220,6 +279,11 @@ inspect(FILE *f)
 	}
 
 version0:
+	if (memcmp(&buf[4], &SRK_UUID, sizeof(TSS_UUID))) {
+		printf("This file does not appear to be a valid PS file.\n");
+		return -1;
+	}
+
 	return version_0_print(f);
 }
 
