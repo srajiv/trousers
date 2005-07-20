@@ -1,4 +1,8 @@
 
+ - updated ps_inspect tool to recognize non-PS files,
+   print out version 1 PS files and added a license
+   statement. Also added ps_convert tool to convert
+   version 0 PS files to version 1.
  - updated ps_inspect tool to print out blobs and keys.
  - change assert to DBG_ASSERT in tcs/ps files, also
    assert that data sizes are > 0 when read off disk.
