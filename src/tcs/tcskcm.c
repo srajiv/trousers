@@ -27,11 +27,11 @@
 TSS_RESULT
 TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TSS_UUID *WrappingKeyUUID,	/* in */
-			 TSS_UUID *KeyUUID,	/* in  */
-			 UINT32 cKeySize,	/* in */
-			 BYTE * rgbKey,	/* in */
-			 UINT32 cVendorData,	/* in */
-			 BYTE * gbVendorData	/* in */
+			 TSS_UUID *KeyUUID,		/* in */
+			 UINT32 cKeySize,		/* in */
+			 BYTE * rgbKey,			/* in */
+			 UINT32 cVendorData,		/* in */
+			 BYTE * gbVendorData		/* in */
     )
 {
 	TSS_RESULT result;
@@ -64,7 +64,9 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	/*---	Go ahead and store it in system persistant storage */
-	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID, rgbKey, cKeySize))) {
+	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID,
+						gbVendorData, cVendorData,
+						rgbKey, cKeySize))) {
 		LogError1("Error writing key to file");
 		return TCSERR(TSS_E_FAIL);
 	}
@@ -75,7 +77,7 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_UnregisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			    TSS_UUID KeyUUID	/* in  */
+			    TSS_UUID KeyUUID			/* in */
     )
 {
 	TSS_RESULT result;
@@ -87,9 +89,9 @@ TCSP_UnregisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				TSS_UUID * pKeyUUID,	/* in    */
-				UINT32 * pcKeyHierarchySize,	/* out */
+TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
+				TSS_UUID * pKeyUUID,			/* in */
+				UINT32 * pcKeyHierarchySize,		/* out */
 				TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
     )
 {
@@ -242,7 +244,6 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				}
 			}
 		}
-
 	}
 done:
 
@@ -257,7 +258,7 @@ done:
 
 TSS_RESULT
 TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			      TSS_UUID *KeyUUID,	/* in */
+			      TSS_UUID *KeyUUID,		/* in */
 			      TSS_KM_KEYINFO ** ppKeyInfo	/* out */
     )
 {
@@ -310,9 +311,9 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCS_GetRegisteredKeyBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				  TSS_UUID *KeyUUID,	/* in */
-				  UINT32 * pcKeySize,	/* out */
-				  BYTE ** prgbKey	/* out */
+				  TSS_UUID *KeyUUID,		/* in */
+				  UINT32 * pcKeySize,		/* out */
+				  BYTE ** prgbKey		/* out */
     )
 {
 	UINT16 keySize;
@@ -341,11 +342,11 @@ TCS_GetRegisteredKeyBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 TSS_RESULT
 TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TCS_KEY_HANDLE hUnwrappingKey,	/* in */
-			    UINT32 cWrappedKeyBlobSize,	/* in */
-			    BYTE * rgbWrappedKeyBlob,	/* in */
-			    TPM_AUTH * pAuth,	/* in, out */
-			    TCS_KEY_HANDLE * phKeyTCSI,	/* out */
-			    TCS_KEY_HANDLE * phKeyHMAC	/* out */
+			    UINT32 cWrappedKeyBlobSize,		/* in */
+			    BYTE * rgbWrappedKeyBlob,		/* in */
+			    TPM_AUTH * pAuth,			/* in, out */
+			    TCS_KEY_HANDLE * phKeyTCSI,		/* out */
+			    TCS_KEY_HANDLE * phKeyHMAC		/* out */
     )
 {
 	UINT16 offset;
@@ -575,9 +576,9 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			    TSS_UUID *KeyUUID,	/* in */
+			    TSS_UUID *KeyUUID,			/* in */
 			    TCS_LOADKEY_INFO * pLoadKeyInfo,	/* in, out */
-			    TCS_KEY_HANDLE * phKeyTCSI	/* out */
+			    TCS_KEY_HANDLE * phKeyTCSI		/* out */
     )
 {
 	UINT32 keyslot;
@@ -665,7 +666,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_EvictKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-		       TCS_KEY_HANDLE hKey	/* in */
+		       TCS_KEY_HANDLE hKey		/* in */
     )
 {
 	TSS_RESULT result;
@@ -689,13 +690,13 @@ TCSP_EvictKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 TSS_RESULT
 TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TCS_KEY_HANDLE hWrappingKey,	/* in */
-			    TCPA_ENCAUTH KeyUsageAuth,	/* in */
+			    TCPA_ENCAUTH KeyUsageAuth,		/* in */
 			    TCPA_ENCAUTH KeyMigrationAuth,	/* in */
-			    UINT32 keyInfoSize,	/* in */
-			    BYTE * keyInfo,	/* in */
-			    UINT32 * keyDataSize,	/* out */
-			    BYTE ** keyData,	/* out */
-			    TPM_AUTH * pAuth	/* in, out */
+			    UINT32 keyInfoSize,			/* in */
+			    BYTE * keyInfo,			/* in */
+			    UINT32 * keyDataSize,		/* out */
+			    BYTE ** keyData,			/* out */
+			    TPM_AUTH * pAuth			/* in, out */
     )
 {
 	UINT16 offset;
@@ -756,8 +757,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 /*		if( pAuth != NULL ) */
 
 		UnloadBlob_Auth(&offset, txBlob, pAuth);
-		if (result)
-			auth_mgr_release_auth(pAuth->AuthHandle);
+		auth_mgr_release_auth(pAuth->AuthHandle);
 
 		destroy_key_refs(&keyContainer);
 	}
@@ -768,10 +768,10 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-			TCS_KEY_HANDLE hKey,	/* in */
-			TPM_AUTH * pAuth,	/* in, out */
-			UINT32 * pcPubKeySize,	/* out */
-			BYTE ** prgbPubKey	/* out */
+			TCS_KEY_HANDLE hKey,		/* in */
+			TPM_AUTH * pAuth,		/* in, out */
+			UINT32 * pcPubKeySize,		/* out */
+			BYTE ** prgbPubKey		/* out */
     )
 {
 	UINT16 offset;
@@ -934,23 +934,23 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
-			   TCPA_ENCAUTH identityAuth,	/* in */
+TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
+			   TCPA_ENCAUTH identityAuth,			/* in */
 			   TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
-			   UINT32 idKeyInfoSize,	/*in */
-			   BYTE * idKeyInfo,	/*in */
-			   TPM_AUTH * pSrkAuth,	/* in, out */
-			   TPM_AUTH * pOwnerAuth,	/* in, out */
-			   UINT32 * idKeySize,	/* out */
-			   BYTE ** idKey,	/* out */
-			   UINT32 * pcIdentityBindingSize,	/* out */
-			   BYTE ** prgbIdentityBinding,	/* out */
+			   UINT32 idKeyInfoSize,			/* in */
+			   BYTE * idKeyInfo,				/* in */
+			   TPM_AUTH * pSrkAuth,				/* in, out */
+			   TPM_AUTH * pOwnerAuth,			/* in, out */
+			   UINT32 * idKeySize,				/* out */
+			   BYTE ** idKey,				/* out */
+			   UINT32 * pcIdentityBindingSize,		/* out */
+			   BYTE ** prgbIdentityBinding,			/* out */
 			   UINT32 * pcEndorsementCredentialSize,	/* out */
-			   BYTE ** prgbEndorsementCredential,	/* out */
-			   UINT32 * pcPlatformCredentialSize,	/* out */
-			   BYTE ** prgbPlatformCredential,	/* out */
+			   BYTE ** prgbEndorsementCredential,		/* out */
+			   UINT32 * pcPlatformCredentialSize,		/* out */
+			   BYTE ** prgbPlatformCredential,		/* out */
 			   UINT32 * pcConformanceCredentialSize,	/* out */
-			   BYTE ** prgbConformanceCredential	/* out */
+			   BYTE ** prgbConformanceCredential		/* out */
     )
 {
 	UINT16 offset;
@@ -1043,12 +1043,12 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 }
 
 TSS_RESULT
-TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,
-					   TCPA_ALGORITHM_ID algID,	/* in */
-					   UINT32 ulPublicInfoLength,	/* in */
-					   BYTE * rgbPublicInfo,	/* in */
-					   UINT32 * keySize,		/* out */
-					   BYTE ** keyBlob)		/* out */
+TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,	/* in */
+					   TCPA_ALGORITHM_ID algID,		/* in */
+					   UINT32 ulPublicInfoLength,		/* in */
+					   BYTE * rgbPublicInfo,		/* in */
+					   UINT32 * keySize,			/* out */
+					   BYTE ** keyBlob)			/* out */
 {
 	TCPA_STORE_PUBKEY pubKey;
 	TSS_RESULT result = TCSERR(TSS_E_FAIL);
