@@ -1,4 +1,5 @@
 
+ - fixed ps_inspect's printing function.
  - added SELinux files and README.selinux.
  - updated ps_inspect tool to recognize non-PS files,
    print out version 1 PS files and added a license
