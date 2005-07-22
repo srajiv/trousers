@@ -145,7 +145,9 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return result;
 		}
 
-		if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID, newSRK, bugOffset))) {
+		if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID,
+						       NULL, 0,	newSRK,
+						       bugOffset))) {
 			LogError1("Error writing SRK to disk");
 			return result;
 		}
@@ -1089,8 +1091,10 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 		memcpy(*SealedData, &txBlob[10], *SealedDataSize);
 /*		LoadBlob_STORED_DATA( &offset, *SealedData, &storedData ); */
-		if (pubAuth != NULL)
+		if (pubAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, pubAuth);
+			auth_mgr_release_auth(pubAuth->AuthHandle);
+		}
 	}
 /*	AppendAudit(0, TPM_ORD_Seal, result); */
 	LogResult("Seal", result);
