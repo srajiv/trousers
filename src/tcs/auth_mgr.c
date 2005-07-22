@@ -242,11 +242,14 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			auth_mgr.open_auth_sessions++;
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
-		} else {
+		}
+#ifdef TSS_DEBUG
+		else {
 			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle)
 				LogDebug1("***************************** "
 						"UNCLEAN AUTH MAPPER TABLE");
 		}
+#endif
 	}
 
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR))

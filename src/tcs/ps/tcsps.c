@@ -585,7 +585,7 @@ ps_remove_key(int fd, struct key_disk_cache *c)
         UINT32 head_offset = 0, tail_offset, num_keys;
 	BYTE buf[4096];
 	struct stat stat_buf;
-	int rc, size;
+	int rc, size = 0;
 
 	if ((rc = fstat(fd, &stat_buf)) != 0) {
 		LogError("fstat: %s", strerror(errno));
