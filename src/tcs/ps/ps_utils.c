@@ -64,7 +64,7 @@ UnloadBlob_KEY_PARMS_PS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
 			LogError("malloc of %u bytes failed.", keyParms->parmSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms, NULL);
 	}
@@ -84,7 +84,7 @@ UnloadBlob_STORE_PUBKEY_PS(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 		store->key = malloc(store->keyLength);
 		if (store->key == NULL) {
 			LogError("malloc of %u bytes failed.", store->keyLength);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, store->keyLength, blob, store->key, NULL);
 	}
@@ -113,7 +113,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 		key->PCRInfo = malloc(key->PCRInfoSize);
 		if (key->PCRInfo == NULL) {
 			LogError("malloc of %u bytes failed.", key->PCRInfoSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, NULL);
 	}
@@ -129,7 +129,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 		key->encData = malloc(key->encSize);
 		if (key->encData == NULL) {
 			LogError("malloc of %u bytes failed.", key->encSize);
-			return TSS_E_OUTOFMEMORY;
+			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->encSize, blob, key->encData, NULL);
 	}
@@ -160,10 +160,10 @@ read_data(int fd, void *data, UINT32 size)
 	rc = read(fd, data, size);
 	if (rc == -1) {
 		LogError("read of %d bytes: %s", size, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("read of %d bytes (only %d read)", size, rc);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -178,10 +178,10 @@ write_data(int fd, void *data, UINT32 size)
 	rc = write(fd, data, size);
 	if (rc == -1) {
 		LogError("write of %d bytes: %s", size, strerror(errno));
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("write of %d bytes (only %d written)", size, rc);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -192,7 +192,7 @@ write_data(int fd, void *data, UINT32 size)
  * write a new key to.
  */
 int
-find_write_offset(UINT32 pub_data_size, UINT32 blob_size)
+find_write_offset(UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_data_size)
 {
 	struct key_disk_cache *tmp;
 	unsigned int offset;
@@ -203,9 +203,9 @@ find_write_offset(UINT32 pub_data_size, UINT32 blob_size)
 	while (tmp) {
 		/* if we find a deleted key of the right size, return its offset */
 		if (!(tmp->flags & CACHE_FLAG_VALID) &&
-			tmp->pub_data_size == pub_data_size &&
-			tmp->blob_size == blob_size) {
-
+		    tmp->pub_data_size == pub_data_size &&
+		    tmp->blob_size == blob_size &&
+		    tmp->vendor_data_size == vendor_data_size) {
 			offset = tmp->offset;
 			pthread_mutex_unlock(&disk_cache_lock);
 			return offset;
@@ -224,10 +224,17 @@ find_write_offset(UINT32 pub_data_size, UINT32 blob_size)
  * that offset
  */
 int
-write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size)
+write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_data_size)
 {
 	UINT32 num_keys;
 	int rc, offset;
+
+	/* seek to the PS version */
+	rc = lseek(fd, VERSION_OFFSET, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return -1;
+	}
 
 	/* go to NUM_KEYS */
 	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
@@ -261,7 +268,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size)
 	}
 
 	/* if there is a hole in the file we can write to, find it */
-	offset = find_write_offset(pub_data_size, blob_size);
+	offset = find_write_offset(pub_data_size, blob_size, vendor_data_size);
 
 	if (offset != -1) {
 		/* we found a hole, seek to it and don't increment the # of keys on disk */
@@ -299,9 +306,10 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size)
  * add a new cache entry for a written key
  */
 TSS_RESULT
-cache_key(UINT32 offset, UINT16 flags, 
+cache_key(UINT32 offset, UINT16 flags,
 		TSS_UUID *uuid, TSS_UUID *parent_uuid,
-		UINT16 pub_data_size, UINT32 blob_size)
+		UINT16 pub_data_size, UINT32 blob_size,
+		UINT32 vendor_data_size)
 {
 	struct key_disk_cache *tmp;
 
@@ -319,7 +327,7 @@ cache_key(UINT32 offset, UINT16 flags,
 	if (tmp == NULL) {
 		LogError1("malloc of %d bytes failed.");
 		pthread_mutex_unlock(&disk_cache_lock);
-		return TSS_E_INTERNAL_ERROR;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	tmp->next = key_disk_cache_head;
 	key_disk_cache_head = tmp;
@@ -333,6 +341,7 @@ fill_cache_entry:
 	tmp->flags = flags;
 	tmp->blob_size = blob_size;
 	tmp->pub_data_size = pub_data_size;
+	tmp->vendor_data_size = vendor_data_size;
 	memcpy(&tmp->uuid, uuid, sizeof(TSS_UUID));
 	memcpy(&tmp->parent_uuid, parent_uuid, sizeof(TSS_UUID));
 
@@ -392,7 +401,8 @@ get_num_keys()
 /*
  * disk store format:
  *
- *                             cached?
+ * TrouSerS 0.2.0 and before:
+ * Version 0:                  cached?
  * [UINT32   num_keys_on_disk]
  * [TSS_UUID uuid0           ] yes
  * [TSS_UUID uuid_parent0    ] yes
@@ -403,8 +413,22 @@ get_num_keys()
  * [BYTE[]   blob0           ]
  * [...]
  *
+ * TrouSerS 0.2.1+
+ * Version 1:                  cached?
+ * [BYTE     PS version = '\1']
+ * [UINT32   num_keys_on_disk ]
+ * [TSS_UUID uuid0            ] yes
+ * [TSS_UUID uuid_parent0     ] yes
+ * [UINT16   pub_data_size0   ] yes
+ * [UINT16   blob_size0       ] yes
+ * [UINT32   vendor_data_size0] yes
+ * [UINT16   cache_flags0     ] yes
+ * [BYTE[]   pub_data0        ]
+ * [BYTE[]   blob0            ]
+ * [BYTE[]   vendor_data0     ]
+ * [...]
+ *
  */
-
 /*
  * read the PS file pointed to by fd and create a cache based on it
  */
@@ -487,6 +511,12 @@ init_disk_cache(int fd)
 
 		DBG_ASSERT(tmp->blob_size <= 4096 && tmp->blob_size > 0);
 
+		/* vendor data size */
+		if ((rc = read_data(fd, &tmp->vendor_data_size, sizeof(UINT32)))) {
+			LogError("%s", __FUNCTION__);
+			goto err_exit;
+		}
+
 		/* cache flags */
 		if ((rc = read_data(fd, &tmp->flags, sizeof(UINT16)))) {
 			LogError("%s", __FUNCTION__);
@@ -533,11 +563,20 @@ init_disk_cache(int fd)
 				rc = -1;
 				goto err_exit;
 			}
+
+			/* fast forward over the vendor data */
+			offset = lseek(fd, tmp->vendor_data_size, SEEK_CUR);
+			if (offset == ((off_t) - 1)) {
+				LogError("lseek: %s", strerror(errno));
+				rc = -1;
+				goto err_exit;
+			}
 		}
 
 		tmp->next = calloc(1, sizeof(struct key_disk_cache));
 		if (tmp->next == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(struct key_disk_cache));
+			LogError("malloc of %d bytes failed.",
+					sizeof(struct key_disk_cache));
 			rc = -1;
 			goto err_exit;
 		}
@@ -556,6 +595,7 @@ err_exit:
 	return rc;
 }
 
+#if 0
 /*
  * zero out a key in the persistent store. The key data and blob are zeroed,
  * but the sizes of each remain on disk. Newly created keys will then be inserted
@@ -628,8 +668,20 @@ blank_key(int fd, struct key_disk_cache *key)
 		return rc;
 	}
 
+	// blank the vendor data
+	rc = lseek(fd, VENDOR_DATA_OFFSET(key), SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return -1;
+	}
+	if ((rc = write_data(fd, &blank, key->vendor_data_size))) {
+		LogError("%s", __FUNCTION__);
+		return rc;
+	}
+
 	return 0;
 }
+#endif
 
 int
 close_disk_cache(int fd)
@@ -644,9 +696,10 @@ close_disk_cache(int fd)
 
 	do {
 		tmp_next = tmp->next;
-
+#if 0
 		if (!(tmp->flags & CACHE_FLAG_VALID))
 			(void)blank_key(fd, tmp);
+#endif
 		free(tmp);
 		tmp = tmp_next;
 	} while (tmp);

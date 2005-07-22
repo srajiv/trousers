@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <assert.h>
 
@@ -177,10 +178,12 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
 }
 
 /*
- * return a key blob from PS given its cache entry. The disk cache must be locked by the caller.
+ * return a key blob from PS given its cache entry. The disk cache must be
+ * locked by the caller.
  */
 TSS_RESULT
-ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer, UINT16 *ret_buffer_size)
+ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer,
+			  UINT16 *ret_buffer_size)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -447,7 +450,8 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
 /*
  * disk store format:
  *
- *                             cached?
+ * TrouSerS 0.2.0 and before:
+ * Version 0:                  cached?
  * [UINT32   num_keys_on_disk]
  * [TSS_UUID uuid0           ] yes
  * [TSS_UUID uuid_parent0    ] yes
@@ -458,16 +462,32 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
  * [BYTE[]   blob0           ]
  * [...]
  *
+ * TrouSerS 0.2.1+
+ * Version 1:                  cached?
+ * [BYTE     PS version = '\1']
+ * [UINT32   num_keys_on_disk ]
+ * [TSS_UUID uuid0            ] yes
+ * [TSS_UUID uuid_parent0     ] yes
+ * [UINT16   pub_data_size0   ] yes
+ * [UINT16   blob_size0       ] yes
+ * [UINT32   vendor_data_size0] yes
+ * [UINT16   cache_flags0     ] yes
+ * [BYTE[]   pub_data0        ]
+ * [BYTE[]   blob0            ]
+ * [BYTE[]   vendor_data0     ]
+ * [...]
+ *
  */
 TSS_RESULT
 ps_write_key(int fd,
 		TSS_UUID *uuid,
 		TSS_UUID *parent_uuid,
 		UINT32 *parent_ps,
+		BYTE *vendor_data,
+		UINT32 vendor_size,
 		BYTE *key_blob,
 		UINT16 key_blob_size)
 {
-	//BYTE pub_key[2048];
 	TCPA_KEY key;
 	UINT16 offset, pub_key_size, cache_flags = CACHE_FLAG_VALID;
 	int rc = 0;
@@ -480,13 +500,10 @@ ps_write_key(int fd,
 	offset = 0;
 	if ((rc = UnloadBlob_KEY_PS(&offset, key_blob, &key)))
 		return rc;
-#if 0
-	offset = 0;
-	LoadBlob_STORE_PUBKEY((UINT16 *)&offset, pub_key, &key.pubKey);
-#endif
+
 	pub_key_size = key.pubKey.keyLength;
 
-        if ((rc = write_key_init(fd, pub_key_size, key_blob_size)) < 0)
+        if ((rc = write_key_init(fd, pub_key_size, key_blob_size, vendor_size)) < 0)
                 return rc;
 
 	/* offset now holds the number of bytes from the beginning of the file
@@ -523,28 +540,173 @@ ps_write_key(int fd,
 		return rc;
 	}
 
+	/* [UINT32   vendor_data_size0 ] yes */
+        if ((rc = write_data(fd, &vendor_size, sizeof(UINT32)))) {
+		LogError("%s", __FUNCTION__);
+		return rc;
+	}
+
 	/* [UINT16   cache_flags0    ] yes */
         if ((rc = write_data(fd, &cache_flags, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
 		return rc;
 	}
 
-	/* [BYTE[]   pub_data0       ] */
+	/* [BYTE[]   pub_data0       ] no */
         //if ((rc = write_data(fd, (void *)pub_key, pub_key_size))) {
         if ((rc = write_data(fd, (void *)key.pubKey.key, pub_key_size))) {
 		LogError("%s", __FUNCTION__);
 		return rc;
 	}
 
-	/* [BYTE[]   blob0           ] */
+	/* [BYTE[]   blob0           ] no */
         if ((rc = write_data(fd, (void *)key_blob, key_blob_size))) {
 		LogError("%s", __FUNCTION__);
 		return rc;
 	}
 
-	if ((rc = cache_key(offset, cache_flags, uuid, parent_uuid, pub_key_size, key_blob_size)))
+	/* [BYTE[]   vendor_data0    ] no */
+        if ((rc = write_data(fd, (void *)vendor_data, vendor_size))) {
+		LogError("%s", __FUNCTION__);
+		return rc;
+	}
+
+	if ((rc = cache_key(offset, cache_flags, uuid, parent_uuid, pub_key_size,
+					key_blob_size, vendor_size)))
 		return rc;
 
         return TSS_SUCCESS;
 }
 
+TSS_RESULT
+ps_remove_key(int fd, struct key_disk_cache *c)
+{
+        TSS_RESULT result;
+        UINT32 head_offset = 0, tail_offset, num_keys;
+	BYTE buf[4096];
+	struct stat stat_buf;
+	int rc, size;
+
+	if ((rc = fstat(fd, &stat_buf)) != 0) {
+		LogError("fstat: %s", strerror(errno));
+		return TSS_E_INTERNAL_ERROR;
+	}
+
+	/* head_offset is the offset the beginning of the key */
+	head_offset = UUID_OFFSET(c);
+
+	/* tail_offset is the offset the beginning of the next key */
+	tail_offset = VENDOR_DATA_OFFSET(c) + c->vendor_data_size;
+
+	rc = lseek(fd, tail_offset, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	/* read in from tail, write out to head to fill the gap */
+	while ((rc = read(fd, buf, sizeof(buf))) > 0) {
+		size = rc;
+		tail_offset += size;
+
+		/* set the file pointer to where we want to write */
+		rc = lseek(fd, head_offset, SEEK_SET);
+		if (rc == ((off_t) - 1)) {
+			LogError("lseek: %s", strerror(errno));
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		/* write the data */
+		if ((result = write_data(fd, (void *)buf, size))) {
+			LogError("%s", __FUNCTION__);
+			return result;
+		}
+		head_offset += size;
+
+		/* set the file pointer to where we want to read in the next
+		 * loop */
+		rc = lseek(fd, tail_offset, SEEK_SET);
+		if (rc == ((off_t) - 1)) {
+			LogError("lseek: %s", strerror(errno));
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+
+	if (rc < 0) {
+		LogError("read: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	} else if (rc == 0) {
+		/* we read through to the EOF, so set rc correctly */
+		size = stat_buf.st_size - tail_offset;
+	}
+
+	/* set the file pointer to where we want to write */
+	rc = lseek(fd, head_offset, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if (size > 0) {
+		/* write the data, length of short read count is in the rc variable */
+		if ((result = write_data(fd, (void *)buf, size))) {
+			LogError("%s", __FUNCTION__);
+			return result;
+		}
+		head_offset += size;
+	}
+
+	/* head_offset now contains a pointer to where we want to truncate the
+	 * file. Zero out the old tail end of the file and truncate it. */
+
+	memset(buf, 0, sizeof(buf));
+
+	/* Zero out the old tail end of the file */
+	if ((result = write_data(fd, (void *)buf, sizeof(buf)))) {
+		LogError("%s", __FUNCTION__);
+		return result;
+	}
+#if 0
+	/* set the file pointer back to where we want to truncate */
+	rc = lseek(fd, head_offset, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+#endif
+	if ((rc = ftruncate(fd, head_offset)) < 0) {
+		LogError("ftruncate: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	/* we succeeded in removing a key from the disk. Decrement the number
+	 * of keys in the file */
+	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	rc = read(fd, &num_keys, sizeof(UINT32));
+	if (rc != sizeof(UINT32)) {
+		LogError("read of %d bytes: %s", sizeof(UINT32),
+						strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	/* decrement, then write back out to disk */
+	num_keys--;
+
+	if ((result = write_data(fd, (void *)&num_keys, sizeof(UINT32)))) {
+		LogError("%s", __FUNCTION__);
+		return result;
+	}
+
+	return TSS_SUCCESS;
+}
