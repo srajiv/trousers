@@ -3789,8 +3789,21 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 	UnloadBlob_UINT32(&offset, &tsp_data.ordinal, data->buf, NULL);
 	UnloadBlob_UINT32(&offset, &totalSize, data->buf, NULL);
 	UnloadBlob_UINT16(&offset, &tsp_data.numParms, data->buf, NULL);
-	UnloadBlob(&offset, tsp_data.numParms, data->buf, tsp_data.types, NULL);
-	UnloadBlob(&offset, totalSize - offset, data->buf, tsp_data.dataBuffer, NULL);
+
+	if (tsp_data.numParms > 0) {
+		UnloadBlob(&offset, tsp_data.numParms, data->buf,
+							tsp_data.types, NULL);
+
+		/* if we've already unloaded totalSize bytes or more, the TSP's
+		 * packet is bogus, return a code indicating that its the
+		 * TSP's problem */
+		if (offset < totalSize) {
+			UnloadBlob(&offset, totalSize - offset, data->buf,
+					tsp_data.dataBuffer, NULL);
+		} else {
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
 
 #if 0
 	LogDebug("Dispatching command to TCSD_ORD_ 0x%X", tsp_data.ordinal);
