@@ -19,18 +19,23 @@
 /*
  * disk store format:
  *
- *                             cached?
- * [UINT32   num_keys_on_disk]
- * [TSS_UUID uuid0           ] yes
- * [TSS_UUID uuid_parent0    ] yes
- * [UINT16   pub_data_size0  ] yes
- * [UINT16   blob_size0      ] yes
- * [UINT16   cache_flags0    ] yes
- * [BYTE[]   pub_data0       ]
- * [BYTE[]   blob0           ]
+ * [type     name               ] cached?
+ * --------------------------------------
+ * [BYTE     TrouSerS PS version] no
+ * [UINT32   num_keys_on_disk   ] no
+ * [TSS_UUID uuid0              ] yes
+ * [TSS_UUID uuid_parent0       ] yes
+ * [UINT16   pub_data_size0     ] yes
+ * [UINT16   blob_size0         ] yes
+ * [UINT32   vendor_data_size0  ] yes
+ * [UINT16   cache_flags0       ] yes
+ * [BYTE[]   pub_data0          ] no
+ * [BYTE[]   blob0              ] no
+ * [BYTE[]   vendor_data0       ] no
  * [...]
  *
  */
+
 
 /*
  * PS disk cache flags
@@ -48,49 +53,28 @@ struct key_disk_cache
         UINT16 pub_data_size;
         UINT16 blob_size;
         UINT16 flags;
+	UINT32 vendor_data_size;
         TSS_UUID uuid;
         TSS_UUID parent_uuid;
         struct key_disk_cache *next;
 };
 
 /* offsets into each key on disk. These should be passed a (struct key_disk_cache *) */
-#define NUM_KEYS_OFFSET         (0)
+#define VERSION_OFFSET		(0)
+#define NUM_KEYS_OFFSET         (VERSION_OFFSET + sizeof(BYTE))
 #define KEYS_OFFSET             (NUM_KEYS_OFFSET + sizeof(UINT32))
 #define UUID_OFFSET(c)          (c->offset)
 #define PARENT_UUID_OFFSET(c)   (c->offset + sizeof(TSS_UUID))
 #define PUB_DATA_SIZE_OFFSET(c) (c->offset + (2 * sizeof(TSS_UUID)))
 #define BLOB_SIZE_OFFSET(c)     (c->offset + (2 * sizeof(TSS_UUID)) + sizeof(UINT16))
-#define CACHE_FLAGS_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)))
-#define PUB_DATA_OFFSET(c)      (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)))
-#define BLOB_DATA_OFFSET(c)     (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + c->pub_data_size)
+#define VENDOR_SIZE_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)))
+#define CACHE_FLAGS_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)) + sizeof(UINT32))
+#define PUB_DATA_OFFSET(c)      (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32))
+#define BLOB_DATA_OFFSET(c)     (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + c->pub_data_size)
+#define VENDOR_DATA_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + c->pub_data_size + c->blob_size)
 
 #define MAX_KEY_CHILDREN	10
 
 #define STRUCTURE_PACKING_ATTRIBUTE	__attribute__((packed))
-
-typedef unsigned char *POINTER;
-typedef POINTER B_KEY_OBJ;
-typedef POINTER B_ALGORITHM_OBJ;
-typedef struct _CRTKEY {
-	BYTE exp1[256];
-	BYTE exp2[256];
-	BYTE mod1[256];
-	BYTE mod2[256];
-	BYTE crt[256];
-} CRTKEY;
-
-typedef struct _HMAC_Struct {
-	UINT32 secretSize;
-	BYTE *secret;
-	UINT32 bufferSize;
-	BYTE *buffer;
-} HMAC_Struct;
-
-typedef struct _HASH_Struct {
-	BYTE hashType;
-/*      UINT32 bufSize; */
-/*      BYTE* buffer; */
-	B_ALGORITHM_OBJ algObject;
-} HASH_Struct;
 
 #endif

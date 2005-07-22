@@ -26,8 +26,8 @@ void		   close_file(int);
 void		   destroy_ps();
 inline TSS_RESULT  read_data(int, void *, UINT32);
 inline TSS_RESULT  write_data(int, void *, UINT32);
-int		   write_key_init(int, UINT32, UINT32);
-TSS_RESULT	   cache_key(UINT32, UINT16, TSS_UUID *, TSS_UUID *, UINT16, UINT32);
+int		   write_key_init(int, UINT32, UINT32, UINT32);
+TSS_RESULT	   cache_key(UINT32, UINT16, TSS_UUID *, TSS_UUID *, UINT16, UINT32, UINT32);
 TSS_RESULT	   UnloadBlob_KEY_PS(UINT16 *, BYTE *, TCPA_KEY *);
 TSS_RESULT	   ps_get_parent_uuid_by_uuid(int, TSS_UUID *, TSS_UUID *);
 TSS_RESULT	   ps_remove_key_by_uuid(int, TSS_UUID *);
@@ -36,7 +36,8 @@ TSS_RESULT	   ps_get_key_by_cache_entry(int, struct key_disk_cache *, BYTE *, UI
 TSS_RESULT	   ps_get_parent_ps_type_by_uuid(int, TSS_UUID *, UINT32 *);
 TSS_RESULT	   ps_is_pub_registered(int, TCPA_STORE_PUBKEY *, TSS_BOOL *);
 TSS_RESULT	   ps_get_uuid_by_pub(int, TCPA_STORE_PUBKEY *, TSS_UUID **);
-TSS_RESULT	   ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT16);
+TSS_RESULT	   ps_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT32, BYTE *, UINT16);
+TSS_RESULT	   ps_remove_key(int, struct key_disk_cache *);
 TCPA_STORE_PUBKEY *ps_get_pub_by_tpm_handle(int, TCPA_KEY_HANDLE);
 TSS_RESULT	   ps_get_tpm_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCPA_KEY_HANDLE *);
 TSS_RESULT	   ps_get_tcs_handle_by_pub(int, TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE *);
@@ -46,5 +47,7 @@ TSS_RESULT	   ps_get_key_by_pub(int, TCPA_STORE_PUBKEY *, UINT32 *, BYTE **);
 TSS_RESULT	   removeRegisteredKey(TSS_UUID *);
 int		   init_disk_cache(int fd);
 int		   close_disk_cache(int fd);
+
+TSS_RESULT	   clean_disk_cache(int);
 
 #endif
