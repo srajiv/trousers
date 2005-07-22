@@ -78,15 +78,19 @@ usage(char *argv0)
 void
 print_hex(BYTE *buf, UINT32 len)
 {
-	UINT32 i = 0, j;
+	UINT32 i, j;
 
-	while (i < len) {
-		for (j=0; (j < 4) && (i < len); j++, i+=4)
-			printf("%02x%02x%02x%02x ",
-				buf[i] & 0xff, buf[i+1] & 0xff,
-				buf[i+2] & 0xff, buf[i+3] & 0xff);
-		printf("\n");
+	for (i=0, j=1; (i+4) < len; j++, i+=4) {
+		printf("%02x%02x%02x%02x ",
+			buf[i] & 0xff, buf[i+1] & 0xff,
+			buf[i+2] & 0xff, buf[i+3] & 0xff);
+		if (!(j % 4))
+			printf("\n");
 	}
+
+	while (i < len)
+		printf("%02x", buf[i++] & 0xff);
+	printf("\n");
 }
 
 int
