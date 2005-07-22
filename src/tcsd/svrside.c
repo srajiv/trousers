@@ -34,7 +34,6 @@
 #include "tcslog.h"
 #include "tcsd_wrap.h"
 #include "tcsps.h"
-#include "tspps.h"
 #include "tcsd.h"
 #include "req_mgr.h"
 
