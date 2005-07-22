@@ -242,6 +242,10 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			auth_mgr.open_auth_sessions++;
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
+		} else {
+			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle)
+				LogDebug1("***************************** "
+						"UNCLEAN AUTH MAPPER TABLE");
 		}
 	}
 
@@ -265,8 +269,10 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 
 	/* If this TSP has already opened its max open auth handles, deny
 	 *  another open */
-	if (opened >= MAX(2, auth_mgr.max_auth_sessions/2))
+	if (opened >= MAX(2, auth_mgr.max_auth_sessions/2)) {
+		LogDebug1("Max opened auth handles already opened.");
 		return FALSE;
+	}
 
 	/* if we have one opened already and there's a slot available, ok */
 	if (opened && ((auth_mgr.max_auth_sessions - auth_mgr.open_auth_sessions) >= 1))
@@ -275,6 +281,8 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 	/* we don't already have one open and there are at least 2 slots left */
 	if ((auth_mgr.max_auth_sessions - auth_mgr.open_auth_sessions) >= 2)
 		return TRUE;
+
+	LogDebug1("Request for new auth handle denied by TCS.");
 
 	return FALSE;
 }
