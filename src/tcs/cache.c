@@ -110,6 +110,11 @@ initDiskCache(void)
 	if ((rc = init_disk_cache(fd)))
 		return rc;
 
+	/* this is temporary, to clear out a PS file from trousers
+	 * versions before 0.2.1 */
+	if ((rc = clean_disk_cache(fd)))
+		return rc;
+
 	put_file(fd);
 	return TSS_SUCCESS;
 }
@@ -1181,36 +1186,110 @@ isUUIDRegistered(TSS_UUID *uuid, TSS_BOOL *is_reg)
 	return TSS_SUCCESS;
 }
 
-/*
- * run through the key cache and invalidate the key with the given uuid. If a new
- * key is then added to the cache with the same size, it will overwrite the
- * invalidated key. If PS is closed before a key overwrites it, the bytes in the
- * file for the invalid key are written with 0's.
- */
+void
+disk_cache_shift(struct key_disk_cache *c)
+{
+	UINT32 offset = VENDOR_DATA_OFFSET(c) + c->vendor_data_size
+			- UUID_OFFSET(c);
+	struct key_disk_cache *tmp = key_disk_cache_head;
+
+	/* for each disk cache entry, if the data for that entry is at an
+	 * offset greater than the key beign removed, then the entry needs to
+	 * be decremented by the size of key's disk footprint (the offset
+	 * variable) */
+	while (tmp) {
+		if (tmp->offset > offset) {
+			tmp->offset -= offset;
+		}
+
+		tmp = tmp->next;
+	}
+}
+
 TSS_RESULT
 removeRegisteredKey(TSS_UUID *uuid)
 {
-	struct key_disk_cache *tmp;
+	struct key_disk_cache *tmp, *prev = NULL;
+	TSS_RESULT rc;
+        int fd = -1;
 
 	pthread_mutex_lock(&disk_cache_lock);
 	tmp = key_disk_cache_head;
 
-	for (; tmp; tmp = tmp->next) {
+	for (; tmp; prev = tmp, tmp = tmp->next) {
 		if ((tmp->flags & CACHE_FLAG_VALID) &&
-				!memcmp(uuid, &tmp->uuid, sizeof(TSS_UUID))) {
-			/* just invalidate the key in the cache. The next time a key of the same
-			 * size needs to be written to disk, this key will be overwritten. This is
-			 * fine for the TSP, but the TCS will have to zero out invalid entries on
-			 * disk before exiting or sth. */
-			tmp->flags &= ~CACHE_FLAG_VALID;
+		    !memcmp(uuid, &tmp->uuid, sizeof(TSS_UUID))) {
+			if ((fd = get_file()) < 0) {
+				rc = TCSERR(TSS_E_INTERNAL_ERROR);
+				break;
+			}
+
+			rc = ps_remove_key(fd, tmp);
+
+			put_file(fd);
+
+			/* if moving the file contents around succeeded, then
+			 * change the offsets of the keys in the cache in
+			 * mem_cache_shift() and remove the key from the
+			 * cache. */
+			if (!rc) {
+				disk_cache_shift(tmp);
+				if (prev) {
+					prev->next = tmp->next;
+				} else {
+					key_disk_cache_head = tmp->next;
+				}
+				free(tmp);
+			} else {
+				LogError1("Error removing registered key.");
+			}
+
 			pthread_mutex_unlock(&disk_cache_lock);
-			return TSS_SUCCESS;
+			return rc;
 		}
 	}
 
 	pthread_mutex_unlock(&disk_cache_lock);
 
 	return TCSERR(TCSERR(TSS_E_PS_KEY_NOTFOUND));
+}
+
+/* temporary function to clean out blanked keys from a PS file from
+ * trousers 0.2.0 and before */
+TSS_RESULT
+clean_disk_cache(int fd)
+{
+	struct key_disk_cache *tmp, *prev = NULL;
+	TSS_RESULT rc;
+
+	pthread_mutex_lock(&disk_cache_lock);
+	tmp = key_disk_cache_head;
+
+	for (; tmp; prev = tmp, tmp = tmp->next) {
+		if (!(tmp->flags & CACHE_FLAG_VALID)) {
+			rc = ps_remove_key(fd, tmp);
+
+			/* if moving the file contents around succeeded, then
+			 * change the offsets of the keys in the cache in
+			 * mem_cache_shift() and remove the key from the
+			 * cache. */
+			if (!rc) {
+				disk_cache_shift(tmp);
+				if (prev) {
+					prev->next = tmp->next;
+				}
+				free(tmp);
+			} else {
+				LogError1("Error removing blank key.");
+			}
+
+			pthread_mutex_unlock(&disk_cache_lock);
+			return rc;
+		}
+	}
+
+	pthread_mutex_unlock(&disk_cache_lock);
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -1428,7 +1507,9 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 }
 
 TSS_RESULT
-writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *blob, UINT32 blob_size)
+writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid,
+			 BYTE *vendor_data, UINT32 vendor_size,
+			 BYTE *blob, UINT32 blob_size)
 {
         int fd = -1;
         TSS_RESULT rc;
@@ -1447,7 +1528,8 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *blob, UINT
 			return rc;
 	}
 
-        rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, short_blob_size);
+        rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, vendor_data,
+			  vendor_size, blob, short_blob_size);
 
         put_file(fd);
         return TSS_SUCCESS;

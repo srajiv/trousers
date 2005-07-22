@@ -715,8 +715,8 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 						     uuidKey,
 						     keyBlobSize,
 						     keyBlob,
-						     0,
-						     NULL)))
+						     strlen(PACKAGE_STRING) + 1,
+						     PACKAGE_STRING)))
 				return result;
 		} else {
 			return TSPERR(TSS_E_BAD_PARAMETER);
