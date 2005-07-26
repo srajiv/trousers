@@ -62,15 +62,16 @@ ssh_askpass(const char *msg)
 
 	bytes_read = rc = 0;
 	while (rc >= 0 && (bytes_read < 256)) {
-		bytes_read = read(pipe_fds[0], &buf[bytes_read], 256 - bytes_read);
+		rc = read(pipe_fds[0], &buf[bytes_read], 255 - bytes_read);
 		if (rc == 0) {
+			/* eof, so break before 256 bytes are read */
 			break;
-		} else if (rc == -1) {
+		} else if (rc < 0) { /* error, either retry or break */
 			if (errno == EINTR) {
 				rc = 0;
 			} else {
 				LogError("Error on read of password: %s", strerror(errno));
-				break;
+				return NULL;
 			}
 		}
 		/* rc is greater than 0, add it to bytes_read */
