@@ -1,4 +1,5 @@
 
+ - changed config file defaults for kernel/firmware pcrs.
  - added better logging for when user/group "tss" doesn't exist
  - in sendTCSDPacket: set transmitBuffer to 0 to prevent sending
    bogus data.
