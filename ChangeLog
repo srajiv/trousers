@@ -1,4 +1,21 @@
 
+ - Fixed mem leak in spi_getset.c:791, found by Coverity.
+ - Fixed mem leak in calltcsapi.c:70, found by Coverity.
+ - Fixed mem leak in tcskcm.c:531, found by Coverity.
+ - Fixed type-o mem leak in tspps.c:319/tcsps.c:349, found by Coverity.
+ - Fixed mem leak bug in memmgr.c:173, found by Coverity.
+ - Fixed bounds error bugs in tcstp.c:38/98, found by Coverity.
+ - Fixed bounds error bug in tcsd_wrap.c:154, found by Coverity.
+ - Fixed unchecked return bug in spi_utils.c:430, found by Coverity.
+ - Fixed unchecked return bug in calltcsapi.c:1159, found by Coverity.
+ - Fixed negative return value bug tcs/ps/ps_utils.c:365, found by Coverity.
+ - Fixed negative array index bug readpass.c:65, found by Coverity.
+ - Fixed null deref bugs spi_tpm.c:1292/1309/1302, and uninitialized
+   variable 1272, found by Coverity.
+ - Fixed null deref bugs spi_context.c:358/378, found by Coverity.
+ - Fixed null deref bug tcspbg.c:1413, found by Coverity.
+ - Fixed null deref bug tcspbg.c:745, found by Coverity.
+ - Fixed null deref bug imaem.c:356, found by Coverity.
  - changed config file defaults for kernel/firmware pcrs.
  - added better logging for when user/group "tss" doesn't exist
  - in sendTCSDPacket: set transmitBuffer to 0 to prevent sending
