@@ -745,17 +745,17 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (*SymmetricKey == NULL) {
 			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey, "sym key");
 
 		if (idKeyAuth != NULL) {
-			if (result) {
-				UnloadBlob_Auth(&offset, txBlob, idKeyAuth);
-			}
+			UnloadBlob_Auth(&offset, txBlob, idKeyAuth);
 		}
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_ActivateTPMIdentity, result); */
+
+done:
 	return result;
 }
 
@@ -1405,11 +1405,12 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		} else {
 			UnloadBlob(&offset, *outDataSize, txBlob, *outData, "out data");
 		}
-		if (parentAuth != NULL)
+		if (parentAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, parentAuth);
 
-		if (result)
-			auth_mgr_release_auth(parentAuth->AuthHandle);
+			if (result)
+				auth_mgr_release_auth(parentAuth->AuthHandle);
+		}
 	}
 /*	AppendAudit(0, TPM_ORD_ConvertMigrationBlob, result); */
 	LogResult("***Leaving ConvertMigrationBlob with result ", result);
