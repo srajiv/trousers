@@ -428,7 +428,7 @@ init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
 	TSS_HCONTEXT tspContext = obj_lookupTspContext(tcsContext);
 
 	if (tspContext == NULL_HCONTEXT) {
-		LogError("TCS context not found: %x", hContext);
+		LogError("TCS context not found: %x", tcsContext);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
