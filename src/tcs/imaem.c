@@ -351,10 +351,10 @@ ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent
 
 				e->rgbEvent = malloc(e->ulEventLength);
 				if (e->rgbEvent == NULL) {
+					LogError("malloc of %d bytes failed.", e->ulEventLength);
 					free(e->rgbPcrValue);
 					free(e);
 					e = NULL;
-					LogError("malloc of %d bytes failed.", e->ulEventLength);
 					break;
 				}
 
