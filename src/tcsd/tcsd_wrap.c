@@ -151,7 +151,7 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_pa
 		memset(hdr->parm_types, 0, sizeof(hdr->parm_types));
 	}
 	offset = hdr->packet_size;
-	if (index > TCSD_MAX_NUM_PARMS) {
+	if (index >= TCSD_MAX_NUM_PARMS) {
 		LogError1("Too many elements in TCSD packet!");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
