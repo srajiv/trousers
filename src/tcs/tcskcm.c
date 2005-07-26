@@ -355,7 +355,6 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY *key = NULL;
 	TCPA_KEY_HANDLE myKeySlot;
 	TCS_KEY_HANDLE myTcsKeyHandle;
-	TCPA_STORE_PUBKEY *myPubKey;
 	TCPA_STORE_PUBKEY *parentPubKey = NULL;
 	TCPA_KEY_HANDLE parentKeySlot;
 	TSS_BOOL needToSendPacket = TRUE, canLoad;
@@ -511,8 +510,6 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LogData("Key slot is", myKeySlot);
 	}
 
-	/*---	Get the keyInfo from the key for storage */
-	myPubKey = &key->pubKey;
 	/***************************************
 	 *See if a TCSKeyHandle already exists.
 	 *	If it's 0, then it doesn't exist, and we need new knowledge of the key.
@@ -530,8 +527,11 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (pAuth == NULL) {
 			offset = 0;
 			destroy_key_refs(key);
-			if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key)))
+			if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key))) {
+				destroy_key_refs(key);
+				free(key);
 				return result;
+			}
 		}
 
 		result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, key);
