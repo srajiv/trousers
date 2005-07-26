@@ -32,10 +32,10 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 	if (index == 0) {
 		packet->dataSize = 0;
 		packet->numParms = 0;
-		memset(packet->types, 0, sizeof (packet->types));
+		memset(packet->types, 0, sizeof(packet->types));
 	}
 	offset = packet->dataSize;
-	if ((unsigned int)index > sizeof(packet->types))
+	if ((unsigned int)index >= sizeof(packet->types))
 		return -1;
 	switch (dataType) {
 	case TCSD_PACKET_TYPE_BYTE:
@@ -95,7 +95,7 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_pa
 		hdr->packet_size = sizeof(struct tcsd_packet_hdr) - 1;
 	}
 	offset = hdr->packet_size;
-	if (index > TCSD_MAX_NUM_PARMS) {
+	if (index >= TCSD_MAX_NUM_PARMS) {
 		LogError1("Too many elements in TCSD packet!");
 		return -1;
 	}
