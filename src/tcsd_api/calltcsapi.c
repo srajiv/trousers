@@ -67,6 +67,8 @@ TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
 		return result;
 	}
 
+	free(entry);
+
 	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
@@ -1140,6 +1142,7 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
+	TSS_HCONTEXT tspContext;
 
 	if (entry == NULL)
 		return TSPERR(TSS_E_NO_CONNECTION);
@@ -1152,8 +1155,12 @@ TCPA_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/*  in */
 		if (result) {
 			LogWarn("%s: TPM random generation failed. result=0x%x",
 					__FUNCTION__, result);
-			result = get_local_random(obj_lookupTspContext(hContext),
-					bytesRequested, randomBytes);
+			if ((tspContext = obj_lookupTspContext(hContext)) ==
+							NULL_HCONTEXT) {
+				LogError("TCS context not found: %x", hContext);
+				return TSPERR(TSS_E_INTERNAL_ERROR);
+			}
+			result = get_local_random(tspContext, bytesRequested, randomBytes);
 		}
 
 		return result;
