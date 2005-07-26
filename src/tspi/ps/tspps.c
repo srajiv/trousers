@@ -316,7 +316,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 			continue;
 		}
 
-		*ret_uuid == (TSS_UUID *)malloc(sizeof(TSS_UUID));
+		*ret_uuid = (TSS_UUID *)malloc(sizeof(TSS_UUID));
 		if (*ret_uuid == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(TSS_UUID));
 			pthread_mutex_unlock(&disk_cache_lock);
