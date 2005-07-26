@@ -1,4 +1,5 @@
 
+ - added better logging for when user/group "tss" doesn't exist
  - in sendTCSDPacket: set transmitBuffer to 0 to prevent sending
    bogus data.
  - added some sanity checking in getTCSDPacket to prevent segfaults.
