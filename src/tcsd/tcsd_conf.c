@@ -464,15 +464,27 @@ conf_file_init(struct tcsd_config *conf)
 	}
 
 	/* find the gid that owns the conf file */
+	errno = 0;
 	grp = getgrnam(TSS_GROUP_NAME);
 	if (grp == NULL) {
-		LogError("getgrnam(%s): %s", TSS_GROUP_NAME, strerror(errno));
+		if (errno == 0) {
+			LogError("Group \"%s\" not found, please add this group"
+					" manually.", TSS_GROUP_NAME);
+		} else {
+			LogError("getgrnam(%s): %s", TSS_GROUP_NAME, strerror(errno));
+		}
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
+	errno = 0;
 	pw = getpwnam(TSS_USER_NAME);
 	if (pw == NULL) {
-		LogError("getpwnam(%s): %s", TSS_USER_NAME, strerror(errno));
+		if (errno == 0) {
+			LogError("User \"%s\" not found, please add this user"
+					" manually.", TSS_USER_NAME);
+		} else {
+			LogError("getpwnam(%s): %s", TSS_USER_NAME, strerror(errno));
+		}
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
