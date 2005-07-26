@@ -362,13 +362,13 @@ get_num_keys_in_file(int fd)
 	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
 	if (rc == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
-		return -1;
+		return 0;
 	}
 
 	rc = read(fd, &num_keys, sizeof(UINT32));
-	if (rc == -1) {
+	if (rc < 0) {
 		LogError("read of %d bytes: %s", sizeof(UINT32), strerror(errno));
-		return -1;
+		return 0;
 	} else if ((unsigned)rc < sizeof(UINT32)) {
 		num_keys = 0;
 	}
