@@ -483,7 +483,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	TCPA_KEY ephemeralKey;
 	TCPA_DIGEST newAuthLink;
 	UINT32 encObjectSize;
-	BYTE *encObject;
+	BYTE *encObject = NULL;
 	UINT32 encDataSizeOut;
 	BYTE *encDataOut;
 	TCPA_NONCE saltNonce;
@@ -788,6 +788,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 									&digest,
 									&auth))) {
 					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
+					free(encObject);
 					return result;
 				}
 			}
@@ -822,6 +823,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		}
 	} else
 		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	free(encObject);
 
 	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
 }
