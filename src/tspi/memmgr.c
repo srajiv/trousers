@@ -170,6 +170,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	newEntry->memPointer = calloc(1, howMuch);
 	if (newEntry->memPointer == NULL) {
 		LogError("malloc of %d bytes failed.", howMuch);
+		free(newEntry);
 		pthread_mutex_unlock(&memtable_lock);
 		return NULL;
 	}
