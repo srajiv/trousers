@@ -425,6 +425,12 @@ TSS_RESULT
 init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
 {
 	UINT16 num = get_num_pcrs(tcsContext);
+	TSS_HCONTEXT tspContext = obj_lookupTspContext(tcsContext);
+
+	if (tspContext == NULL_HCONTEXT) {
+		LogError("TCS context not found: %x", hContext);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	if (num == 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -434,8 +440,7 @@ init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if ((select->pcrSelect = calloc_tspi(obj_lookupTspContext(tcsContext),
-						num / 8)) == NULL) {
+	if ((select->pcrSelect = calloc_tspi(tspContext, num / 8)) == NULL) {
 		LogError("malloc of %d bytes failed.", num / 8);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
