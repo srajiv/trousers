@@ -350,13 +350,12 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/*  in */
 		case TSS_TSPCAP_VERSION:
 		case TSS_TSPCAP_PERSSTORAGE:
 			if (capArea == TSS_TSPCAP_ALG) {
-				if (ulSubCapLength != sizeof(UINT32) &&
-						rgbSubCap)
+				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
 					return TSPERR(TSS_E_BAD_PARAMETER);
 			}
 
 			result = internal_GetCap(tspContext, capArea,
-						 *(UINT32 *)rgbSubCap,
+						 rgbSubCap ? *(UINT32 *)rgbSubCap : 0,
 						 pulRespDataLength,
 						 prgbRespData);
 			break;
@@ -370,12 +369,11 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/*  in */
 				return result;
 
 			if (capArea == TSS_TCSCAP_ALG) {
-				if (ulSubCapLength != sizeof(UINT32) &&
-						rgbSubCap)
+				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
 					return TSPERR(TSS_E_BAD_PARAMETER);
 			}
 
-			subCap = endian32(*(UINT32 *)rgbSubCap);
+			subCap = rgbSubCap ? endian32(*(UINT32 *)rgbSubCap) : 0;
 
 			result = TCS_GetCapability(tcsContext,
 							capArea,
