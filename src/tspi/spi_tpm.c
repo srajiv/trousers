@@ -1269,7 +1269,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	TCPA_CAPABILITY_AREA tcsCapArea;
-	UINT32 tcsSubCap;
+	UINT32 tcsSubCap = 0;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
 	UINT32 nonVolFlags, volFlags, respLen, correct_endianess = 0;
@@ -1289,7 +1289,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	/* Verify the caps and subcaps */
 	switch (capArea) {
 	case TSS_TPMCAP_ORD:
-		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_ORD;
@@ -1299,14 +1299,14 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		fOwnerAuth = TRUE;
 		break;
 	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
-		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_ALG;
 		tcsSubCap = *(UINT32 *)rgbSubCap;
 		break;
 	case TSS_TPMCAP_PROPERTY:	/*     Determines a physical property of the TPM. */
-		if ((ulSubCapLength != sizeof(UINT32)) && rgbSubCap)
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_PROPERTY;
