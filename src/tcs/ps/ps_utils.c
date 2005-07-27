@@ -264,7 +264,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 		}
 
 		/* return the offset */
-		return sizeof(UINT32);
+		return (NUM_KEYS_OFFSET + sizeof(UINT32));
 	}
 
 	/* if there is a hole in the file we can write to, find it */
