@@ -25,7 +25,7 @@ Tspi_TPM_GetEvents\- get a specific number of PCR events for a given index.
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <tss/spi_types.h>
+.B #include <trousers/tss.h>
 .sp
 .BI "TSS_RESULT Tspi_TPM_GetEvents(TSS_HTPM " hTPM ", UINT32 " ulPcrIndex ", UINT32 " ulStartNumber ", UINT32 " ulEventNumber ", UINT32* " pulEventNumber ", TSS_PCR_EVENT* " prgPcrEvents ")
 .sp
