@@ -25,7 +25,7 @@ Tspi_Context_UnregisterKey \- unregister a key from the persistent storage devic
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <tss/tss.h>
+.B #include <trousers/tss.h>
 .sp
 .BI "TSS_RESULT Tspi_Context_UnregisterKey(TSS_HCONTEXT " hContext ", TSS_FLAG " persistentStorageType ", TSS_UUID " uuidKey ", TSS_HKEY* " phKey ");
 .sp
@@ -68,7 +68,7 @@ The handle of the object to be destroyed
 .SM TSS_E_INTERNAL_ERROR - An error occurred internal to the TSS.
 .SH "EXAMPLE"
 .nf
-#include <tss/tss.h>
+#include <trousers/tss.h>
 
 int
 main(void)
