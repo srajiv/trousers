@@ -1,4 +1,6 @@
 
+ - return invalid handle int Tspi_ChangeAuth when hParentObject
+   is not of the right type.
  - Fixed bug in TCS ps, write_key_init returned the wrong offset.
  - Fixed mem leak in spi_getset.c:791, found by Coverity.
  - Fixed mem leak in calltcsapi.c:70, found by Coverity.
