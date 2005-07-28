@@ -84,7 +84,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		memcpy(&addr.sin_addr, hEnt->h_addr_list[0], 4);
 	}
 
-	LogDebug("Resolved Address is %s\n", inet_ntoa(addr.sin_addr));
+	LogDebug("Resolved Address is %s", inet_ntoa(addr.sin_addr));
 
 	LogDebug1("Connecting");
 	if (connect(sd, (struct sockaddr *) &addr, sizeof (addr))) {
