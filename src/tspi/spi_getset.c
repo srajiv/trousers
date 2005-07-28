@@ -526,6 +526,9 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 						&hParentPolicy)))
 		return result;
 
+	if (!obj_is_rsakey(hParentObject) && !obj_is_tpm(hParentObject))
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
 	/*  get the keyObject  */
 	keyHandle = getTCSKeyHandle(hParentObject);
 	if (keyHandle == NULL_HKEY)
