@@ -27,7 +27,7 @@ state using cryptographic hashes and more.
 %package	devel
 Summary:	TrouSerS header files and documentation
 Group:		Productivity/Security
-Requires:	trousers >= 0.1.0
+Requires:	trousers >= 0.2.0
 
 %description	devel
 Header files and man pages for use in creating TSS enabled applications.
@@ -69,21 +69,12 @@ make
 # create the default location for the persistent store files
 if test -e @localstatedir@/tpm; then
 	mkdir -p @localstatedir@/tpm
-	/bin/chown tss.tss @localstatedir@/tpm
+	/bin/chown tss:tss @localstatedir@/tpm
 	/bin/chmod 1777 @localstatedir@/tpm
 fi
 
-# create the device file if it DNE
-if test ! -e /dev/tpm; then
-	/bin/mknod /dev/tpm c 10 224
-fi
-
-# set the device file appropriately
-/bin/chown tss.tss /dev/tpm
-/bin/chmod 0600 /dev/tpm
-
 # chown the daemon
-/bin/chown tss.tss %{_sbindir}/tcsd
+/bin/chown tss:tss %{_sbindir}/tcsd
 
 /sbin/ldconfig
 
@@ -102,11 +93,17 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 %files
 %doc TODO README NICETOHAVES AUTHORS
 %attr(755, tss, tss) %{_sbindir}/tcsd
+%{_libdir}/libtspi.la
 %{_libdir}/libtspi.so
+%{_libdir}/libtspi.so.0.0.1
+%{_libdir}/libtddl.a
 %config %attr(600, tss, tss) %{_sysconfdir}/tcsd.conf
+%{_mandir}/man5/*
+%{_mandir}/man8/*
 
 # The files to be used by developers, 'trousers-devel'
 %files		devel
 %{_includedir}/tss/*.h
+%{_includedir}/trousers/*.h
 %{_mandir}/man3/Tspi_*
 
