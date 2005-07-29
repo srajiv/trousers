@@ -1,4 +1,6 @@
 
+* TROUSERS_0_2_1
+
  - return invalid handle int Tspi_ChangeAuth when hParentObject
    is not of the right type.
  - Fixed bug in TCS ps, write_key_init returned the wrong offset.

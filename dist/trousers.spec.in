@@ -95,7 +95,7 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 %attr(755, tss, tss) %{_sbindir}/tcsd
 %{_libdir}/libtspi.la
 %{_libdir}/libtspi.so
-%{_libdir}/libtspi.so.0.0.1
+%{_libdir}/libtspi.so.0.0.2
 %{_libdir}/libtddl.a
 %config %attr(600, tss, tss) %{_sysconfdir}/tcsd.conf
 %{_mandir}/man5/*

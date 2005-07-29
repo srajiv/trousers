@@ -2,7 +2,7 @@
 # configure.in for the trousers project
 #
 
-AC_INIT(trousers, 0.2.0, trousers-tech@lists.sf.net)
+AC_INIT(trousers, 0.2.1, trousers-tech@lists.sf.net)
 # compute $target
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(1.6.3)
@@ -40,7 +40,7 @@ esac
 AC_MSG_CHECKING([Non-standard OpenSSL])
 AC_ARG_WITH(openssl,
 	[--with-openssl=PATH      Location of openssl libs/includes],
-  	[OPENSSL_INCLUDE_DIR="$withval/include"
+	[OPENSSL_INCLUDE_DIR="$withval/include"
 	 OPENSSL_LIB_DIR="$withval/lib"
 	 if [[ ! -d $OPENSSL_INCLUDE_DIR -o ! -d $OPENSSL_LIB_DIR ]]; then
 		AC_MSG_ERROR([$OPENSSL_INCLUDE_DIR or $OPENSSL_LIB_DIR doen't exist!])
