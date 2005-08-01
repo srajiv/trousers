@@ -1,4 +1,6 @@
 
+ - Bugfix for SF#1249769, addKeyHandle now returns a TSS_RESULT.
+
 * TROUSERS_0_2_1
 
  - return invalid handle int Tspi_ChangeAuth when hParentObject
