@@ -1,6 +1,4 @@
 
-These are now prioritized, in order of decreasing priority...
-
 ---- TODO ----
 
   TCS reading of the BIOS/IMA controlled PCR's and related config file changes.
@@ -11,33 +9,28 @@ These are now prioritized, in order of decreasing priority...
 
   TCS context handles should probably be random numbers, not incremental.
 
-  Implement Tspi get event functions so that if ppEvent == NULL, only the number of events is
-    returned.
+  Implement Tspi get event functions so that if ppEvent == NULL, only the
+  number of events is returned.
 
-  Make sure some GetCap call returns the version of the TSS software instead of a TPM version.
+  Make sure some GetCap call returns the version of the TSS software instead of
+  a TPM version.
 
   User PS assumes 1 TSP context per-process. spi_context.c:119
 
   What to do when key->time_stamp loops?
 
-  Setting a key's policy's secret after Key_CreateKey is called results in TCPA_AUTHFAIL. Make
-    sure this is the desired behavior. If not, maybe throw some kind of error on Key_CreateKey,
-    or throw a statment into the SNAFU's doc.
-
-  Return code layer correctness.
-    High level testcases needed to flush out bad return codes
-    Make sure bitmasks for return codes are correct at each level (TSP, TCS, TDDL, TPM)
+  Setting a key's policy's secret after Key_CreateKey is called results in
+  TCPA_AUTHFAIL. Make sure this is the desired behavior. If not, maybe throw
+  some kind of error on Key_CreateKey, or throw a statment into the SNAFU's
+  doc.
 
   Audit code for fault tolerance when reading in bogus data.
 
-  Verify:
-   TCS GetRegisteredKeyBlob
-   TCS SetOwnerInstall
+  Name ps functions rationally so that we can audit ps cache checking functions
+  vs. functions that need to actually open the ps file on disk.
 
-  Name ps functions rationally so that we can audit ps cache checking functions vs. functions
-    that need to actually open the ps file on disk.
-
-  Check for locking sanity. PS functions specifically with flock and disk_cache_lock.
+  Check for locking sanity. PS functions specifically with flock and
+  disk_cache_lock.
 
   i18n work
 
@@ -47,9 +40,11 @@ These are now prioritized, in order of decreasing priority...
 
   AIK path
    - Creation of a TPM identity
-     - Source of the platform, endorsement and conformance credentials must be determined
+     - Source of the platform, endorsement and conformance credentials must be
+     determined
      - Code path from TSP to TPM must be verified
-   - Collate identity request function (encryption of the identity info under the CA's pubkey)
+   - Collate identity request function (encryption of the identity info under
+     the CA's pubkey)
      - format of key received from a CA must be determined
      - Code path from TSP to TPM must be verified
    - Activation of the identity
@@ -67,112 +62,4 @@ These are now prioritized, in order of decreasing priority...
    TCS ChangeAuthAsym{Start|Finish}
    - According to the TSSWG, these functions have been deprecated. Look into these further.
    - These require a TPM identity, so therefore they're not implemented 04/14/05
-
-  Implement the TSS 1.2 policy for remote connections API access controls.
-   - The 1.2 access control policies appear to be based on OS auth
-
----- DONE ---- (DONE means designed, coded and unit tested)
-
-  TCS Bind/Unbind
-   - PKCSv15 ES seems not to work, investigate
-
-  Audit memory freeing everywhere. getSPIMemory was being used as a crutch for
-    freeing memory.
-
-  Revisit threading in the TCSD, there are loose ends.  Check signal handling. Polish up
-    the TRM.
-    - Done 12/08
-
-  Make sure temporary keys are cleaned up on TCS context close.
-    - added 11/30, keys are now reference counted
-
-  11/15/04 Bugfixes:
-    tcsd.conf was getting "${prefix}" in the path to system.data when no prefix was specified.
-
-  Re-write TCS GetCapability function.
-    - sometimes we return hard coded stuff
-    - Done. 11/04 This is fine, TCS caps are hard coded, TPM caps always go to the chip.
-
-  Make the TSP's port configurable
-   - Done 11/04, use the environemnt variable "TSS_TCSD_PORT"
-
-  Make sure the passing of possibly NULL parameter between the TSP
-    and TCS is done in a consistent way.
-   - Done 10/29ish
-
-  Verify:
-   TCS Event Mgr. functions
-   - Done 10/28.
-
-  Detect when the TCSD response to a TSP request fails, so that the TCS session related to
-   that socket can be closed cleanly.
-  - Done! TSP connections to the TCS are now persistent. The TCSD also can associate a connection
-    with a TCS context and clean up a broken connection. 10/21/04
-
-  Add support for TSS_KEY_TYPE_AUTHCHANGE
-   - Auth Change key support added. 10/06/04
-   - Added checks for conflicting init flags on all Tspi_Context_CreateObject calls. 10/06/04
-
-  UNICODE stuff
-    - Fixes in the Tspi_Context_Connect path wrt UNICODE conversion of TCS server name. 10/06
-    - All testcases now run on any host, use the GLOBALSERVER var in common/common.h to set
-      the destination TCSD hostname. 10/06
-
-  Auth Mgr:
-    - added a retry loop for auth requests in the TSP. This should match the logic in
-      other known TSP's. 10/04/04
-
-  Policy lifetime TIMER doesn't yet work
-    - Done 09/27/04
-
-  Several functions throw tcsd_wrap.c:149 errors (attempt to read
-  data past the end of the TCSD packet).  Fix these.
-    - Done 09/24/04, These were related to NULL parameters passed between the TCS and TSP
-
- TCS/TSP free memory handling
-    - Done 09/24/04, NULL passed to Tspi_Context_FreeMemory does the right thing. This is
-      now called implicitly on a Tspi_Context_Close() call.
-
- Auth Mgr:
-    - added context_close_auth() function 09/13/04
-    - need true swapping capabilities
-     - Done 09/23/04
-
-  TCSD locking of all shared data structures
-    - locking around setObject calls, check all lists
-    - Done 09/17/04, need tests to verify
-
-  Verified testcases pass:
-   TCS DirRead
-     - implemented 09/14/04
-   TCS DirWriteAuth
-     - implemented 09/14/04
-   TCS Seal/Unseal
-     - Seal implemented 09/13/04
-     - Unseal implemented on 09/16/04
-
-  In leiu of a patch to OpenSSL enabling passing an OAEP padding parameter
-      (which was shot down), an actual OAEP padding implementation.
-    - Done 08/05/04
-
-  rpm packaging.  It should be the job of the rpm to:
-    - create a user/group named tss
-    - chown /dev/tpm and /var/tpm to tss.tss
-   - Done 09/09/04
-
-  Do user/group install changes for the source install
-    - create a user/group named tss, etc.
-  - Done 08/27/04
-
-  Multi-threaded TCSD
-    - Done 08/12/04
-
-  UNICODE work
-    - Done 09/01/04
-
-  Link build time install targets to necessary #define's (tcsd.conf, etc)
-    - Done 08/27/04
-
-  remove all -1/UNKNOWN returns
-  - Done, sometime
 
