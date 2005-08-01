@@ -1,4 +1,5 @@
 
+ - Bugfix for SF#1249780, PCR selection structure was incomplete.
  - Bugfix for SF#1249769, addKeyHandle now returns a TSS_RESULT.
 
 * TROUSERS_0_2_1
