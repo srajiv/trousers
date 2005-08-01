@@ -1843,7 +1843,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 	TPM_AUTH *pPrivAuth = &privAuth;
 	UINT16 offset;
 	BYTE hashBlob[1000];
-	TCPA_DIGEST digest;
+	TCPA_DIGEST digest, composite;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HPOLICY hPolicy;
@@ -1902,6 +1902,11 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 #else
+		/* calling get_composite first forces the TSP to call the TCS
+		 * to make sure the pcr selection structure is correct */
+		if ((result = obj_pcrs_get_composite(hPcrComposite, &composite)))
+			return result;
+
 		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
 			return result;
 #endif
