@@ -111,7 +111,12 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	}
 
 	if (initFlags & TSS_KEY_TSP_SRK) {
-		addKeyHandle(TPM_KEYHND_SRK, *phObject);
+		if ((result = addKeyHandle(TPM_KEYHND_SRK, *phObject))) {
+			obj_policy_remove(rsakey->usagePolicy, tspContext);
+			obj_policy_remove(rsakey->migPolicy, tspContext);
+			free(rsakey);
+			return result;
+		}
 		rsakey->privateKey.Privlen = 0;
 		rsakey->tcpaKey.PCRInfoSize = 0;
 		rsaKeyParms.keyLength = 2048;

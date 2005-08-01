@@ -503,9 +503,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	addKeyHandle(myTCSKeyHandle, *phKey);
-
-	return TSS_SUCCESS;
+	return addKeyHandle(myTCSKeyHandle, *phKey);
 }
 
 TSS_RESULT
@@ -659,7 +657,10 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	}
 
 	/* Update our table to bind the tcsKeyHandle to this TspKeyHandle */
-	addKeyHandle(tcsKeyHandle, *phKey);
+	if ((result = addKeyHandle(tcsKeyHandle, *phKey))) {
+		free(keyBlob);
+		return result;
+	}
 
 	/* ---  Stuff the data into the object */
 	if ((result = obj_rsakey_set_tcpakey(*phKey, keyBlobSize, keyBlob))) {

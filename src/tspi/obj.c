@@ -700,20 +700,6 @@ anyPopupPolicies(TSS_HCONTEXT tspContext)
 }
 #endif
 
-/* ====================================================================================================== */
-
-TSPKeyHandleContainer *
-createTSPKeyHandleContainer()
-{
-	return calloc(1, sizeof(TSPKeyHandleContainer));
-}
-
-TCSKeyHandleContainer *
-createTCSKeyHandleContainer()
-{
-	return calloc(1, sizeof(TCSKeyHandleContainer));
-}
-
 TCSKeyHandleContainer *
 concatTCSKeyHandleContainer(TCSKeyHandleContainer ** first, TCSKeyHandleContainer * second)
 {
@@ -763,13 +749,17 @@ getTCSKeyHandleContainerByTCSHandle(TCS_KEY_HANDLE tcsHandle)
 
 /*	These can be called by other funcs */
 
-void
+TSS_RESULT
 addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 {
 	TCSKeyHandleContainer *newTCS = NULL;
 	TSPKeyHandleContainer *newTSP = NULL;
 
-	newTSP = createTSPKeyHandleContainer();
+	if ((newTSP = calloc(1, sizeof(TSPKeyHandleContainer))) == NULL) {
+		LogError("malloc of %d bytes failed.",
+				sizeof(TSPKeyHandleContainer));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
 	newTSP->tspKeyHandle = tspHandle;
 
 	newTCS = getTCSKeyHandleContainerByTCSHandle(tcsHandle);
@@ -777,13 +767,20 @@ addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 	pthread_mutex_lock(&keylist_lock);
 
 	if (newTCS == NULL) {
-		newTCS = createTCSKeyHandleContainer();
+		if ((newTCS = calloc(1, sizeof(TCSKeyHandleContainer))) == NULL) {
+			LogError("malloc of %d bytes failed.",
+					sizeof(TCSKeyHandleContainer));
+			free(newTSP);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
 		newTCS->tcsKeyHandle = tcsHandle;
 		concatTCSKeyHandleContainer(&glKeyHandleManager, newTCS);
 	}
 	concatTSPKeyHandleContainer(&newTCS->tspHandles, newTSP);
 
 	pthread_mutex_unlock(&keylist_lock);
+
+	return TSS_SUCCESS;
 }
 
 #if 0
