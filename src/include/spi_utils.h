@@ -118,7 +118,7 @@ TSS_BOOL anyPopupPolicies(TSS_HCONTEXT);
 
 /*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
 
-void addKeyHandle(TCS_KEY_HANDLE, TSS_HKEY);
+TSS_RESULT addKeyHandle(TCS_KEY_HANDLE, TSS_HKEY);
 void removeTSPKeyHandle(TSS_HKEY);
 void removeTCSKeyHandle(TCS_KEY_HANDLE);
 TCS_KEY_HANDLE getTCSKeyHandle(TSS_HKEY);
