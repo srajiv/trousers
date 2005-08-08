@@ -110,4 +110,16 @@ char *Trspi_Error_Layer(TSS_RESULT);
 /* return just the error code bits of the result */
 TSS_RESULT Trspi_Error_Code(TSS_RESULT);
 
+/* masks */
+#define TSS_KEY_SIZE_MASK	0x00000F00
+#define TSS_KEY_TYPE_MASK	0x000000F0
+#define TSS_ENCDATA_TYPE_MASK	0x0000000F
+
+/* These should be passed an TSS_FLAG parameter as to
+ * Tspi_Context_CreateObject
+ */
+#define TSS_KEY_SIZE(x)		(x & TSS_KEY_SIZE_MASK)
+#define TSS_KEY_TYPE(x)		(x & TSS_KEY_TYPE_MASK)
+#define TSS_ENCDATA_TYPE(x)	(x & TSS_ENCDATA_TYPE_MASK)
+
 #endif
