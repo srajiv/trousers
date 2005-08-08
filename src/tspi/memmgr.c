@@ -49,11 +49,12 @@ addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
 	}
 
 	/* else tack @new onto the end */
-	for (; tmp_entry; tmp_entry = tmp_entry->nextEntry)
+	for (; tmp_entry; tmp_entry = tmp_entry->nextEntry) {
 		if (tmp_entry->nextEntry == NULL) {
 			tmp_entry->nextEntry = new;
 			break;
 		}
+	}
 }
 
 /* caller needs to lock memtable lock */
