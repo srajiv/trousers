@@ -166,6 +166,15 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 		}
 		pcrs->select.sizeOfSelect = bytes_to_hold;
 		memset(pcrs->select.pcrSelect, 0, bytes_to_hold);
+
+		/* allocate the pcr array */
+		if ((pcrs->pcrs = malloc(bytes_to_hold * 8 *
+					 TCPA_SHA1_160_HASH_LEN)) == NULL) {
+			LogError("malloc of %d bytes failed.",
+				bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
 	} else if (pcrs->select.sizeOfSelect < bytes_to_hold) {
 		if ((pcrs->select.pcrSelect = realloc(pcrs->select.pcrSelect,
 				bytes_to_hold)) == NULL) {
@@ -177,32 +186,22 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 		memset(&pcrs->select.pcrSelect[pcrs->select.sizeOfSelect], 0,
 				bytes_to_hold - pcrs->select.sizeOfSelect);
 		pcrs->select.sizeOfSelect = bytes_to_hold;
+
+		/* realloc the pcrs array */
+		if ((pcrs->pcrs = realloc(pcrs->pcrs, bytes_to_hold * 8 *
+						sizeof(TCPA_PCRVALUE))) == NULL) {
+			LogError("malloc of %d bytes failed.",
+					bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
 	}
 
 	/* set the bit in the selection structure */
 	pcrs->select.pcrSelect[idx / 8] |= (1 << (idx % 8));
 
-	/* allocate the pcr array */
-	if (pcrs->pcrs == NULL) {
-		/* idx + 1, since PCR indices are 0 based */
-		if ((pcrs->pcrs = malloc((idx + 1) * sizeof(TCPA_PCRVALUE))) == NULL) {
-			LogError("malloc of %d bytes failed.",
-					(idx + 1) * TCPA_SHA1_160_HASH_LEN);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-	} else if ((UINT32)(pcrs->select.sizeOfSelect * 8) < idx) {
-		if ((pcrs->pcrs = realloc(pcrs->pcrs,
-				idx * sizeof(TCPA_PCRVALUE))) == NULL) {
-			LogError("malloc of %d bytes failed.",
-					idx * TCPA_SHA1_160_HASH_LEN);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-	}
-
 	/* set the value in the pcrs array */
-	memcpy(&(pcrs->pcrs[idx].digest), value, size);
+	memcpy(&(pcrs->pcrs[idx]), value, size);
 
 done:
 	obj_list_put(&pcrs_list);
