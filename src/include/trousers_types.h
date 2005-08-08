@@ -49,11 +49,6 @@ extern TSS_UUID	SRK_UUID;
 
 #define TSS_PS_TYPE_NO			(0)
 
-/* masks */
-#define TSS_KEY_SIZE_MASK	0x00000F00
-#define TSS_KEY_TYPE_MASK	0x000000F0
-#define TSS_ENCDATA_TYPE_MASK	0x0000000F
-
 /* ordinals */
 
 #define TPM_ORD_OIAP				(TCPA_PROTECTED_ORDINAL + 10)
