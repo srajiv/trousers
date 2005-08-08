@@ -1,4 +1,8 @@
 
+ - Bugfix in obj_pcrs.c, setting pcr indices and values was buggy.
+ - Moved macros from trousers_types.h (internal) to trousers.h
+   (external), since new header files make them virtually a
+   requirement
  - Bugfix for SF#1249780, PCR selection structure was incomplete.
  - Bugfix for SF#1249769, addKeyHandle now returns a TSS_RESULT.
 
