@@ -244,7 +244,13 @@ main(int argc, char **argv)
 	memset(&serv_addr, 0, sizeof (serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(tcsd_options.port);
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	/* If no remote_ops are defined, restrict connections to localhost
+	 * only at the socket. */
+	if (tcsd_options.remote_ops[0] == 0)
+		serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	else
+		serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(sd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
 		LogError("Failed bind: %s", strerror(errno));
