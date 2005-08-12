@@ -27,11 +27,18 @@ Tspi_Hash_VerifySignature \- verify the hash value with a given signature
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Hash_VerifySignature(TSS_HHASH " hHash ","
-.BI "TSS_HKEY " hKey ", UINT32 " ulSignatureLength ", BYTE " *rgbSignature ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Hash_VerifySignature(TSS_HHASH " hHash ",             TSS_HKEY " hKey ","
+.BI "                                     UINT32    " ulSignatureLength ", BYTE*    " rgbSignature ");"
+.fi
 .sp
 .ad
 .hy

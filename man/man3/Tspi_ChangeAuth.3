@@ -25,9 +25,18 @@ Tspi_ChangeAuth \- change the authorization data of an entity.
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .sp
-.BI "TSS_RESULT Tspi_ChangeAuthTSS_HOBJECT (" hObjectToChange ", TSS_HOBJECT " hParentObject ", TSS_HPOLICY " hNewPolicy " );"
+.BI "TSS_RESULT Tspi_ChangeAuth(TSS_HOBJECT " hObjectToChange ", TSS_HOBJECT " hParentObject ","
+.BI "                           TSS_HPOLICY " hNewPolicy " );"
+.fi
 .sp
 .ad
 .hy

@@ -27,13 +27,19 @@ Tspi_TPM_CreateMaintenanceArchive \- create the TPM manufacturer specific mainte
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM " hTPM ","
-.BI	"TSS_BOOL " fGenerateRndNumber ", UINT32 " *pulRndNumberLength ","
-.BI	"BYTE " **prgbRndNumber ", UINT32 " *pulArchiveDataLength ","
-.BI	"BYTE " **prgbArchiveData ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM " hTPM ",                 TSS_BOOL " fGenerateRndNumber ","
+.BI "                                             UINT32*  " pulRndNumberLength ",   BYTE**   " prgbRndNumber ","
+.BI "                                             UINT32*  " pulArchiveDataLength ", BYTE**   " prgbArchiveData ");"
+.fi
 .sp
 .ad
 .hy

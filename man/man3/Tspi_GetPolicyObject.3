@@ -27,11 +27,18 @@ Tspi_GetPolicyObject \- get a policy object assigned to a working object
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_GetPolicyObject(TSS_HOBJECT " hObject ", "
-.BI	"TSS_FLAG " policyType ", TSS_HPOLICY " *phPolicy "); "
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_GetPolicyObject(TSS_HOBJECT  " hObject ", TSS_FLAG " policyType ","
+.BI "                                TSS_HPOLICY* " phPolicy "); "
+.fi
 .sp
 .ad
 .hy

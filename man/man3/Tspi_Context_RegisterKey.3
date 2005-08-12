@@ -27,15 +27,19 @@ Tspi_Context_RegisterKey \- register a key in the TSS Persistent Storage databas
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-..
-.PP
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .sp
-.HP
-.BI "TSS_RESULT Tspi_Context_RegisterKey(TSS_HCONTEXT " hContext ", "
-.BI	"TSS_HKEY " hKey ", TSS_FLAG " persistentStorageType ", "
-.BI	"TSS_UUID " uuidKey ", TSS_FLAG " persistentStorageTypeParent ", "
-.BI	"TSS_UUID " uuidParentKey "); "
+.BI "TSS_RESULT Tspi_Context_RegisterKey(TSS_HCONTEXT " hContext ",                    TSS_HKEY " hKey ","
+.BI "                                    TSS_FLAG     " persistentStorageType ",       TSS_UUID " uuidKey ","
+.BI "                                    TSS_FLAG     " persistentStorageTypeParent ", TSS_UUID " uuidParentKey "); "
+.fi
 .sp
 .ad
 .hy

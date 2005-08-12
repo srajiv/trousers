@@ -27,11 +27,18 @@ Tspi_SetAttribUint32 \- set a 32bit attribute associated with a given class or o
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_SetAttribUint32(TSS_HOBJECT " hObject ", "
-.BI	"TSS_FLAG " attribFlag ", TSS_FLAG " subFlag ", UINT32 " ulAttrib "); "
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_SetAttribUint32(TSS_HOBJECT " hObject ", TSS_FLAG " attribFlag ","
+.BI "                                TSS_FLAG    " subFlag ", UINT32   " ulAttrib "); "
+.fi
 .sp
 .ad
 .hy

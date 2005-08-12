@@ -28,10 +28,17 @@ of a given context.
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .HP
-.BI "TSS_RESULT Tspi_Context_GetDefaultPolicy(TSS_HCONTEXT " hContext ", "
-.BI	"TSS_HPOLICY " *phPolicy "); "
+.BI "TSS_RESULT Tspi_Context_GetDefaultPolicy(TSS_HCONTEXT " hContext ", TSS_HPOLICY " *phPolicy "); "
+.fi
 .sp
 .ad
 .hy

@@ -25,9 +25,18 @@ Tspi_Data_Unseal \- dencrypt data encrypted by Tspi_Data_Seal() only if it was e
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .sp
-.BI "TSS_RESULT Tspi_Data_Unseal(TSS_HENCDATA " hEncData ", TSS_HKEY " hKey ", UINT32 " pulUnsealedDataLength ", BYTE** " prgbUnsealedData ");"
+.BI "TSS_RESULT Tspi_Data_Unseal(TSS_HENCDATA " hEncData ",              TSS_HKEY " hKey ","
+.BI "                            UINT32       " pulUnsealedDataLength ", BYTE**   " prgbUnsealedData ");"
+.fi
 .sp
 .ad
 .hy

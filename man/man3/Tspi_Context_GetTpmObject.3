@@ -27,11 +27,18 @@ Context_GetTpmObject \- get the handle of the TPM object associated with a conte
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .br
 .HP
-.BI "TSS_RESULT Tspi_Context_GetTpmObject(TSS_HCONTEXT " hContext ", "
-.BI	"TSS_HTPM " *phTPM "); "
+.BI "TSS_RESULT Tspi_Context_GetTpmObject(TSS_HCONTEXT " hContext ", TSS_HTPM* " phTPM "); "
+.fi
 .sp
 .ad
 .hy

@@ -27,11 +27,18 @@ Tspi_Hash_Sign \- sign the hash data of an object with a signing key
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Hash_Sign(TSS_HHASH " hHash ", TSS_HKEY " hKey ","
-.BI	"UINT32 " pulSignatureLength ", BYTE " **prgbSignature ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Hash_Sign(TSS_HHASH " hHash ",              TSS_HKEY " hKey ","
+.BI "                          UINT32    " pulSignatureLength ", BYTE**   " prgbSignature ");"
+.fi
 .sp
 .ad
 .hy

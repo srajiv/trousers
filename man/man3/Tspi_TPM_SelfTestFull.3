@@ -27,10 +27,17 @@ Tspi_TPM_SelfTestFull \- perform a self-test of each internal TPM function
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
 .BI "TSS_RESULT Tspi_TPM_SelfTestFull(TSS_HTPM " hTPM ");"
+.fi
 .sp
 .ad
 .hy

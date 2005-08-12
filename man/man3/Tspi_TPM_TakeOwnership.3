@@ -27,11 +27,18 @@ Tspi_TPM_TakeOwnership \- take ownership of a TPM
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_TPM_TakeOwnership(TSS_HTPM " hTPM "," TSS_HKEY " hKeySRK "
-.BI	"TSS_HKEY " hEndorsementPubKey ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_TPM_TakeOwnership(TSS_HTPM " hTPM ", TSS_HKEY " hKeySRK ","
+.BI "                                  TSS_HKEY " hEndorsementPubKey ");"
+.fi
 .sp
 .ad
 .hy

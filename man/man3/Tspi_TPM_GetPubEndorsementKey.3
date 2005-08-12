@@ -27,11 +27,18 @@ Tspi_TPM_GetPubEndorsementKey \- create a TSS key object from the TPM's public e
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.BI "TSS_RESULT Tspi_TPM_GetPubEndorsementKey(TSS_HTPM " hTPM ","
-.BI	"TSS_BOOL " fOwnerAuthorized ", TSS_VALIDATION " *pValidationData
-.BI     "TSS_HKEY " *phEndorsementPubKey ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_TPM_GetPubEndorsementKey(TSS_HTPM        " hTPM ",            TSS_BOOL  " fOwnerAuthorized ","
+.BI "                                         TSS_VALIDATION* " pValidationData ", TSS_HKEY* " phEndorsementPubKey ");"
+.fi
 .sp
 .ad
 .hy

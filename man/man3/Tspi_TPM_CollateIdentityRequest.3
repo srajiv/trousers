@@ -25,9 +25,21 @@ Tspi_TPM_CollateIdentityRequest \- Gets all the informatin necessary to send to 
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .sp
-.BI "TSS_RESULT Tspi_TPM_CollateIdentityRequest(TSS_HTPM " hTPM ", TSS_HKEY " hKeySRK ", TSS_HKEY " hCAPPubKey ", UINT32 " ulIdentityLabelData ", BYTE* " rgbIdentityLabelData ", TSS_HKEY " hIdentityKey ", TSS_ALGORITHM_ID " algid ", UINT32* " pulTCPAIdentityReqLength ", BYTE** " prgbTCPAIdentityReq ")
+.BI "TSS_RESULT Tspi_TPM_CollateIdentityRequest(TSS_HTPM " hTPM ",                     TSS_HKEY         " hKeySRK ","
+.BI "                                           TSS_HKEY " hCAPPubKey ","
+.BI "                                           UINT32   " ulIdentityLabelData ",      BYTE*            " rgbIdentityLabelData ","
+.BI "                                           TSS_HKEY " hIdentityKey ",             TSS_ALGORITHM_ID " algid ","
+.BI "                                           UINT32*  " pulTCPAIdentityReqLength ", BYTE**           " prgbTCPAIdentityReq ");"
+.fi
 .sp
 .ad
 .hy

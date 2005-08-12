@@ -27,11 +27,17 @@ Tspi_Policy_AssignToObject \- assign a policy to an object
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Policy_AssignToObject(TSS_HPOLICY " hPolicy ","
-.BI	"TSS_HOBJECT " hObject ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Policy_AssignToObject(TSS_HPOLICY " hPolicy ", TSS_HOBJECT " hObject ");"
+.fi
 .sp
 .ad
 .hy

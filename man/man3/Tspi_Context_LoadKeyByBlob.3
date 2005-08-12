@@ -27,12 +27,19 @@ Tspi_Context_LoadKeyByBlob \- load a key into the TPM using the key's blob.
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT " hContext ", "
-.BI	"TSS_HKEY " hUnwrappingKey ", UINT32 " ulBlobLength ", "
-.BI	"BYTE " *rgbBlobData ", TSS_HKEY " *phKey "); "
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT " hContext ",     TSS_HKEY " hUnwrappingKey ","
+.BI "                                      UINT32       " ulBlobLength ", BYTE*    " rgbBlobData ","
+.BI "                                      TSS_HKEY*    " phKey "); "
+.fi
 .sp
 .ad
 .hy

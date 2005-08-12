@@ -27,11 +27,17 @@ Tspi_Hash_SetHashValue \- Sets the hash value of a hash object for non-SHA1 hash
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Hash_SetHashValue(TSS_HHASH " hHash ","
-.BI	"UINT32 " ulHashValueLength ", BYTE " *rgbHashValue ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Hash_SetHashValue(TSS_HHASH " hHash ", UINT32 " ulHashValueLength ", BYTE* " rgbHashValue ");"
+.fi
 .sp
 .ad
 .hy

@@ -25,9 +25,18 @@ Tspi_Key_CertifyKey \- sign a public key.
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
 .sp
-.BI "TSS_RESULT Tspi_Key_CertifyKey(TSS_HKEY " hKey ", TSS_HKEY " hCertifyingKey ", TSS_VALIDATION " pValidationData ");"
+.BI "TSS_RESULT Tspi_Key_CertifyKey(TSS_HKEY        " hKey ", TSS_HKEY " hCertifyingKey ","
+.BI "                               TSS_VALIDATION* " pValidationData ");"
+.fi
 .sp
 .ad
 .hy

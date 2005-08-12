@@ -27,11 +27,18 @@ Tspi_Data_Bind \- Encrypts a data blob
 .SH "SYNOPSIS"
 .ad l
 .hy 0
-.B #include <trousers/tss.h>
-.br
-.HP
-.BI "TSS_RESULT Tspi_Data_Bind(TSS_HENCDATA " hEncData ","
-.BI "TSS_HKEY " hEncKey ", UINT32 " ulDataLength ", BYTE " *rgbDataToBind ");"
+.nf
+.B #include <tss/platform.h>
+.B #include <tss/tcpa_defines.h>
+.B #include <tss/tcpa_typedef.h>
+.B #include <tss/tcpa_struct.h>
+.B #include <tss/tss_typedef.h>
+.B #include <tss/tss_structs.h>
+.B #include <tss/tspi.h>
+.sp
+.BI "TSS_RESULT Tspi_Data_Bind(TSS_HENCDATA " hEncData ",     TSS_HKEY " hEncKey ","
+.BI "                          UINT32       " ulDataLength ", BYTE*    " rgbDataToBind ");"
+.fi
 .sp
 .ad
 .hy
