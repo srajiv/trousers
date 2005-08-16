@@ -1317,7 +1317,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (result == 0) {
+	if (result == TSS_SUCCESS) {
 		UnloadBlob_UINT32(&offset, randomSize, txBlob, "random size");
 		*random = getSomeMemory(*randomSize, hContext);
 		UnloadBlob(&offset, *randomSize, txBlob, *random, "random");
