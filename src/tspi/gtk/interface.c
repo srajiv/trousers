@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -178,23 +178,23 @@ create_new_password_dialog (struct userdata *ud, char *message)
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton2;
   GtkWidget *okbutton2;
-                                                                                                             
+
   dialog1 = gtk_dialog_new ();
   gtk_widget_set_size_request (dialog1, 300, 150);
   /*gtk_window_set_title (GTK_WINDOW (dialog1), _("dialog1"));*/
   gtk_window_set_title (GTK_WINDOW (dialog1), message);
-                                                                                                             
-    dialog_vbox1 = GTK_DIALOG (dialog1)->vbox;
+
+  dialog_vbox1 = GTK_DIALOG (dialog1)->vbox;
   gtk_widget_show (dialog_vbox1);
-                                                                                                             
+
   vbox1 = gtk_vbox_new (FALSE, 0);
   gtk_widget_show (vbox1);
   gtk_box_pack_start (GTK_BOX (dialog_vbox1), vbox1, TRUE, TRUE, 0);
-                                                                                                             
+
   table2 = gtk_table_new (3, 3, FALSE);
   gtk_widget_show (table2);
   gtk_box_pack_start (GTK_BOX (vbox1), table2, TRUE, TRUE, 0);
-                                                                                                             
+
   label7 = gtk_label_new (_("Please enter a new password below."));
   gtk_widget_show (label7);
   gtk_table_attach (GTK_TABLE (table2), label7, 1, 2, 1, 2,
@@ -202,11 +202,11 @@ create_new_password_dialog (struct userdata *ud, char *message)
                     (GtkAttachOptions) (0), 0, 0);
   gtk_label_set_justify (GTK_LABEL (label7), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label7), 0, 0.5);
-                                                                                                             
+
   table1 = gtk_table_new (5, 5, FALSE);
   gtk_widget_show (table1);
   gtk_box_pack_start (GTK_BOX (vbox1), table1, TRUE, TRUE, 0);
-                                                                                                             
+
   label5 = gtk_label_new (_("Password:"));
   gtk_widget_show (label5);
   gtk_table_attach (GTK_TABLE (table1), label5, 1, 2, 1, 2,
@@ -214,7 +214,7 @@ create_new_password_dialog (struct userdata *ud, char *message)
                     (GtkAttachOptions) (0), 0, 0);
   gtk_label_set_justify (GTK_LABEL (label5), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label5), 0, 0.5);
-                                                                                                             
+
   label6 = gtk_label_new (_("Confirm:"));
   gtk_widget_show (label6);
   gtk_table_attach (GTK_TABLE (table1), label6, 1, 2, 3, 4,
@@ -222,7 +222,7 @@ create_new_password_dialog (struct userdata *ud, char *message)
                     (GtkAttachOptions) (0), 0, 0);
   gtk_label_set_justify (GTK_LABEL (label6), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label6), 0, 0.5);
-                                                                                                             
+
   entryPassword = gtk_entry_new ();
   gtk_widget_show (entryPassword);
   gtk_table_attach (GTK_TABLE (table1), entryPassword, 3, 4, 1, 2,
@@ -230,7 +230,7 @@ create_new_password_dialog (struct userdata *ud, char *message)
                     (GtkAttachOptions) (0), 0, 0);
   gtk_entry_set_max_length (GTK_ENTRY (entryPassword), 255);
   gtk_entry_set_visibility (GTK_ENTRY (entryPassword), FALSE);
-                                                                                                             
+
   entryConfirm = gtk_entry_new ();
   gtk_widget_show (entryConfirm);
   gtk_table_attach (GTK_TABLE (table1), entryConfirm, 3, 4, 3, 4,
@@ -238,27 +238,27 @@ create_new_password_dialog (struct userdata *ud, char *message)
                     (GtkAttachOptions) (0), 0, 0);
   gtk_entry_set_max_length (GTK_ENTRY (entryConfirm), 255);
   gtk_entry_set_visibility (GTK_ENTRY (entryConfirm), FALSE);
-                                                                                                             
+
   dialog_action_area1 = GTK_DIALOG (dialog1)->action_area;
   gtk_widget_show (dialog_action_area1);
   gtk_button_box_set_layout (GTK_BUTTON_BOX (dialog_action_area1), GTK_BUTTONBOX_END);
-                                                                                                             
+
   cancelbutton2 = gtk_button_new_from_stock ("gtk-cancel");
   gtk_widget_show (cancelbutton2);
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog1), cancelbutton2, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (cancelbutton2, GTK_CAN_DEFAULT);
-                                                                                                             
+
   okbutton2 = gtk_button_new_from_stock ("gtk-ok");
   gtk_widget_show (okbutton2);
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog1), okbutton2, GTK_RESPONSE_OK);
   GTK_WIDGET_SET_FLAGS (okbutton2, GTK_CAN_DEFAULT);
-  
+
   /* We need to pass the window in to destroy it */
   ud->window = dialog1;
   /* Here we need a pointer to the entries to grab text out of them */
   ud->entryPass = entryPassword;
   ud->entryConf = entryConfirm;
-  
+
   g_signal_connect ((gpointer) dialog1, "destroy",
                     G_CALLBACK (on_inputdialog1_destroy),
                     ud);
@@ -290,7 +290,7 @@ create_new_password_dialog (struct userdata *ud, char *message)
   GLADE_HOOKUP_OBJECT_NO_REF (dialog1, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (dialog1, cancelbutton2, "cancelbutton2");
   GLADE_HOOKUP_OBJECT (dialog1, okbutton2, "okbutton2");
-                                                                                                             
+
   return dialog1;
 }
 
