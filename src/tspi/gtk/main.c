@@ -31,25 +31,19 @@
 #include "interface.h"
 #include "support.h"
 
-#undef ENABLE_NLS
-
 /*
  * DisplayPINWindow()
  *
  * Popup the dialog to collect an existing password.
  *
  * string - buffer that the password will be passed back to caller in
- * w_popup - UNICODE string to be displayed in the title bar of the dialog box
+ * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayPINWindow(char *string, UNICODE *w_popup)
+TSS_RESULT DisplayPINWindow(char *string, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
-  char c_title[256];
-  mbstate_t ps;
-
-  memset(&ps, 0, sizeof(mbstate_t));
 
 #ifdef ENABLE_NLS
   bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -57,14 +51,12 @@ TSS_RESULT DisplayPINWindow(char *string, UNICODE *w_popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  wcsrtombs(c_title, (const wchar_t **)&w_popup, 256, &ps);
-
   ud.string = string;
 
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
 
-  dialog1 = create_password_dialog(&ud, c_title);
+  dialog1 = create_password_dialog(&ud, popup);
   gtk_widget_show(dialog1);
 
   gtk_main();
@@ -78,17 +70,13 @@ TSS_RESULT DisplayPINWindow(char *string, UNICODE *w_popup)
  * Popup the dialog to collect a new password.
  *
  * string - buffer that the password will be passed back to caller in
- * w_popup - UNICODE string to be displayed in the title bar of the dialog box
+ * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayNewPINWindow(char *string, UNICODE *w_popup)
+TSS_RESULT DisplayNewPINWindow(char *string, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
-  char c_title[256];
-  mbstate_t ps;
-
-  memset(&ps, 0, sizeof(mbstate_t));
 
 #ifdef ENABLE_NLS
   bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -96,14 +84,12 @@ TSS_RESULT DisplayNewPINWindow(char *string, UNICODE *w_popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  wcsrtombs(c_title, (const wchar_t **)&w_popup, 256, &ps);
-
   ud.string = string;
 
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
 
-  dialog1 = create_new_password_dialog(&ud, c_title);
+  dialog1 = create_new_password_dialog(&ud, popup);
   gtk_widget_show(dialog1);
 
   gtk_main();
