@@ -78,8 +78,8 @@ TCPA_PCRVALUE *getPcrFromComposite(TCPA_PCR_COMPOSITE, UINT32);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
-TSS_RESULT DisplayPINWindow(char *, UNICODE *);
-TSS_RESULT DisplayNewPINWindow(char *, UNICODE *);
+TSS_RESULT DisplayPINWindow(char *, BYTE *);
+TSS_RESULT DisplayNewPINWindow(char *, BYTE *);
 
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
@@ -90,6 +90,7 @@ TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
 TSS_RESULT ConnectGuts(TSS_HCONTEXT, UNICODE *, TCS_CONTEXT_HANDLE);
 
 #define TSS_LOCAL_RANDOM_DEVICE		"/dev/random"
+#define TSS_LOCALHOST_STRING		"localhost"
 TSS_RESULT get_local_random(TSS_HCONTEXT, UINT32, BYTE **);
 
 short get_port(void);
@@ -144,7 +145,7 @@ void UINT32ToArray(UINT32, BYTE *);
 void UINT16ToArray(UINT16, BYTE *);
 UINT32 Decode_UINT32(BYTE *);
 
-TSS_RESULT popup_GetSecret(UINT32, UNICODE *, void *);
+TSS_RESULT popup_GetSecret(UINT32, BYTE *, void *);
 
 TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
@@ -158,7 +159,7 @@ void Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT16 *, BYTE *, TCPA_CHANGEAUTH_VALIDA
 
 
 TSS_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE);
-TSS_RESULT TCS_OpenContext_RPC(UNICODE *, UINT32 *, int);
+TSS_RESULT TCS_OpenContext_RPC(BYTE *, UINT32 *, int);
 TSS_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE, TCPA_CAPABILITY_AREA, UINT32, BYTE *,
                               UINT32 *, BYTE **);
 TSS_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE, TCPA_CAPABILITY_AREA,	UINT32, BYTE *, UINT32 *,
