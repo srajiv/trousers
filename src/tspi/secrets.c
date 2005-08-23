@@ -14,7 +14,6 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -35,19 +34,13 @@
  *
  */
 TSS_RESULT
-popup_GetSecret(UINT32 new_pin, UNICODE *popup_str, void *auth_hash)
+popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 {
 	char secret[UI_MAX_SECRET_STRING_LENGTH] = "\0";
-	UNICODE w_popup[UI_MAX_POPUP_STRING_LENGTH];
-	const char *dflt = "TSS Authentication Dialog";
-	mbstate_t ps;
-
-	memset(&ps, 0, sizeof(mbstate_t));
+	BYTE *dflt = "TSS Authentication Dialog";
 
 	if (popup_str == NULL)
-		mbsrtowcs(w_popup, &dflt, UI_MAX_POPUP_STRING_LENGTH, &ps);
-	else
-		wcsncpy(w_popup, popup_str, wcslen(popup_str));
+		popup_str = dflt;
 
 	/* pin the area where the secret will be put in memory */
 	if (pin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH)) {
@@ -56,9 +49,9 @@ popup_GetSecret(UINT32 new_pin, UNICODE *popup_str, void *auth_hash)
 	}
 
 	if (new_pin) {
-		if (DisplayNewPINWindow(secret, w_popup))
+		if (DisplayNewPINWindow(secret, popup_str))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
-	} else if (DisplayPINWindow(secret, w_popup))
+	} else if (DisplayPINWindow(secret, popup_str))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	/* allow a 0 length password here, as spec'd by the TSSWG */
