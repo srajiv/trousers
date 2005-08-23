@@ -45,7 +45,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 {
 	TSS_RESULT result;
 	struct tr_context_obj *context = calloc(1, sizeof(struct tr_context_obj));
-	size_t rc;
+	unsigned len = strlen(TSS_LOCALHOST_STRING) + 1;
 
 	if (context == NULL) {
 		LogError("malloc of %d bytes failed.",
@@ -54,13 +54,12 @@ obj_context_add(TSS_HOBJECT *phObject)
 	}
 
 	context->silentMode = TSS_TSPATTRIB_CONTEXT_NOT_SILENT;
-	rc = mbstowcs(context->machineName, "localhost", 10);
-	if (rc == (size_t)(-1)) {
-		LogError1("failed to convert \"localhost\" to UNICODE.");
-		free(context);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if ((context->machineName = calloc(1, len)) == NULL) {
+		LogError("malloc of %d bytes failed", len);
+		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
-	context->machineNameLength = 10;
+	memcpy(context->machineName, TSS_LOCALHOST_STRING, len);
+	context->machineNameLength = len;
 
 	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, context,
 					phObject))) {
@@ -149,7 +148,7 @@ obj_context_get_machine_name(TSS_HCONTEXT tspContext, UINT32 *size, BYTE **data)
 		 * number of UNICODE characters in it.
 		 */
 		*size = context->machineNameLength * sizeof(UNICODE);
-		wcscpy((wchar_t *)*data, context->machineName);
+		memcpy(*data, context->machineName, *size);
 	}
 
 	result = TSS_SUCCESS;
@@ -161,7 +160,7 @@ done:
 }
 
 TSS_RESULT
-obj_context_set_machine_name(TSS_HCONTEXT tspContext, UNICODE *name, UINT32 len)
+obj_context_set_machine_name(TSS_HCONTEXT tspContext, BYTE *name, UINT32 len)
 {
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
@@ -171,8 +170,9 @@ obj_context_set_machine_name(TSS_HCONTEXT tspContext, UNICODE *name, UINT32 len)
 
 	context = (struct tr_context_obj *)obj->data;
 
+	free(context->machineName);
+	context->machineName = name;
 	context->machineNameLength = len;
-	memcpy(&context->machineName, name, len * sizeof(UNICODE));
 
 	obj_list_put(&context_list);
 
