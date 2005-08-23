@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
@@ -29,6 +30,8 @@ host_table_init()
 		LogError("malloc of %d bytes failed.", sizeof(struct host_table));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
+
+	pthread_mutex_init(&ht->lock, NULL);
 
 	return TSS_SUCCESS;
 }
