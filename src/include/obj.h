@@ -77,7 +77,7 @@ struct tr_context_obj {
 	TSS_FLAG silentMode;
 	TSS_HPOLICY policy;
 	TCS_CONTEXT_HANDLE tcsHandle;
-	UNICODE machineName[256];
+	BYTE *machineName;
 	UINT32 machineNameLength;
 };
 
@@ -99,7 +99,7 @@ struct tr_policy_obj {
 	UINT32 SecretSize;
 	BYTE Secret[20];
 	UINT32 type;
-	UNICODE popupString[256];
+	BYTE *popupString;
 	UINT32 popupStringLength;
 	PVOID hmacAppData;
 	PVOID xorAppData;
@@ -276,7 +276,7 @@ TSS_BOOL   obj_context_is_silent(TSS_HCONTEXT);
 TSS_RESULT obj_context_is_connected(TSS_HCONTEXT, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_context_set_policy(TSS_HCONTEXT, TSS_HPOLICY);
 TSS_RESULT obj_context_get_machine_name(TSS_HCONTEXT, UINT32 *, BYTE **);
-TSS_RESULT obj_context_set_machine_name(TSS_HCONTEXT, UNICODE *, UINT32);
+TSS_RESULT obj_context_set_machine_name(TSS_HCONTEXT, BYTE *, UINT32);
 TSS_RESULT obj_context_add(TSS_HOBJECT *);
 TSS_RESULT obj_context_get_tcs_context(TSS_HCONTEXT, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_context_set_mode(TSS_HCONTEXT, UINT32);
