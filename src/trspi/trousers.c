@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <iconv.h>
 #include <errno.h>
 
 #include "trousers/tss.h"
@@ -786,4 +787,115 @@ TSS_RESULT
 Trspi_Error_Code(TSS_RESULT r)
 {
 	return TSS_ERROR_CODE(r);
+}
+
+BYTE *
+Trspi_UTF8_To_UNICODE(BYTE *string, UINT32 *size)
+{
+	BYTE *ret = NULL;
+	char *outbuf, *local_string = string;
+	size_t inbytesleft, outbytesleft;
+	int newbufsize;
+	iconv_t cd;
+	int rc, local_size;
+
+	if (string == NULL)
+		return NULL;
+
+	if ((cd = iconv_open("UTF-16", "UTF-8")) == (iconv_t)-1) {
+		LogError("iconv_open: %s", strerror(errno));
+		return NULL;
+	}
+
+	/* if size is NULL, attempt to get the length of the string manually */
+	if (size == NULL) {
+		local_size = strlen(string) + 2;
+		newbufsize = local_size * sizeof(UNICODE);
+		inbytesleft = local_size;
+	} else {
+		inbytesleft = *size;
+		newbufsize = (*size + 2) * sizeof(UNICODE);
+	}
+
+	ret = malloc(newbufsize);
+	if (ret == NULL) {
+		LogError("malloc of %d bytes failed.", newbufsize);
+		iconv_close(cd);
+		return NULL;
+	}
+
+	outbytesleft = newbufsize;
+	outbuf = (char *)ret;
+
+	if ((rc = iconv(cd, &local_string, &inbytesleft, &outbuf,
+					&outbytesleft)) == -1) {
+		LogError("iconv errno: %d, %s\n", errno, strerror(errno));
+		iconv_close(cd);
+		free(ret);
+		return NULL;
+	}
+
+	if (size)
+		*size = newbufsize;
+	iconv_close(cd);
+
+	return ret;
+}
+
+BYTE *
+Trspi_UNICODE_To_UTF8(BYTE *string, UINT32 *size)
+{
+	BYTE *ret = NULL;
+	char *outbuf, *local_string = string;
+	size_t inbytesleft, outbytesleft;
+	int newbufsize, local_size = 1;
+	iconv_t cd;
+	int rc;
+	UNICODE *null_term;
+
+	if (string == NULL)
+		return NULL;
+
+	if ((cd = iconv_open("UTF-8", "UTF-16")) == (iconv_t)-1) {
+		LogError("iconv_open: %s", strerror(errno));
+		return NULL;
+	}
+
+	/* if size is NULL, attempt to get the length of the string manually */
+	if (size == NULL) {
+		null_term = (UNICODE *)string;
+		while (null_term != L'\0') {
+			*null_term++;
+			local_size++;
+		}
+		newbufsize = local_size / sizeof(UNICODE);
+		inbytesleft = local_size;
+	} else {
+		inbytesleft = *size;
+		newbufsize = *size / sizeof(UNICODE);
+	}
+
+	ret = malloc(newbufsize);
+	if (ret == NULL) {
+		LogError("malloc of %d bytes failed.", newbufsize);
+		iconv_close(cd);
+		return NULL;
+	}
+
+	outbytesleft = newbufsize;
+	outbuf = (char *)ret;
+
+	if ((rc = iconv(cd, &local_string, &inbytesleft, &outbuf,
+					&outbytesleft)) == -1) {
+		LogError("iconv errno: %d, %s\n", errno, strerror(errno));
+		free(ret);
+		iconv_close(cd);
+		return NULL;
+	}
+
+	if (size)
+		*size = newbufsize;
+	iconv_close(cd);
+
+	return ret;
 }
