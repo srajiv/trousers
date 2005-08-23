@@ -18,8 +18,7 @@
 struct host_table_entry {
 	struct host_table_entry *next;
 	TCS_CONTEXT_HANDLE tcsContext;
-	UNICODE wHostName[256];
-	TSS_BOOL isLocal;
+	BYTE *hostname;
 	int type;
 	int socket;
 };
