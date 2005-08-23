@@ -65,7 +65,7 @@ void Trspi_LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 void Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key);
 
 
-/* Cryptographic functions */
+/* Cryptographic Functions */
 
 /* Hash @BufSize bytes at location @Buf using the algorithm @HashType.  Currently only
  * TSS_HASH_SHA1 is a suported type, so 20 bytes will be written to @Digest */
@@ -99,7 +99,23 @@ int Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 			unsigned char *publicKey,
 			unsigned int keysize);
 
-/* error functions */
+/* String Functions */
+
+/* Below UNICODE is in reference to the TSS type of that name, which is
+ * actually UTF-16. */
+
+/* convert @string to a UNICODE string. On entry, *size should contain the
+ * number of bytes to be converted. On success, *size contains the number of
+ * bytes in the newly alloc'd returned string, on error, NULL is returned. */
+BYTE *Trspi_UTF8_To_UNICODE(BYTE *string, UINT32 *size);
+
+/* convert UNICODE @string to a UTF-8 string. On entry, *size should contain the
+ * number of bytes to be converted. On success, *size contains the number of
+ * bytes in the newly alloc'd returned string, on error, NULL is returned.
+ * If the size of @string is unknown, size should be set to NULL. */
+BYTE *Trspi_UNICODE_To_UTF8(BYTE *string, UINT32 *size);
+
+/* Error Functions */
 
 /* return a human readable string based on the result */
 char *Trspi_Error_String(TSS_RESULT);
