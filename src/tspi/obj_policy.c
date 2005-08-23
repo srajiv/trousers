@@ -187,7 +187,7 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 			/* if the secret is still NULL, grab it using the GUI */
 			if (!memcmp(policy->Secret, &null_secret,
 						TCPA_SHA1_160_HASH_LEN)) {
-				if ((result = popup_GetSecret(hPolicy,
+				if ((result = popup_GetSecret(TRUE,
 							      policy->popupString,
 							      policy->Secret)))
 					break;
@@ -605,20 +605,18 @@ obj_policy_get_string(TSS_HPOLICY hPolicy, UINT32 *size, BYTE **data)
 
 	policy = (struct tr_policy_obj *)obj->data;
 
+	*size = policy->popupStringLength;
 	if (policy->popupStringLength == 0) {
 		*data = NULL;
-		*size = 0;
 	} else {
-		*data = calloc_tspi(obj->tspContext,
-				policy->popupStringLength * sizeof(UNICODE));
+		*data = calloc(1, policy->popupStringLength);
 		if (*data == NULL) {
 			LogError("malloc of %d bytes failed.",
-				policy->popupStringLength * sizeof(UNICODE));
+				 policy->popupStringLength);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 
-		*size = policy->popupStringLength * sizeof(UNICODE);
 		memcpy(*data, policy->popupString, *size);
 	}
 
@@ -638,8 +636,10 @@ obj_policy_set_string(TSS_HPOLICY hPolicy, UINT32 size, BYTE *data)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	memcpy(policy->popupString, data, size);
-	policy->popupStringLength = size / sizeof(UNICODE);
+
+	free(policy->popupString);
+	policy->popupString = data;
+	policy->popupStringLength = size;
 
 	obj_list_put(&policy_list);
 
