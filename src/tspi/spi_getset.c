@@ -1125,6 +1125,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
     )
 {
 	TSS_RESULT result;
+	BYTE *popup_string = NULL;
 
 	if (obj_is_rsakey(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_KEY_BLOB)
@@ -1150,11 +1151,11 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
-		/* check to see if the passed in data can fit in our UNICODE array */
-		if ((ulAttribDataSize/sizeof(UNICODE)) >= UI_MAX_POPUP_STRING_LENGTH)
-			return TSPERR(TSS_E_BAD_PARAMETER);
+		if ((popup_string =
+		    Trspi_UNICODE_To_UTF8(rgbAttribData, &ulAttribDataSize)) == NULL)
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 
-		result = obj_policy_set_string(hObject, ulAttribDataSize, rgbAttribData);
+		result = obj_policy_set_string(hObject, ulAttribDataSize, popup_string);
 	} else {
 		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
 		    obj_is_pcrs(hObject) || obj_is_context(hObject))
@@ -1175,6 +1176,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
     )
 {
 	TSS_RESULT result;
+	BYTE *popup_string = NULL;
 
 	if (pulAttribDataSize == NULL || prgbAttribData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1273,8 +1275,16 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
-		result = obj_policy_get_string(hObject,
-					pulAttribDataSize, prgbAttribData);
+		if ((result = obj_policy_get_string(hObject, pulAttribDataSize,
+						    &popup_string)))
+			return result;
+
+		if ((*prgbAttribData =
+		    Trspi_UTF8_To_UNICODE(popup_string, pulAttribDataSize)) == NULL)
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		free(popup_string);
+		result = TSS_SUCCESS;
 	} else {
 		if (obj_is_tpm(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
