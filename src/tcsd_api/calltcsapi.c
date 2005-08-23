@@ -24,7 +24,7 @@
 #include "obj.h"
 
 TSS_RESULT
-TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
+TCS_OpenContext_RPC(BYTE *hostname, UINT32 *tcsContext, int type)
 {
 	TSS_RESULT result;
 	struct host_table_entry *entry = NULL;
@@ -35,12 +35,7 @@ TCS_OpenContext_RPC(UNICODE *hostName, UINT32 *tcsContext, int type)
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-        /* fill in the entry */
-        if (hostName != NULL)
-                wcscpy(entry->wHostName, hostName);
-        else
-                entry->isLocal = TRUE;
-
+	entry->hostname = hostname;
         entry->type = type;
 
 	if (type == CONNECTION_TYPE_TCP_PERSISTANT) {
