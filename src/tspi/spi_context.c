@@ -65,13 +65,13 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/*  in */
 }
 
 TSS_RESULT
-Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
-		     UNICODE *wszDestination	/*  in */
+Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
+		     UNICODE *wszDestination	/* in */
     )
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsHandle;
-	BYTE *wMachineName = NULL;
+	BYTE *machine_name = NULL;
 	TSS_HPOLICY hPolicy;
 	TSS_HOBJECT hTpm;
 	UINT32 string_len = 0;
@@ -81,31 +81,32 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/*  in */
 		LogError("attempted to call %s on an already connected "
 			 "context!", __FUNCTION__);
 		return TSPERR(TSS_E_CONNECTION_FAILED);
-	} else if (result != TSPERR(TSS_E_NO_CONNECTION))
+	} else if (result != TSPERR(TSS_E_NO_CONNECTION)) {
 		return result;
+	}
 
 	if (wszDestination == NULL) {
 		if ((result = obj_context_get_machine_name(tspContext,
 							&string_len,
-							&wMachineName)))
+							&machine_name)))
 			return result;
 
-		if ((result = TCS_OpenContext_RPC((UNICODE *)wMachineName, &tcsHandle,
+		if ((result = TCS_OpenContext_RPC(machine_name, &tcsHandle,
 						CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 	} else {
-		string_len = wcslen(wszDestination);
-		if (string_len >= 256 || string_len < 1) {
-			LogError1("Invalid hostname.");
-			return TSPERR(TSS_E_BAD_PARAMETER);
+		if ((machine_name =
+		    Trspi_UNICODE_To_UTF8((char *)wszDestination, NULL)) == NULL) {
+			LogError("Error converting hostname to UTF-8");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
-		if ((result = TCS_OpenContext_RPC(wszDestination, &tcsHandle,
+		if ((result = TCS_OpenContext_RPC(machine_name, &tcsHandle,
 						CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 
-		if ((result = obj_context_set_machine_name(tspContext, wszDestination,
-						wcslen(wszDestination))))
+		if ((result = obj_context_set_machine_name(tspContext, machine_name,
+						strlen(machine_name)+1)))
 			return result;
 	}
 
