@@ -39,9 +39,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 {
 	struct tcsd_packet_hdr loc_hdr, *hdr_p;
 	int sd, hdr_size = sizeof(struct tcsd_packet_hdr);
-	int returnSize, string_len;
-	size_t rc;
-	char szHostName[256];
+	int returnSize;
 	TSS_RESULT result;
 
 	struct sockaddr_in addr;
@@ -60,23 +58,15 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(get_port());
 
-	string_len = wcslen(hte->wHostName) + 1;
-	/* call our wide char routine */
-	rc = wcstombs(szHostName, hte->wHostName, string_len);
-	if (rc == (size_t)(-1)) {
-		LogError1("Conversion of UNICODE hostname string failed.");
-		result = TSPERR(TSS_E_CONNECTION_FAILED);
-		goto err_exit;
-	}
-
-	LogDebug("Sending TSP packet to host %s.", szHostName);
+	LogDebug("Sending TSP packet to host %s.", hte->hostname);
 
 	/* try to resolve by hostname first */
-	hEnt = gethostbyname(szHostName);
+	hEnt = gethostbyname(hte->hostname);
 	if (hEnt == NULL) {
 		/* if by hostname fails, try by dot notation */
-		if (inet_aton(szHostName, &addr.sin_addr) == 0) {
-			LogError("hostname %s does not resolve to a valid address.", szHostName);
+		if (inet_aton(hte->hostname, &addr.sin_addr) == 0) {
+			LogError("hostname %s does not resolve to a valid address.",
+				 hte->hostname);
 			result = TSPERR(TSS_E_CONNECTION_FAILED);
 			goto err_exit;
 		}
