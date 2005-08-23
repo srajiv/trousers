@@ -1,4 +1,7 @@
 
+ - Converted UNICODE to unsigned short and modified code accordingly.
+ - Only allow INADDR_LOCALHOST connections when no remote_ops are
+   defined in the tcsd.conf file.
  - Bugfix in obj_pcrs.c, setting pcr indices and values was buggy.
  - Moved macros from trousers_types.h (internal) to trousers.h
    (external), since new header files make them virtually a
