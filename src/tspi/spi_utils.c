@@ -664,25 +664,6 @@ get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
 }
 
 TSS_RESULT
-internal_GetMachineName(UNICODE *name, int nameSize)
-{
-	mbstate_t ps;
-	const char *s = "localhost";
-	size_t ret;
-
-	memset(&ps, 0, sizeof(mbstate_t));
-
-	ret = mbsrtowcs(name, &s, nameSize, &ps);
-	if (ret == (size_t)(-1)) {
-		LogError("Error converting string %s to UNICODE", s);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	return TSS_SUCCESS;
-
-}
-
-TSS_RESULT
 internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 		UINT32 * respSize, BYTE ** respData)
 {
