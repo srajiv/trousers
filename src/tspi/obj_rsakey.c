@@ -120,7 +120,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		rsakey->privateKey.Privlen = 0;
 		rsakey->tcpaKey.PCRInfoSize = 0;
 		rsaKeyParms.keyLength = 2048;
-		rsakey->tcpaKey.keyFlags |= volatileKey;
 	}
 
 	/* assign encryption and signature schemes */
