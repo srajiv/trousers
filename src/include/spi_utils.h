@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -132,14 +132,6 @@ void HMAC_Auth(BYTE *, BYTE *, TPM_AUTH *);
 TSS_RESULT OSAP_Calc(TCS_CONTEXT_HANDLE, UINT16, UINT32, BYTE *, BYTE *, BYTE *,
 			TCPA_ENCAUTH *, TCPA_ENCAUTH *, BYTE *, TPM_AUTH *);
 
-TSS_RESULT internal_SetSecret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
-TSS_RESULT internal_FlushSecret(TSS_HPOLICY);
-TSS_RESULT internal_CopySecrets(TSS_HPOLICY, TSS_HPOLICY);
-
-TSS_RESULT calculateCompositeHash(TCPA_PCR_COMPOSITE, TCPA_DIGEST *);
-TSS_RESULT calcCompositeHash(TCPA_PCR_SELECTION *, TCPA_PCRVALUE *, TCPA_DIGEST *);
-TSS_RESULT generateCompositeFromTPM(TSS_HCONTEXT, TCPA_PCR_SELECTION *, TCPA_DIGEST *);
-
 UINT16 Decode_UINT16(BYTE *);
 void UINT32ToArray(UINT32, BYTE *);
 void UINT16ToArray(UINT16, BYTE *);
@@ -149,6 +141,7 @@ TSS_RESULT popup_GetSecret(UINT32, BYTE *, void *);
 
 TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
+TSS_RESULT calc_composite_from_object(TCPA_PCR_SELECTION *, TCPA_PCRVALUE *, TCPA_DIGEST *);
 
 void LoadBlob_AUTH(UINT16 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_AUTH(UINT16 *, BYTE *, TPM_AUTH *);
