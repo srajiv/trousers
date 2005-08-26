@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -32,6 +32,9 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 {
 	char temp[64];
 	int i;
+
+	if (getenv("TSS_DEBUG_OFF"))
+		return;
 
 	memset(temp, 0, sizeof(temp));
 
