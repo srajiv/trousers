@@ -1,4 +1,5 @@
 
+ - Close auth sessions in TCS_GetCapabilityOwner
  - Removed volatile flag from the SRK key handle at key object
    create time. This was keeping National TPM's from having the
    ability to be owned!
