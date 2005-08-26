@@ -2026,6 +2026,10 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_UINT32(&offset, pVolatileFlags, txBlob, "vol flags");
 		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
 	}
+
+	if (pOwnerAuth->fContinueAuthSession == FALSE)
+		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
+
 	AppendAudit(0, TPM_ORD_GetCapabilityOwner, result);
 	LogResult("GetCapowner", result);
 	return result;
