@@ -1,4 +1,7 @@
 
+ - Bugfix for SF#1274308, Tspi_Key_CreateKey doesn't add PCRs
+   correctly. Ordering of calls in obj_rsakey_set_pcr_data
+   and calculation of PCRInfo size were incorrect.
  - Close auth sessions in TCS_GetCapabilityOwner
  - Removed volatile flag from the SRK key handle at key object
    create time. This was keeping National TPM's from having the
