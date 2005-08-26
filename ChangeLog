@@ -1,4 +1,17 @@
 
+ - Removed volatile flag from the SRK key handle at key object
+   create time. This was keeping National TPM's from having the
+   ability to be owned!
+ - Moved calcCompositeHash to obj_pcrs.c and renamed it.
+ - Check returns everywhere for addKeyHandle calls.
+ - Call pthread_mutex_init on the host table's mutex.
+ - Modified TSSWG headers so that code w/o BSD types compiles
+   (such as the PKCS#11 TPM STDLL).
+ - Removed ssh_askpass, since UNICODE must be hashed from the GUI
+   input source.
+ - Updated all manpages to include the TSSWG header file names
+   instead of trousers specific files.
+ - Don't log debug data when TSS_DEBUG_OFF env var is available.
  - Converted UNICODE to unsigned short and modified code accordingly.
  - Only allow INADDR_LOCALHOST connections when no remote_ops are
    defined in the tcsd.conf file.
