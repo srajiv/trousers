@@ -14,7 +14,6 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -74,8 +73,16 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	if (!obj_is_rsakey(hParentObject) && !obj_is_tpm(hParentObject))
+	/* if the object to change is the TPM object, then the parent should
+	 * be NULL.  If the object to change is not the TPM, then the parent
+	 * object must be either an rsakey or the TPM */
+	if (obj_is_tpm(hObjectToChange)) {
+		if (hParentObject != NULL_HOBJECT)
+			return TSPERR(TSS_E_INVALID_HANDLE);
+	} else if (!obj_is_rsakey(hParentObject) &&
+		   !obj_is_tpm(hParentObject)) {
 		return TSPERR(TSS_E_INVALID_HANDLE);
+	}
 
 	if (obj_is_tpm(hObjectToChange)) {/*  if TPM Owner Auth change */
 		/* get the owner policy */
@@ -135,9 +142,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 			LogDebug1("SRK Handle");
 			/* get the owner policy */
-			if ((result = obj_rsakey_get_policy(hParentObject,
-							   TSS_POLICY_USAGE,
-							   &hParentPolicy, NULL)))
+			if ((result = obj_tpm_get_policy(hParentObject,
+							 &hParentPolicy)))
 				return result;
 
 			/* //////////////////////////////////////////////// */
