@@ -1184,6 +1184,8 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	BYTE pcrBlob[1024];
 	UINT16 offset;
 
+	memset(pcrBlob, 0, sizeof(pcrBlob));
+
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
@@ -1192,18 +1194,16 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	/* free the info that may already be set */
 	free(rsakey->tcpaKey.PCRInfo);
 
-	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
+	if ((result = obj_pcrs_get_composite(hPcrComposite, &pcrComposite)))
 		return result;
 
-	if ((result = obj_pcrs_get_composite(hPcrComposite, &pcrComposite)))
+	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
 		return result;
 
 	offset = 0;
 	Trspi_LoadBlob_PCR_SELECTION(&offset, pcrBlob, &pcrSelect);
 	memcpy(&pcrBlob[offset], &pcrComposite.digest, TCPA_SHA1_160_HASH_LEN);
-	offset += TCPA_SHA1_160_HASH_LEN; // skip over digestAtRelease
-	//memset(&pcrInfoData[offset], 0, 20);
-	//offset += 20;
+	offset += TCPA_SHA1_160_HASH_LEN * 2; // skip over digestAtRelease
 
 	/* ---  Stuff it into the key container */
 	rsakey->tcpaKey.PCRInfoSize = offset;
