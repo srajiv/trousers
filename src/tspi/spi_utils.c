@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -367,124 +366,6 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 		encAuthUsage->authdata[i] = usageSecret[i] ^ xorUsageAuth[i];
 	for (i = 0; i < sizeof(TCPA_ENCAUTH); i++)
 		encAuthMig->authdata[i] = migSecret[i] ^ xorMigAuth[i];
-
-	return TSS_SUCCESS;
-}
-
-#if 0
-TSS_RESULT
-calculateCompositeHash( TCPA_PCR_COMPOSITE comp, TCPA_DIGEST* digest )
-{
-	BYTE hashBlob[1024];
-	UINT16 blobOffset = 0;
-	Trspi_LoadBlob_PCR_COMPOSITE( &blobOffset, hashBlob, comp );
-	Trspi_Hash( TSS_HASH_SHA1, blobOffset, hashBlob, digest->digest );
-	return TSS_SUCCESS;
-}
-#endif
-
-TSS_RESULT
-calcCompositeHash(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_DIGEST * digestOut)
-{
-	int size;
-	int index;
-	BYTE mask;
-	BYTE temp[1024];
-	UINT32 numPCRs = 0;
-	UINT16 offset = 0;
-	UINT16 sizeOffset = 0;
-
-	if (select->sizeOfSelect > 0) {
-		sizeOffset = 0;
-		Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, temp, select);
-		offset = sizeOffset + 4;
-
-		for (size = 0; size < select->sizeOfSelect; size++) {
-			for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
-				if (select->pcrSelect[size] & mask) {
-					memcpy(&temp[(numPCRs * 20) + offset],
-					       arrayOfPcrs[index + (size * 8)].digest,
-					       20);
-					numPCRs++;
-				}
-			}
-		}
-
-		if (numPCRs > 0) {
-			offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
-			UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &temp[sizeOffset]);
-
-			Trspi_Hash(TSS_HASH_SHA1, offset, temp, digestOut->digest);
-		}
-	}
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-init_pcr_select(TCS_CONTEXT_HANDLE tcsContext, TCPA_PCR_SELECTION *select)
-{
-	UINT16 num = get_num_pcrs(tcsContext);
-	TSS_HCONTEXT tspContext = obj_lookupTspContext(tcsContext);
-
-	if (tspContext == NULL_HCONTEXT) {
-		LogError("TCS context not found: %x", tcsContext);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	if (num == 0)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	if (num % 8 != 0) {
-		LogError1("Invalid number of pcrs detected");
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	if ((select->pcrSelect = calloc_tspi(tspContext, num / 8)) == NULL) {
-		LogError("malloc of %d bytes failed.", num / 8);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	select->sizeOfSelect = num / 8;
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-generateCompositeFromTPM(TSS_HCONTEXT tcsContext, TCPA_PCR_SELECTION *select, TCPA_DIGEST *digest)
-{
-	UINT32 i, j;
-	BYTE hashBlob[1024];
-	BYTE mask;
-	TCPA_PCRVALUE pcrVal;
-	UINT16 blobOffset;
-	TCPA_RESULT result;
-	UINT16 count = 0;
-	UINT32 tmpOffset;
-
-	if (select->pcrSelect == NULL) {
-		if ((result = init_pcr_select(tcsContext, select)))
-			return result;
-	}
-
-	blobOffset = 0;
-	Trspi_LoadBlob_PCR_SELECTION(&blobOffset, hashBlob, select);
-	tmpOffset = blobOffset;
-	blobOffset += 4;
-	for (i = 0; i < select->sizeOfSelect; i++) {
-		for (j = 0; j < 8; j++) {
-			mask = (1 << j);
-			if (select->pcrSelect[i] & mask) {
-				count++;
-				if ((result = TCSP_PcrRead(tcsContext, (i << 3) + j, &pcrVal)))
-					return result;
-				Trspi_LoadBlob(&blobOffset, 20, hashBlob, pcrVal.digest);
-			}
-
-		}
-	}
-	UINT32ToArray(count * 20, &hashBlob[tmpOffset]);
-	Trspi_Hash(TSS_HASH_SHA1, blobOffset, hashBlob, digest->digest);
 
 	return TSS_SUCCESS;
 }
