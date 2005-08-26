@@ -434,81 +434,8 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 
 	if (hPcrComposite) {
-		/* this call triggers the formation of hPcrComposite */
 		if ((result = obj_rsakey_set_pcr_data(hKey, hPcrComposite)))
 			return result;
-#if 0
-		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
-
-		anObject = getAnObjectByHandle(hPcrComposite);
-		if (anObject == NULL || anObject->memPointer == NULL) {
-			LogError1("Cannot find key by PcrComposite Handle!");
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-		}
-#if 0
-		/* ---  Stuff the data from the pcr object into the pcrInfo structure */
-		memcpy(pcrInfo.digestAtCreation.digest,
-				((TCPA_PCR_OBJECT *) anObject->memPointer)->
-				digAtCreation.digest, sizeof (TCPA_DIGEST));
-		memcpy(pcrInfo.digestAtRelease.digest,
-				((TCPA_PCR_OBJECT *) anObject->memPointer)->
-				digAtRelease.digest, sizeof (TCPA_DIGEST));
-		pcrInfo.pcrSelection.sizeOfSelect =
-			((TCPA_PCR_OBJECT *) anObject->memPointer)->
-			pcrComposite.select.sizeOfSelect;
-		pcrInfo.pcrSelection.pcrSelect =
-			calloc_tspi(tspContext, pcrInfo.pcrSelection.sizeOfSelect);
-		memcpy(pcrInfo.pcrSelection.pcrSelect,
-				((TCPA_PCR_OBJECT *) anObject->memPointer)->
-				pcrComposite.select.pcrSelect, pcrInfo.pcrSelection.sizeOfSelect);
-#endif
-		/* ---  Now into blob form */
-		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
-			return result;
-
-		if ((result = obj_pcrs_get_composite(hPcrComposite, &pcrComposite)))
-			return result;
-
-		offset = 0;
-		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrInfoData, pcrSelect);
-		memcpy(&pcrInfoData[offset], pcrComposite, sizeof(TCPA_PCRVALUE));
-		offset += 20;
-		memset(&pcrInfoData[offset], 0, 20);
-		offset += 20;
-
-		/* ---  Stuff it into the key container */
-		pcrInfoSize = offset;
-		keyContainer.PCRInfo = calloc_tspi(tspContext, offset);
-		if (keyContainer.PCRInfo == NULL) {
-			LogError("malloc of %d bytes failed.", offset);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-		keyContainer.PCRInfoSize = pcrInfoSize;
-		memcpy(keyContainer.PCRInfo, pcrInfoData, pcrInfoSize);
-
-		newKey = calloc_tspi(tspContext, 1024);
-		if (newKey == NULL) {
-			LogError("malloc of %d bytes failed.", 1024);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-
-		/* ---  New key Blob */
-		offset = 0;
-		Trspi_LoadBlob_KEY(&offset, newKey, &keyContainer);
-
-		if ((result = Tspi_SetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
-						TSS_TSPATTRIB_KEYBLOB_BLOB, offset, newKey))) {
-			return result;
-		}
-
-		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
-						TSS_TSPATTRIB_KEYBLOB_BLOB, &keySize, &keyBlob))) {
-			return result;
-		}
-
-		/* keyBlob now has the updated key blob */
-#endif
 	}
 
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
@@ -569,13 +496,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	}
 
 	/* ---  Push the new key into the existing object */
-#if 0
-	if ((result = Tspi_SetAttribData(hKey,
-					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, newKeySize, newKey))) {
-#else
 	if ((result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey))) {
-#endif
 		free(newKey);
 		return result;
 	}
@@ -612,6 +533,11 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		return result;
 
 	memset(&keyContainer, 0, sizeof(TCPA_KEY));
+
+	if (hPcrComposite) {
+		if ((result = obj_rsakey_set_pcr_data(hKey, hPcrComposite)))
+			return result;
+	}
 
 	/* get the key to be wrapped's private key */
 	if ((result = obj_rsakey_get_priv_blob(hKey, &keyPrivBlobLen, &keyPrivBlob)))
