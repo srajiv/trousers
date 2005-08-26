@@ -202,7 +202,6 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 
 	/* set the value in the pcrs array */
 	memcpy(&(pcrs->pcrs[idx]), value, size);
-
 done:
 	obj_list_put(&pcrs_list);
 
@@ -264,13 +263,11 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 	}
 	bytes_to_hold = num_pcrs / 8;
 
-	/* Is the current select object going to be interpretable
-	 * by the TPM?  If the select object is of a size equal to
-	 * or greater than the one the TPM wants, just calculate
-	 * the composite hash and let the TPM return an error
-	 * code to the user (when its greater).  If its less than
-	 * the size of the one the TPM wants, add extra zero
-	 * bytes until its the right size. */
+	/* Is the current select object going to be interpretable by the TPM?
+	 * If the select object is of a size greater than the one the TPM
+	 * wants, just calculate the composite hash and let the TPM return an
+	 * error code to the user.  If its less than the size of the one the
+	 * TPM wants, add extra zero bytes until its the right size. */
 	if (bytes_to_hold > pcrs->select.sizeOfSelect) {
 		if ((pcrs->select.pcrSelect = realloc(pcrs->select.pcrSelect,
 						bytes_to_hold)) == NULL) {
@@ -309,7 +306,7 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 	}
 #endif
 
-	result = calcCompositeHash(&pcrs->select, pcrs->pcrs, comp);
+	result = calc_composite_from_object(&pcrs->select, pcrs->pcrs, comp);
 
 done:
 	obj_list_put(&pcrs_list);
@@ -378,4 +375,44 @@ done:
 
 	return result;
 }
+
+TSS_RESULT
+calc_composite_from_object(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_DIGEST * digestOut)
+{
+	UINT32 size, index;
+	BYTE mask;
+	BYTE hashBlob[1024];
+	UINT32 numPCRs = 0;
+	UINT16 offset = 0;
+	UINT16 sizeOffset = 0;
+
+	if (select->sizeOfSelect > 0) {
+		sizeOffset = 0;
+		Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, hashBlob, select);
+		offset = sizeOffset + 4;
+
+		for (size = 0; size < select->sizeOfSelect; size++) {
+			for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
+				if (select->pcrSelect[size] & mask) {
+					memcpy(&hashBlob[(numPCRs * TCPA_SHA1_160_HASH_LEN) + offset],
+					       arrayOfPcrs[index + (size << 3)].digest,
+					       TCPA_SHA1_160_HASH_LEN);
+					numPCRs++;
+				}
+			}
+		}
+
+		if (numPCRs > 0) {
+			offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
+			UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &hashBlob[sizeOffset]);
+
+			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digestOut->digest);
+
+			return TSS_SUCCESS;
+		}
+	}
+
+	return TSPERR(TSS_E_INTERNAL_ERROR);
+}
+
 
