@@ -1,4 +1,6 @@
 
+ - tcspbg.c: deleted unused code and always release auth session
+   on an Unbind call.
  - Bugfix for SF#1274308, Tspi_Key_CreateKey doesn't add PCRs
    correctly. Ordering of calls in obj_rsakey_set_pcr_data
    and calculation of PCRInfo size were incorrect.
