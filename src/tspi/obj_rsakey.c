@@ -110,18 +110,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		rsaKeyParms.keyLength = 16384;
 	}
 
-	if (initFlags & TSS_KEY_TSP_SRK) {
-		if ((result = addKeyHandle(TPM_KEYHND_SRK, *phObject))) {
-			obj_policy_remove(rsakey->usagePolicy, tspContext);
-			obj_policy_remove(rsakey->migPolicy, tspContext);
-			free(rsakey);
-			return result;
-		}
-		rsakey->privateKey.Privlen = 0;
-		rsakey->tcpaKey.PCRInfoSize = 0;
-		rsaKeyParms.keyLength = 2048;
-	}
-
 	/* assign encryption and signature schemes */
 	if ((initFlags & TSS_KEY_TYPE_MASK) == TSS_KEY_TYPE_SIGNING) {
 		rsakey->tcpaKey.keyUsage = TPM_KEY_SIGNING;
@@ -831,6 +819,19 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = rsakey->tcpaKey.pubKey.keyLength;
+
+	/* if this key object represents the SRK and the public key
+	 * data here is all 0's, then we shouldn't return it, we
+	 * should return TSS_E_BAD_PARAMETER. This is part of protecting
+	 * the SRK public key. */
+	if (getTCSKeyHandle(hKey) == TPM_KEYHND_SRK) {
+		BYTE zeroBlob[2048] = { 0, };
+
+		if (!memcmp(rsakey->tcpaKey.pubKey.key, zeroBlob, offset)) {
+			result = TSS_E_BAD_PARAMETER;
+			goto done;
+		}
+	}
 
 	*data = calloc_tspi(obj->tspContext, offset);
 	if (*data == NULL) {
