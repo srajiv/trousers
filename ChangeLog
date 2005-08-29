@@ -1,4 +1,10 @@
 
+ - SF BUG#1269290 Fixed: Protect the SRK pub key. Upon taking
+   ownership, the unaltered SRK blob is passed back to the TSP
+   to create a valid key object with the SRK pub key intact.
+   The copies of the SRK pub key data that do into the TCSd's
+   mem cache and PS are zeroed out. From then on, the only way
+   to get the SRK pub key is through Tspi_Key_GetPubKey.
  - tcspbg.c: deleted unused code and always release auth session
    on an Unbind call.
  - Bugfix for SF#1274308, Tspi_Key_CreateKey doesn't add PCRs
