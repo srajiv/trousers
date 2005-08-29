@@ -797,13 +797,8 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		result = TCSERR(TCS_E_KM_LOADFAILED);
 		return result;
 	}
-#if 0
-	keySlot = getSlotByHandle_lock(hKey);
-	if (keySlot == NULL_TPM_HANDLE) {
-		result = TCSERR(TCS_E_KM_LOADFAILED);
-		return result;
-	}
-#endif
+
+	LogDebug("GetPubKey: handle: 0x%x, slot: 0x%x", hKey, keySlot);
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
 	if (pAuth != NULL) {
