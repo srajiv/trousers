@@ -131,6 +131,8 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			srkKeyContainer.authDataUsage = oldAuthDataUsage;
 		}
 		memcpy(*srkKey, &txBlob[10], *srkKeySize);
+
+		memset(srkKeyContainer.pubKey.key, 0, srkKeyContainer.pubKey.keyLength);
 		bugOffset = 0;
 		LoadBlob_KEY(&bugOffset, newSRK, &srkKeyContainer);
 
