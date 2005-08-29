@@ -266,7 +266,7 @@ tcsd_thread_run(void *v)
 			LogError("TSP has closed its connection: %s. Thread exiting.", strerror(errno));
 			break;
 		} else if (thread_buf_size == 0) {
-			LogInfo1("The TSP has closed the socket's connection. Thread exiting.");
+			LogDebug1("The TSP has closed the socket's connection. Thread exiting.");
 			break;
 		}
 	}
