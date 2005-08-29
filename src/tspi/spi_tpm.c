@@ -393,10 +393,15 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 		newSrkBlob[10] = oldAuthDataUsage;	/* this will fix it  */
 	}
 
-	obj_rsakey_set_tcpakey(hKeySRK, newSrkBlobSize, newSrkBlob);
+	result = obj_rsakey_set_tcpakey(hKeySRK, newSrkBlobSize, newSrkBlob);
 	free(newSrkBlob);
 
-	return result;
+	if (result)
+		return result;
+
+	/* The SRK is loaded at this point, so insert it into the key handle
+	 * list */
+	return addKeyHandle(TPM_KEYHND_SRK, hKeySRK);
 }
 
 TSS_RESULT
