@@ -1236,13 +1236,9 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_UnBind, result); */
-	LogResult("UnBind", result);
 
-	if (result) {
-		if (privAuth != NULL)
-			auth_mgr_release_auth(privAuth->AuthHandle);
-	}
+	if (privAuth != NULL)
+		auth_mgr_release_auth(privAuth->AuthHandle);
 
 	return result;
 }
