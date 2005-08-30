@@ -511,7 +511,6 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		 TSS_HPCRS hPcrComposite	/* in, may be NULL */
     )
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy;
 	TCPA_SECRET secret;
 	TSS_RESULT result;
@@ -527,9 +526,6 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	TSS_HCONTEXT tspContext;
 
 	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	memset(&keyContainer, 0, sizeof(TCPA_KEY));
