@@ -26,7 +26,7 @@
 # Values: Any absolute directory path
 # Description: Path where the tcsd creates its persistent storage file.
 #
-# system_ps_file = @localstatedir@/tpm/system.data
+# system_ps_file = @localstatedir@/lib/tpm/system.data
 #
 
 # Option: firmware_log_file
@@ -72,7 +72,7 @@
 # possible values = seal - encrypt data bound to PCR values
 #		    unseal - decrypt data bound to PCR values
 #		    registerkey - store keys in system persistent storage [Disk write access!]
-#		    unregisterkey - remove keys from system persistent storage
+#		    unregisterkey - remove keys from system persistent storage [Disk write access!]
 #		    loadkey - load a key into the TPM
 #		    createkey - create a key using the TPM
 #		    sign - encrypt data using a private key
