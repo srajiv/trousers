@@ -227,6 +227,7 @@ int
 write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_data_size)
 {
 	UINT32 num_keys;
+	BYTE version;
 	int rc, offset;
 
 	/* seek to the PS version */
@@ -251,6 +252,20 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 	} else if (rc == 0) {
 		/* This is the first key being written */
 		num_keys = 1;
+		version = 1;
+
+		/* seek to the PS version */
+		rc = lseek(fd, VERSION_OFFSET, SEEK_SET);
+		if (rc == ((off_t) - 1)) {
+			LogError("lseek: %s", strerror(errno));
+			return -1;
+		}
+
+		/* write out the version info byte */
+		if ((rc = write_data(fd, &version, sizeof(BYTE)))) {
+			LogError("%s", __FUNCTION__);
+			return rc;
+		}
 
 		rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
 		if (rc == ((off_t) - 1)) {
