@@ -89,6 +89,9 @@ TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
 
 TSS_RESULT ConnectGuts(TSS_HCONTEXT, UNICODE *, TCS_CONTEXT_HANDLE);
 
+/* For an unconnected context that wants to do PCR operations, assume that
+ * the TPM has TSS_DEFAULT_NUM_PCRS pcrs */
+#define TSS_DEFAULT_NUM_PCRS		16
 #define TSS_LOCAL_RANDOM_DEVICE		"/dev/random"
 #define TSS_LOCALHOST_STRING		"localhost"
 TSS_RESULT get_local_random(TSS_HCONTEXT, UINT32, BYTE **);
