@@ -1,4 +1,6 @@
 
+ - Fixed bug where a tcsd created system.data file was not
+   getting the right version info put into it.
  - SF BUG#1269290 Fixed: Protect the SRK pub key. Upon taking
    ownership, the unaltered SRK blob is passed back to the TSP
    to create a valid key object with the SRK pub key intact.
