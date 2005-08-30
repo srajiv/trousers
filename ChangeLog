@@ -1,4 +1,7 @@
 
+ - Don't require Tspi_Key_WrapKey to be connected to succeed
+   and return a default value (or from the environment) if
+   we're doing PCR operations on an unconnected context.
  - Fixed bug where a tcsd created system.data file was not
    getting the right version info put into it.
  - SF BUG#1269290 Fixed: Protect the SRK pub key. Upon taking
