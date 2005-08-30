@@ -828,7 +828,7 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 		BYTE zeroBlob[2048] = { 0, };
 
 		if (!memcmp(rsakey->tcpaKey.pubKey.key, zeroBlob, offset)) {
-			result = TSS_E_BAD_PARAMETER;
+			result = TSPERR(TSS_E_BAD_PARAMETER);
 			goto done;
 		}
 	}
