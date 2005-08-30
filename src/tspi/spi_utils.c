@@ -254,8 +254,13 @@ get_num_pcrs(TCS_CONTEXT_HANDLE hContext)
 
 	subCap = endian32(TPM_CAP_PROP_PCR);
 	if ((result = TCSP_GetCapability(hContext, TCPA_CAP_PROPERTY, sizeof(UINT32),
-					 (BYTE *)&subCap, &respSize, &resp)))
-		return 0;
+					 (BYTE *)&subCap, &respSize, &resp))) {
+		if ((resp = getenv("TSS_DEFAULT_NUM_PCRS")) == NULL)
+			return TSS_DEFAULT_NUM_PCRS;
+
+		/* don't set ret here, next time we may be connected */
+		return atoi(resp);
+	}
 
 	ret = (UINT16)Decode_UINT32(resp);
 	free_tspi(hContext, resp);
