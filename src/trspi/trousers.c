@@ -625,6 +625,7 @@ Trspi_Error_String(TSS_RESULT r)
 	if (TSS_ERROR_LAYER(r) == TSS_LAYER_TPM) {
 		switch (TSS_ERROR_CODE(r)) {
 			case TCPA_E_AUTHFAIL:		return "Authentication failed";
+			case TCPA_E_BAD_PARAMETER:	return "Bad Parameter";
 			case TCPA_E_BADINDEX:		return "Bad index";
 			case TCPA_E_AUDITFAILURE:	return "Audit failure";
 			case TCPA_E_CLEAR_DISABLED:	return "Clear has been disabled";
