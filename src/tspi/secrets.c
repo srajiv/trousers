@@ -64,55 +64,6 @@ popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 	return TSS_SUCCESS;
 }
 
-#if 0
-TSS_RESULT
-secret_HasSecretExpired(TCPA_POLICY_OBJECT *policyObject, TSS_BOOL *answer)
-{
-	LogDebug1("Has Secret Expired");
-	if (policyObject->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-		*answer = FALSE;
-	} else if (policyObject->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-		if (policyObject->SecretCounter == 0)
-			*answer = TRUE;
-		else
-			*answer = FALSE;
-	} else if (policyObject->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-		int seconds_elapsed;
-		time_t t = time(NULL);
-
-		if (t == ((time_t)-1)) {
-			LogError("time failed: %s", strerror(errno));
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-		}
-		/* curtime - SecretTimer is the number of seconds elapsed since we
-		 * started the timer. SecretCounter is the number of seconds the
-		 * secret is valid.  If seconds_elspased > SecretCounter, we've
-		 * expired.
-		 */
-		seconds_elapsed = t - policyObject->SecretTimer;
-		if ((UINT32)seconds_elapsed >= policyObject->SecretCounter) {
-			*answer = TRUE;
-		} else {
-			*answer = FALSE;
-		}
-	} else {
-		LogError1("Policy's Secret mode is not set!");
-		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
-	}
-
-	LogDebug("has expired = 0x%.2X", *answer);
-	return TSS_SUCCESS;
-}
-
-void
-secret_DecSecretCounter(TCPA_POLICY_OBJECT * policy)
-{
-	if (policy->SecretLifetime != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
-		return;
-	--policy->SecretCounter;
-}
-#endif
-
 TSS_RESULT
 secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
 {
@@ -186,50 +137,6 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *
 
 	return obj_policy_dec_counter(hPolicy);
 }
-
-#if 0
-/* moved to obj_policy_validate_auth_oiap() */
-TSS_RESULT
-obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
-{
-	TSS_RESULT result;
-	TCPA_SECRET secret;
-
-	switch (policyObject->p.SecretMode) {
-	case TSS_SECRET_MODE_CALLBACK:
-		if ((result = policyObject->cb.Tspicb_CallbackHMACAuth(NULL, hPolicy,	/* for now */
-					      0,
-					      auth->fContinueAuthSession,
-					      FALSE,
-					      20,
-					      auth->NonceEven.nonce,
-					      auth->NonceOdd.nonce,
-					      NULL, NULL, 20, hashDigest.digest, (BYTE *)&auth->HMAC)))
-			return result;
-		break;
-	case TSS_SECRET_MODE_SHA1:
-	case TSS_SECRET_MODE_PLAIN:
-		if ((result = obj_policy_get_secret(hPolicy, &secret, FALSE)))
-			return result;
-
-		if (validateReturnAuth(secret.authdata, hashDigest.digest, auth))
-			return TSPERR(TSS_E_TSP_AUTHFAIL);
-		break;
-	case TSS_SECRET_MODE_POPUP:
-		if ((result = popup_GetSecret(FALSE, policyObject->p.popupString, &secret)))
-			return result;
-
-		if (validateReturnAuth(secret.authdata, hashDigest.digest, auth))
-			return TSPERR(TSS_E_TSP_AUTHFAIL);
-		break;
-	default:
-		return TSPERR(TSS_E_POLICY_NO_SECRET);
-		break;
-	}
-
-	return TSS_SUCCESS;
-}
-#endif
 
 TSS_RESULT
 secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
@@ -463,11 +370,11 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	 *		or there is an error, then we must fail
 	 **************************************************/
 
-	/* ---  First get the Owner Policy */
+	/* First get the Owner Policy */
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
 		return result;
 
-	/* ---  Now get the SRK Policy */
+	/* Now get the SRK Policy */
 
 	if ((result = Tspi_GetPolicyObject(hKeySRK, TSS_POLICY_USAGE, &hSrkPolicy)))
 		return result;
@@ -478,7 +385,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	if ((result = obj_policy_get_mode(hSrkPolicy, &srkMode)))
 		return result;
 
-	/* ---  If the policy callback's aren't the same, that's an error if one is callback */
+	/* If the policy callback's aren't the same, that's an error if one is callback */
 	if (srkMode == TSS_SECRET_MODE_CALLBACK ||
 	    ownerMode == TSS_SECRET_MODE_CALLBACK) {
 		if (srkMode != TSS_SECRET_MODE_CALLBACK ||
@@ -490,14 +397,14 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	}
 
 	if (ownerMode != TSS_SECRET_MODE_CALLBACK) {
-		/* ---  First, get the Endorsement Public Key for Encrypting */
+		/* First, get the Endorsement Public Key for Encrypting */
 		if ((result = Tspi_GetAttribData(hEndorsementPubKey,
 					    TSS_TSPATTRIB_KEY_BLOB,
 					    TSS_TSPATTRIB_KEYBLOB_BLOB,
 					    &endorsementKeySize, &endorsementKey)))
 			return result;
 
-		/* ---  now stick it in a Key Structure */
+		/* now stick it in a Key Structure */
 		offset = 0;
 		Trspi_UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
 
@@ -507,7 +414,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
 			return result;
 
-		/* ---   Encrypt the Owner Authorization */
+		/* Encrypt the Owner Authorization */
 		Trspi_RSA_Encrypt(ownerSecret.authdata,
 				       20,
 				       encOwnerAuth,
@@ -515,7 +422,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 				       dummyKey.pubKey.key,
 				       dummyKey.pubKey.keyLength);
 
-		/* ---  Encrypt the SRK Authorization */
+		/* Encrypt the SRK Authorization */
 		Trspi_RSA_Encrypt(srkSecret.authdata,
 				       20,
 				       encSRKAuth,
@@ -538,8 +445,8 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 				    &srkKeyBlob)))
 		return result;
 
-	/* ================  Authorizatin Digest Calculation */
-	/* ===	Hash first the following: */
+	/* Authorizatin Digest Calculation */
+	/* Hash first the following: */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_TakeOwnership, hashblob);
 	Trspi_LoadBlob_UINT16(&offset, TCPA_PID_OWNER, hashblob);
@@ -551,7 +458,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	/* ===  HMAC for the final digest */
+	/* HMAC for the final digest */
 
 	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, &digest, auth)))
 		return result;
