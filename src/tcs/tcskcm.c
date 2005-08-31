@@ -923,7 +923,6 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 #endif
 	}
-/*	AppendAudit(0, TPM_ORD_GetPubKey, result); */
 	LogResult("Get Public Key", result);
 	return result;
 }
@@ -1032,7 +1031,6 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		if (result)
 			auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 	}
-	/*    AppendAudit(0, TPM_ORD_MakeIdentity, result); */
 	LogResult("Make Identity", result);
 	return result;
 }

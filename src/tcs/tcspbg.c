@@ -28,9 +28,6 @@
 
 #include "atmel.h"
 
-/*---	Kill audit */
-#define AppendAudit( a, b, c )
-
 TSS_RESULT
 TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TSS_BOOL state	/* in  */
@@ -55,7 +52,6 @@ TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	offset = 10;
-	AppendAudit(0, TPM_ORD_SetOwnerInstall, result);
 	LogResult("SetOwnerInstall", result);
 	return result;
 }
@@ -192,7 +188,6 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				nonce0->nonce, "n0");
 	}
 
-	AppendAudit(0, TPM_ORD_OIAP, result);
 	LogResult("OIAP", result);
 	return result;
 }
@@ -242,7 +237,6 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEven->nonce, "n0");
 		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEvenOSAP->nonce, "n0 osap");
 	}
-	AppendAudit(0, TPM_ORD_OSAP, result);
 	LogResult("OSAP", result);
 
 	return result;
@@ -355,7 +349,6 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 
 		}
 	}
-/*	AppendAudit(0, TPM_ORD_ChangeAuth, result);	 */
 	LogResult("ChangeAuth", result);
 	return result;
 }
@@ -399,7 +392,6 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 
-	AppendAudit(0, TPM_ORD_ChangeAuthOwner, result);
 	LogResult("ChangeAuthOwner", result);
 	return result;
 }
@@ -518,7 +510,6 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
 	}
 
-/*	AppendAudit(0, TPM_ORD_ChangeAuthAsymStart, result); */
 	LogResult("ChangeAuthAsymStart", result);
 	return result;
 }
@@ -634,7 +625,6 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 	}
 
-/*	AppendAudit(0, TPM_ORD_ChangeAuthAsymFinish, result); */
 	LogResult("ChangeAuthAsymFinish", result);
 	return result;
 }
@@ -675,7 +665,6 @@ TCSP_TerminateHandle_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = auth_mgr_release_auth(handle);
 
 	LogResult("Terminate Handle", result);
-	AppendAudit(0, TPM_ORD_Terminate_Handle, result);
 	return result;
 }
 
@@ -809,7 +798,6 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   outDigest->digest, "digest");
 	}
-	AppendAudit(0, TPM_ORD_Extend, result);
 	LogResult("Extend", result);
 	return result;
 }
@@ -847,7 +835,6 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   outDigest->digest, "digest");
 	}
-	AppendAudit(0, TPM_ORD_PcrRead, result);
 	LogResult("PCR Read", result);
 	return result;
 }
@@ -925,7 +912,6 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_Quote, result); */
 	LogResult("Quote", result);
 	return result;
 }
@@ -971,7 +957,6 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-	AppendAudit(0, TPM_ORD_DirWriteAuth, result);
 	LogResult("DirWriteAuth", result);
 	return result;
 }
@@ -1010,7 +995,6 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIRVALUE_SIZE, txBlob,
 			   dirValue->digest, "digest");
 	}
-	AppendAudit(0, TPM_ORD_DirRead, result);
 	LogResult("DirRead", result);
 	return result;
 }
@@ -1098,7 +1082,6 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			auth_mgr_release_auth(pubAuth->AuthHandle);
 		}
 	}
-/*	AppendAudit(0, TPM_ORD_Seal, result); */
 	LogResult("Seal", result);
 	return result;
 }
@@ -1173,7 +1156,6 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob_Auth(&offset, txBlob, parentAuth);
 		UnloadBlob_Auth(&offset, txBlob, dataAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_Unseal, result); */
 	LogResult("Unseal", result);
 	return result;
 }
@@ -1334,7 +1316,6 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (result)
 			auth_mgr_release_auth(entityAuth->AuthHandle);
 	}
-/*	AppendAudit(0, TPM_ORD_CreateMigrationBlob, result); */
 	LogResult("TPM_CreateMigrationBlob", result);
 	return result;
 }
@@ -1410,7 +1391,6 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				auth_mgr_release_auth(parentAuth->AuthHandle);
 		}
 	}
-/*	AppendAudit(0, TPM_ORD_ConvertMigrationBlob, result); */
 	LogResult("***Leaving ConvertMigrationBlob with result ", result);
 	return result;
 }
@@ -1466,7 +1446,6 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (result)
 			auth_mgr_release_auth(ownerAuth->AuthHandle);
 	}
-	AppendAudit(0, TPM_ORD_AuthorizeMigrationKey, result);
 	LogResult("TPM_AuthorizeMigrationKey", result);
 	return result;
 
@@ -1640,7 +1619,6 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_Sign, result); */
 	LogResult("sign", result);
 	return result;
 }
@@ -1679,7 +1657,6 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 		UnloadBlob(&offset, *bytesRequested, txBlob, *randomBytes, "random bytes");
 	}
-	AppendAudit(0, TPM_ORD_GetRandom, result);
 	LogResult("get random", result);
 	return result;
 }
@@ -1712,7 +1689,6 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Stir random", result);
-	AppendAudit(0, TPM_ORD_StirRandom, result);
 	return result;
 }
 
@@ -1890,7 +1866,6 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 	}
 	LogResult("Get Cap", result);
-	AppendAudit(0, TPM_ORD_GetCapability, result);
 	return result;
 }
 
@@ -1980,7 +1955,6 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_GetCapabilitySigned, result); */
 	LogResult("Get Cap signed", result);
 	return result;
 }
@@ -2028,7 +2002,6 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (pOwnerAuth->fContinueAuthSession == FALSE)
 		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 
-	AppendAudit(0, TPM_ORD_GetCapabilityOwner, result);
 	LogResult("GetCapowner", result);
 	return result;
 }
@@ -2081,7 +2054,6 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   checksum->digest, "digest");
 	}
 	LogData("Leaving CreateEKPair with result:", result);
-/*	AppendAudit(0, TPM_ORD_CreateEndorsementKeyPair, result); */
 	return result;
 }
 
@@ -2127,7 +2099,6 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Read Pubek", result);
 /*	LogData( "Leaving ReadPubek with result:", result ); */
-/*	AppendAudit(0, TPM_ORD_ReadPubek, result); */
 	return result;
 }
 
@@ -2163,7 +2134,6 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-	AppendAudit(0, TPM_ORD_DisablePubekRead, result);
 	return result;
 }
 
@@ -2232,7 +2202,6 @@ TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Self Test Full", result);
-	AppendAudit(0, TPM_ORD_SelfTestFull, result);
 	return result;
 }
 
@@ -2298,7 +2267,6 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
-/*	AppendAudit(0, TPM_ORD_CertifySelfTest, result); */
 	LogResult("Certify Self Test", result);
 	return result;
 }
@@ -2338,7 +2306,6 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LogBlob(*outDataSize, *outData);
 	}
 	LogResult("Get Test Result", result);
-	AppendAudit(0, TPM_ORD_GetTestResult, result);
 	return result;
 }
 
@@ -2375,7 +2342,6 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-	AppendAudit(0, TPM_ORD_OwnerSetDisable, result);
 	return result;
 }
 
@@ -2412,7 +2378,6 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Ownerclear", result);
-	AppendAudit(0, TPM_ORD_OwnerClear, result);
 	return result;
 }
 
@@ -2449,7 +2414,6 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("DisableOwnerClear", result);
-	AppendAudit(0, TPM_ORD_DisableOwnerClear, result);
 	return result;
 }
 
@@ -2471,7 +2435,6 @@ TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-	AppendAudit(0, TPM_ORD_ForceClear, result);
 	LogResult("Force Clear", result);
 	return result;
 }
@@ -2496,7 +2459,6 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Disable Force Clear", result);
-	AppendAudit(0, TPM_ORD_DisableForceClear, result);
 	return result;
 
 }
@@ -2555,7 +2517,6 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Physical Disable", result);
-	AppendAudit(0, TPM_ORD_PhysicalDisable, result);
 
 	return result;
 }
@@ -2580,7 +2541,6 @@ TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Physical Enable", result);
-	AppendAudit(0, TPM_ORD_PhysicalEnable, result);
 
 	return result;
 }
@@ -2609,7 +2569,6 @@ TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("PhysicalSetDeactivated", result);
-	AppendAudit(0, TPM_ORD_PhysicalSetDeactivated, result);
 	return result;
 }
 
@@ -2633,7 +2592,6 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("SetTempDeactivated", result);
-	AppendAudit(0, TPM_ORD_SetTempDeactivated, result);
 
 	return result;
 }
