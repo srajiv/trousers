@@ -29,8 +29,6 @@
 struct key_mem_cache *key_mem_cache_head = NULL;
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
-TSS_BOOL corruptParamSize = 0;
-BYTE LOG_ENABLED = 1;
 TSS_BOOL firstVendorCheck = 1;
 
 TSS_RESULT
@@ -244,116 +242,6 @@ get_tpm_metrics(struct tpm_properties *p)
 	return result;
 }
 
-#if 0
-void
-setCorruptParamSize(TSS_BOOL b)
-{
-	corruptParamSize = b;
-}
-
-UINT16
-getVendor(TCS_CONTEXT_HANDLE hContext)
-{
-	static UINT16 vendor;
-	UINT32 respSize;
-	BYTE *resp;
-	BYTE subCap[4];
-	TCPA_RESULT result;
-
-	 LogDebug1("Vendor Check");
-	if (firstVendorCheck == 0) {
-		 LogDebug1("Already got vendor");
-		return vendor;
-	}
-	 LogDebug1("Getting vendor");
-
-	UINT32ToArray(TCPA_CAP_PROP_MANUFACTURER, subCap);
-	if ((result = TCSP_GetCapability_Internal(hContext, TCPA_CAP_PROPERTY, 4, subCap,
-					&respSize, &resp)))
-		return 0;
-
-	if (!memcmp(resp, "ATML", 4)) {
-		vendor = TPM_VENDOR_ATMEL;
-		 LogDebug1("Vendor is Atmel");
-	} else if (!memcmp(resp, "IFX", 3)) {
-		vendor = TPM_VENDOR_IFX;
-		 LogDebug1("Vendor is Infineon");
-	} else if (!memcmp(resp, "NSM", 3)) {
-		 LogDebug1("Vendor is National");
-		vendor = TPM_VENDOR_NATL;
-	} else {
-		 LogDebug1("Don't know vendor");
-		vendor = TPM_VENDOR_UNKNOWN;
-	}
-
-	TCS_FreeMemory_Internal(hContext, resp);
-
-	firstVendorCheck = 0;
-	 LogDebug1("Returning From Vendor Check");
-	return vendor;
-}
-
-void
-showBlob(BYTE * blob, char *string)
-{
-	LogDebug1(string);
-	LogBlob(Decode_UINT32(&blob[TPM_PARAMSIZE_OFFSET]), blob);
-	/*      LogBlob( string, Decode_UINT32( &blob[TPM_PARAMSIZE_OFFSET] ), blob ); */
-}
-#endif
-
-#define HOW_MANY_RESPONSES	0x2F
-#if 0
-char resultString[HOW_MANY_RESPONSES][50] = { "TCPA Passed",	/*0x00 */
-	"Failed Auth",
-	"Failed with Bad Index",
-	"Failed with Bad Parameter",	/*0x03 */
-	"Audit Failed",
-	"TCPA Clear Disabled",
-	"TCPA Deactivated",	/*0x07 */
-	"TCPA Disabled",
-	"TCPA Disabled Command",
-	"TCPA Fail",
-	"TCPA Bad Ordinal",	/*0x0A */
-	"TCPA Install Disabled",
-	"TCPA Invalid KeyHandle",
-	"TCPA Key Not Found",
-	"TCPA Innappropriate Enc",	/*0x0E */
-	"TCPA Migrate Fail",
-	"TCPA No PCR Info",
-	"TCPA No Space",
-	"TCPA No SRK",
-	"TCPA Not Sealed Blob",
-	"TCPA Owner Set",	/*0x14 */
-	"TCPA Resources",
-	"TCPA Short Random",
-	"TCPA Size",
-	"TCPA Wrong PCR Value",	/*0x18 */
-	"TCPA Bad Param Size",
-	"TCPA Sha Thread",
-	"TCPA Sha Error",	/*0x1B */
-	"TCPA Failed Self Test",
-	"TCPA Auth 2 Fail",
-	"TCPA Bad Tag",
-	"TCPA IO Error",	/*0x1F */
-	"TCPA Encrypt Error",
-	"TCPA Decrypt Error",
-	"TCPA Invalid AuthHandle",
-	"TCPA No Endorsement",
-	"TCPA Invalid KeyUsage",
-	"TCPA Wrong Entity Type",	/*0x25 */
-	"Command in Wrong order...Run Startup first",
-	"TCPA Inappropriate Sig",
-	"TCPA Bad Key Property",
-	"TCPA Bad Migration",	/*0x29 */
-	"TCPA Bad Scheme",
-	"TCPA Bad DataSize",
-	"TCPA Bad Mode",
-	"TCPA Bad Presence",	/*0x2D */
-	"TCPA Bad Version"
-};
-
-#endif
 void
 LogData(char *string, UINT32 data)
 {
@@ -372,29 +260,6 @@ LogResult(char *string, TCPA_RESULT result)
 #endif
 }
 
-void
-setLogging(BYTE b)
-{
-	LOG_ENABLED = b;
-}
-
-void
-purgeLog()
-{
-	/*
-	   #ifdef WIN32
-	   FILE* fp;
-	   if( LOG_ENABLED )
-	   {
-	   fp = fopen( LOG_FILE_NAME, "w" );
-	   fprintf( fp, "\n" );
-	   fclose( fp );
-	   }
-	   #endif
-	 */
-}
-
-#undef HOW_MANY_RESPONSES
 TSS_RESULT
 canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 {
@@ -528,19 +393,9 @@ clearKeysFromChip(TCS_CONTEXT_HANDLE hContext)
 			continue;
 		if ((result = internal_EvictByKeySlot(keyList.handle[i])))
 			return result;
-
-/*		if( getSlotByHandle( keyList.handle[i] ) != NULL_TPM_HANDLE )
-		{
-			if( result = TCSP_EvictKey_Internal(hContext, keyList.handle[i] ))
-				return result;
-		}
-		*/
-
 	}
 	return TSS_SUCCESS;
 }
-
-/*============================================================================================= */
 
 UINT16
 Decode_UINT16(BYTE * in)
@@ -623,7 +478,7 @@ LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob, char *log)
 {
 	blob[*offset] = data;
 	(*offset)++;
-#ifdef DEBUG
+#ifdef TSS_DEBUG
 	if (log)
 		LogDebug("%s: %c", log, data);
 #endif
@@ -634,7 +489,7 @@ UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob, char *log)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
-#ifdef DEBUG
+#ifdef TSS_DEBUG
 	if (log)
 		LogDebug("%s: %c", log, *dataOut);
 #endif
@@ -1197,50 +1052,6 @@ destroy_key_refs(TCPA_KEY *key)
 	key->PCRInfo = NULL;
 	key->PCRInfoSize = 0;
 }
-
-#if 0
-/*
- * removeRegisteredKeyNode() is responsible for finding all the children
- * of a the key with UUID==uuid and removing them, then removing itself.
- * The caller is responsible for locking here!
- */
-TSS_RESULT
-removeRegisteredKeyNode(TSS_UUID *uuid)
-{
-	TSS_RESULT result = TSS_SUCCESS;
-	struct key_disk_cache *tmp;
-
-	for (tmp = key_disk_cache_head; tmp; tmp = tmp->next) {
-		if (!memcmp(&tmp->parent_uuid, uuid, sizeof(TSS_UUID))) {
-			/* call recursively on each child */
-			if ((result = removeRegisteredKeyNode(&tmp->uuid))) {
-				return result;
-			} else {
-				/* all children of this key have been removed,
-				 * so its safe to remove it now */
-				tmp->flags &= ~CACHE_FLAG_VALID;
-			}
-		} else if (!memcmp(&tmp->uuid, uuid, sizeof(TSS_UUID))) {
-			/* remove the parent, too */
-			tmp->flags &= ~CACHE_FLAG_VALID;
-		}
-	}
-
-	return result;
-}
-
-TSS_RESULT
-removeRegisteredKey(TSS_UUID *uuid)
-{
-	TSS_RESULT result;
-
-	pthread_mutex_lock(&disk_cache_lock);
-	result = removeRegisteredKeyNode(uuid);
-	pthread_mutex_unlock(&disk_cache_lock);
-
-	return result;
-}
-#endif
 
 UINT32
 get_pcr_event_size(TSS_PCR_EVENT *e)
