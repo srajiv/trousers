@@ -233,8 +233,6 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	BYTE pcrData[256];
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TCPA_NONCE nonceEvenOSAP;
-	TSS_BOOL useAuth;
-	TPM_AUTH *pAuth;
 	TCPA_DIGEST digAtCreation;
 	TSS_HCONTEXT tspContext;
 	TCPA_PCR_SELECTION pcrSelect = { 0, NULL };
@@ -249,7 +247,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hEncKey, TSS_POLICY_USAGE,
-					&hPolicy, &useAuth)))
+					&hPolicy, NULL)))
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
@@ -295,19 +293,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 					&nonceEvenOSAP)))
 		return result;
 
-	if (useAuth) {
-		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
-		Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.authdata);
-		Trspi_LoadBlob_UINT32(&offset, pcrDataSize, hashBlob);
-		Trspi_LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
-		Trspi_LoadBlob_UINT32(&offset, ulDataLength, hashBlob);
-		Trspi_LoadBlob(&offset, ulDataLength, hashBlob, rgbDataToSeal);
-		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-		pAuth = &auth;
-	} else {
-		pAuth = NULL;
-	}
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
+	Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.authdata);
+	Trspi_LoadBlob_UINT32(&offset, pcrDataSize, hashBlob);
+	Trspi_LoadBlob(&offset, pcrDataSize, hashBlob, pcrData);
+	Trspi_LoadBlob_UINT32(&offset, ulDataLength, hashBlob);
+	Trspi_LoadBlob(&offset, ulDataLength, hashBlob, rgbDataToSeal);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if ((result = secret_PerformAuth_OSAP(hPolicy, hEncPolicy, hEncPolicy,
 					  hEncKey, sharedSecret, &auth,
@@ -316,23 +309,21 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 
 	if ((result = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage,
 			    pcrDataSize, pcrData, ulDataLength, rgbDataToSeal,
-			    pAuth, &encDataSize, &encData)))
+			    &auth, &encDataSize, &encData)))
 		return result;
 
-	if (useAuth) {
-		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
-		Trspi_LoadBlob(&offset, encDataSize, hashBlob, encData);
-		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Seal, hashBlob);
+	Trspi_LoadBlob(&offset, encDataSize, hashBlob, encData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OSAP(hPolicy, hEncPolicy,
-						   hEncPolicy, sharedSecret,
-						   &auth, digest.digest,
-						   &nonceEvenOSAP))) {
-			free(encData);
-			return result;
-		}
+	if ((result = secret_ValidateAuth_OSAP(hPolicy, hEncPolicy,
+					hEncPolicy, sharedSecret,
+					&auth, digest.digest,
+					&nonceEvenOSAP))) {
+		free(encData);
+		return result;
 	}
 
 	/* Need to set the object with the blob and the pcr's */
