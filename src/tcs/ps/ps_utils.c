@@ -610,94 +610,6 @@ err_exit:
 	return rc;
 }
 
-#if 0
-/*
- * zero out a key in the persistent store. The key data and blob are zeroed,
- * but the sizes of each remain on disk. Newly created keys will then be inserted
- * in the blank space.  Keys are only blanked on disk before a TCS shutdown,
- * otherwise the TSP will just overwrite the free space.
- */
-int
-blank_key(int fd, struct key_disk_cache *key)
-{
-	int rc;
-	char blank[1024] = {0,};
-
-	// seek to the key location
-#ifdef TSS_DEBUG
-	if (key->offset == 0)
-		LogDebug1("Storing key with file offset==0!!!");
-#endif
-	// blank the uuid
-	rc = lseek(fd, UUID_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, sizeof(TSS_UUID)))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	// blank the parent's uuid
-	rc = lseek(fd, PARENT_UUID_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, sizeof(TSS_UUID)))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	// blank the key's cache flags
-	rc = lseek(fd, CACHE_FLAGS_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, sizeof(UINT16)))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	// blank the public key
-	rc = lseek(fd, PUB_DATA_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, key->pub_data_size))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	// blank the blob
-	rc = lseek(fd, BLOB_DATA_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, key->blob_size))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	// blank the vendor data
-	rc = lseek(fd, VENDOR_DATA_OFFSET(key), SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return -1;
-	}
-	if ((rc = write_data(fd, &blank, key->vendor_data_size))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
-	}
-
-	return 0;
-}
-#endif
-
 int
 close_disk_cache(int fd)
 {
@@ -711,10 +623,6 @@ close_disk_cache(int fd)
 
 	do {
 		tmp_next = tmp->next;
-#if 0
-		if (!(tmp->flags & CACHE_FLAG_VALID))
-			(void)blank_key(fd, tmp);
-#endif
 		free(tmp);
 		tmp = tmp_next;
 	} while (tmp);

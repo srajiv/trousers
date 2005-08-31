@@ -666,14 +666,7 @@ ps_remove_key(int fd, struct key_disk_cache *c)
 		LogError("%s", __FUNCTION__);
 		return result;
 	}
-#if 0
-	/* set the file pointer back to where we want to truncate */
-	rc = lseek(fd, head_offset, SEEK_SET);
-	if (rc == ((off_t) - 1)) {
-		LogError("lseek: %s", strerror(errno));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-#endif
+
 	if ((rc = ftruncate(fd, head_offset)) < 0) {
 		LogError("ftruncate: %s", strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
