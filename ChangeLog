@@ -1,4 +1,7 @@
 
+ - Fixed the TSP seal command to allow Sealing with a no-auth
+   key by using null auth data. Also changes the TCS seal
+   to return bad parameter if it gets null auth data.
  - Removed lots of unused code and made formatting changes.
  - Don't require Tspi_Key_WrapKey to be connected to succeed
    and return a default value (or from the environment) if
