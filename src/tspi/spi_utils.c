@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -98,56 +98,6 @@ check_flagset_collision(TSS_FLAG flagset, UINT32 flags)
 	return (one_bits > 1 ? TRUE : FALSE);
 }
 
-#if 0
-/* ---	Converts true unicode to a TSS defined byte array of unicode data */
-UINT32
-UnicodeToArray(BYTE * bytes, UNICODE * wchars)
-{
-	UINT32 i, w;
-	for (i = 0, w = 0; wchars[w] != 0; i += 2, w++) {
-		bytes[i] = ((wchars[w] >> 8) & 0x00FF);
-		bytes[i + 1] = (wchars[w] & 0x00FF);
-	}
-	bytes[i] = 0;
-	bytes[i + 1] = 0;
-
-	i += 2;
-	return i;
-}
-
-/* ---	converts TSS defined byte array of unicode characters to unicode */
-UINT32
-ArrayToUnicode(BYTE * bytes, UINT32 howManyBytes, UNICODE * wchars)
-{
-	UINT32 i;
-	UINT16 temp;
-	for (i = 0; i < howManyBytes; i += 2) {
-		temp = (bytes[i] << 8);
-		temp |= bytes[i + 1];
-		wchars[i >> 1] = temp;
-	}
-	wchars[i >> 1] = 0;
-
-	i += 2;
-	return (i >> 1);
-}
-
-/* ---	Converts SBCS to TSS defined unicode array */
-UINT32
-StringToUnicodeArray(char *message, BYTE * array)
-{
-	UINT32 i, w;
-	for (i = 0, w = 0; message[i] != 0; i++, w += 2) {
-		array[w] = 0;
-		array[w + 1] = message[i];
-	}
-	array[w++] = 0;
-	array[w++] = 0;
-
-	return w;
-}
-#endif
-
 TSS_RESULT
 internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 {
@@ -165,79 +115,6 @@ internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 	free_tspi(tspContext, random);
 
 	return TSS_SUCCESS;
-}
-
-#if 0
-TSS_RESULT
-EncryptStoreAsymKey(TCS_CONTEXT_HANDLE hContext, TCPA_PAYLOAD_TYPE payload,
-		    UINT32 privModLength, BYTE * privMod, BYTE * usageAuth,
-		    BYTE * migAuth, TCPA_RSAKEY_OBJECT * keyObject,
-		    BYTE * pubkey, UINT32 pubKeyLength)
-{
-	UINT16 offset;
-	BYTE blob[1000];
-	BYTE seed[20];
-	TCPA_STORE_ASYMKEY storeAsymkey;
-/* 	UINT32 rc; */
-	UINT32 bytesRequested;
-	BYTE *randomBytes;
-	TSS_RESULT result;
-
-	bytesRequested = 20;
-	if ((result = TCSP_GetRandom(hContext,	/*  in */
-				    &bytesRequested,	/*  in, out */
-				    &randomBytes	/*  out */
-	    )))
-		return result;
-	memset(seed, *randomBytes, 20);
-
-	/* generate storeAsymkey structure */
-	storeAsymkey.payload = TCPA_PT_ASYM;
-	storeAsymkey.privKey.keyLength = privModLength;
-	storeAsymkey.privKey.key = getSPIMemory(hContext, privModLength);
-/* 	storeAsymkey.privKey.key = malloc(privModLength); */
-	memcpy(storeAsymkey.privKey.key, privMod, storeAsymkey.privKey.keyLength);
-	memcpy(storeAsymkey.migrationAuth.secret, migAuth, 20);
-	memcpy(storeAsymkey.usageAuth.secret, usageAuth, 20);
-
-	offset = 0;
-	Trspi_LoadBlob_KEY_ForHash(&offset, blob, &keyObject->tcpaKey);
-
-	Trspi_Hash(TSS_HASH_SHA1, offset, blob, storeAsymkey.pubDataDigest.digest);
-
-	offset = 0;
-	Trspi_LoadBlob_STORE_ASYMKEY(&offset, blob, &storeAsymkey);
-
-	if ((result = Trspi_RSA_Encrypt(blob,
-				    offset,
-				    keyObject->tcpaKey.encData,
-				    &keyObject->tcpaKey.encSize,
-				    pubkey, pubKeyLength)))
-		return result;
-
-	return TSS_SUCCESS;
-
-}
-#endif
-
-TCPA_PCRVALUE *
-getPcrFromComposite(TCPA_PCR_COMPOSITE comp, UINT32 which)
-{
-	UINT32 i, j, valueOffset;
-
-	valueOffset = 0;
-	for (j = 0; j < comp.select.sizeOfSelect; j++) {
-		for (i = 0; i < 8; i++) {
-			if (comp.select.pcrSelect[j] & (1 << i)) {
-				if (j == (which >> 3) && i == (which & 0x07)) {
-					return &comp.pcrValue[valueOffset];
-				} else
-					valueOffset++;
-			}
-		}
-	}
-
-	return NULL;
 }
 
 UINT16
@@ -286,7 +163,7 @@ TSS_BOOL
 validateReturnAuth(BYTE *secret, BYTE *hash, TPM_AUTH *auth)
 {
 	BYTE digest[20];
-	/* ===  auth is expected to have both nonces and the digest from the TPM */
+	/* auth is expected to have both nonces and the digest from the TPM */
 	memcpy(digest, &auth->HMAC, 20);
 	HMAC_Auth(secret, hash, auth);
 
