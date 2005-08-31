@@ -1,4 +1,5 @@
 
+ - Removed lots of unused code and made formatting changes.
  - Don't require Tspi_Key_WrapKey to be connected to succeed
    and return a default value (or from the environment) if
    we're doing PCR operations on an unconnected context.
