@@ -1027,6 +1027,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return result;
 	} else {
 		LogDebug1("No Auth");
+		return TCSERR(TSS_E_BAD_PARAMETER);
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
