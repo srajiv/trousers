@@ -26,8 +26,6 @@
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 
-#include "atmel.h"
-
 TSS_RESULT
 TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TSS_BOOL state	/* in  */
