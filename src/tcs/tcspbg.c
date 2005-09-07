@@ -78,10 +78,10 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	/*---	Check on the Atmel Bug Patch */
 	offset = 0;
@@ -107,7 +107,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_TakeOwnership, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -118,7 +118,8 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*srkKey = getSomeMemory(*srkKeySize, hContext);	/*this is that memory leak problem */
 		if (*srkKey == NULL) {
 			LogError("malloc of %u bytes failed.", *srkKeySize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		if (srkKeyContainer.authDataUsage != oldAuthDataUsage) {
 			LogDebug1("AuthDataUsage was changed by TPM.  Atmel Bug. Fixing it in PS");
@@ -138,20 +139,22 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		result = removeRegisteredKey(&SRK_UUID);
 		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
 			LogError1("Error removing SRK from key file.");
-			return result;
+			goto done;
 		}
 
 		if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID,
 						       NULL, 0,	newSRK,
 						       bugOffset))) {
 			LogError1("Error writing SRK to disk");
-			return result;
+			goto done;
 		}
 		result = add_mem_cache_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TSS_SUCCESS)
-			LogError1("Error creating mem cache entry");
+			LogError1("Error creating SRK mem cache entry");
 	}
 	LogResult("TakeOwnership", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -264,15 +267,15 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 
 	LogDebug1("Entering Changeauth");
 	if ((result = ctx_verify_context(contextHandle)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(contextHandle, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 	if ((result = auth_mgr_check(contextHandle, entityAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	if ((result = ensureKeyIsLoaded(contextHandle, parentHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "handle");
@@ -289,7 +292,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			TPM_ORD_ChangeAuth, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -308,11 +311,8 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, entityAuth);
 
 		/* if the malloc above failed, terminate the 2 new auth handles and exit */
-		if (result) {
-			auth_mgr_release_auth(ownerAuth->AuthHandle);
-			auth_mgr_release_auth(entityAuth->AuthHandle);
-			return result;
-		}
+		if (result)
+			goto done;
 
 		/****************************************
 		 *	Check if ET is a key.  If it is, we need to 
@@ -329,9 +329,6 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			/*---	Check PS */
 			LogDebug1("Checking PS");
 			uuidKeyToEvict = getUUIDByEncData(encData);
-#if 0
-			uuidKeyToEvict = getUUIDByEncData( *outData );	/* use the new encdata to search since above might change it  */
-#endif
 			if (uuidKeyToEvict != NULL) {
 				LogDebug1("UUID is not NULL, replace storage");
 				replaceEncData_PS(*uuidKeyToEvict, encData, *outData);
@@ -348,6 +345,8 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 		}
 	}
 	LogResult("ChangeAuth", result);
+done:
+	auth_mgr_release_auth(ownerAuth, entityAuth);
 	return result;
 }
 
@@ -367,10 +366,10 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering ChangeAuthOwner");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT16(&offset, protocolID, txBlob, "prot id");
@@ -379,18 +378,16 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ChangeAuthOwner, txBlob);
 
-	if ((result = req_mgr_submit_req(txBlob))) {
-		auth_mgr_release_auth(ownerAuth->AuthHandle);
-		return result;
-	}
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
-	}
+	UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 
 	LogResult("ChangeAuthOwner", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -424,35 +421,35 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering ChangeAuthAsymStart");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (pAuth != NULL) {
 		LogDebug1("Auth Command");
 		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, idHandle, &keySlot)))
-		return result;
+		goto done;
 
 	LogDebug1("Checking for room to load the eph key");
 	offset = 0;
 	if ((result = UnloadBlob_KEY_PARMS(&offset, KeyDataIn, &keyParmsContainer)))
-		return result;
+		goto done;
 
 	/* if we can't load the key, evict keys until we can */
 	if ((result = canILoadThisKey(&keyParmsContainer, &canLoad)))
-		return result;
+		goto done;
 
 	while (canLoad == FALSE) {
 		/* Evict a key that isn't the parent */
 		if ((result = evictFirstKey(idHandle)))
-			return result;
+			goto done;
 
 		if ((result = canILoadThisKey(&keyParmsContainer, &canLoad)))
-			return result;
+			goto done;
 	}
 
 	offset = 10;
@@ -472,18 +469,18 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (result == 0) {
-		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
-					&certifyInfo);
+		UnloadBlob_CERTIFY_INFO(&offset, txBlob, &certifyInfo);
 		*CertifyInfoSize = offset - 10;
 		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
 		if (*CertifyInfo == NULL) {
 			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(*CertifyInfo, &txBlob[offset - *CertifyInfoSize],
 		       *CertifyInfoSize);
@@ -491,7 +488,8 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		UnloadBlob_UINT32(&offset, ephHandle, txBlob, "eph handle");
@@ -501,7 +499,8 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
 		if (*KeyDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *KeySizeOut);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(*KeyDataOut, &txBlob[offset - *KeySizeOut], *KeySizeOut);
 		if (pAuth != NULL)
@@ -509,6 +508,8 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	LogResult("ChangeAuthAsymStart", result);
+done:
+	auth_mgr_release_auth(pAuth, NULL);
 	return result;
 }
 
@@ -544,17 +545,17 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering ChangeAuthAsymFinish");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (ownerAuth != NULL) {
 		LogDebug1("Auth used");
 		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "idhandle");
@@ -576,7 +577,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -586,7 +587,8 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*encDataOut = getSomeMemory(*encDataSizeOut, hContext);
 		if (*encDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *encDataSizeOut);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *encDataSizeOut, txBlob,
 			   *encDataOut, "outData");
@@ -624,6 +626,8 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	LogResult("ChangeAuthAsymFinish", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -660,7 +664,7 @@ TCSP_TerminateHandle_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, handle)))
 		return result;
 
-	result = auth_mgr_release_auth(handle);
+	result = auth_mgr_release_auth_handle(handle);
 
 	LogResult("Terminate Handle", result);
 	return result;
@@ -686,20 +690,20 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("TCSP_ActivateTPMIdentity");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (idKeyAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, idKeyAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, idKey, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "id key handle");
@@ -719,7 +723,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -745,6 +749,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 done:
+	auth_mgr_release_auth(idKeyAuth, ownerAuth);
 	return result;
 }
 
@@ -861,17 +866,17 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering quote");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
@@ -886,7 +891,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				TPM_ORD_Quote, txBlob);
 	}
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -897,20 +902,24 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pcrDataOut = getSomeMemory(*pcrDataSizeOut, hContext);
 		if (*pcrDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *pcrDataSizeOut);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(*pcrDataOut, &txBlob[10], *pcrDataSizeOut);
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sigsize");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 	LogResult("Quote", result);
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -928,14 +937,14 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering dirwriteauth");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	if (dirIndex > tpm_metrics.num_dirs) {
 		result = TCSERR(TSS_E_BAD_PARAMETER);
-		return result;
+		goto done;
 	}
 
 	offset = 10;
@@ -947,7 +956,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_DirWriteAuth, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -956,6 +965,8 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("DirWriteAuth", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -1019,23 +1030,24 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Seal");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (pubAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, pubAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
-		return TCSERR(TSS_E_BAD_PARAMETER);
+		result = TCSERR(TSS_E_BAD_PARAMETER);
+		goto done;
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	if (keySlot == 0) {
 		result = TCSERR(TSS_E_FAIL);
-		return result;
+		goto done;
 	}
 
 	offset = 10;
@@ -1058,7 +1070,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1066,22 +1078,24 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		TSS_RESULT tmp_result;
 		if ((tmp_result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
-			return tmp_result;
+			goto done;
 		*SealedDataSize = offset - 10;
 /*		UnloadBlob_UINT32( &offset, SealedDataSize, txBlob, "sealed data size" ); */
 		*SealedData = getSomeMemory(*SealedDataSize, hContext);
 		if (*SealedData == NULL) {
 			LogError("malloc of %u bytes failed.", *SealedDataSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(*SealedData, &txBlob[10], *SealedDataSize);
 /*		LoadBlob_STORED_DATA( &offset, *SealedData, &storedData ); */
 		if (pubAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, pubAuth);
-			auth_mgr_release_auth(pubAuth->AuthHandle);
 		}
 	}
 	LogResult("Seal", result);
+done:
+	auth_mgr_release_auth(pubAuth, NULL);
 	return result;
 }
 
@@ -1105,22 +1119,22 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Unseal");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (parentAuth != NULL) {
 		LogDebug1("Auth used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
-		return result;
+		goto done;
 
 	if (keySlot == 0) {
 		result = TCSERR(TSS_E_FAIL);
-		return result;
+		goto done;
 	}
 
 	offset = 10;
@@ -1137,7 +1151,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				offset, TPM_ORD_Unseal, txBlob);
 	}
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1148,7 +1162,8 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*Data = getSomeMemory(*DataSize, hContext);
 		if (*Data == NULL) {
 			LogError("malloc of %u bytes failed.", *DataSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *DataSize, txBlob, *Data, "sealed data");
 		if (parentAuth != NULL)
@@ -1156,6 +1171,8 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, dataAuth);
 	}
 	LogResult("Unseal", result);
+done:
+	auth_mgr_release_auth(parentAuth, dataAuth);
 	return result;
 }
 
@@ -1177,17 +1194,17 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering TCSI_UnBind");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
@@ -1202,7 +1219,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				TPM_ORD_UnBind, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1220,9 +1237,8 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 
-	if (privAuth != NULL)
-		auth_mgr_release_auth(privAuth->AuthHandle);
-
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -1254,21 +1270,21 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering TPM_CreateMigrationBlob");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (parentAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("no Auth");
 	}
 
 	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keyHandle, txBlob, "parent handle");
@@ -1291,7 +1307,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1311,11 +1327,11 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (parentAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, parentAuth);
 		UnloadBlob_Auth(&offset, txBlob, entityAuth);
-
-		if (result)
-			auth_mgr_release_auth(entityAuth->AuthHandle);
 	}
 	LogResult("TPM_CreateMigrationBlob", result);
+
+done:
+	auth_mgr_release_auth(entityAuth, parentAuth);
 	return result;
 }
 
@@ -1339,17 +1355,17 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("ConvertMigBlob");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (parentAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "parent handle");
@@ -1368,7 +1384,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1385,12 +1401,11 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 		if (parentAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, parentAuth);
-
-			if (result)
-				auth_mgr_release_auth(parentAuth->AuthHandle);
 		}
 	}
 	LogResult("***Leaving ConvertMigrationBlob with result ", result);
+done:
+	auth_mgr_release_auth(parentAuth, NULL);
 	return result;
 }
 
@@ -1413,10 +1428,10 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("TCSP_AuthorizeMigrationKey");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT16(&offset, migrateScheme, txBlob, "migation scheme");
@@ -1425,7 +1440,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_AuthorizeMigrationKey, txBlob);
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1442,10 +1457,10 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
-		if (result)
-			auth_mgr_release_auth(ownerAuth->AuthHandle);
 	}
 	LogResult("TPM_AuthorizeMigrationKey", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 
 }
@@ -1474,12 +1489,12 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Certify Key");
 	offset = 10;
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (certAuth != NULL) {
 		LogDebug1("Auth Used for Cert signing key");
 		if ((result = auth_mgr_check(hContext, certAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth used for Cert signing key");
 	}
@@ -1487,16 +1502,16 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (keyAuth != NULL) {
 		LogDebug1("Auth Used for Key being signed");
 		if ((result = auth_mgr_check(hContext, keyAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth used for Key being signed");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, certHandle, &certKeySlot)))
-		return result;
+		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	LoadBlob_UINT32(&offset, certKeySlot, txBlob, "cert handle");
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
@@ -1515,7 +1530,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob_Header(tag, offset, TPM_ORD_CertifyKey, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 
@@ -1550,6 +1565,8 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 	}
 	LogResult("Certify Key", result);
+done:
+	auth_mgr_release_auth(certAuth, keyAuth);
 	return result;
 }
 
@@ -1576,13 +1593,13 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 
@@ -1600,7 +1617,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1610,15 +1627,16 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError("malloc of %d bytes failed.", *sigSize);
-			if (privAuth != NULL)
-				auth_mgr_release_auth(privAuth->AuthHandle);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 	LogResult("sign", result);
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -1890,12 +1908,12 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
@@ -1906,12 +1924,13 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		case TSS_TCSCAP_PERSSTORAGE:
 		case TSS_TCSCAP_CACHING:
 			result = TCSERR(TSS_E_FAIL);	/*can't sign software cap's */
+			goto done;
 			break;
 	}
 
 	LogDebug1("Entering Get Cap Signed");
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
@@ -1930,7 +1949,7 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1941,20 +1960,24 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*resp = getSomeMemory(*respSize, hContext);
 		if (*resp == NULL) {
 			LogError("malloc of %u bytes failed.", *respSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 	LogResult("Get Cap signed", result);
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -1974,10 +1997,10 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Getcap owner");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
@@ -1985,7 +2008,7 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_GetCapabilityOwner, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -1998,10 +2021,9 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
 	}
 
-	if (pOwnerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
-
 	LogResult("GetCapowner", result);
+done:
+	auth_mgr_release_auth(pOwnerAuth, NULL);
 	return result;
 }
 
@@ -2114,10 +2136,10 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("DisablePubekRead");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2125,7 +2147,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_DisablePubekRead, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2133,6 +2155,8 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2152,7 +2176,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering OwnerReadPubek");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2161,7 +2185,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_OwnerReadPubek, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2172,12 +2196,15 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
 		if (*pubEndorsementKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Owner Read Pubek", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2222,18 +2249,18 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Certify Self Test");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
@@ -2250,7 +2277,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2260,13 +2287,16 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*sig = getSomeMemory(*sigSize, hContext);
 		if (*sig == NULL) {
 			LogError("malloc of %d bytes failed.", *sigSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
 		if (privAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 	LogResult("Certify Self Test", result);
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -2322,10 +2352,10 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	LoadBlob_BOOL(&offset, disableState, txBlob, "State");
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2333,7 +2363,7 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_OwnerSetDisable, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2341,6 +2371,8 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2357,10 +2389,10 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering OwnerClear");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2368,7 +2400,7 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_OwnerClear, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2377,6 +2409,8 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Ownerclear", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2393,10 +2427,10 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering DisableownerClear");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2404,7 +2438,7 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_DisableOwnerClear, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -2413,6 +2447,8 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("DisableOwnerClear", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2612,7 +2648,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Field Upgrade");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	offset = 10;
 	if (dataInSize != 0) {
@@ -2626,7 +2662,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_FieldUpgrade, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2638,7 +2674,8 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			if (*dataOut == NULL) {
 				LogError("malloc of %u bytes failed.",
 								 *dataOutSize);
-				return TCSERR(TSS_E_OUTOFMEMORY);
+				result = TCSERR(TSS_E_OUTOFMEMORY);
+				goto done;
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
 				   *dataOut, "data");
@@ -2646,6 +2683,8 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Field Upgrade", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2666,12 +2705,14 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Set Redirection");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (privAuth != NULL) {
 		LogDebug1("Auth Used");
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-			return TCSERR(TSS_E_FAIL);
+		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot))) {
+			result = TCSERR(TSS_E_FAIL);
+			goto done;
+		}
 	} else {
 		keySlot = getSlotByHandle_lock(keyHandle);
 		if (keySlot == NULL_TPM_HANDLE)
@@ -2692,7 +2733,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				TPM_ORD_SetRedirection, txBlob);
 	}
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2702,6 +2743,8 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob_Auth(&offset, txBlob, privAuth);
 	}
 	LogResult("Set Redirection", result);
+done:
+	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -2723,7 +2766,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Create Main Archive");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_BOOL(&offset, generateRandom, txBlob, "gen rand");
@@ -2733,7 +2776,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_CreateMaintenanceArchive, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2758,10 +2801,10 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
-		if (result)
-			auth_mgr_release_auth(ownerAuth->AuthHandle);
 	}
 	LogResult("Create Main Archive", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2782,7 +2825,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Load Maint Archive");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	offset = 10;
 	if (dataInSize != 0) {
@@ -2797,7 +2840,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_LoadMaintenanceArchive, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2809,7 +2852,8 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			if (*dataOut == NULL) {
 				LogError("malloc of %u bytes failed.",
 								 *dataOutSize);
-				return TCSERR(TSS_E_OUTOFMEMORY);
+				result = TCSERR(TSS_E_OUTOFMEMORY);
+				goto done;
 			}
 			UnloadBlob(&offset, *dataOutSize, txBlob,
 				   *dataOut, "vendor data");
@@ -2817,6 +2861,8 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Load Maint Archive", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
@@ -2833,7 +2879,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Kill Maint Feature");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
@@ -2842,7 +2888,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			TPM_ORD_KillMaintenanceFeature, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
@@ -2851,6 +2897,8 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 	LogResult("Kill Maint Feature", result);
+done:
+	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
 }
 
