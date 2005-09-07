@@ -1,3 +1,4 @@
+* TROUSERS_0_2_2
 
  - deleted section on ssh-askpass in README
  - Modified popup code to hash UTF16 instead of UTF8.
