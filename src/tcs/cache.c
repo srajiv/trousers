@@ -1007,8 +1007,9 @@ isKeyRegistered(TCPA_STORE_PUBKEY *pub)
 	put_file(fd);
 
 	if ((isUUIDRegistered(uuid, &is_reg)))
-		return FALSE;
+		is_reg = FALSE;
 
+	free(uuid);
 	return is_reg;
 }
 
