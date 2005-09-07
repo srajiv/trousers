@@ -1079,6 +1079,10 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 	struct tsp_packet data;
 	int i;
 	struct tcsd_packet_hdr *hdr;
+	TSS_HCONTEXT tspContext;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -1110,7 +1114,7 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 			goto done;
 		}
 
-		*prgbPubKey = (BYTE *) malloc(*pcPubKeySize);
+		*prgbPubKey = (BYTE *) calloc_tspi(tspContext, *pcPubKeySize);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pcPubKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
