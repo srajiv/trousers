@@ -557,3 +557,23 @@ Spi_UnloadBlob_KEY(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 
 	return result;
 }
+
+void
+free_key_refs(TCPA_KEY *key)
+{
+	free(key->algorithmParms.parms);
+	key->algorithmParms.parms = NULL;
+	key->algorithmParms.parmSize = 0;
+
+	free(key->pubKey.key);
+	key->pubKey.key = NULL;
+	key->pubKey.keyLength = 0;
+
+	free(key->encData);
+	key->encData = NULL;
+	key->encSize = 0;
+
+	free(key->PCRInfo);
+	key->PCRInfo = NULL;
+	key->PCRInfoSize = 0;
+}
