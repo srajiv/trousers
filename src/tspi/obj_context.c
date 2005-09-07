@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -56,6 +55,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 	context->silentMode = TSS_TSPATTRIB_CONTEXT_NOT_SILENT;
 	if ((context->machineName = calloc(1, len)) == NULL) {
 		LogError("malloc of %d bytes failed", len);
+		free(context);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(context->machineName, TSS_LOCALHOST_STRING, len);
