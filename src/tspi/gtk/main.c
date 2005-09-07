@@ -19,7 +19,6 @@
 
 #include <sys/types.h>
 #include <string.h>
-#include <wchar.h>
 
 #include <gtk/gtk.h>
 
@@ -40,7 +39,7 @@
  * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayPINWindow(char *string, BYTE *popup)
+TSS_RESULT DisplayPINWindow(BYTE **string, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
@@ -51,7 +50,7 @@ TSS_RESULT DisplayPINWindow(char *string, BYTE *popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  ud.string = string;
+  //ud.string = string;
 
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
@@ -60,6 +59,8 @@ TSS_RESULT DisplayPINWindow(char *string, BYTE *popup)
   gtk_widget_show(dialog1);
 
   gtk_main();
+
+  *string = ud.string;
 
   return TSS_SUCCESS;
 }
@@ -73,7 +74,7 @@ TSS_RESULT DisplayPINWindow(char *string, BYTE *popup)
  * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayNewPINWindow(char *string, BYTE *popup)
+TSS_RESULT DisplayNewPINWindow(BYTE **string, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
@@ -84,7 +85,7 @@ TSS_RESULT DisplayNewPINWindow(char *string, BYTE *popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  ud.string = string;
+  //ud.string = string;
 
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
@@ -93,6 +94,8 @@ TSS_RESULT DisplayNewPINWindow(char *string, BYTE *popup)
   gtk_widget_show(dialog1);
 
   gtk_main();
+
+  *string = ud.string;
 
   return TSS_SUCCESS;
 }
