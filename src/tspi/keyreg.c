@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -25,27 +25,30 @@
 #include "tspps.h"
 #include "tsplog.h"
 
-TSS_BOOL
-keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT tspContext, UINT32 keyBlobSize, BYTE *keyBlob)
+TSS_RESULT
+keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob, TSS_BOOL *answer)
 {
 	TCPA_KEY key;
 	UINT16 offset;
 	int fd = -1;
-	TSS_BOOL answer;
+	UINT32 result;
 
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &key);
+	memset(&key, 0, sizeof(TCPA_KEY));
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &key)))
+		return result;
 
-	if ((fd = get_file()) < 0)
-		return FALSE;
-
-	if (ps_is_pub_registered(fd, &key.pubKey, &answer)) {
-		put_file(fd);
+	if ((fd = get_file()) < 0) {
+		free_key_refs(&key);
 		return FALSE;
 	}
 
+	if (ps_is_pub_registered(fd, &key.pubKey, answer))
+		*answer = FALSE;
+
+	free_key_refs(&key);
 	put_file(fd);
-	return answer;
+	return result;
 }
 
 TSS_RESULT
