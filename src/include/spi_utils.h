@@ -44,7 +44,7 @@ TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
 
 /*---	keyReg.c */
 //void keyreg_SetUUIDOfKeyObject(TSS_HKEY, TSS_UUID, TSS_FLAG);
-TSS_BOOL keyreg_IsKeyAlreadyRegistered(TSS_HCONTEXT, UINT32, BYTE *);
+TSS_RESULT keyreg_IsKeyAlreadyRegistered(UINT32, BYTE *, TSS_BOOL *);
 TSS_RESULT keyreg_WriteKeyToFile(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
 TSS_RESULT keyreg_RemoveKey(TSS_UUID *);
 TSS_RESULT keyreg_GetKeyByUUID(TSS_UUID *, UINT32 *, BYTE **);
@@ -74,6 +74,7 @@ TSS_RESULT secret_TakeOwnership(TSS_HKEY, TSS_HTPM, TSS_HKEY, TPM_AUTH *,
 /* spi_utils.c */
 
 UINT16 get_num_pcrs(TCS_CONTEXT_HANDLE);
+void   free_key_refs(TCPA_KEY *);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
@@ -108,6 +109,17 @@ extern TSS_VERSION VERSION_1_1;
 TSS_RESULT Spi_UnloadBlob_KEY(UINT16 *, BYTE *, TCPA_KEY *);
 TSS_RESULT Spi_UnloadBlob_KEY_PARMS(UINT16 *, BYTE *, TCPA_KEY_PARMS *);
 TSS_RESULT Spi_UnloadBlob_STORE_PUBKEY(UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
+
+/* openssl.c */
+#ifdef TSS_DEBUG
+#define DEBUG_print_openssl_errors() \
+	do { \
+		ERR_load_crypto_strings(); \
+		ERR_print_errors_fp(stderr); \
+	} while (0)
+#else
+#define DEBUG_print_openssl_errors()
+#endif
 
 
 /*===	Object Stuff */
