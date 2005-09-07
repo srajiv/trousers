@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"

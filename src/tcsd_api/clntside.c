@@ -19,7 +19,6 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
