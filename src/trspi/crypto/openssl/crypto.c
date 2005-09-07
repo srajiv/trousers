@@ -74,9 +74,7 @@ Trspi_Hash(UINT32 HashType, UINT32 BufSize, BYTE* Buf, BYTE* Digest)
 	goto out;
 
 err:
-	ERR_load_crypto_strings();
-	/* XXX Log something here instead */
-	ERR_print_errors_fp(stderr);
+	DEBUG_print_openssl_errors();
 out:
         return rv;
 }
@@ -168,9 +166,7 @@ Trspi_RSA_Encrypt(unsigned char *dataToEncrypt, /* in */
 	goto out;
 
 err:
-	ERR_load_crypto_strings();
-	/* XXX Log something here instead */
-	ERR_print_errors_fp(stderr);
+	DEBUG_print_openssl_errors();
 out:
 	if (rsa)
 		RSA_free(rsa);
@@ -240,10 +236,7 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 	goto out;
 
 err:
-	ERR_load_crypto_strings();
-	/* XXX Log something here instead */
-	ERR_print_errors_fp(stderr);
-
+	DEBUG_print_openssl_errors();
 out:
 	if (rsa)
 		RSA_free(rsa);
@@ -300,9 +293,7 @@ Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 	goto out;
 
 err:
-	ERR_load_crypto_strings();
-	/* XXX Log something here instead */
-	ERR_print_errors_fp(stderr);
+	DEBUG_print_openssl_errors();
 out:
 	if (rsa)
 		RSA_free(rsa);
