@@ -3173,7 +3173,6 @@ tcs_wrap_CertifySelfTest(struct tcsd_thread_data *data,
 	TPM_AUTH *pPrivAuth;
 	int i;
 
-	LogDebug("tcs_wrap_CertifySelfTest");
 	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
@@ -3224,7 +3223,6 @@ tcs_wrap_CertifySelfTest(struct tcsd_thread_data *data,
 		(*hdr)->packet_size = size;
 	}
 
-	LogDebug("tcs_wrap_CertifySelfTest exit");
 	(*hdr)->result = result;
 	return TSS_SUCCESS;
 }
@@ -3240,7 +3238,6 @@ tcs_wrap_GetTestResult(struct tcsd_thread_data *data,
 	UINT32 resultDataSize;
 	BYTE *resultData = NULL;
 
-	LogDebug("tcs_wrap_GetTestResult");
 	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
@@ -3274,7 +3271,6 @@ tcs_wrap_GetTestResult(struct tcsd_thread_data *data,
 		(*hdr)->packet_size = size;
 	}
 
-	LogDebug("tcs_wrap_GetTestResult exit");
 	(*hdr)->result = result;
 	return TSS_SUCCESS;
 }
@@ -3753,7 +3749,7 @@ dispatchCommand(struct tcsd_thread_data *data,
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	LogDebug("Dispatching ordinal %d", tsp_data->ordinal);
+	LogDebug("Dispatching ordinal %u", tsp_data->ordinal);
 	if (access_control(data, tsp_data)) {
 		*hdr = calloc(1, sizeof(struct tcsd_packet_hdr));
 		if (*hdr == NULL) {
