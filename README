@@ -17,11 +17,7 @@ fully functional.
   autoconf
   pkgconfig
   libtool
-  gtk2-devel OR openssh-askpass
-    Using gtk2-devel builds a native GTK2 popup into trousers, using openssh-askpass
-    calls the ssh-askpass program externally to grab secrets from your GUI. The
-    askpass method makes libtspi.so 40K smaller and reduces the number of dynamic libs
-    from 26 to 6!
+  gtk2-devel
   openssl-0.9.7 or newer
   openssl-devel-0.9.7 or newer
   pthreads library (glibc-devel)

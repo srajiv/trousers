@@ -1,4 +1,5 @@
 
+ - deleted section on ssh-askpass in README
  - Modified popup code to hash UTF16 instead of UTF8.
  - Restructured TCS calls to the TPM so that all auth sessions
    are released correctly.
