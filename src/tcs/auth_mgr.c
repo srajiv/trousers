@@ -171,12 +171,24 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 	return TSS_SUCCESS;
 }
 
+void
+auth_mgr_release_auth(TPM_AUTH *auth0, TPM_AUTH *auth1)
+{
+	if (auth0) {
+		auth_mgr_release_auth_handle(auth0->AuthHandle);
+	}
+
+	if (auth1) {
+		auth_mgr_release_auth_handle(auth1->AuthHandle);
+	}
+}
+
 /* unload the auth ctx associated with this auth handle */
 TSS_RESULT
-auth_mgr_release_auth(TCS_AUTHHANDLE tpm_auth_handle)
+auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle)
 {
 	int i;
-	TSS_RESULT result;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	pthread_mutex_lock(&auth_mgr_lock);
 
@@ -200,7 +212,7 @@ auth_mgr_release_auth(TCS_AUTHHANDLE tpm_auth_handle)
 
 	pthread_mutex_unlock(&auth_mgr_lock);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -243,13 +255,17 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
 		}
-#ifdef TSS_DEBUG
+		/* XXX This is a hack. See SF BUG #1229838 */
 		else {
-			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle)
+			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 				LogDebug1("***************************** "
 						"UNCLEAN AUTH MAPPER TABLE");
+				auth_mgr.auth_mapper[i].full = FALSE;
+				auth_mgr.open_auth_sessions--;
+				i--;
+				LogDebug1("CLEANED TABLE");
+			}
 		}
-#endif
 	}
 
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
@@ -285,7 +301,8 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 	if ((auth_mgr.max_auth_sessions - auth_mgr.open_auth_sessions) >= 2)
 		return TRUE;
 
-	LogDebug1("Request for new auth handle denied by TCS.");
+	LogDebug("Request for new auth handle denied by TCS. (%d opened "
+			"sessions)", opened);
 
 	return FALSE;
 }
