@@ -1,4 +1,9 @@
 
+ - Modified popup code to hash UTF16 instead of UTF8.
+ - Restructured TCS calls to the TPM so that all auth sessions
+   are released correctly.
+ - Removed TSP contexts from all Trspi functions and modified
+   all trousers code to free its own memory instead.
  - Fixed the TSP seal command to allow Sealing with a no-auth
    key by using null auth data. Also changes the TCS seal
    to return bad parameter if it gets null auth data.
