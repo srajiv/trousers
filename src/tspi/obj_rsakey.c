@@ -188,14 +188,19 @@ obj_rsakey_set_key_parms(TSS_HKEY hKey, TCPA_KEY_PARMS *parms)
 
 	memcpy(&rsakey->tcpaKey.algorithmParms, parms, sizeof(TCPA_KEY_PARMS));
 
-	if ((rsakey->tcpaKey.algorithmParms.parms = malloc(parms->parmSize)) == NULL) {
-		LogError("calloc of %d bytes failed.", parms->parmSize);
-		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
+	if (parms->parmSize > 0) {
+		if ((rsakey->tcpaKey.algorithmParms.parms =
+					malloc(parms->parmSize)) == NULL) {
+			LogError("calloc of %d bytes failed.", parms->parmSize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
 
-	memcpy(rsakey->tcpaKey.algorithmParms.parms, parms->parms,
-			parms->parmSize);
+		memcpy(rsakey->tcpaKey.algorithmParms.parms, parms->parms,
+		       parms->parmSize);
+	} else {
+		rsakey->tcpaKey.algorithmParms.parms = NULL;
+	}
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1121,6 +1126,7 @@ done:
 
 	return result;
 }
+
 
 TSS_RESULT
 obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
