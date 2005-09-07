@@ -32,15 +32,16 @@ TSS_RESULT
 req_mgr_submit_req(BYTE *blob)
 {
 	TSS_RESULT result;
-	BYTE loc_buf[TPM_TXBLOB_SIZE];
-	UINT32 size = TPM_TXBLOB_SIZE;
+	BYTE loc_buf[TSS_TPM_TXBLOB_SIZE];
+	UINT32 size = TSS_TPM_TXBLOB_SIZE;
+	UINT32 retry = TSS_REQ_MGR_MAX_RETRIES;
 
 	pthread_mutex_lock(&(trm->queue_lock));
 
 	/* XXX Put a retry limit in here... */
 	do {
 		result = Tddli_TransmitData(blob, Decode_UINT32(&blob[2]), loc_buf, &size);
-	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_E_RETRY));
+	} while (!result && (Decode_UINT32(&loc_buf[6]) == TCPA_E_RETRY) && --retry);
 
 	if (!result)
 		memcpy(blob, loc_buf, Decode_UINT32(&loc_buf[2]));

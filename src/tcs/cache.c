@@ -80,7 +80,7 @@ internal_BSOSAP(void)
 /*	TCPA_PUBKEY pubContainer; */
 /*	TCPA_KEY_HANDLE keySlot; */
 	TCPA_NONCE nonce;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	offset = 10;
 	LoadBlob_UINT16(&offset, TCPA_ET_KEYHANDLE, txBlob, NULL);

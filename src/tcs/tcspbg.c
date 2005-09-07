@@ -34,7 +34,7 @@ TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering SetOwnerInstall");
 	if ((result = ctx_verify_context(hContext)))
@@ -75,7 +75,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE oldAuthDataUsage;
 	UINT16 bugOffset;
 	BYTE newSRK[1024];
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -167,7 +167,7 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering TCSI_OIAP");
 
@@ -207,7 +207,7 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT32 newEntValue = 0;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering OSAP");
 	if ((result = ctx_verify_context(hContext)))
@@ -263,7 +263,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
 	TSS_UUID *uuidKeyToEvict;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Changeauth");
 	if ((result = ctx_verify_context(contextHandle)))
@@ -361,7 +361,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering ChangeAuthOwner");
 
@@ -417,7 +417,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 tempSize;
 	TCPA_KEY_PARMS keyParmsContainer;
 	TSS_BOOL canLoad;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering ChangeAuthAsymStart");
 	if ((result = ctx_verify_context(hContext)))
@@ -541,7 +541,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 #endif
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
 	TSS_UUID *uuidKeyToEvict;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering ChangeAuthAsymFinish");
 	if ((result = ctx_verify_context(hContext)))
@@ -637,7 +637,7 @@ internal_TerminateHandle(TCS_AUTHHANDLE handle)
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, handle, txBlob, "handle");
@@ -685,7 +685,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT32 keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("TCSP_ActivateTPMIdentity");
 
@@ -763,7 +763,7 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Extend");
 	if ((result = ctx_verify_context(hContext)))
@@ -814,7 +814,7 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering PCRRead");
 
@@ -861,7 +861,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 keySlot;
 	TCPA_PCR_COMPOSITE pcrComp;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering quote");
 
@@ -933,7 +933,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering dirwriteauth");
 	if ((result = ctx_verify_context(hContext)))
@@ -979,7 +979,7 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering DirRead");
 	if ((result = ctx_verify_context(hContext)))
@@ -1026,7 +1026,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TCPA_KEY_HANDLE keySlot;
 	TCPA_STORED_DATA storedData;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Seal");
 	if ((result = ctx_verify_context(hContext)))
@@ -1114,7 +1114,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Unseal");
 
@@ -1190,7 +1190,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT16 offset;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering TCSI_UnBind");
 	if ((result = ctx_verify_context(hContext)))
@@ -1265,7 +1265,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keyHandle;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering TPM_CreateMigrationBlob");
 
@@ -1351,7 +1351,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	UINT16 offset;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("ConvertMigBlob");
 	if ((result = ctx_verify_context(hContext)))
@@ -1424,7 +1424,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	UINT16 offset;
 	TCPA_MIGRATIONKEYAUTH container;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("TCSP_AuthorizeMigrationKey");
 	if ((result = ctx_verify_context(hContext)))
@@ -1484,7 +1484,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE certKeySlot, keySlot;
 	TCPA_CERTIFY_INFO certifyContainer;
 	UINT16 tag;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Certify Key");
 	offset = 10;
@@ -1584,7 +1584,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Sign");
 	if ((result = ctx_verify_context(hContext)))
@@ -1649,7 +1649,7 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering get random");
 
@@ -1687,7 +1687,7 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering stir random");
 
@@ -1855,7 +1855,7 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -1905,7 +1905,7 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -1992,7 +1992,7 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Getcap owner");
 
@@ -2041,7 +2041,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubKey;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("\nEntering TCSI_CreateEKPair:");
 	if ((result = ctx_verify_context(hContext)))
@@ -2090,7 +2090,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubkey;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("\nEntering ReadPubek");
 
@@ -2131,7 +2131,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("DisablePubekRead");
 
@@ -2171,7 +2171,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT16 offset;
 	TCPA_PUBKEY container;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering OwnerReadPubek");
 
@@ -2214,7 +2214,7 @@ TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Self Test Full");
 	if ((result = ctx_verify_context(hContext)))
@@ -2244,7 +2244,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Certify Self Test");
 
@@ -2309,7 +2309,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Get Test Result");
 	if ((result = ctx_verify_context(hContext)))
@@ -2347,7 +2347,7 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	offset = 10;
 
@@ -2384,7 +2384,7 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering OwnerClear");
 
@@ -2422,7 +2422,7 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering DisableownerClear");
 
@@ -2458,7 +2458,7 @@ TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Force Clear");
 	if ((result = ctx_verify_context(hContext)))
@@ -2480,7 +2480,7 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Disable Force Clear");
 	if ((result = ctx_verify_context(hContext)))
@@ -2506,7 +2506,7 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result = TCSERR(TSS_E_NOTIMPL);
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 	char runlevel;
 
 	runlevel = platform_get_runlevel();
@@ -2537,7 +2537,7 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Physical Disable");
 	if ((result = ctx_verify_context(hContext)))
@@ -2562,7 +2562,7 @@ TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Physical Enable");
 	if ((result = ctx_verify_context(hContext)))
@@ -2588,7 +2588,7 @@ TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Physical Set Decativated");
 	if ((result = ctx_verify_context(hContext)))
@@ -2613,7 +2613,7 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Set Temp Deactivated");
 	if ((result = ctx_verify_context(hContext)))
@@ -2643,7 +2643,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Field Upgrade");
 
@@ -2700,7 +2700,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	UINT16 offset;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Set Redirection");
 
@@ -2761,7 +2761,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Create Main Archive");
 
@@ -2820,7 +2820,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Load Maint Archive");
 
@@ -2874,7 +2874,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Kill Maint Feature");
 
@@ -2913,7 +2913,7 @@ TCSP_LoadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Load Manu Maint Pub");
 
@@ -2944,7 +2944,7 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Read Manu Maint Pub");
 

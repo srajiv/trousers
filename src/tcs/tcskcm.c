@@ -358,7 +358,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_STORE_PUBKEY *parentPubKey = NULL;
 	TCPA_KEY_HANDLE parentKeySlot;
 	TSS_BOOL needToSendPacket = TRUE, canLoad;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	cWrappedKeyBlobSize = 0;
 
@@ -663,7 +663,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	TCPA_KEY keyContainer;
 	TCPA_KEY_HANDLE parentSlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Create Wrap Key");
 
@@ -739,7 +739,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	TCPA_PUBKEY pubContainer;
 	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Get pub key");
 	if ((result = ctx_verify_context(hContext)))
@@ -908,7 +908,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY idKeyContainer;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;

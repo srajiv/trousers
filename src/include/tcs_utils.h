@@ -72,8 +72,9 @@ TSS_RESULT auth_mgr_close_context(TCS_CONTEXT_HANDLE);
 TSS_RESULT event_log_init();
 TSS_RESULT event_log_final();
 
-#define TPM_TXBLOB_SIZE		4096
-#define MAX_AUTHS_CAP		1024
+#define TSS_TPM_TXBLOB_SIZE	4096
+#define TSS_MAX_AUTHS_CAP	1024
+#define TSS_REQ_MGR_MAX_RETRIES	5
 
 #define next( x ) x = x->next
 

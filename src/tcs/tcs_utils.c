@@ -154,7 +154,7 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 TSS_RESULT
 get_max_auths(UINT32 *auths)
 {
-	TCS_AUTHHANDLE handles[MAX_AUTHS_CAP];
+	TCS_AUTHHANDLE handles[TSS_MAX_AUTHS_CAP];
 	TCPA_NONCE nonce;
 	UINT32 subCap;
 	TSS_RESULT result;
@@ -165,7 +165,7 @@ get_max_auths(UINT32 *auths)
 		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
 	} else if (TPM_VERSION(1,1)) {
 		/* open auth sessions until we get a failure */
-		for (i = 0; i < MAX_AUTHS_CAP; i++) {
+		for (i = 0; i < TSS_MAX_AUTHS_CAP; i++) {
 			result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);
 			if (result != TSS_SUCCESS) {
 				/* this is not off by one since we're 0 indexed */
@@ -174,8 +174,8 @@ get_max_auths(UINT32 *auths)
 			}
 		}
 
-		if (i == MAX_AUTHS_CAP)
-			*auths = MAX_AUTHS_CAP;
+		if (i == TSS_MAX_AUTHS_CAP)
+			*auths = TSS_MAX_AUTHS_CAP;
 
 		/* close the auth sessions */
 		for (i = 0; (UINT32)i < *auths; i++) {
@@ -296,7 +296,7 @@ internal_EvictByKeySlot(TCPA_KEY_HANDLE slot)
 	TCPA_RESULT result;
 	UINT32 paramSize;
 	UINT16 offset;
-	BYTE txBlob[TPM_TXBLOB_SIZE];
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Evict Key");
 
@@ -1053,6 +1053,7 @@ destroy_key_refs(TCPA_KEY *key)
 	key->PCRInfoSize = 0;
 }
 
+/* XXX make this a macro */
 UINT32
 get_pcr_event_size(TSS_PCR_EVENT *e)
 {
