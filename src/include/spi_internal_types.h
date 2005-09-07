@@ -11,7 +11,7 @@
 #ifndef _SPI_INTERNAL_TYPES_H_
 #define _SPI_INTERNAL_TYPES_H_
 
-/* XXX*/
+/* XXX */
 #include "trousers_types.h"
 
 typedef struct tdTSPKeyHandleContainer {
