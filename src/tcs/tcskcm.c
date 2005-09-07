@@ -352,7 +352,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	TCPA_KEY *key = NULL;
+	TCPA_KEY key;
 	TCPA_KEY_HANDLE myKeySlot;
 	TCS_KEY_HANDLE myTcsKeyHandle;
 	TCPA_STORE_PUBKEY *parentPubKey = NULL;
@@ -362,149 +362,113 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	cWrappedKeyBlobSize = 0;
 
-	do {
-		if ((result = ctx_verify_context(hContext)))
-			break;
-
-		if (pAuth != NULL) {
-			LogDebug1("Auth Used");
-			if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-				break;
-		} else {
-			LogDebug1("No Auth Used");
-		}
-
-		key = malloc(sizeof(TCPA_KEY));
-		if (key == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-
-		offset = 0;
-		if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key))) {
-			free(key);
-			return result;
-		}
-		cWrappedKeyBlobSize = offset;
-
-		/******************************************
-		 *	The first thing to make sure is that the parent is loaded.
-		 *	If the parentKeySlot is invalid, then it either wasn't found in the cache
-		 *	or it was evicted.  Then checking if it was ever in the cache by calling
-		 *	getParentPubByPub will tell us whether or not there is an error.  If this
-		 *	unregistered parent was never loaded by the user, then he's hosed and
-		 *	this is an error.  If there is knowledge, then the shim is called to load
-		 *	the parent by it's public key.
-		 *********************************************/
-
-		/* Check the mem cache to see if there is a TPM handle associated with the
-		 * parent's TCS handle */
-		if ((parentKeySlot = getSlotByHandle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
-			parentPubKey = getPubBySlot(hUnwrappingKey);
-			if (parentPubKey == NULL) {
-				result = TCSERR(TCS_E_KM_LOADFAILED);
-				break;
-			}
-			/* Otherwise, try to load it using the shim */
-			if ((result = LoadKeyShim(hContext, parentPubKey, NULL, &parentKeySlot)))
-				break;
-		}
-		/*******************************************
-		 *Call LoadKeyShim
-		 *If it passes, we had prior knowledge of this key and we can avoid redundant copies of it
-		 *******************************************/
-
-		/*---	If it's an authorized load, then assume that we brute-force load it every time */
-		if (pAuth == NULL) {
-			LogDebug1("Checking if LoadKeyByBlob can be avoided by using existing key");
-
-			myTcsKeyHandle = getTCSKeyHandleByPub(&key->pubKey);
-			if (myTcsKeyHandle != NULL_TCS_HANDLE) {
-				LogDebug1("tcs key handle exists");
-
-				myKeySlot = getSlotByHandle(myTcsKeyHandle);
-				if (myKeySlot != NULL_TPM_HANDLE && isKeyLoaded(myKeySlot) == TRUE) {
-					needToSendPacket = FALSE;
-					LogDebug1("Don't need to reload this key.");
-					result = TSS_SUCCESS;
-					break;
-
-				}
-			}
-
-		}
-
-		/******************************************
-		 *Now we just have to check if there is enough room in the chip.
-		 *********************************************/
-
-		if ((result = canILoadThisKey(&key->algorithmParms, &canLoad))) {
-			destroy_key_refs(key);
-			free(key);
-			return result;
-		}
-
-		while (canLoad == FALSE) {
-			/* Evict a key that isn't the parent */
-			if ((result = evictFirstKey(hUnwrappingKey))) {
-				destroy_key_refs(key);
-				free(key);
-				return result;
-			}
-
-			if ((result = canILoadThisKey(&key->algorithmParms, &canLoad))) {
-				destroy_key_refs(key);
-				free(key);
-				return result;
-			}
-		}
-
-		LogDebug1("Entering LoadKey by blob");
-
-		/****************************************
-		 *	Now the parent is loaded and all of the info is ready.
-		 *	Send the loadkey command.  If the auth is a NULL Pointer
-		 *	then this represents a NoAuth load
-		 ********************************************/
-
-		offset = 10;
-		LoadBlob_UINT32(&offset, parentKeySlot, txBlob, "parentHandle");
-		LoadBlob(&offset, cWrappedKeyBlobSize, txBlob, rgbWrappedKeyBlob, "wrapped blob");
-		if (pAuth != NULL) {
-			LoadBlob_Auth(&offset, txBlob, pAuth);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
-		} else
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
-
-		if ((result = req_mgr_submit_req(txBlob)))
-			break;
-	} while (0);
-
-	if (result) {
-		/*---	Should never get in here on a needToSendPacket == FALSE path */
-		if (pAuth != NULL)
-			auth_mgr_release_auth(pAuth->AuthHandle);
-		if (key) {
-			destroy_key_refs(key);
-			free(key);
-		}
+	if ((result = ctx_verify_context(hContext)))
 		return result;
+
+	if (pAuth != NULL) {
+		LogDebug1("Auth Used");
+		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+			return result;
+	} else {
+		LogDebug1("No Auth Used");
 	}
 
-	if (needToSendPacket == TRUE) {
-		if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
-			destroy_key_refs(key);
-			free(key);
-			return result;
+	offset = 0;
+	memset(&key, 0, sizeof(TCPA_KEY));
+	if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, &key)))
+		return result;
+	cWrappedKeyBlobSize = offset;
+
+	/******************************************
+	 *	The first thing to make sure is that the parent is loaded.
+	 *	If the parentKeySlot is invalid, then it either wasn't found in the cache
+	 *	or it was evicted.  Then checking if it was ever in the cache by calling
+	 *	getParentPubByPub will tell us whether or not there is an error.  If this
+	 *	unregistered parent was never loaded by the user, then he's hosed and
+	 *	this is an error.  If there is knowledge, then the shim is called to load
+	 *	the parent by it's public key.
+	 *********************************************/
+
+	/* Check the mem cache to see if there is a TPM handle associated with the
+	 * parent's TCS handle */
+	if ((parentKeySlot = getSlotByHandle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
+		parentPubKey = getPubBySlot(hUnwrappingKey);
+		if (parentPubKey == NULL) {
+			result = TCSERR(TCS_E_KM_LOADFAILED);
+			goto error;
 		}
+		/* Otherwise, try to load it using the shim */
+		if ((result = LoadKeyShim(hContext, parentPubKey, NULL, &parentKeySlot)))
+			goto error;
+	}
+	/*******************************************
+	 *Call LoadKeyShim
+	 *If it passes, we had prior knowledge of this key and we can avoid redundant copies of it
+	 *******************************************/
+
+	/*---	If it's an authorized load, then assume that we brute-force load it every time */
+	if (pAuth == NULL) {
+		LogDebug1("Checking if LoadKeyByBlob can be avoided by using existing key");
+
+		myTcsKeyHandle = getTCSKeyHandleByPub(&key.pubKey);
+		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
+			LogDebug1("tcs key handle exists");
+
+			myKeySlot = getSlotByHandle(myTcsKeyHandle);
+			if (myKeySlot != NULL_TPM_HANDLE && isKeyLoaded(myKeySlot) == TRUE) {
+				needToSendPacket = FALSE;
+				LogDebug1("Don't need to reload this key.");
+				result = TSS_SUCCESS;
+				goto add_cache_entry;
+			}
+		}
+	}
+
+	/******************************************
+	 *Now we just have to check if there is enough room in the chip.
+	 *********************************************/
+
+	if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
+		goto error;
+
+	while (canLoad == FALSE) {
+		/* Evict a key that isn't the parent */
+		if ((result = evictFirstKey(hUnwrappingKey)))
+			goto error;
+
+		if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
+			goto error;
+	}
+
+	LogDebug1("Entering LoadKey by blob");
+
+	/****************************************
+	 *	Now the parent is loaded and all of the info is ready.
+	 *	Send the loadkey command.  If the auth is a NULL Pointer
+	 *	then this represents a NoAuth load
+	 ********************************************/
+
+	offset = 10;
+	LoadBlob_UINT32(&offset, parentKeySlot, txBlob, "parentHandle");
+	LoadBlob(&offset, cWrappedKeyBlobSize, txBlob, rgbWrappedKeyBlob, "wrapped blob");
+	if (pAuth != NULL) {
+		LoadBlob_Auth(&offset, txBlob, pAuth);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
+	} else
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto error;
+
+	if (needToSendPacket == TRUE) {
+		if ((result = UnloadBlob_Header(txBlob, &paramSize)))
+			goto error;
+
 		offset = 10;
 		/*---	Finish unloading the stuff */
 		UnloadBlob_UINT32(&offset, &myKeySlot, txBlob, "handle back");
 		if (pAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
-			if (pAuth->fContinueAuthSession == FALSE)
-				auth_mgr_release_auth(pAuth->AuthHandle);
-
 		}
 	} else {
 		LogData("Key slot is", myKeySlot);
@@ -516,62 +480,56 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *	If it exists, then just register the new keySlot with that existing handle
 	 *****************************************/
 
-	myTcsKeyHandle = getTCSKeyHandleByPub(&key->pubKey);
+add_cache_entry:
+	myTcsKeyHandle = getTCSKeyHandleByPub(&(key.pubKey));
 	if (myTcsKeyHandle == NULL_TCS_HANDLE) {
 		LogDebug1("No existing key handle for this key, need to create a new one");
-		/*---	Get a new TCS Key Handle */
+		/* Get a new TCS Key Handle */
 		myTcsKeyHandle = getNextTcsKeyHandle();
-		/*if it was an authorized load, then we can't make complete knowledge about it */
+		/* if it was an authorized load, then we can't make complete knowledge about it */
 
-		/*---	Add this info to the memory cache */
+#if 0
+		/* Add this info to the memory cache */
 		if (pAuth == NULL) {
 			offset = 0;
 			destroy_key_refs(key);
-			if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key))) {
-				destroy_key_refs(key);
-				free(key);
-				return result;
-			}
+			if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, key)))
+				goto done;
 		}
+#endif
 
-		result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, key);
-		if (result != TSS_SUCCESS) {
-			destroy_key_refs(key);
-			free(key);
-			return result;
-		}
+		if ((result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, &key)))
+			goto error;
 
 		if (ctx_mark_key_loaded(hContext, myTcsKeyHandle)) {
 			LogError1("Error marking key as loaded");
-			destroy_key_refs(key);
-			free(key);
-			return TCSERR(TSS_E_INTERNAL_ERROR);
+			result = TCSERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 
 		if (pAuth == NULL) {
 			result = setParentByHandle(myTcsKeyHandle, hUnwrappingKey);
 			if (result != TSS_SUCCESS) {
 				LogError1("setParentBlobByHandle failed.");
-				destroy_key_refs(key);
-				free(key);
-				return result;
+				goto error;
 			}
 		}
 
 	} else
 		setSlotByHandle(myTcsKeyHandle, myKeySlot);
 
-	/*---	Setup the outHandles */
+	result = TSS_SUCCESS;
+
+	/* Setup the outHandles */
 	*phKeyTCSI = myTcsKeyHandle;
 	*phKeyHMAC = myKeySlot;
 
 	LogDebug("Key handles for loadKeyByBlob slot:%.8X tcshandle:%.8X", myKeySlot, myTcsKeyHandle);
 	LogResult("LoadKey By Blob", result);
-
-	destroy_key_refs(key);
-	free(key);
-
-	return TSS_SUCCESS;
+error:
+	destroy_key_refs(&key);
+	auth_mgr_release_auth(pAuth, NULL);
+	return result;
 }
 
 TSS_RESULT
@@ -607,7 +565,8 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	Now that there is a key, unload it for later use */
 	offset = 0;
-	UnloadBlob_KEY(&offset, keyBlob, &myKey);
+	if ((result = UnloadBlob_KEY(&offset, keyBlob, &myKey)))
+		return result;
 
 	/*---	First, check if it's actually loaded now or was previously loaded */
 	*phKeyTCSI = getTCSKeyHandleByPub(&myKey.pubKey);
@@ -709,17 +668,17 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug1("Entering Create Wrap Key");
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	/* Since hWrappingKey must already be loaded, we can fail immediately if
 	 * getSlotByHandle() fails.*/
 	parentSlot = getSlotByHandle_lock(hWrappingKey);
 	if (parentSlot == NULL_TPM_HANDLE) {
 		result = TCSERR(TSS_E_FAIL);
-		return result;
+		goto done;
 	}
 
 	offset = 10;
@@ -732,7 +691,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_CreateWrapKey, txBlob);
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
@@ -757,12 +716,13 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 /*		if( pAuth != NULL ) */
 
 		UnloadBlob_Auth(&offset, txBlob, pAuth);
-		auth_mgr_release_auth(pAuth->AuthHandle);
 
 		destroy_key_refs(&keyContainer);
 	}
 	LogResult("Create Wrap Key", result);
 
+done:
+	auth_mgr_release_auth(pAuth, NULL);
 	return result;
 }
 
@@ -783,19 +743,19 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug1("Entering Get pub key");
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (pAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
 		result = TCSERR(TCS_E_KM_LOADFAILED);
-		return result;
+		goto done;
 	}
 
 	LogDebug("GetPubKey: handle: 0x%x, slot: 0x%x", hKey, keySlot);
@@ -809,13 +769,10 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (pAuth && pAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer);
@@ -830,8 +787,6 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		if (pAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
-			if (result)
-				auth_mgr_release_auth(pAuth->AuthHandle);
 		}
 #if 0
 		if (keySlot == SRK_TPM_HANDLE) {
@@ -924,6 +879,8 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 #endif
 	}
 	LogResult("Get Public Key", result);
+done:
+	auth_mgr_release_auth(pAuth, NULL);
 	return result;
 }
 
@@ -954,18 +911,18 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	BYTE txBlob[TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
-		return result;
+		goto done;
 
 	if (pSrkAuth != NULL) {
 		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
-			return result;
+			goto done;
 	} else {
 		LogDebug1("No Auth");
 	}
 
 	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
-		return result;
+		goto done;
 
 	offset = 0;
 
@@ -985,16 +942,10 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	}
 
 	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (pSrkAuth && pSrkAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pSrkAuth->AuthHandle);
-
-	if (pOwnerAuth->fContinueAuthSession == FALSE)
-		auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 
 	if (!result) {
 		UnloadBlob_KEY(&offset, txBlob, &idKeyContainer);
@@ -1022,16 +973,13 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		*pcPlatformCredentialSize = 0;
 		*pcConformanceCredentialSize = 0;
 
-		if (pSrkAuth != NULL) {
+		if (pSrkAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, pSrkAuth);
-			if (result)
-				auth_mgr_release_auth(pSrkAuth->AuthHandle);
-		}
 		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
-		if (result)
-			auth_mgr_release_auth(pOwnerAuth->AuthHandle);
 	}
 	LogResult("Make Identity", result);
+done:
+	auth_mgr_release_auth(pSrkAuth, pOwnerAuth);
 	return result;
 }
 
