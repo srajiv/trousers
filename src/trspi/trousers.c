@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -35,23 +35,39 @@ Trspi_UnloadBlob_DIGEST(UINT16 * offset, BYTE * blob, TCPA_DIGEST digest)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_PUBKEY(TSS_HCONTEXT tspContext, UINT16 * offset,
-		  BYTE * blob, TCPA_PUBKEY * pubKey)
+Trspi_UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * pubKey)
 {
 	TSS_RESULT result;
 
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, offset, blob, &pubKey->algorithmParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, blob, &pubKey->algorithmParms)))
 		return result;
-	return Trspi_UnloadBlob_STORE_PUBKEY(tspContext, offset, blob, &pubKey->pubKey);
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(offset, blob, &pubKey->pubKey))) {
+		free(pubKey->pubKey.key);
+		free(pubKey->algorithmParms.parms);
+		pubKey->pubKey.key = NULL;
+		pubKey->pubKey.keyLength = 0;
+		pubKey->algorithmParms.parms = NULL;
+		pubKey->algorithmParms.parmSize = 0;
+		return result;
+	}
+
+	return TSS_SUCCESS;
 }
 
-void
-Trspi_UnloadBlob_MigrationKeyAuth(TSS_HCONTEXT tspContext,
-			    UINT16 * offset, TCPA_MIGRATIONKEYAUTH * migAuth, BYTE * blob)
+TSS_RESULT
+Trspi_UnloadBlob_MigrationKeyAuth(UINT16 *offset,
+				  BYTE *blob,
+				  TCPA_MIGRATIONKEYAUTH *migAuth)
 {
-	Trspi_UnloadBlob_PUBKEY(tspContext, offset, blob, &migAuth->migrationKey);
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_PUBKEY(offset, blob,
+					      &migAuth->migrationKey)))
+		return result;
 	Trspi_UnloadBlob_UINT16(offset, &migAuth->migrationScheme, blob);
 	Trspi_UnloadBlob_DIGEST(offset, blob, migAuth->digest);
+
+	return TSS_SUCCESS;
 }
 
 #if 0
@@ -210,14 +226,13 @@ Trspi_UnloadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_STORED_DATA(TSS_HCONTEXT tspContext, UINT16 * offset,
-		       BYTE * blob, TCPA_STORED_DATA * data)
+Trspi_UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data)
 {
 	Trspi_UnloadBlob_TCPA_VERSION(offset, blob, &data->ver);
 	Trspi_UnloadBlob_UINT32(offset, &data->sealInfoSize, blob);
 
 	if (data->sealInfoSize > 0) {
-		data->sealInfo = calloc_tspi(tspContext, data->sealInfoSize);
+		data->sealInfo = malloc(data->sealInfoSize);
 		if (data->sealInfo == NULL) {
 			LogError("malloc of %d bytes failed.", data->sealInfoSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -230,9 +245,11 @@ Trspi_UnloadBlob_STORED_DATA(TSS_HCONTEXT tspContext, UINT16 * offset,
 	Trspi_UnloadBlob_UINT32(offset, &data->encDataSize, blob);
 
 	if (data->encDataSize > 0) {
-		data->encData = calloc_tspi(tspContext, data->encDataSize);
+		data->encData = malloc(data->encDataSize);
 		if (data->encData == NULL) {
 			LogError("malloc of %d bytes failed.", data->encDataSize);
+			free(data->sealInfo);
+			data->sealInfo = NULL;
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -375,8 +392,7 @@ Trspi_UnloadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID * uuid)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_KEY_PARMS(TSS_HCONTEXT tspContext,
-		     UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms)
+Trspi_UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms)
 {
 	Trspi_UnloadBlob_UINT32(offset, &keyParms->algorithmID, blob);
 	Trspi_UnloadBlob_UINT16(offset, &keyParms->encScheme, blob);
@@ -384,7 +400,7 @@ Trspi_UnloadBlob_KEY_PARMS(TSS_HCONTEXT tspContext,
 	Trspi_UnloadBlob_UINT32(offset, &keyParms->parmSize, blob);
 
 	if (keyParms->parmSize > 0) {
-		keyParms->parms = calloc_tspi(tspContext, keyParms->parmSize);
+		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
 			LogError("malloc of %d bytes failed.", keyParms->parmSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -398,7 +414,7 @@ Trspi_UnloadBlob_KEY_PARMS(TSS_HCONTEXT tspContext,
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_KEY(TSS_HCONTEXT tspContext, UINT16 * offset, BYTE * blob, TCPA_KEY * key)
+Trspi_UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 {
 	TSS_RESULT result;
 
@@ -406,12 +422,12 @@ Trspi_UnloadBlob_KEY(TSS_HCONTEXT tspContext, UINT16 * offset, BYTE * blob, TCPA
 	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	Trspi_UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	key->authDataUsage = blob[(*offset)++];
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, offset, (BYTE *) blob, &key->algorithmParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, (BYTE *) blob, &key->algorithmParms)))
 		return result;
 	Trspi_UnloadBlob_UINT32(offset, &key->PCRInfoSize, blob);
 
 	if (key->PCRInfoSize > 0) {
-		key->PCRInfo = calloc_tspi(tspContext, key->PCRInfoSize);
+		key->PCRInfo = malloc(key->PCRInfoSize);
 		if (key->PCRInfo == NULL) {
 			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -421,12 +437,12 @@ Trspi_UnloadBlob_KEY(TSS_HCONTEXT tspContext, UINT16 * offset, BYTE * blob, TCPA
 		key->PCRInfo = NULL;
 	}
 
-	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, offset, blob, &key->pubKey)))
+	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey)))
 		return result;
 	Trspi_UnloadBlob_UINT32(offset, &key->encSize, blob);
 
 	if (key->encSize > 0) {
-		key->encData = calloc_tspi(tspContext, key->encSize);
+		key->encData = malloc(key->encSize);
 		if (key->encData == NULL) {
 			LogError("malloc of %d bytes failed.", key->encSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -452,14 +468,12 @@ void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ){
 */
 
 TSS_RESULT
-Trspi_UnloadBlob_STORE_PUBKEY(TSS_HCONTEXT tspContext,
-			UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store)
+Trspi_UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store)
 {
-
 	Trspi_UnloadBlob_UINT32(offset, &store->keyLength, blob);
 
 	if (store->keyLength > 0) {
-		store->key = calloc_tspi(tspContext, store->keyLength);
+		store->key = malloc(store->keyLength);
 		if (store->key == NULL) {
 			LogError("malloc of %d bytes failed.", store->keyLength);
 			return TSPERR(TSS_E_OUTOFMEMORY);
