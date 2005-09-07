@@ -62,7 +62,8 @@ TSS_RESULT get_tpm_metrics(struct tpm_properties *);
 TSS_RESULT auth_mgr_init();
 TSS_RESULT auth_mgr_final();
 TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
-TSS_RESULT auth_mgr_release_auth(TCS_AUTHHANDLE);
+TSS_RESULT auth_mgr_release_auth_handle(TCS_AUTHHANDLE);
+void       auth_mgr_release_auth(TPM_AUTH *, TPM_AUTH *);
 TSS_RESULT auth_mgr_oiap(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE *, TCPA_NONCE *);
 TSS_RESULT auth_mgr_osap(TCS_CONTEXT_HANDLE, TCPA_ENTITY_TYPE, UINT32, TCPA_NONCE,
 			 TCS_AUTHHANDLE *, TCPA_NONCE *, TCPA_NONCE *);
