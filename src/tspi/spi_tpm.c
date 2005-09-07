@@ -27,7 +27,6 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
     )
 {
 	TCS_CONTEXT_HANDLE tcsContext;
-
 	TCPA_NONCE antiReplay;
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
@@ -41,9 +40,10 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	UINT32 newEKSize;
 	BYTE *newEK;
 	TSS_HCONTEXT tspContext;
-	TCPA_KEY_PARMS keyParms;
-	TCPA_STORE_PUBKEY pubKey;
+	TCPA_PUBKEY pubEK;
 
+	memset(&pubEK, 0, sizeof(TCPA_PUBKEY));
+	memset(&dummyKey, 0, sizeof(TCPA_KEY));
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -55,10 +55,12 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, ek, &dummyKey);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, ek, &dummyKey)))
+		return result;
 
 	offset = 0;
 	Trspi_LoadBlob_KEY_PARMS(&offset, ek, &dummyKey.algorithmParms);
+	free_key_refs(&dummyKey);
 	ekSize = offset;
 
 	if (pValidationData == NULL)
@@ -112,18 +114,18 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	/* unload the blob into our local objects, then store inside hKey */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, newEK, &keyParms)))
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, newEK, &pubEK)))
 		return result;
 
-	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, newEK, &pubKey)))
-		return result;
+	if ((result = obj_rsakey_set_key_parms(hKey, &pubEK.algorithmParms)))
+		goto done;
 
-	if ((result = obj_rsakey_set_key_parms(hKey, &keyParms)))
-		return result;
+	if ((result = obj_rsakey_set_pubkey(hKey, pubEK.pubKey.keyLength, pubEK.pubKey.key)))
+		goto done;
 
-	if ((result = obj_rsakey_set_pubkey(hKey, pubKey.keyLength, pubKey.key)))
-		return result;
-
+done:
+	free(pubEK.pubKey.key);
+	free(pubEK.algorithmParms.parms);
 	free(newEK);
 
 	return TSS_SUCCESS;
@@ -150,8 +152,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	TSS_HOBJECT retKey;
 	TSS_HCONTEXT tspContext;
 	TCPA_PUBKEY pubKey;
-	TCPA_KEY_PARMS keyParms;
 
+	memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
 
 	if (phEndorsementPubKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -183,7 +185,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &ownerAuth)))
-			return result;
+			goto done;
 	} else {
 		if (pValidationData == NULL) {
 			if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
@@ -215,15 +217,19 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				 * Atmel chips specifically.
 				 */
 				offset = 0;
-				Trspi_UnloadBlob_PUBKEY(tspContext, &offset, pubEK, &pubKey);
+				memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
+				if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubEK, &pubKey)))
+					goto done;
 
 				offset = 0;
 				Trspi_LoadBlob(&offset, pubKey.pubKey.keyLength, hashblob, pubKey.pubKey.key);
 				Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashblob, antiReplay.nonce);
 				Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN))
-					return TSPERR(TSS_E_VALIDATION_FAILED);
+				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
+					result = TSPERR(TSS_E_VALIDATION_FAILED);
+					goto done;
+				}
 			}
 		} else {
 			/* validate the entire TCPA_PUBKEY structure */
@@ -242,7 +248,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			pValidationData->ValidationData = calloc_tspi(tspContext, TCPA_SHA1_160_HASH_LEN);
 			if (pValidationData->ValidationData == NULL) {
 				LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
-				return TSPERR(TSS_E_OUTOFMEMORY);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
 			}
 
 			memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
@@ -250,27 +257,28 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	}
 
 	if ((result = obj_rsakey_add(tspContext,
-					TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY, &retKey)))
+				     TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY,
+				     &retKey)))
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(tspContext, &offset, pubEK, &keyParms)))
-		return result;
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubEK, &pubKey)))
+		goto done;
 
-	if ((result = Trspi_UnloadBlob_STORE_PUBKEY(tspContext, &offset, pubEK, &pubKey.pubKey)))
-		return result;
-
-	if ((result = obj_rsakey_set_key_parms(retKey, &keyParms)))
-		return result;
+	if ((result = obj_rsakey_set_key_parms(retKey, &pubKey.algorithmParms)))
+		goto done;
 
 	if ((result = obj_rsakey_set_pubkey(retKey, pubKey.pubKey.keyLength, pubKey.pubKey.key)))
-		return result;
+		goto done;
 
 	*phEndorsementPubKey = retKey;
 
+done:
 	free(pubEK);
+	free(pubKey.pubKey.key);
+	free(pubKey.algorithmParms.parms);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -413,7 +421,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	BYTE sharedSecret[20];
 	TPM_AUTH srkAuth;
 	TPM_AUTH ownerAuth;
-	TCPA_PUBKEY pubkey;
 	TCPA_RESULT result;
 	UINT16 offset;
 	BYTE hashblob[0x2000];
@@ -489,15 +496,15 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* Take the PUBKEY portion out of the TCPA_KEY caPubKey and put it into 'pubkey' */
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, caKey, &keyContainer);
+	memset(&keyContainer, 0, sizeof(TCPA_KEY));
+	if ((result = Trspi_UnloadBlob_KEY(&offset, caKey, &keyContainer)))
+		return result;
 
 	offset = 0;
 	Trspi_LoadBlob_KEY_PARMS(&offset, caPubKey, &keyContainer.algorithmParms);
 	Trspi_LoadBlob_STORE_PUBKEY(&offset, caPubKey, &keyContainer.pubKey);
 	caPubKeySize = offset;
-
-	offset = 0;
-	Trspi_UnloadBlob_PUBKEY(tspContext, &offset, caPubKey, &pubkey);
+	free_key_refs(&keyContainer);
 
 	/* Start OSAP */
 	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
@@ -601,9 +608,12 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, symKey, &keyContainer);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, symKey, &keyContainer)))
+		return result;
 
 	keyContainer.encSize = tAESSIZE;
+	free(keyContainer.encData);
+	/* XXX */
 	keyContainer.encData = malloc(tAESSIZE);
 	if (keyContainer.encData == NULL) {
 		LogError("malloc of %d bytes failed.", tAESSIZE);
@@ -614,6 +624,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	offset = 0;
 	Trspi_LoadBlob_KEY(&offset, symKey, &keyContainer);
+	free_key_refs(&keyContainer);
 
 	if ((result = Tspi_SetAttribData(hSymKey,
 					TSS_TSPATTRIB_KEY_BLOB,
@@ -1147,13 +1158,16 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		}
 
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		memset(&keyContainer, 0, sizeof(TCPA_KEY));
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+			return result;
 
 		offset = 0;
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE) + strlen("Test Passed"));
 		if (hashBlob == NULL) {
 			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE)
 					+ strlen("Test Passed"));
+			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob(&offset, strlen("Test Passed"), hashBlob, "Test Passed");
@@ -1167,6 +1181,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 outData, outDataSize))) {
 			free(outData);
+			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
 
@@ -1671,7 +1686,9 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 
 	/* First, turn the keyBlob into a TCPA_KEY structure */
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, migrationKeyBlob, &tcpaKey);
+	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
+	if ((result = Trspi_UnloadBlob_KEY(&offset, migrationKeyBlob, &tcpaKey)))
+		return result;
 	free_tspi(tspContext, migrationKeyBlob);
 
 	/* Then pull the _PUBKEY portion out of that struct into a blob */
@@ -1679,6 +1696,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	Trspi_LoadBlob_KEY_PARMS(&offset, pubKeyBlob, &tcpaKey.algorithmParms);
 	Trspi_LoadBlob_STORE_PUBKEY(&offset, pubKeyBlob, &tcpaKey.pubKey);
 	pubKeySize = offset;
+	free_key_refs(&tcpaKey);
 
 	/* Auth */
 	offset = 0;
@@ -1910,7 +1928,9 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 		}
 
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		memset(&keyContainer, 0, sizeof(TCPA_KEY));
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+			return result;
 
 		/*  creating pcrCompositeHash */
 		Trspi_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
@@ -1937,9 +1957,11 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
 					 validationData, validationLength))) {
 			free(validationData);
+			free_key_refs(&keyContainer);
 			return result;
 		}
 
+		free_key_refs(&keyContainer);
 	} else {
 		pValidationData->ValidationDataLength = validationLength;
 		pValidationData->ValidationData = calloc_tspi(tspContext, validationLength);

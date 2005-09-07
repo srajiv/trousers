@@ -52,13 +52,13 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset, keyData,
-					&keyContainer)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
 		return result;
 
 	if (keyContainer.keyUsage != TPM_KEY_BIND &&
-		keyContainer.keyUsage != TPM_KEY_LEGACY) {
-		return TSPERR(TSS_E_INVALID_KEYUSAGE);
+	    keyContainer.keyUsage != TPM_KEY_LEGACY) {
+		result = TSPERR(TSS_E_INVALID_KEYUSAGE);
+		goto done;
 	}
 
 	if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15 &&
@@ -69,16 +69,17 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 						&encDataLength,
 						keyContainer.pubKey.key,
 						keyContainer.pubKey.keyLength)))
-			return result;
-	} else if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15
-		   && keyContainer.keyUsage == TPM_KEY_BIND) {
+			goto done;
+	} else if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15 &&
+		   keyContainer.keyUsage == TPM_KEY_BIND) {
 		boundData.payload = TCPA_PT_BIND;
 
 		memcpy(&boundData.ver, &VERSION_1_1, sizeof(TCPA_VERSION));
 
 		boundData.payloadData = malloc(ulDataLength);
 		if (boundData.payloadData == NULL) {
-			return TSPERR(TSS_E_OUTOFMEMORY);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
 
@@ -90,9 +91,10 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 						encData,
 						&encDataLength,
 						keyContainer.pubKey.key,
-						keyContainer.pubKey.keyLength)))
-			return result;
-
+						keyContainer.pubKey.keyLength))) {
+			free(boundData.payloadData);
+			goto done;
+		}
 		free(boundData.payloadData);
 	} else {
 		boundData.payload = TCPA_PT_BIND;
@@ -102,7 +104,8 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		boundData.payloadData = malloc(ulDataLength);
 		if (boundData.payloadData == NULL) {
 			LogError("malloc of %d bytes failed.", ulDataLength);
-			return TSPERR(TSS_E_OUTOFMEMORY);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
 
@@ -113,8 +116,10 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 		if ((result = Trspi_RSA_Encrypt(bdblob, offset, encData,
 					    &encDataLength,
 					    keyContainer.pubKey.key,
-					    keyContainer.pubKey.keyLength)))
-			return result;
+					    keyContainer.pubKey.keyLength))) {
+			free(boundData.payloadData);
+			goto done;
+		}
 
 		free(boundData.payloadData);
 	}
@@ -122,10 +127,12 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 	if ((result = obj_encdata_set_data(hEncData, encDataLength, encData))) {
 		LogError1("Error in calling SetAttribData on the encrypted "
 				"data object.");
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto done;
 	}
-
-	return TSS_SUCCESS;
+done:
+	free_key_refs(&keyContainer);
+	return result;
 }
 
 TSS_RESULT

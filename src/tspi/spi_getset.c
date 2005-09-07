@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -48,7 +48,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	BYTE *dataBlob;
 	TCPA_STORED_DATA storedData;
 	UINT32 keyToChangeHandle;
-	BYTE oldEncData[256];
 	UINT32 objectLength;
 	TCPA_KEY keyToChange;
 	BYTE *keyBlob;
@@ -214,47 +213,31 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(tspContext, &offset,
-							keyBlob,
-							&keyToChange))) {
+			if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob,
+							   &keyToChange))) {
 				LogDebug("Trspi_UnloadBlob_KEY failed. "
 						"result=0x%x", result);
 				return result;
 			}
 
-			keyHandle = getTCSKeyHandle(hParentObject);
-			if (keyHandle == NULL_HKEY)
+			if ((keyHandle = getTCSKeyHandle(hParentObject)) == NULL_HKEY)
 				return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-			if (keyHandle == TPM_KEYHND_SRK) {
-				if ((result =
-				    secret_PerformXOR_OSAP(hParentPolicy,
-							   hNewPolicy,
-							   hNewPolicy,
-							   hParentObject,
-							   TCPA_ET_SRK,
-							   keyHandle,
-							   &encAuthUsage,
-							   &encAuthMig,
-							   sharedSecret,
-							   &auth1,
-							   &nonceEvenOSAP)))
-					return result;
-			} else {
-				if ((result =
-				    secret_PerformXOR_OSAP(hParentPolicy,
-							   hNewPolicy,
-							   hNewPolicy,
-							   hParentObject,
-							   TCPA_ET_KEYHANDLE,
-							   keyHandle,
-							   &encAuthUsage,
-							   &encAuthMig,
-							   sharedSecret,
-							   &auth1,
-							   &nonceEvenOSAP)))
-					return result;
-			}
+			if ((result =
+			    secret_PerformXOR_OSAP(hParentPolicy,
+						   hNewPolicy,
+						   hNewPolicy,
+						   hParentObject,
+						   keyHandle == TPM_KEYHND_SRK ?
+						                   TCPA_ET_SRK :
+								   TCPA_ET_KEYHANDLE,
+						   keyHandle,
+						   &encAuthUsage,
+						   &encAuthMig,
+						   sharedSecret,
+						   &auth1,
+						   &nonceEvenOSAP)))
+				return result;
 
 			/* caluculate auth data */
 			offset = 0;
@@ -285,9 +268,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 							auth1.AuthHandle);
 				return result;
 			}
-
-			/* ---  for replacing PS */
-			memcpy(oldEncData, keyToChange.encData, 0x100);
 
 			if ((result = TCSP_ChangeAuth(tcsContext, keyHandle,
 						      TCPA_PID_ADCP, encAuthUsage,
@@ -358,14 +338,15 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset,
-							   dataBlob,
+		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataBlob,
 							   &storedData)))
 			return result;
 
-		keyHandle = getTCSKeyHandle(hParentObject);
-		if (keyHandle == NULL_HKEY)
+		if ((keyHandle = getTCSKeyHandle(hParentObject)) == NULL_HKEY) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return TSPERR(TSS_E_KEY_NOT_LOADED);
+		}
 
 		if ((result =
 		    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
@@ -373,8 +354,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					   TCPA_ET_KEYHANDLE, keyHandle,
 					   &encAuthUsage, &encAuthMig,
 					   sharedSecret, &auth1,
-					   &nonceEvenOSAP)))
+					   &nonceEvenOSAP))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
 
 		/* caluculate auth data */
 		offset = 0;
@@ -391,12 +375,17 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
 					    hNewPolicy, hParentObject,
 					    sharedSecret, &auth1,
-					    digest.digest, &nonceEvenOSAP)))
+					    digest.digest, &nonceEvenOSAP))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
 
 		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
 							&auth2))) {
 			TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
 		}
 
@@ -406,8 +395,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					     storedData.encDataSize,
 					     storedData.encData, &auth1,
 					     &auth2, &newEncSize,
-					     &newEncData)))
+					     &newEncData))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
 
 		/* ---  Validate the Auth's */
 		offset = 0;
@@ -421,13 +413,18 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
 					     hNewPolicy, sharedSecret, &auth1,
 					     digest.digest, &nonceEvenOSAP))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			free(newEncData);
 			return result;
 		}
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
-							&auth2)))
+							&auth2))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
 
 		memcpy(storedData.encData, newEncData, newEncSize);
 		free(newEncData);
@@ -435,6 +432,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 
 		offset = 0;
 		Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
+		free(storedData.sealInfo);
+		free(storedData.encData);
 		if ((result = obj_encdata_set_data(hObjectToChange,
 						 offset, dataBlob)))
 			return result;
@@ -476,7 +475,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	UINT16 tempSize;
 	BYTE tempKey[512];
 	TCPA_KEY_PARMS keyParms;
-	BYTE ephParms[] = { 00, 00, 0x08, 00, 00, 00, 00, 0x02, 00, 00, 00, 00 };
+	/* XXX Wow... */
+	BYTE ephParms[] = { 0, 0, 0x08, 0, 0, 0, 0, 0x02, 0, 0, 0, 0 };
 	UINT32 KeySizeOut;
 	BYTE *KeyDataOut;
 	UINT32 CertifyInfoSize;
@@ -546,10 +546,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
 
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
-
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		} else {
-
 			/*  generate container for ephemeral key */
 			keyParms.algorithmID = 1;	/* rsa */
 			keyParms.encScheme = 3;
@@ -672,12 +670,15 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			caValidSize = offset;
 
 			offset = 0;
-			Trspi_UnloadBlob_KEY(tspContext, &offset, KeyDataOut,
-						&ephemeralKey);
+			if ((result = Trspi_UnloadBlob_KEY(&offset, KeyDataOut,
+						&ephemeralKey)))
+				return result;
 
 			Trspi_RSA_Encrypt(hashBlob, caValidSize, a1, &a1Size,
 				       ephemeralKey.pubKey.key,
 				       ephemeralKey.pubKey.keyLength);
+
+			free_key_refs(&ephemeralKey);
 
 			Trspi_HMAC(TSS_HASH_SHA1, 20, oldSecret.authdata,
 					 20, newSecret.authdata,
@@ -688,15 +689,20 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 						   &keyObjectSize, &keyObject)))
 					return result;
 
+				memset(&keyContainer, 0, sizeof(TCPA_KEY));
+
 				offset = 0;
-				Trspi_UnloadBlob_KEY(tspContext, &offset,
-							keyObject, &keyContainer);
+				if ((result = Trspi_UnloadBlob_KEY(&offset,
+								   keyObject,
+								   &keyContainer)))
+					return result;
 
 				encObjectSize = keyContainer.encSize;
 				encObject = malloc(encObjectSize);
 				if (encObject == NULL) {
 					LogError("malloc of %d bytes failed.",
 							encObjectSize);
+					free_key_refs(&keyContainer);
 					return TSPERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(encObject, keyContainer.encData,
@@ -708,16 +714,18 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 					return result;
 
 				offset = 0;
-				if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext,
-								&offset, dataObject,
-								&dataContainer)))
+				if ((result = Trspi_UnloadBlob_STORED_DATA(&offset,
+									   dataObject,
+									   &dataContainer)))
 					return result;
 
 				encObjectSize = dataContainer.encDataSize;
 				encObject = malloc(encObjectSize);
 				if (encObject == NULL) {
 					LogError("malloc of %d bytes failed.",
-							encObjectSize);
+						 encObjectSize);
+					free(dataContainer.sealInfo);
+					free(dataContainer.encData);
 					return TSPERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(encObject, dataContainer.encData,
@@ -753,6 +761,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 					TCSP_TerminateHandle(tcsContext,
 							     auth.AuthHandle);
 					free(encObject);
+					free_key_refs(&keyContainer);
 					return result;
 				}
 				pAuth = &auth;
@@ -774,9 +783,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 							       &encDataOut,
 							       &saltNonce,
 							       &changeProof))) {
-				if (useAuth)
-					TCSP_TerminateHandle(tcsContext,
-							     pAuth->AuthHandle);
+				free_key_refs(&keyContainer);
 				free(encObject);
 				return result;
 			}
@@ -799,7 +806,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				if ((result = obj_policy_validate_auth_oiap(hParentPolicy,
 									&digest,
 									&auth))) {
-					TCSP_TerminateHandle(tcsContext, pAuth->AuthHandle);
+					free_key_refs(&keyContainer);
 					free(encObject);
 					return result;
 				}
@@ -817,9 +824,15 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				offset = 0;
 				Trspi_LoadBlob_KEY(&offset, keyObject,
 							&keyContainer);
-				obj_rsakey_set_tcpakey(hObjectToChange,
-						   offset, keyObject);
+				free_key_refs(&keyContainer);
+				if ((result = obj_rsakey_set_tcpakey(
+							hObjectToChange,
+							offset, keyObject))) {
+					free(encObject);
+					return result;
+				}
 			}
+
 			if (entityType == TCPA_ET_DATA) {
 				memcpy(dataContainer.encData, encDataOut,
 						encDataSizeOut);
@@ -828,9 +841,10 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				offset = 0;
 				Trspi_LoadBlob_STORED_DATA(&offset, dataBlob,
 							   &dataContainer);
+				free(dataContainer.sealInfo);
+				free(dataContainer.encData);
 				obj_encdata_set_data(hObjectToChange,
 						   offset, dataBlob);
-
 			}
 		}
 	} else

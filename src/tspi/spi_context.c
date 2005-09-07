@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <wchar.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -414,6 +413,8 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 	TPM_AUTH *pAuth;
 	TSS_FLAG initFlags;
 	UINT16 realKeyBlobSize;
+	TCPA_KEY_USAGE keyUsage;
+	UINT32 pubLen;
 
 	if (phKey == NULL || rgbBlobData == NULL )
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -433,9 +434,13 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 	}
 
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, rgbBlobData,
-			&keyContainer);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, rgbBlobData, &keyContainer)))
+		return result;
 	realKeyBlobSize = offset;
+	pubLen = keyContainer.pubKey.keyLength;
+	keyUsage = keyContainer.keyUsage;
+	/* free these now, since they're not used below */
+	free_key_refs(&keyContainer);
 
 	if ((result = obj_rsakey_get_policy(hUnwrappingKey, TSS_POLICY_USAGE,
 					&hPolicy, &useAuth)))
@@ -475,17 +480,17 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 
 	/* ---  Create a new Object */
 	initFlags = 0;
-	if (keyContainer.pubKey.keyLength == 0x100)
+	if (pubLen == 0x100)
 		initFlags |= TSS_KEY_SIZE_2048;
-	else if (keyContainer.pubKey.keyLength == 0x80)
+	else if (pubLen == 0x80)
 		initFlags |= TSS_KEY_SIZE_1024;
-	else if (keyContainer.pubKey.keyLength == 0x40)
+	else if (pubLen == 0x40)
 		initFlags |= TSS_KEY_SIZE_512;
 
 	/* clear the key type field */
 	initFlags &= ~TSS_KEY_TYPE_MASK;
 
-	if (keyContainer.keyUsage == TPM_KEY_STORAGE)
+	if (keyUsage == TPM_KEY_STORAGE)
 		initFlags |= TSS_KEY_TYPE_STORAGE;
 	else
 		initFlags |= TSS_KEY_TYPE_SIGNING;	/* loading the blob
@@ -637,7 +642,8 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	LogDebug1("Key is loaded, create a new key object for the user");
 
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey)))
+		return result;
 	initFlags = 0;
 
 	if (theKey.pubKey.keyLength == 0x100)
@@ -646,6 +652,9 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		initFlags |= TSS_KEY_SIZE_1024;
 	else if (theKey.pubKey.keyLength == 0x40)
 		initFlags |= TSS_KEY_SIZE_512;
+
+	/* free key memory allocations */
+	free_key_refs(&theKey);
 
 	/* Make sure to setup the key properly if its the SRK */
 	if (!(memcmp(&uuidData, &srk_uuid, sizeof(TSS_UUID))))
@@ -670,7 +679,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	}
 
 	free(keyBlob);
-	//keyreg_SetUUIDOfKeyObject(*phKey, uuidData, persistentStorageType);
 	if ((result = obj_rsakey_set_uuid(*phKey, &uuidData)))
 		return result;
 
@@ -689,10 +697,10 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 			 TSS_UUID uuidParentKey			/* in */
     )
 {
-
 	BYTE *keyBlob;
 	UINT32 keyBlobSize;
 	TSS_RESULT result;
+	TSS_BOOL answer;
 	TCS_CONTEXT_HANDLE tcsContext;
 
 	if (!obj_is_context(tspContext) || !obj_is_rsakey(hKey))
@@ -726,8 +734,12 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 						&keyBlobSize, &keyBlob)))
 			return result;
 
-		if (keyreg_IsKeyAlreadyRegistered(tspContext, keyBlobSize,
-						  keyBlob))
+		if ((result = keyreg_IsKeyAlreadyRegistered(keyBlobSize,
+							    keyBlob,
+							    &answer)))
+			return result;
+
+		if (answer == TRUE)
 			return TSPERR(TSS_E_KEY_ALREADY_REGISTERED);
 
 		if ((result = keyreg_WriteKeyToFile(&uuidKey, &uuidParentKey,
@@ -828,7 +840,10 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			return result;
 
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey))) {
+			free(keyBlob);
+			return result;
+		}
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		if (!obj_is_context(tspContext))
 			return TSPERR(TSS_E_INVALID_HANDLE);
@@ -838,7 +853,10 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			return result;
 
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &theKey);
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey))) {
+			free(keyBlob);
+			return result;
+		}
 	} else
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
@@ -848,6 +866,9 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		initFlag |= TSS_KEY_SIZE_1024;
 	else if (theKey.pubKey.keyLength == 0x40)
 		initFlag |= TSS_KEY_SIZE_512;
+
+	/* free key memory allocations */
+	free_key_refs(&theKey);
 
 	if ((result = obj_rsakey_add(tspContext, initFlag, phKey))) {
 		free(keyBlob);
@@ -912,30 +933,35 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		/* need to setup the init flags of the create object based on
 		 * the size of the blob's pubkey */
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob,
-				&keyContainer);
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &keyContainer))) {
+			free_tspi(tspContext, keyBlob);
+			return result;
+		}
+
+		/* begin setting up the key object */
 		switch (keyContainer.pubKey.keyLength) {
-			case 2048:
+			case 16384/8:
 				flag |= TSS_KEY_SIZE_16384;
 				break;
-			case 1024:
+			case 8192/8:
 				flag |= TSS_KEY_SIZE_8192;
 				break;
-			case 512:
+			case 4096/8:
 				flag |= TSS_KEY_SIZE_4096;
 				break;
-			case 256:
+			case 2048/8:
 				flag |= TSS_KEY_SIZE_2048;
 				break;
-			case 128:
+			case 1024/8:
 				flag |= TSS_KEY_SIZE_1024;
 				break;
-			case 64:
+			case 512/8:
 				flag |= TSS_KEY_SIZE_512;
 				break;
 			default:
 				LogError1("Key was not a known keylength.");
 				free(keyBlob);
+				free_key_refs(&keyContainer);
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
@@ -958,8 +984,9 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 			flag |= TSS_KEY_AUTHORIZATION;
 		else {
 			LogError1("keyContainer.authDataUsage was not "
-					"always or never");
+				  "always or never");
 			free_tspi(tspContext, keyBlob);
+			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
@@ -976,16 +1003,19 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		/* ---  Create a new Key Object */
 		if ((result = obj_rsakey_add(tspContext, flag, &keyOutHandle))) {
 			free(keyBlob);
+			free_key_refs(&keyContainer);
 			return result;
 		}
 		/* ---  Stick the info into this net KeyObject */
 		if ((result = obj_rsakey_set_tcpakey(keyOutHandle,
 						 keyBlobSize, keyBlob))) {
 			free(keyBlob);
+			free_key_refs(&keyContainer);
 			return result;
 		}
 
 		free(keyBlob);
+		free_key_refs(&keyContainer);
 		*phKey = keyOutHandle;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		return TSPERR(TSS_E_NOTIMPL);	/* TODO */

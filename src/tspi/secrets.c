@@ -406,13 +406,20 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 		/* now stick it in a Key Structure */
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, endorsementKey, &dummyKey);
-
-		if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret)))
+		if ((result = Trspi_UnloadBlob_KEY(&offset, endorsementKey, &dummyKey)))
 			return result;
 
-		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret)))
+		if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret))) {
+			free(dummyKey.pubKey.key);
+			free(dummyKey.algorithmParms.parms);
 			return result;
+		}
+
+		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret))) {
+			free(dummyKey.pubKey.key);
+			free(dummyKey.algorithmParms.parms);
+			return result;
+		}
 
 		/* Encrypt the Owner Authorization */
 		Trspi_RSA_Encrypt(ownerSecret.authdata,
@@ -429,6 +436,9 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 				       encSRKAuthLength,
 				       dummyKey.pubKey.key,
 				       dummyKey.pubKey.keyLength);
+
+		free(dummyKey.pubKey.key);
+		free(dummyKey.algorithmParms.parms);
 	} else {
 		*encOwnerAuthLength = 256;
 		*encSRKAuthLength = 256;

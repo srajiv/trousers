@@ -132,6 +132,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 	TSS_HPOLICY hPolicy;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
+	TCPA_PUBKEY pubKey;
 
 	if (pulPubKeyLength == NULL || prgbPubKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -166,6 +167,8 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 				    prgbPubKey)))
 		return result;
 
+	memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
+
 	if (usesAuth) {
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, result, hashblob);
@@ -173,18 +176,29 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		Trspi_LoadBlob(&offset, *pulPubKeyLength, hashblob, *prgbPubKey);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth))) {
-			free(*prgbPubKey);
-			return result;
-		}
+		/* goto error here since prgbPubKey has been set */
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth)))
+			goto error;
 	}
 
-	if ((result = obj_rsakey_set_pubkey(hKey, *pulPubKeyLength, *prgbPubKey))) {
-		free(*prgbPubKey);
-		return result;
-	}
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, *prgbPubKey, &pubKey)))
+		goto error;
+
+	if ((result = obj_rsakey_set_key_parms(hKey, &pubKey.algorithmParms)))
+		goto error;
+
+	if ((result = obj_rsakey_set_pubkey(hKey, pubKey.pubKey.keyLength,
+					    pubKey.pubKey.key)))
+		goto error;
 
 	return TSS_SUCCESS;
+error:
+	free(pubKey.pubKey.key);
+	free(pubKey.algorithmParms.parms);
+	free(*prgbPubKey);
+	*pulPubKeyLength = 0;
+	return result;
 }
 
 TSS_RESULT
@@ -334,22 +348,27 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
+		memset(&keyContainer, 0, sizeof(TCPA_KEY));
+
 		offset = 0;
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyData, &keyContainer);
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+			return result;
 
 		Trspi_Hash(TSS_HASH_SHA1, CertifyInfoSize, CertifyInfo, hash.digest);
 
 		if ((result = Trspi_Verify(TSS_HASH_SHA1, hash.digest, 20,
-				       keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
-				       outData, outDataSize))) {
+					   keyContainer.pubKey.key,
+					   keyContainer.pubKey.keyLength,
+					   outData, outDataSize))) {
 			if (useAuthKey)
 				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
 			if (useAuthCert)
 				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
+			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
-
+		free_key_refs(&keyContainer);
 	} else {
 		pValidationData->DataLength = CertifyInfoSize;
 		pValidationData->Data = calloc_tspi(tspContext, CertifyInfoSize);
@@ -528,8 +547,6 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
-	memset(&keyContainer, 0, sizeof(TCPA_KEY));
-
 	if (hPcrComposite) {
 		if ((result = obj_rsakey_set_pcr_data(hKey, hPcrComposite)))
 			return result;
@@ -553,16 +570,21 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		goto done;
 
 	if ((result = obj_policy_get_secret(hPolicy, &secret)))
-		return result;
+		goto done;
+
+	memset(&keyContainer, 0, sizeof(TCPA_KEY));
 
 	/* unload the key to be wrapped's blob */
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, keyBlob, &keyContainer);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &keyContainer)))
+		return result;
 
 	/* load the key's attributes into an object and get its hash value */
 	offset = 0;
 	Trspi_LoadBlob_PRIVKEY_DIGEST(&offset, hashBlob, &keyContainer);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+	free_key_refs(&keyContainer);
 
 	/* create the plaintext private key blob */
 	offset = 0;
@@ -585,12 +607,9 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		goto done;
 
 done:
-	if (keyPrivBlob)
-		free_tspi(tspContext, keyPrivBlob);
-	if (keyBlob)
-		free_tspi(tspContext, keyBlob);
-	if (wrappingPubKey)
-		free_tspi(tspContext, wrappingPubKey);
+	free_tspi(tspContext, keyPrivBlob);
+	free_tspi(tspContext, keyBlob);
+	free_tspi(tspContext, wrappingPubKey);
 	return result;
 }
 
@@ -672,15 +691,30 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 
 	/* ////////////////////////////////////////////////////////////////////// */
 	/*  Parsing the migration scheme from the blob and key object */
+	memset(&migAuth, 0, sizeof(TCPA_MIGRATIONKEYAUTH));
+
 	offset = 0;
-	Trspi_UnloadBlob_MigrationKeyAuth(tspContext, &offset, &migAuth, rgbMigTicket);
+	if ((result = Trspi_UnloadBlob_MigrationKeyAuth(&offset, rgbMigTicket,
+							&migAuth)))
+		return result;
+
+	/* free these now, since none are used below */
+	free(migAuth.migrationKey.algorithmParms.parms);
+	migAuth.migrationKey.algorithmParms.parmSize = 0;
+	free(migAuth.migrationKey.pubKey.key);
+	migAuth.migrationKey.pubKey.keyLength = 0;
+
+	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
 
 	offset = 0;
 	if (migratingKey) {
-		Trspi_UnloadBlob_KEY(tspContext, &offset, keyToMigrateBlob, &tcpaKey);
+		if ((result = Trspi_UnloadBlob_KEY(&offset, keyToMigrateBlob,
+						   &tcpaKey)))
+			return result;
 	} else {
-		if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset,
-						keyToMigrateBlob, &storedData)))
+		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset,
+							   keyToMigrateBlob,
+							   &storedData)))
 			return result;
 	}
 
@@ -704,26 +738,51 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	}
 	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hParentPolicy, &digest, &parentAuth)))
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy, &digest,
+						      &parentAuth))) {
+			free_key_refs(&tcpaKey);
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
 		pParentAuth = &parentAuth;
 	} else {
 		pParentAuth = NULL;
 	}
-	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, &digest, &entityAuth)))
+	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, &digest, &entityAuth))) {
+		free_key_refs(&tcpaKey);
+		free(storedData.sealInfo);
+		free(storedData.encData);
 		return result;
+	}
 
-	parentHandle = getTCSKeyHandle(hParentKey);
-	if (parentHandle == NULL_HKEY)
+	if ((parentHandle = getTCSKeyHandle(hParentKey)) == NULL_HKEY) {
+		free_key_refs(&tcpaKey);
+		free(storedData.sealInfo);
+		free(storedData.encData);
 		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	}
 
 	if (migratingKey) {
 		if ((result = TCSP_CreateMigrationBlob(tcsContext,
-					parentHandle, migAuth.migrationScheme, ulMigTicketLength,
-					rgbMigTicket, tcpaKey.encSize, tcpaKey.encData, pParentAuth,
-					&entityAuth, pulRandomLength, prgbRandom,
-					pulMigrationBlobLength, prgbMigrationBlob)))
+						       parentHandle,
+						       migAuth.migrationScheme,
+						       ulMigTicketLength,
+						       rgbMigTicket,
+						       tcpaKey.encSize,
+						       tcpaKey.encData,
+						       pParentAuth,
+						       &entityAuth,
+						       pulRandomLength,
+						       prgbRandom,
+						       pulMigrationBlobLength,
+						       prgbMigrationBlob))) {
+			free_key_refs(&tcpaKey);
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
+		free_key_refs(&tcpaKey);
 	} else {
 		if ((result = TCSP_CreateMigrationBlob(tcsContext,
 						parentHandle, migAuth.migrationScheme,
@@ -731,8 +790,13 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 						storedData.encDataSize, storedData.encData,
 						pParentAuth, &entityAuth, pulRandomLength,
 						prgbRandom, pulMigrationBlobLength,
-						prgbMigrationBlob)))
+						prgbMigrationBlob))) {
+			free(storedData.sealInfo);
+			free(storedData.encData);
 			return result;
+		}
+		free(storedData.sealInfo);
+		free(storedData.encData);
 	}
 
 	offset = 0;
@@ -755,36 +819,46 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 			if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
 				return result;
 
-			offset = 0;
-			Trspi_UnloadBlob_KEY(tspContext, &offset, blob, &keyContainer);
+			memset(&keyContainer, 0, sizeof(TCPA_KEY));
 
-			/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
+			offset = 0;
+			if ((result = Trspi_UnloadBlob_KEY(&offset, blob,
+							   &keyContainer)))
+				return result;
+
+			/* keyContainer.encData = calloc_tspi(tspContext, outDataSize); */
 			keyContainer.encSize = *pulMigrationBlobLength;
-			memcpy(keyContainer.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
+			/* XXX */
+			memcpy(keyContainer.encData, *prgbMigrationBlob,
+			       *pulMigrationBlobLength);
 
 			offset = 0;
 			Trspi_LoadBlob_KEY(&offset, blob, &keyContainer);
+			free_key_refs(&keyContainer);
 
 			if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate,
 							blobSize, blob)))
 				return result;
 
 		} else {
-
 			if ((result = obj_encdata_get_data(hKeyToMigrate,
 							&blobSize, &blob)))
 				return result;
 
 			offset = 0;
-			if ((result = Trspi_UnloadBlob_STORED_DATA(tspContext, &offset, blob, &storedData)))
+			if ((result = Trspi_UnloadBlob_STORED_DATA(&offset,
+								   blob,
+								   &storedData)))
 				return result;
 
-			/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
+			/* keyContainer.encData = calloc_tspi(tspContext, outDataSize); */
 			storedData.encDataSize = *pulMigrationBlobLength;
 			memcpy(storedData.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
 
 			offset = 0;
 			Trspi_LoadBlob_STORED_DATA(&offset, blob, &storedData);
+			free(storedData.sealInfo);
+			free(storedData.encData);
 
 			if ((result = obj_encdata_set_data(hKeyToMigrate,
 							blobSize, blob)))
@@ -888,15 +962,21 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	if (result)
 		return result;
 
+	memset(&keyContainer, 0, sizeof(TCPA_KEY));
+
 	offset = 0;
-	Trspi_UnloadBlob_KEY(tspContext, &offset, blob, &keyContainer);
+	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer)))
+		return result;
 
 	/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
 	keyContainer.encSize = outDataSize;
+	/* XXX */
 	memcpy(keyContainer.encData, outData, outDataSize);
 
 	offset = 0;
 	Trspi_LoadBlob_KEY(&offset, blob, &keyContainer);
+
+	free_key_refs(&keyContainer);
 
 	return obj_rsakey_set_tcpakey(hKeyToMigrate, blobSize, blob);
 }
