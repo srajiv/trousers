@@ -1,3 +1,7 @@
+ - SF#1285428 bug fixed. obj_context_get_machine_name copied
+   too many bytes out. Code added to Tspi_GetAttribData to
+   convert to UTF16 before returning.
+
 * TROUSERS_0_2_2
 
  - deleted section on ssh-askpass in README
