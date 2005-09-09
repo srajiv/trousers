@@ -86,12 +86,12 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 
 	if (wszDestination == NULL) {
 		if ((result = obj_context_get_machine_name(tspContext,
-							&string_len,
-							&machine_name)))
+							   &string_len,
+							   &machine_name)))
 			return result;
 
 		if ((result = TCS_OpenContext_RPC(machine_name, &tcsHandle,
-						CONNECTION_TYPE_TCP_PERSISTANT)))
+						  CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 	} else {
 		if ((machine_name =

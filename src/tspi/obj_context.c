@@ -135,19 +135,14 @@ obj_context_get_machine_name(TSS_HCONTEXT tspContext, UINT32 *size, BYTE **data)
 		*data = NULL;
 		*size = 0;
 	} else {
-		/* allocate the number of bytes, not UNICODE characters */
-		*data = calloc_tspi(obj->tspContext,
-				context->machineNameLength * sizeof(UNICODE));
+		*data = calloc_tspi(obj->tspContext, context->machineNameLength);
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.",
-					context->machineNameLength * sizeof(UNICODE));
+			LogError("malloc of %u bytes failed.",
+					context->machineNameLength);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		/* return the UNICODE string and the number of _bytes_ in it, not the
-		 * number of UNICODE characters in it.
-		 */
-		*size = context->machineNameLength * sizeof(UNICODE);
+		*size = context->machineNameLength;
 		memcpy(*data, context->machineName, *size);
 	}
 
