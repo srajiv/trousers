@@ -1145,7 +1145,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
     )
 {
 	TSS_RESULT result;
-	BYTE *popup_string = NULL;
+	BYTE *string = NULL;
 
 	if (obj_is_rsakey(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_KEY_BLOB)
@@ -1171,11 +1171,10 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
-		if ((popup_string =
-		    Trspi_UNICODE_To_UTF8(rgbAttribData, &ulAttribDataSize)) == NULL)
+		if ((string = Trspi_UNICODE_To_Native(rgbAttribData, NULL)) == NULL)
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 
-		result = obj_policy_set_string(hObject, ulAttribDataSize, popup_string);
+		result = obj_policy_set_string(hObject, ulAttribDataSize, string);
 	} else {
 		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
 		    obj_is_pcrs(hObject) || obj_is_context(hObject))
@@ -1294,7 +1293,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			return result;
 
 		if ((*prgbAttribData =
-		    Trspi_UTF8_To_UNICODE(string, pulAttribDataSize)) == NULL)
+		    Trspi_Native_To_UNICODE(string, pulAttribDataSize)) == NULL)
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		free(string);
@@ -1307,7 +1306,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			return result;
 
 		if ((*prgbAttribData =
-		    Trspi_UTF8_To_UNICODE(string, pulAttribDataSize)) == NULL)
+		    Trspi_Native_To_UNICODE(string, pulAttribDataSize)) == NULL)
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		free(string);

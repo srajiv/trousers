@@ -15,7 +15,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <langinfo.h>
 #include <iconv.h>
+#include <wchar.h>
 #include <errno.h>
 
 #include "trousers/tss.h"
@@ -804,112 +806,134 @@ Trspi_Error_Code(TSS_RESULT r)
 	return TSS_ERROR_CODE(r);
 }
 
-BYTE *
-Trspi_UTF8_To_UNICODE(BYTE *string, UINT32 *size)
+static int
+hacky_strlen(char *codeset, BYTE *string)
 {
-	BYTE *ret = NULL;
-	char *outbuf, *local_string = string;
-	size_t inbytesleft, outbytesleft;
-	int newbufsize;
-	iconv_t cd;
-	int rc, local_size;
+	BYTE *ptr = string;
+	int len = 0;
 
-	if (string == NULL)
-		return NULL;
-
-	if ((cd = iconv_open("UTF-16", "UTF-8")) == (iconv_t)-1) {
-		LogError("iconv_open: %s", strerror(errno));
-		return NULL;
-	}
-
-	/* if size is NULL, attempt to get the length of the string manually */
-	if (size == NULL) {
-		local_size = strlen(string) + 2;
-		newbufsize = local_size * sizeof(UNICODE);
-		inbytesleft = local_size;
+	if (strcmp("UTF-16", codeset) == 0) {
+		while (!(ptr[0] == '\0' && ptr[1] == '\0')) {
+			len += 2;
+			ptr += 2;
+		}
+	} else if (strcmp("UTF-32", codeset) == 0) {
+		while (!(ptr[0] == '\0' && ptr[1] == '\0' &&
+					ptr[2] == '\0' && ptr[3] == '\0')) {
+			len += 4;
+			ptr += 4;
+		}
 	} else {
-		inbytesleft = *size;
-		newbufsize = (*size + 2) * sizeof(UNICODE);
+		/* default to 8bit chars */
+		while (*ptr++ != '\0') {
+			len++;
+		}
 	}
 
-	ret = malloc(newbufsize);
-	if (ret == NULL) {
-		LogError("malloc of %d bytes failed.", newbufsize);
+	return len;
+}
+
+#define MAX_BUF_SIZE	4096
+
+BYTE *
+Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
+{
+	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
+	iconv_t cd;
+	size_t rc;
+
+	if ((cd = iconv_open("UTF-16", nl_langinfo(CODESET))) == (iconv_t)-1) {
+		LogDebug("iconv_open: %s", strerror(errno));
+		return NULL;
+	}
+
+	if ((tmplen = hacky_strlen(nl_langinfo(CODESET), string)) == 0) {
+		LogDebug1("hacky_strlen returned 0");
+		return NULL;
+	}
+
+	do {
+		len++;
+		outbytesleft = len;
+		inbytesleft = tmplen;
+		outbuf = tmpbuf;
+		ptr = string;
+
+		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
+	} while (rc == (size_t)-1 && errno == E2BIG);
+
+	if (len > MAX_BUF_SIZE) {
+		LogDebug1("string too long.");
 		iconv_close(cd);
 		return NULL;
 	}
 
-	outbytesleft = newbufsize;
-	outbuf = (char *)ret;
-
-	if ((rc = iconv(cd, &local_string, &inbytesleft, &outbuf,
-					&outbytesleft)) == -1) {
-		LogError("iconv errno: %d, %s\n", errno, strerror(errno));
+	/* add the max size for a char onto len, then malloc all bytes as
+	 * zeroed out. This may allocate a few more bytes than necessary, but
+	 * will ensure that the string is NULL terminated. */
+	if ((ret = calloc(1, len + 4)) == NULL) {
+		LogDebug("malloc of %d bytes failed.", len);
 		iconv_close(cd);
-		free(ret);
 		return NULL;
 	}
 
+	memcpy(ret, &tmpbuf, len);
 	if (size)
-		*size = newbufsize;
+		*size = len + 4;
 	iconv_close(cd);
 
 	return ret;
+
 }
 
 BYTE *
-Trspi_UNICODE_To_UTF8(BYTE *string, UINT32 *size)
+Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 {
-	BYTE *ret = NULL;
-	char *outbuf, *local_string = string;
-	size_t inbytesleft, outbytesleft;
-	int newbufsize, local_size = 1;
+	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
 	iconv_t cd;
-	int rc;
-	UNICODE *null_term;
+	size_t rc;
 
-	if (string == NULL)
-		return NULL;
-
-	if ((cd = iconv_open("UTF-8", "UTF-16")) == (iconv_t)-1) {
-		LogError("iconv_open: %s", strerror(errno));
+	if ((cd = iconv_open(nl_langinfo(CODESET), "UTF-16")) == (iconv_t)-1) {
+		LogDebug("iconv_open: %s", strerror(errno));
 		return NULL;
 	}
 
-	/* if size is NULL, attempt to get the length of the string manually */
-	if (size == NULL) {
-		null_term = (UNICODE *)string;
-		while (null_term != L'\0') {
-			*null_term++;
-			local_size++;
-		}
-		newbufsize = local_size / sizeof(UNICODE);
-		inbytesleft = local_size;
-	} else {
-		inbytesleft = *size;
-		newbufsize = *size / sizeof(UNICODE);
+	if ((tmplen = hacky_strlen("UTF-16", string)) == 0) {
+		LogDebug1("hacky_strlen returned 0");
+		return 0;
 	}
 
-	ret = malloc(newbufsize);
-	if (ret == NULL) {
-		LogError("malloc of %d bytes failed.", newbufsize);
+	do {
+		len++;
+		outbytesleft = len;
+		inbytesleft = tmplen;
+		outbuf = tmpbuf;
+		ptr = string;
+
+		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
+	} while (rc == (size_t)-1 && errno == E2BIG);
+
+	/* add the max size for a char onto len, then malloc all bytes as
+	 * zeroed out. This may allocate a few more bytes than necessary, but
+	 * will ensure that the string is NULL terminated. */
+	len += 4;
+	if (len > MAX_BUF_SIZE) {
+		LogDebug1("string too long.");
 		iconv_close(cd);
 		return NULL;
 	}
 
-	outbytesleft = newbufsize;
-	outbuf = (char *)ret;
-
-	if ((rc = iconv(cd, &local_string, &inbytesleft, &outbuf,
-					&outbytesleft)) == -1) {
-		LogError("iconv errno: %d, %s\n", errno, strerror(errno));
-		free(ret);
+	if ((ret = calloc(1, len)) == NULL) {
+		LogDebug("malloc of %d bytes failed.", len);
 		iconv_close(cd);
 		return NULL;
 	}
 
+	memcpy(ret, &tmpbuf, len);
 	if (size)
-		*size = newbufsize;
+		*size = len;
 	iconv_close(cd);
 
 	return ret;

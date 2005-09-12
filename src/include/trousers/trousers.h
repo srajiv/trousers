@@ -104,16 +104,13 @@ int Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 /* Below UNICODE is in reference to the TSS type of that name, which is
  * actually UTF-16. */
 
-/* convert @string to a UNICODE string. On entry, *size should contain the
- * number of bytes to be converted. On success, *size contains the number of
- * bytes in the newly alloc'd returned string, on error, NULL is returned. */
-BYTE *Trspi_UTF8_To_UNICODE(BYTE *string, UINT32 *size);
+/* Convert @string to a UNICODE string. On error, NULL is returned. If len
+ * is non-NULL, *len will be set to the size of the returned buffer. */
+BYTE *Trspi_Native_To_UNICODE(BYTE *string, unsigned *len);
 
-/* convert UNICODE @string to a UTF-8 string. On entry, *size should contain the
- * number of bytes to be converted. On success, *size contains the number of
- * bytes in the newly alloc'd returned string, on error, NULL is returned.
- * If the size of @string is unknown, size should be set to NULL. */
-BYTE *Trspi_UNICODE_To_UTF8(BYTE *string, UINT32 *size);
+/* convert UNICODE @string to a string from the current codeset. If there is
+ * If len is non-NULL, *len will be set to the size of the returned buffer. */
+BYTE *Trspi_UNICODE_To_Native(BYTE *string, unsigned *len);
 
 /* Error Functions */
 

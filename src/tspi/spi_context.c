@@ -95,7 +95,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 			return result;
 	} else {
 		if ((machine_name =
-		    Trspi_UNICODE_To_UTF8((char *)wszDestination, NULL)) == NULL) {
+		    Trspi_UNICODE_To_Native((BYTE *)wszDestination, NULL)) == NULL) {
 			LogError("Error converting hostname to UTF-8");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}

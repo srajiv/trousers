@@ -60,7 +60,7 @@ on_okbutton1_clicked(GtkButton *button, struct userdata	*user_data)
 #if 0
 	strncpy(user_data->string, entry_text, strlen(entry_text)+1);
 #else
-	user_data->string = Trspi_UTF8_To_UNICODE((BYTE *)entry_text, &len);
+	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text, &len);
 #endif
 	gtk_widget_destroy(user_data->window);
 
@@ -77,7 +77,7 @@ enter_event(GtkWidget *widget, struct userdata *user_data)
 #if 0
 	strncpy(user_data->string, entry_text, strlen(entry_text)+1);
 #else
-	user_data->string = Trspi_UTF8_To_UNICODE((BYTE *)entry_text, &len);
+	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text, &len);
 #endif
 	gtk_widget_destroy(user_data->window);
 
@@ -103,7 +103,7 @@ on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 	/* Compare the two text boxes, if they're equal, we're done */
 	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
 		len++;
-		user_data->string = Trspi_UTF8_To_UNICODE((BYTE *)entryConf_text, &len);
+		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
 		gtk_widget_destroy(user_data->window);
 		gtk_main_quit();
 	} else {
@@ -121,7 +121,7 @@ on_entryConfirm_activate(GtkEntry *entry, struct userdata *user_data)
 	/* Compare the two text boxes, if they're equal, we're done */
 	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
 		len++;
-		user_data->string = Trspi_UTF8_To_UNICODE((BYTE *)entryConf_text, &len);
+		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
 		gtk_widget_destroy(user_data->window);
 		gtk_main_quit();
 	} else {
@@ -146,7 +146,7 @@ on_okbutton2_clicked(GtkButton *button, struct userdata *user_data)
 	/* Compare the two text boxes, if they're equal, we're done */
 	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
 		len++;
-		user_data->string = Trspi_UTF8_To_UNICODE((BYTE *)entryConf_text, &len);
+		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
 		gtk_widget_destroy(user_data->window);
 		gtk_main_quit();
 	} else {
