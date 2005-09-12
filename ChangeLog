@@ -1,3 +1,10 @@
+
+ - Added GetPubKey as an option for TCSD's remote ops.
+ - SF#1249767 bug fixed. UTF16 strings are now hashed when
+ passwords are passed in through the popups.
+ - SF#1286333 bug fixed. New unicode functions added that
+ convert to UTF-16 and from the nl_langinfo(CODESET)
+ encoding.
  - SF#1285428 bug fixed. obj_context_get_machine_name copied
    too many bytes out. Code added to Tspi_GetAttribData to
    convert to UTF16 before returning.
