@@ -843,6 +843,12 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 	iconv_t cd;
 	size_t rc;
 
+	if (string == NULL) {
+		if (size)
+			*size = 0;
+		return NULL;
+	}
+
 	if ((cd = iconv_open("UTF-16", nl_langinfo(CODESET))) == (iconv_t)-1) {
 		LogDebug("iconv_open: %s", strerror(errno));
 		return NULL;
@@ -894,6 +900,12 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
 	iconv_t cd;
 	size_t rc;
+
+	if (string == NULL) {
+		if (size)
+			*size = 0;
+		return NULL;
+	}
 
 	if ((cd = iconv_open(nl_langinfo(CODESET), "UTF-16")) == (iconv_t)-1) {
 		LogDebug("iconv_open: %s", strerror(errno));
