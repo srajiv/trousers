@@ -44,11 +44,36 @@ extern int foreground;
 #ifdef TSS_DEBUG
 #define LogDebug(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, fmt, ##__VA_ARGS__)
 #define LogDebug1(data)		LogMessage1(stdout, LOG_DEBUG, APPID, data)
+#define LogDebugFn(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define LogDebugFn1(data)	LogMessage(stdout, LOG_DEBUG, APPID, "%s: " data, __FUNCTION__)
 #define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
+#define LogDebugKey(k) \
+	do { \
+		LogDebugFn("Version: %hhu.%hhu.%hhu.%hhu", \
+			   k.ver.major, k.ver.minor, \
+			   k.ver.revMajor, k.ver.revMinor); \
+		LogDebugFn("keyUsage: 0x%hx", k.keyUsage); \
+		LogDebugFn("keyFlags: 0x%x", k.keyFlags); \
+		LogDebugFn("authDatausage: %hhu", k.authDataUsage); \
+		LogDebugFn("pcrInfosize: %u", k.PCRInfoSize); \
+		LogDebugFn("encDataSize: %u", k.encSize); \
+	} while (0)
+#define LogDebugUnrollKey(b) \
+	do { \
+			TCPA_KEY tmpkey; \
+			UINT16 offset = 0; \
+			UnloadBlob_KEY(&offset, b, &tmpkey); \
+			LogDebugKey(tmpkey); \
+			destroy_key_refs(&tmpkey); \
+	} while (0)
 #else
 #define LogDebug(fmt, ...)
 #define LogDebug1(data)
+#define LogDebugFn(fmt, ...)
+#define LogDebugFn1(data)
 #define LogBlob(sz,blb)
+#define LogDebugKey(s)
+#define LogDebugUnrollKey(b)
 #endif
 
 /* Error logging */

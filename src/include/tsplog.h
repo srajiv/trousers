@@ -35,6 +35,8 @@
 
 #define LogDebug(fmt, ...)	LogMessage(stdout, "LOG_DEBUG", APPID, fmt, ##__VA_ARGS__)
 #define LogDebug1(data)		LogMessage1(stdout, "LOG_DEBUG", APPID, data)
+#define LogDebugFn(fmt, ...)	LogMessage(stdout, "LOG_DEBUG", APPID, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define LogDebugFn1(data)	LogMessage(stdout, "LOG_DEBUG", APPID, "%s: " data, __FUNCTION__)
 #define LogDebugData(sz,blb)	LogBlobData(APPID, sz, blb)
 
 /* Error logging */
@@ -51,6 +53,8 @@
 #else
 #define LogDebug(fmt, ...)
 #define LogDebug1(data)
+#define LogDebugFn(fmt, ...)
+#define LogDebugFn1(data)
 #define LogDebugData(sz,blb)
 #define LogError(fmt, ...)
 #define LogError1(data)
