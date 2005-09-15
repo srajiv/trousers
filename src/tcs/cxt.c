@@ -210,7 +210,6 @@ ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 {
 	struct tcs_context *c;
 
-	LogDebug("verifyContextExists for context %.8X", tcsContext);
 	if (tcsContext == InternalContext) {
 		LogDebug("Success: %.8X is an Internal Context", tcsContext);
 		return TSS_SUCCESS;
@@ -227,7 +226,6 @@ ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 		return TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 	}
 
-	LogDebug("Success: Context %.8X found.", tcsContext);
 	return TSS_SUCCESS;
 }
 
