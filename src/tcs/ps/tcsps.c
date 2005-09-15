@@ -168,7 +168,7 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
                         return rc;
                 }
 		*ret_buffer_size = tmp->blob_size;
-
+		LogDebugUnrollKey(ret_buffer);
                 pthread_mutex_unlock(&disk_cache_lock);
                 return TSS_SUCCESS;
         }
