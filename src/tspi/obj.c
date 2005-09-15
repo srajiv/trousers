@@ -397,6 +397,7 @@ addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 	}
 	concatTSPKeyHandleContainer(&newTCS->tspHandles, newTSP);
 
+	LogDebugFn("TSP handle 0x%x maps to TCS 0x%x", tspHandle, tcsHandle);
 	pthread_mutex_unlock(&keylist_lock);
 
 	return TSS_SUCCESS;

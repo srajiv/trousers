@@ -525,6 +525,7 @@ Spi_UnloadBlob_KEY(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	Trspi_UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	key->authDataUsage = blob[(*offset)++];
+	LogDebugFn("authDataUsage: 0x%hhx", key->authDataUsage);
 	if ((result = Spi_UnloadBlob_KEY_PARMS(offset, (BYTE *)blob, &key->algorithmParms)))
 		return result;
 

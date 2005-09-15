@@ -1203,6 +1203,9 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	} else {
 		LogDebug1("No Auth");
 	}
+
+	LogDebugFn("calling ensureKeyIsLoaded for TCS handle 0x%x",
+		   keyHandle);
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
