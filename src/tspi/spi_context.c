@@ -545,8 +545,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		if ((result = TCSP_LoadKeyByUUID(tcsContext,
 						uuidData,
 						NULL,
-						&tcsKeyHandle))
-				== TCS_E_KM_LOADFAILED)
+						&tcsKeyHandle)))
 			return result;
 
 		if ((result = TCS_GetRegisteredKeyBlob(tcsContext,
