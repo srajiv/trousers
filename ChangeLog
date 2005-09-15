@@ -1,4 +1,11 @@
 
+ - SF#1291256 bugs fixed. A UINT16 was being passed instead
+ of a UINT32 to TCS_LoadKeyByBlob_Internal.
+ - Removed test in spi_context.c's call to TCS_LoadKeyByUUID,
+ which would always fail, since there was no TCS layer bit
+ set. This kept us in a success path.
+ - Added debug logging functions that print the function
+ name at the beginning of the statement.
  - Added GetPubKey as an option for TCSD's remote ops.
  - SF#1249767 bug fixed. UTF16 strings are now hashed when
  passwords are passed in through the popups.
