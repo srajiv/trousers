@@ -926,6 +926,9 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyHMAC, 0, hdr))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		LogDebugFn("TCS key handle: 0x%x, TPM key slot: 0x%x",
+			   *phKeyTCSI, *phKeyHMAC);
 	}
 
 	free(hdr);
@@ -963,6 +966,8 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	if (result == TSS_SUCCESS) {
 		if (getData(TCSD_PACKET_TYPE_UINT32, 0, phKeyTCSI, 0, hdr))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		LogDebugFn("TCS key handle: 0x%x", *phKeyTCSI);
 
 		if (getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 1, &tmpInfo, 0, hdr)) {
 			pLoadKeyInfo = NULL;
