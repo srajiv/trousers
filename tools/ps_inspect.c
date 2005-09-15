@@ -267,7 +267,7 @@ inspect(FILE *f)
 	if ((members = fread(buf,
 			sizeof(TSS_UUID) + sizeof(UINT32) + 1,
 			1, f)) != 1) {
-		PRINTERR("fread: %s\n", strerror(errno));
+		printf("File is empty.\n");
 		return -1;
 	}
 
