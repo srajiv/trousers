@@ -269,7 +269,6 @@ canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 	UINT32 respDataLength;
 	BYTE *respData;
 
-	LogDebug1("Can I load this key");
 	subCapLength = 0;
 	LoadBlob_KEY_PARMS(&subCapLength, subCap, parms);
 
@@ -280,12 +279,13 @@ canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 					    &respDataLength,	/* out */
 					    &respData))) {	/* out */
 		*b = FALSE;
+		LogDebugFn1("NO");
 		return result;
 	}
 
 	*b = respData[0];
-	LogDebug("Can load is %.2X", *respData);
 	free(respData);
+	LogDebugFn("%s", *b ? "YES" : "NO");
 
 	return TSS_SUCCESS;
 }
@@ -338,14 +338,14 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 #ifdef TSS_DEBUG
 	LogDebug1("Loaded TPM key handles:");
 	for (i = 0; i < keyList.loaded; i++) {
-		LogDebug("%d: %x", i, keyList.handle[i]);
+		LogDebugFn("%d: %x", i, keyList.handle[i]);
 	}
 
 	LogDebug1("Loaded TCSD key handles:");
 	i=0;
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		LogDebug("%d: %x", i, tmp->tpm_handle);
-		i++;
+		LogDebugFn("%d: 0x%x -> 0x%x", i++, tmp->tpm_handle,
+			    tmp->tcs_handle);
 	}
 #endif
 
@@ -641,7 +641,7 @@ UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob,
 	else {
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
-			LogError("malloc of %d bytes failed.", keyParms->parmSize);
+			LogError("malloc of %u bytes failed.", keyParms->parmSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -783,7 +783,9 @@ UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob,
 
 	if ((rc = UnloadBlob_KEY_PARMS(offset, blob, &key->algorithmParms)))
 		return rc;
-	rc = UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey);
+	if ((rc = UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey))) {
+		free(key->algorithmParms.parms);
+	}
 
 	return rc;
 }
@@ -1059,3 +1061,4 @@ get_pcr_event_size(TSS_PCR_EVENT *e)
 {
 	return (sizeof(TSS_PCR_EVENT) + e->ulEventLength + e->ulPcrValueLength);
 }
+
