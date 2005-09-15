@@ -63,6 +63,8 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TCSERR(TSS_E_KEY_ALREADY_REGISTERED);
 	}
 
+	LogDebugUnrollKey(rgbKey);
+
 	/*---	Go ahead and store it in system persistant storage */
 	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID,
 						gbVendorData, cVendorData,
@@ -360,7 +362,8 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_BOOL needToSendPacket = TRUE, canLoad;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	cWrappedKeyBlobSize = 0;
+	LogDebugFn1("Enter");
+	LogDebugUnrollKey(rgbWrappedKeyBlob);
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -391,12 +394,15 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* Check the mem cache to see if there is a TPM handle associated with the
 	 * parent's TCS handle */
+	LogDebugFn1("calling getSlotByHandle");
 	if ((parentKeySlot = getSlotByHandle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
+		LogDebugFn1("calling getPubBySlot");
 		parentPubKey = getPubBySlot(hUnwrappingKey);
 		if (parentPubKey == NULL) {
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto error;
 		}
+		LogDebugFn1("calling LoadKeyShim");
 		/* Otherwise, try to load it using the shim */
 		if ((result = LoadKeyShim(hContext, parentPubKey, NULL, &parentKeySlot)))
 			goto error;
@@ -408,16 +414,17 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	If it's an authorized load, then assume that we brute-force load it every time */
 	if (pAuth == NULL) {
-		LogDebug1("Checking if LoadKeyByBlob can be avoided by using existing key");
+		LogDebugFn1("Checking if LoadKeyByBlob can be avoided by using"
+			    " existing key");
 
 		myTcsKeyHandle = getTCSKeyHandleByPub(&key.pubKey);
 		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
-			LogDebug1("tcs key handle exists");
+			LogDebugFn1("tcs key handle exists");
 
 			myKeySlot = getSlotByHandle(myTcsKeyHandle);
 			if (myKeySlot != NULL_TPM_HANDLE && isKeyLoaded(myKeySlot) == TRUE) {
 				needToSendPacket = FALSE;
-				LogDebug1("Don't need to reload this key.");
+				LogDebugFn1("Don't need to reload this key.");
 				result = TSS_SUCCESS;
 				goto add_cache_entry;
 			}
@@ -428,19 +435,22 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *Now we just have to check if there is enough room in the chip.
 	 *********************************************/
 
+	LogDebugFn1("calling canILoadThisKey");
 	if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 		goto error;
 
 	while (canLoad == FALSE) {
+		LogDebugFn1("calling evictFirstKey");
 		/* Evict a key that isn't the parent */
 		if ((result = evictFirstKey(hUnwrappingKey)))
 			goto error;
 
+		LogDebugFn1("calling canILoadThisKey");
 		if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 			goto error;
 	}
 
-	LogDebug1("Entering LoadKey by blob");
+	LogDebugFn1("Entering LoadKey by blob");
 
 	/****************************************
 	 *	Now the parent is loaded and all of the info is ready.
@@ -457,12 +467,17 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	} else
 		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
 
+	LogDebugUnrollKey(rgbWrappedKeyBlob);
+	LogDebugFn1("Submitting request to the TPM");
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto error;
 
 	if (needToSendPacket == TRUE) {
-		if ((result = UnloadBlob_Header(txBlob, &paramSize)))
+		LogDebugFn1("calling UnloadBlob_Header");
+		if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
+			LogDebugFn("UnloadBlob_Header failed: rc=%u", result);
 			goto error;
+		}
 
 		offset = 10;
 		/*---	Finish unloading the stuff */
@@ -471,7 +486,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
 		}
 	} else {
-		LogData("Key slot is", myKeySlot);
+		LogDebugFn("Key slot is 0x%x", myKeySlot);
 	}
 
 	/***************************************
@@ -480,14 +495,13 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *	If it exists, then just register the new keySlot with that existing handle
 	 *****************************************/
 
+	LogDebugFn1("calling getTCSKeyHandleByPub");
 add_cache_entry:
-	myTcsKeyHandle = getTCSKeyHandleByPub(&(key.pubKey));
-	if (myTcsKeyHandle == NULL_TCS_HANDLE) {
-		LogDebug1("No existing key handle for this key, need to create a new one");
+	if ((myTcsKeyHandle = getTCSKeyHandleByPub(&(key.pubKey))) == NULL_TCS_HANDLE) {
+		LogDebugFn1("No existing key handle for this key, need to create a new one");
 		/* Get a new TCS Key Handle */
 		myTcsKeyHandle = getNextTcsKeyHandle();
 		/* if it was an authorized load, then we can't make complete knowledge about it */
-
 #if 0
 		/* Add this info to the memory cache */
 		if (pAuth == NULL) {
@@ -497,24 +511,22 @@ add_cache_entry:
 				goto done;
 		}
 #endif
-
+		LogDebugFn("calling add_mem_cache_entry, TCS handle: 0x%x,"
+			 " TPM handle 0x%x", myTcsKeyHandle, myKeySlot);
 		if ((result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, &key)))
 			goto error;
 
+		LogDebugFn1("ctx_mark_key_loaded");
 		if (ctx_mark_key_loaded(hContext, myTcsKeyHandle)) {
 			LogError1("Error marking key as loaded");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto error;
 		}
 
-		if (pAuth == NULL) {
-			result = setParentByHandle(myTcsKeyHandle, hUnwrappingKey);
-			if (result != TSS_SUCCESS) {
-				LogError1("setParentBlobByHandle failed.");
-				goto error;
-			}
+		if ((result = setParentByHandle(myTcsKeyHandle, hUnwrappingKey))) {
+			LogError1("setParentBlobByHandle failed.");
+			goto error;
 		}
-
 	} else
 		setSlotByHandle(myTcsKeyHandle, myKeySlot);
 
@@ -524,8 +536,8 @@ add_cache_entry:
 	*phKeyTCSI = myTcsKeyHandle;
 	*phKeyHMAC = myKeySlot;
 
-	LogDebug("Key handles for loadKeyByBlob slot:%.8X tcshandle:%.8X", myKeySlot, myTcsKeyHandle);
-	LogResult("LoadKey By Blob", result);
+	LogDebugFn("Key handles for loadKeyByBlob slot:%.8X tcshandle:%.8X",
+		 myKeySlot, myTcsKeyHandle);
 error:
 	destroy_key_refs(&key);
 	auth_mgr_release_auth(pAuth, NULL);
@@ -539,18 +551,19 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TCS_KEY_HANDLE * phKeyTCSI		/* out */
     )
 {
-	UINT32 keyslot;
+	UINT32 keyslot, keySize;
 	TSS_RESULT result;
 	UINT16 offset;
 	TSS_UUID parentUuid;
 	BYTE keyBlob[0x1000];
-	UINT16 keySize = sizeof (keyBlob);
+	UINT16 blobSize = sizeof(keyBlob);
 	TCPA_KEY myKey;
 	TCPA_STORE_PUBKEY *parentPub;
 	TCPA_KEY_HANDLE parentKeySlot;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 
-	LogDebug1("LoadKeyByUUID");
+	LogDebugFn("Enter: uuid: 0x%x auth? 0x%x ***********", (UINT32)KeyUUID,
+		  pLoadKeyInfo == NULL ? 0xdeadbeef : pLoadKeyInfo->authData.AuthHandle);
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -559,39 +572,47 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *		that we get it all from either the keyfile or the keyCache
 	 *		also, it's important to return if the key is already loaded
 	 ***********************************************************************/
-
-	if (getRegisteredKeyByUUID(KeyUUID, keyBlob, &keySize))
+	LogDebugFn1("calling getRegisteredKeyByUUID");
+	if (getRegisteredKeyByUUID(KeyUUID, keyBlob, &blobSize))
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
+	/* convert UINT16 to UIN32 */
+	keySize = blobSize;
 
 	/*---	Now that there is a key, unload it for later use */
 	offset = 0;
 	if ((result = UnloadBlob_KEY(&offset, keyBlob, &myKey)))
 		return result;
 
+	LogDebugKey(myKey);
+	LogDebugFn1("calling getTCSKeyHandleByPub");
 	/*---	First, check if it's actually loaded now or was previously loaded */
 	*phKeyTCSI = getTCSKeyHandleByPub(&myKey.pubKey);
-	LogData("TCSKeyHandle is", *phKeyTCSI);
-	destroy_key_refs(&myKey);
+	LogDebugFn("TCSKeyHandle is 0x%x", *phKeyTCSI);
+	// XXX destroy_key_refs(&myKey); XXX
 
 	if (*phKeyTCSI != NULL_TCS_HANDLE) {
+		LogDebugFn1("calling getSlotByHandle");
 		/* The key was at least previously loaded, now check if its loaded now */
 		if (getSlotByHandle(*phKeyTCSI) != NULL_TPM_HANDLE) {
 			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
 				LogError1("Error marking key as loaded");
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
+			LogDebugFn1("Success, key is loaded.");
 			/* its loaded now */
 			return TSS_SUCCESS;
 		}
+		LogDebugFn1("Key not loaded.");
 	}
 
+	LogDebugFn1("calling getParentUUIDByUUID");
 	/*---	Get my parent's UUID.  Since My key is registered, my parent should be as well. */
 	if ((result = getParentUUIDByUUID(KeyUUID, &parentUuid)))
 		return TCSERR(TCS_E_KM_LOADFAILED);
 
-	/*---	Get the parentPublic key from the mem cache.
-	 * If this is NULL, the parent isn't loaded yet
-	 */
+	LogDebugFn1("calling getPubByUuid");
+	/* Get the parentPublic key from the mem cache.
+	 * If this is NULL, the parent isn't loaded yet */
 	parentPub = getPubByUuid(&parentUuid);
 
 	/*********************************************************************
@@ -603,24 +624,38 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	If no parentPublic information is in the cache, then need to load the parent. */
 	if (parentPub == NULL) {
+		LogDebugFn1("calling TCSP_LoadKeyByUUID_Internal for parent's UUID");
 		/*---	Load the parent by it's UUID */
 		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, &parentUuid,
-					NULL, &parentTCSKeyHandle)))
+							  pLoadKeyInfo, &parentTCSKeyHandle)))
 			return result;
 	}
 	/*---	Parent is already loaded, or was loaded at some time */
 	else {
+		LogDebugFn1("calling LoadKeyShim");
 		if ((result = LoadKeyShim(hContext, parentPub, &parentUuid, &parentKeySlot)))
 			return result;
 		parentTCSKeyHandle = getAnyHandleBySlot(parentKeySlot);
 	}
+	LogDebugKey(myKey);
+	LogDebugFn1("calling TCSP_LoadKeyByBlob_Internal");
 	/*******************************************************
 	 * If no errors have happend up till now, then the parent is loaded and ready for use.
 	 * The parent's TCS Handle should be in parentTCSKeyHandle.
 	 ******************************************************/
-	return TCSP_LoadKeyByBlob_Internal(hContext,
-			parentTCSKeyHandle,
-			keySize, keyBlob, NULL, phKeyTCSI, &keyslot);
+	if ((result = TCSP_LoadKeyByBlob_Internal(hContext, parentTCSKeyHandle,
+						  keySize, keyBlob,
+						  NULL,//&pLoadKeyInfo->authData,
+						  phKeyTCSI, &keyslot))) {
+		LogDebugFn("TCSP_LoadKeyByBlob_Internal returned 0x%x", result);
+#if 0
+		if (result == TCPA_E_AUTHFAIL) {
+			/* set up a load key info struct */
+		}
+#endif
+	}
+
+	return result;
 }
 
 TSS_RESULT
