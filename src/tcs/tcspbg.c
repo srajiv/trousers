@@ -262,7 +262,6 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
-	TSS_UUID *uuidKeyToEvict;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Changeauth");
@@ -325,7 +324,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 		    entityType == TCPA_ET_KEY) {
 			LogDebug1("entity type is a key.  Check if storage/knowledge must be updated");
 			/*---	Compare the EncData against the TCS tables */
-
+#if 0
 			/*---	Check PS */
 			LogDebug1("Checking PS");
 			uuidKeyToEvict = getUUIDByEncData(encData);
@@ -333,7 +332,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 				LogDebug1("UUID is not NULL, replace storage");
 				replaceEncData_PS(*uuidKeyToEvict, encData, *outData);
 			}
-
+#endif
 			tcsKeyHandleToEvict = getTCSKeyHandleByEncData(encData); /*    always 2K for keys */
 			LogDebug("tcsKeyHandle being evicted is %.8X", tcsKeyHandleToEvict);
 			/*---	If it was found in knowledge, replace it */
@@ -538,9 +537,9 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_CERTIFY_INFO certifyInfo;
 	TCPA_KEY tempKey;
 	UINT32 tempSize;
+	TSS_UUID *uuidKeyToEvict;
 #endif
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
-	TSS_UUID *uuidKeyToEvict;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering ChangeAuthAsymFinish");
@@ -609,14 +608,14 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		    entityType == TCPA_ET_KEY) {
 			/*---	Compare the EncData against the TCS tables */
 			tcsKeyHandleToEvict = getTCSKeyHandleByEncData(encDataIn);	/*  always 2K for keys */
-
+#if 0
 			/*---	Check PS */
 			uuidKeyToEvict = getUUIDByEncData(encDataIn);
 			if (uuidKeyToEvict != NULL) {
 				replaceEncData_PS(*uuidKeyToEvict,
 						  encDataIn, *encDataOut);
 			}
-
+#endif
 			/*---	If it was found in knowledge, replace it */
 			if (tcsKeyHandleToEvict != 0) {
 				key_mgr_evict(hContext, tcsKeyHandleToEvict);
