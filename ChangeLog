@@ -1,3 +1,4 @@
+* TROUSERS_0_2_3
 
  - SF#1291256 bugs fixed. A UINT16 was being passed instead
  of a UINT32 to TCS_LoadKeyByBlob_Internal.
