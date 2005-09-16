@@ -2,7 +2,7 @@
 # configure.in for the trousers project
 #
 
-AC_INIT(trousers, 0.2.2, trousers-tech@lists.sf.net)
+AC_INIT(trousers, 0.2.3, trousers-tech@lists.sf.net)
 # compute $target
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(1.6.3)
