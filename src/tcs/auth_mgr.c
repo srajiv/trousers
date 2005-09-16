@@ -153,10 +153,10 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 		    auth_mgr.auth_mapper[i].ctx == tcs_handle) {
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
 			if (result == TCPA_E_INVALID_AUTHHANDLE) {
-				LogError("Tried to close an invalid auth handle: %x",
+				LogDebug("Tried to close an invalid auth handle: %x",
 						auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
-				LogError("TPM_TerminateHandle returned %d", result);
+				LogDebug("TPM_TerminateHandle returned %d", result);
 			}
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
@@ -197,10 +197,10 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle)
 		    auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
 			if (result == TCPA_E_INVALID_AUTHHANDLE) {
-				LogError("Tried to close an invalid auth handle: %x",
+				LogDebug("Tried to close an invalid auth handle: %x",
 						auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
-				LogError("TPM_TerminateHandle returned %d", result);
+				LogDebug("TPM_TerminateHandle returned %d", result);
 			}
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
