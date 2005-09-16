@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -110,14 +110,14 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *
 	switch (mode) {
 		case TSS_SECRET_MODE_CALLBACK:
 			result = obj_policy_do_hmac(hPolicy, TRUE,
-					auth->fContinueAuthSession,
-					FALSE,
-					20,
-					auth->NonceEven.nonce,
-					auth->NonceOdd.nonce,
-					NULL, NULL, 20,
-					hashDigest->digest,
-					(BYTE *)&auth->HMAC);
+						    auth->fContinueAuthSession,
+						    FALSE,
+						    20,
+						    auth->NonceEven.nonce,
+						    auth->NonceOdd.nonce,
+						    NULL, NULL, 20,
+						    hashDigest->digest,
+						    (BYTE *)&auth->HMAC);
 			break;
 		case TSS_SECRET_MODE_SHA1:
 		case TSS_SECRET_MODE_PLAIN:
@@ -203,14 +203,15 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		if ((result = obj_policy_get_secret(hMigrationPolicy, &migSecret)))
 			return result;
 
-		if ((result = OSAP_Calc(tcsContext, osapType, osapData, keySecret.authdata,
-				       usageSecret.authdata,
-				       migSecret.authdata,
-				       encAuthUsage, encAuthMig, sharedSecret, auth)))
+		if ((result = OSAP_Calc(tcsContext, osapType, osapData,
+					keySecret.authdata, usageSecret.authdata,
+					migSecret.authdata, encAuthUsage,
+					encAuthMig, sharedSecret, auth)))
 			return result;
 	} else {
-		if ((result = TCSP_OSAP(tcsContext, osapType, osapData, auth->NonceOdd,
-				  &auth->AuthHandle, &auth->NonceEven, nonceEvenOSAP)))
+		if ((result = TCSP_OSAP(tcsContext, osapType, osapData,
+					auth->NonceOdd,	&auth->AuthHandle,
+					&auth->NonceEven, nonceEvenOSAP)))
 			return result;
 
 		if ((result = obj_policy_do_xor(hPolicy, NULL_HOBJECT, hKey,
@@ -257,16 +258,16 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 
 	if (keyMode == TSS_SECRET_MODE_CALLBACK) {
 		if ((result = obj_policy_do_hmac(hPolicy,
-						TRUE,
-						auth->fContinueAuthSession,
-						TRUE,
-						20,
-						auth->NonceEven.nonce,
-						NULL,
-						nonceEvenOSAP->nonce,
-						auth->NonceOdd.nonce, 20,
-						hashDigest,
-						(BYTE *)&auth->HMAC)))
+						 TRUE,
+						 auth->fContinueAuthSession,
+						 TRUE,
+						 20,
+						 auth->NonceEven.nonce,
+						 NULL,
+						 nonceEvenOSAP->nonce,
+						 auth->NonceOdd.nonce, 20,
+						 hashDigest,
+						 (BYTE *)&auth->HMAC)))
 			return result;
 	} else {
 		HMAC_Auth(sharedSecret, hashDigest, auth);
@@ -317,16 +318,16 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			return TSPERR(TSS_E_TSP_AUTHFAIL);
 	} else {
 		if ((result = obj_policy_do_hmac(hPolicy,
-						0,
-						auth->fContinueAuthSession,
-						TRUE,
-						20,
-						auth->NonceEven.nonce,
-						NULL,
-						nonceEvenOSAP->nonce,
-						auth->NonceOdd.nonce, 20,
-						hashDigest,
-						(BYTE *)&auth->HMAC)))
+						 0,
+						 auth->fContinueAuthSession,
+						 TRUE,
+						 20,
+						 auth->NonceEven.nonce,
+						 NULL,
+						 nonceEvenOSAP->nonce,
+						 auth->NonceOdd.nonce, 20,
+						 hashDigest,
+						 (BYTE *)&auth->HMAC)))
 			return result;
 	}
 
@@ -443,16 +444,17 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		*encOwnerAuthLength = 256;
 		*encSRKAuthLength = 256;
 		if ((result = obj_policy_do_takeowner(hOwnerPolicy, hTPM,
-						hEndorsementPubKey, *encOwnerAuthLength,
-						encOwnerAuth)))
+						      hEndorsementPubKey,
+						      *encOwnerAuthLength,
+						      encOwnerAuth)))
 			return result;
 	}
 
 	if ((result = Tspi_GetAttribData(hKeySRK,
-				    TSS_TSPATTRIB_KEY_BLOB,
-				    TSS_TSPATTRIB_KEYBLOB_BLOB,
-				    &srkKeyBlobLength,
-				    &srkKeyBlob)))
+					 TSS_TSPATTRIB_KEY_BLOB,
+					 TSS_TSPATTRIB_KEYBLOB_BLOB,
+					 &srkKeyBlobLength,
+					 &srkKeyBlob)))
 		return result;
 
 	/* Authorizatin Digest Calculation */
