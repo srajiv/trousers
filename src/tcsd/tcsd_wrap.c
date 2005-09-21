@@ -3776,7 +3776,7 @@ TSS_RESULT
 getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 {
 	struct tsp_packet tsp_data;
-	BYTE tmp_data[1024];
+	BYTE tmp_data[8192];
 	UINT16 offset = 0, tmp_offset;
 	UINT32 totalSize;
 	UINT32 result, operation_result;
@@ -3828,7 +3828,7 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 		LoadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)*hdr, tmp_data, NULL);
 
 		tmp_offset = 0;
-		if (totalSize - offset > 1024)
+		if (totalSize - offset > 8192)
 			LogError("%s: ************** ERROR ***********************", __FUNCTION__);
 		LoadBlob(&tmp_offset, totalSize - offset, tmp_data, &((*hdr)->data), NULL);
 		LoadBlob(&offset, totalSize - offset, (BYTE *)*hdr, tmp_data, NULL);
