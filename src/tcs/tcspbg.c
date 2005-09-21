@@ -1650,33 +1650,53 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	UINT16 offset;
 	TSS_RESULT result;
-	UINT32 paramSize;
+	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 5;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering get random");
+	LogDebugFn("%u bytes", *bytesRequested);
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, *bytesRequested, txBlob, "requested");
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetRandom, txBlob);
+	do {
+		offset = 10;
+		LoadBlob_UINT32(&offset, *bytesRequested - totalReturned,
+				txBlob, "requested");
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetRandom,
+				txBlob);
 
-	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
+		if ((result = req_mgr_submit_req(txBlob)))
+			return result;
 
-	offset = 10;
-	result = UnloadBlob_Header(txBlob, &paramSize);
-	if (!result) {
-		UnloadBlob_UINT32(&offset, bytesRequested, txBlob, "random bytes size");
-		*randomBytes = getSomeMemory(*bytesRequested, hContext);
-		if (*randomBytes == NULL) {
-			LogError("malloc of %d bytes failed.", *bytesRequested);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+		offset = 10;
+		result = UnloadBlob_Header(txBlob, &paramSize);
+		if (!result) {
+			UnloadBlob_UINT32(&offset, &bytesReturned, txBlob,
+					  "random bytes size");
+
+			LogDebugFn("received %u bytes from the TPM",
+				   bytesReturned);
+
+			*randomBytes = realloc(*randomBytes,
+					       totalReturned + bytesReturned);
+			if (*randomBytes == NULL) {
+				LogError("malloc of %d bytes failed.",
+					 bytesReturned);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			UnloadBlob(&offset, totalReturned + bytesReturned,
+				   txBlob, *randomBytes, "random bytes");
+			totalReturned += bytesReturned;
 		}
-		UnloadBlob(&offset, *bytesRequested, txBlob, *randomBytes, "random bytes");
+	} while (totalReturned < *bytesRequested && retries--);
+
+	if (totalReturned != *bytesRequested) {
+		LogDebugFn("only %u bytes recieved from TPM after 5 tries",
+			   totalReturned);
+		free(*randomBytes);
+		result = TCSERR(TSS_E_FAIL);
 	}
-	LogResult("get random", result);
+
 	return result;
 }
 
