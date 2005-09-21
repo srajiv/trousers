@@ -1,6 +1,6 @@
 lib_LTLIBRARIES=libtspi.la
 
-libtspi_la_LIBADD=../trspi/libtrousers.a
+libtspi_la_LIBADD=../trspi/libtrousers.la
 
 # On setting -version-info, from the libtool manual:
 #
