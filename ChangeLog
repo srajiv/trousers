@@ -1,3 +1,12 @@
+
+ - increased the size of the return buffer from TCS to
+ TSP to 8K, so that larger requests won't fail.
+ - added a loop to TCSP_GetRandom_Internal to try several
+ (currently 5) times to get the number of requested bytes
+ from the TPM. Since the TSP has no way to tell an
+ application that a single request failed, this will help
+ improve the odds of a large request succeeding.
+
 * TROUSERS_0_2_3
 
  - SF#1291256 bugs fixed. A UINT16 was being passed instead
