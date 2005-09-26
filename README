@@ -1,11 +1,12 @@
-
 trousers README
 
   Trousers is an open-source TCG Software Stack (TSS), released under
 the Common Public License. Trousers aims to be compliant with the
 current (1.1b) and upcoming (1.2) TSS specifications available from
 the Trusted Computing Group website:
-http://www.trustedcomputinggroup.org.
+
+http://www.trustedcomputinggroup.org
+
 
 BUILD REQUIREMENTS
 
@@ -22,6 +23,7 @@ is not fully functional.
   openssl-0.9.7 or newer
   openssl-devel-0.9.7 or newer
   pthreads library (glibc-devel)
+
 
 BUILDING the TSS
 
@@ -54,11 +56,12 @@ BUILDING the TSS
   By default the build will place everything in /usr/local. To install
 in a slightly more predictable place, use `./configure --prefix=/usr`.
 
+
 ARCHITECTURE
 
   This TSS implementation has several components.
 
-  A) The TCS Daemon - A user space daemon who should be (according to
+  A) The TCS Daemon - A user space daemon that should be (according to
      the TSS spec) the only portal to the TPM device driver. At boot
      time, the TCS Daemon should be started, it should open the TPM
      device driver and from that point on, all requests to the TPM
@@ -71,8 +74,8 @@ ARCHITECTURE
      commicating with the application and the TCSD and transparently
      contacts the TCSD whenever necessary
 
-  C) Persistant storage files - TSS's have 2 different kinds of
-     'persistant' storage. 'User' persistant storage has the lifetime
+  C) Persistent storage files - TSS's have 2 different kinds of
+     'persistent' storage. 'User' persistent storage has the lifetime
      of that of the application using it (not very persistent, IMO)
      and therefore is destroyed when an application exits.  User PS is
      controlled by the TSP of the application.  'System' persistent
@@ -85,6 +88,7 @@ ARCHITECTURE
      when ownership of the TPM is first taken.
 
   D) A config file. By default located in $prefix/etc/tcsd.conf.
+
 
 RUNNING the TSS
 
@@ -117,8 +121,8 @@ udev.permissions file (usually in /etc/udev somewhere):
   # startproc -u tss /usr/local/sbin/tcsd
 
   You can really just ignore this RUNNING section and run everything
-as root, with a root owned device and so on, but the exploitability of
-the tcsd at this point is still in question, considering its reachable
+as root, with a root owned device and so on, but the security of the
+tcsd at this point is still in question, considering it's reachable
 over the internet.
 
   At this point your apps should be ready to run!
@@ -127,6 +131,7 @@ over the internet.
 your /etc/ld.so.conf, this won't make a difference. You may need to
 manually add it and run ldconfig as root to allow your apps to link at
 run time to libtspi.so.
+
 
 BUILDING a TSS RPM
 
