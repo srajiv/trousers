@@ -1,15 +1,16 @@
 
 trousers README
 
-  Trousers is an open-source TCG Software Stack (TSS), released under the Common Public
-License. Trousers aims to be compliant with the current (1.1b) and upcoming (1.2)
-TSS specifications available from the Trusted Computing Group website:
+  Trousers is an open-source TCG Software Stack (TSS), released under
+the Common Public License. Trousers aims to be compliant with the
+current (1.1b) and upcoming (1.2) TSS specifications available from
+the Trusted Computing Group website:
 http://www.trustedcomputinggroup.org.
 
 BUILD REQUIREMENTS
 
-  Currently this software is BETA quality and will build, however it is not
-fully functional.
+  Currently this software is BETA quality and will build, however it
+is not fully functional.
 
   Packages needed to build:
 
@@ -26,53 +27,62 @@ BUILDING the TSS
 
   02/01/05: Right now there are 2 ways to get the TSS up and running:
 
-  A Grab the source code for an older version of the TPM device driver from here:
-    http://www.research.ibm.com/gsal/tcpa/TPM-2.0.tar.gz, configure, make, make
-    install in the tpm-2.0 directory of that archive, then follow the instructions
-    under RUNNING The TSS, below.
+  A Grab the source code for an older version of the TPM device driver
+    from here:
+
+    http://www.research.ibm.com/gsal/tcpa/TPM-2.0.tar.gz, configure,
+    make, make install in the tpm-2.0 directory of that archive, then
+    follow the instructions under RUNNING The TSS, below.
 
     or,
 
-  B Build and install the latest TPM device driver from sf.net/projects/tpmdd
-    either compiled in or loaded as a module. UPDATE: This driver is now included
-    in the vanilla 2.6.12 kernel!  If you are doing this, trousers should just work
-    after a vanilla build. Follow the build instructions below and read RUNNING the
-    TSS, below.
+  B Build and install the latest TPM device driver from
+    sf.net/projects/tpmdd either compiled in or loaded as a
+    module. UPDATE: This driver is now included in the vanilla 2.6.12
+    kernel!  If you are doing this, trousers should just work after a
+    vanilla build. Follow the build instructions below and read
+    RUNNING the TSS, below.
 
   To build trousers after you have the device driver installed:
 
   $ sh bootstrap.sh
-  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] [--enable-gcov]
+  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] \
+                [--enable-gcov]
   $ make
   $ make install
 
-  By default the build will place everything in /usr/local. To install in a
-slightly more predictable place, use `./configure --prefix=/usr`.
+  By default the build will place everything in /usr/local. To install
+in a slightly more predictable place, use `./configure --prefix=/usr`.
 
 ARCHITECTURE
 
   This TSS implementation has several components.
 
-  A) The TCS Daemon - A user space daemon who should be (according to the TSS spec)
-  the only portal to the TPM device driver. At boot time, the TCS Daemon should be
-  started, it should open the TPM device driver and from that point on, all
-  requests to the TPM should go through the TSS stack. The TCSD manages TPM
-  resources and handles requests from TSP's both local and remote.
+  A) The TCS Daemon - A user space daemon who should be (according to
+     the TSS spec) the only portal to the TPM device driver. At boot
+     time, the TCS Daemon should be started, it should open the TPM
+     device driver and from that point on, all requests to the TPM
+     should go through the TSS stack. The TCSD manages TPM resources
+     and handles requests from TSP's both local and remote.
 
-  B) The TSP shared library - The TSP (TCG Service Provider) is a shared library
-  that enables applications to talk to TCSD's both locally and remotely. The TSP
-  also manages resources used in commicating with the application and the TCSD
-  and transparently contacts the TCSD whenever necessary
+  B) The TSP shared library - The TSP (TCG Service Provider) is a
+     shared library that enables applications to talk to TCSD's both
+     locally and remotely. The TSP also manages resources used in
+     commicating with the application and the TCSD and transparently
+     contacts the TCSD whenever necessary
 
-  C) Persistant storage files - TSS's have 2 different kinds of 'persistant'
-  storage. 'User' persistant storage has the lifetime of that of the application
-  using it (not very persistent, IMO) and therefore is destroyed when an application
-  exits.  User PS is controlled by the TSP of the application.  'System' persistent
-  storage is controlled by the TCS and stays valid across application lifetimes, TCSD
-  restarts and system resets. Data registered in system PS stays valid until an
-  application requests that it be removed. User PS files are by default stored as
-  /var/lib/tpm/user.{pid} and the system PS file by default is /var/lib/tpm/system.data. The
-  system PS file is initially created when ownership of the TPM is first taken.
+  C) Persistant storage files - TSS's have 2 different kinds of
+     'persistant' storage. 'User' persistant storage has the lifetime
+     of that of the application using it (not very persistent, IMO)
+     and therefore is destroyed when an application exits.  User PS is
+     controlled by the TSP of the application.  'System' persistent
+     storage is controlled by the TCS and stays valid across
+     application lifetimes, TCSD restarts and system resets. Data
+     registered in system PS stays valid until an application requests
+     that it be removed. User PS files are by default stored as
+     /var/lib/tpm/user.{pid} and the system PS file by default is
+     /var/lib/tpm/system.data. The system PS file is initially created
+     when ownership of the TPM is first taken.
 
   D) A config file. By default located in $prefix/etc/tcsd.conf.
 
@@ -80,8 +90,9 @@ RUNNING the TSS
 
   Before running your app:
 
-  If you're using the device driver from the IBM research site (section A of BUILDING),
-you'll need to do the following to create a device node:
+  If you're using the device driver from the IBM research site
+(section A of BUILDING), you'll need to do the following to create a
+device node:
 
   1) Create the device file for your tpm
   # /bin/mknod /dev/tpm c 10 224
@@ -91,9 +102,9 @@ you'll need to do the following to create a device node:
   3) load the tpm device driver:
   # modprobe tpm
 
-  If you're using the device driver from the tpmdd project and have udev enabled, you
-need to add the following line to your udev.permissions file (usually in /etc/udev
-somewhere):
+  If you're using the device driver from the tpmdd project and have
+udev enabled, you need to add the following line to your
+udev.permissions file (usually in /etc/udev somewhere):
 
   tpm[0-9]:tss:tss:0600
 
@@ -105,16 +116,17 @@ somewhere):
   start the TCS Core Services daemon, by default /usr/local/sbin/tcsd.
   # startproc -u tss /usr/local/sbin/tcsd
 
-  You can really just ignore this RUNNING section and run everything as root, with
-a root owned device and so on, but the exploitability of the tcsd at this point is
-still in question, considering its reachable over the internet.
+  You can really just ignore this RUNNING section and run everything
+as root, with a root owned device and so on, but the exploitability of
+the tcsd at this point is still in question, considering its reachable
+over the internet.
 
   At this point your apps should be ready to run!
 
-  'make install' will run ldconfig, but if /usr/local/lib is not in your
-/etc/ld.so.conf, this won't make a difference. You may need to manually
-add it and run ldconfig as root to allow your apps to link at run time
-to libtspi.so.
+  'make install' will run ldconfig, but if /usr/local/lib is not in
+your /etc/ld.so.conf, this won't make a difference. You may need to
+manually add it and run ldconfig as root to allow your apps to link at
+run time to libtspi.so.
 
 BUILDING a TSS RPM
 
@@ -122,8 +134,6 @@ BUILDING a TSS RPM
  # ./configure --prefix=/usr
  # cd ..
  # mv trousers trousers-${version}
- # tar zcvf /usr/src/packages/SOURCES/trousers-${version}.tar.gz trousers-${version}
+ # tar zcvf /usr/src/packages/SOURCES/trousers-${version}.tar.gz \
+            trousers-${version}
  # rpmbuild -bb trousers-${version}/dist/trousers.spec
-
-EOF
-
