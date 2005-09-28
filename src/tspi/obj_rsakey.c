@@ -1239,8 +1239,8 @@ rsakey_free(struct tr_rsakey_obj *rsakey)
 	free(rsakey);
 }
 
-/* remove an individual rsakey object from the rsakey list with handle
- * equal to hObject */
+/* Remove an individual rsakey object from the rsakey list with handle
+ * equal to hObject. Clean up the TSP's key handle table. */
 TSS_RESULT
 obj_rsakey_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
@@ -1255,6 +1255,8 @@ obj_rsakey_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 			/* validate tspContext */
 			if (obj->tspContext != tspContext)
 				break;
+
+			remove_key_handle(hObject);
 
 			rsakey_free(obj->data);
 			if (prev)
