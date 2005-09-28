@@ -403,6 +403,38 @@ addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+remove_key_handle(TSS_HKEY tsp_handle)
+{
+	TCSKeyHandleContainer *tcs = NULL;
+	TSPKeyHandleContainer *tsp_walker, *tsp_prev;
+
+	pthread_mutex_lock(&keylist_lock);
+
+	for (tcs = glKeyHandleManager; tcs; next(tcs)) {
+		tsp_prev = NULL;
+		for (tsp_walker = tcs->tspHandles; tsp_walker; 
+		     next(tsp_walker)) {
+			if (tsp_walker->tspKeyHandle == tsp_handle) {
+				/* Remove the walker from the list and
+				 * free its memory */
+				if (tsp_prev) {
+					tsp_prev->next = tsp_walker->next;
+				} else {
+					tcs->tspHandles = tsp_walker->next;
+				}
+				free(tsp_walker);
+				break;
+			}
+			tsp_prev = tsp_walker;
+		}
+	}
+
+	pthread_mutex_unlock(&keylist_lock);
+
+	return TSS_SUCCESS;
+}
+
 TCS_KEY_HANDLE
 getTCSKeyHandle(TSS_HKEY tspHandle)
 {
