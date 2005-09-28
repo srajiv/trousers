@@ -1,4 +1,7 @@
 
+ - Accepted Halcrow's patch to add a TSP key object
+ removal function, invoked at object close time.
+ This was SF BUG#1276133.
  - increased the size of the return buffer from TCS to
  TSP to 8K, so that larger requests won't fail.
  - added a loop to TCSP_GetRandom_Internal to try several
