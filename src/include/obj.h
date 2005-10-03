@@ -220,7 +220,7 @@ TSS_RESULT obj_rsakey_set_ss(TSS_HKEY, UINT32);
 TSS_RESULT obj_rsakey_set_num_primes(TSS_HKEY, UINT32);
 TSS_RESULT obj_rsakey_get_num_primes(TSS_HKEY, UINT32 *);
 TSS_RESULT obj_rsakey_get_flags(TSS_HKEY, UINT32 *);
-TSS_RESULT obj_rsakey_get_length(TSS_HKEY, UINT32 *);
+TSS_RESULT obj_rsakey_get_size(TSS_HKEY, UINT32 *);
 TSS_BOOL   obj_rsakey_is_migratable(TSS_HKEY);
 TSS_BOOL   obj_rsakey_is_redirected(TSS_HKEY);
 TSS_BOOL   obj_rsakey_is_volatile(TSS_HKEY);
