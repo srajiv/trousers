@@ -1,4 +1,9 @@
 
+ -Fixes for SF BUG#1312194, and SF BUG#1312196.  Get
+ Attribs for key usage and size were not being returned
+ correctly. Imported values for size from the TSS 1.2
+ header files and translated TPM <-> TSP values for
+ key usage in the get attrib calls.
  - Accepted Halcrow's patch to add a TSP key object
  removal function, invoked at object close time.
  This was SF BUG#1276133.
