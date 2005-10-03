@@ -880,15 +880,6 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_INFO) {
 			switch (subFlag) {
 				case TSS_TSPATTRIB_KEYINFO_USAGE:
-					if (ulAttrib != TSS_KEYUSAGE_BIND &&
-					    ulAttrib != TSS_KEYUSAGE_IDENTITY &&
-					    ulAttrib != TSS_KEYUSAGE_LEGACY &&
-					    ulAttrib != TSS_KEYUSAGE_SIGN &&
-					    ulAttrib != TSS_KEYUSAGE_STORAGE &&
-					    ulAttrib != TSS_KEYUSAGE_AUTHCHANGE) {
-						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
-					}
-
 					result = obj_rsakey_set_usage(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_KEYINFO_MIGRATABLE:
@@ -1067,7 +1058,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					return result;
 				break;
 			case TSS_TSPATTRIB_KEYINFO_SIZE:
-				if ((result = obj_rsakey_get_length(hObject, pulAttrib)))
+				if ((result = obj_rsakey_get_size(hObject, pulAttrib)))
 					return result;
 				break;
 			default:
@@ -1075,7 +1066,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			}
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_KEYSIZE) {
-				if ((result = obj_rsakey_get_length(hObject, pulAttrib)))
+				if ((result = obj_rsakey_get_size(hObject, pulAttrib)))
 					return result;
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_PRIMES) {
 				if ((result = obj_rsakey_get_num_primes(hObject, pulAttrib)))
