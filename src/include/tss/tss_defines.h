@@ -406,6 +406,16 @@ typedef UINT32  TSS_HMACHANDLE;        // handle to a HMAC session
 //
 
 //
+// key size definitions
+//
+#define TSS_KEY_SIZEVAL_512BIT      (0x0200)
+#define TSS_KEY_SIZEVAL_1024BIT     (0x0400)
+#define TSS_KEY_SIZEVAL_2048BIT     (0x0800)
+#define TSS_KEY_SIZEVAL_4096BIT     (0x1000)
+#define TSS_KEY_SIZEVAL_8192BIT     (0x2000)
+#define TSS_KEY_SIZEVAL_16384BIT    (0x4000)
+
+//
 //   This table defines the algo id's
 //      Values intentional moved away from corresponding TPM values to avoid possible misuse
 //
