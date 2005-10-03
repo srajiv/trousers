@@ -175,8 +175,8 @@ out:
 
 TSS_RESULT
 Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
-	   unsigned char *pModulus, int iKeyLength,
-	   BYTE *pSignature, UINT32 sig_len)
+	     unsigned char *pModulus, int iKeyLength,
+	     BYTE *pSignature, UINT32 sig_len)
 {
 	int rv, nid;
 	unsigned char exp[] = { 0x01, 0x00, 0x01 }; /* 65537 hex */
