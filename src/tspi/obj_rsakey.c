@@ -246,9 +246,14 @@ obj_rsakey_set_pstype(TSS_HKEY hKey, UINT32 type)
 	return TSS_SUCCESS;
 }
 
+/* WARN: Nobody should call this function directly except for the
+ * Get/Set Attrib functions. The TCPA_KEY structure wants values
+ * for keyUsage to be TPM_KEY_* values, and this function translates
+ * to TSS_KEYUSAGE_* values for passing to an app. */
 TSS_RESULT
 obj_rsakey_get_usage(TSS_HKEY hKey, UINT32 *usage)
 {
+	TSS_RESULT result = TSS_SUCCESS;
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 
@@ -256,16 +261,44 @@ obj_rsakey_get_usage(TSS_HKEY hKey, UINT32 *usage)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*usage = rsakey->tcpaKey.keyUsage;
+
+	switch (rsakey->tcpaKey.keyUsage) {
+		case TPM_KEY_SIGNING:
+			*usage = TSS_KEYUSAGE_SIGN;
+			break;
+		case TPM_KEY_BIND:
+			*usage = TSS_KEYUSAGE_BIND;
+			break;
+		case TPM_KEY_LEGACY:
+			*usage = TSS_KEYUSAGE_LEGACY;
+			break;
+		case TPM_KEY_AUTHCHANGE:
+			*usage = TSS_KEYUSAGE_AUTHCHANGE;
+			break;
+		case TPM_KEY_IDENTITY:
+			*usage = TSS_KEYUSAGE_IDENTITY;
+			break;
+		case TPM_KEY_STORAGE:
+			*usage = TSS_KEYUSAGE_STORAGE;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
+/* WARN: Nobody should call this function directly except for the
+ * Get/Set Attrib functions. The TCPA_KEY structure wants values
+ * for keyUsage to be TPM_KEY_* values, and this function translates
+ * to TSS_KEYUSAGE_* values for passing to an app. */
 TSS_RESULT
 obj_rsakey_set_usage(TSS_HKEY hKey, UINT32 usage)
 {
+	TSS_RESULT result = TSS_SUCCESS;
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 
@@ -273,11 +306,34 @@ obj_rsakey_set_usage(TSS_HKEY hKey, UINT32 usage)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	rsakey->tcpaKey.keyUsage = usage;
+
+	switch (usage) {
+		case TSS_KEYUSAGE_SIGN:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_SIGNING;
+			break;
+		case TSS_KEYUSAGE_BIND:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_BIND;
+			break;
+		case TSS_KEYUSAGE_LEGACY:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_LEGACY;
+			break;
+		case TSS_KEYUSAGE_AUTHCHANGE:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_AUTHCHANGE;
+			break;
+		case TSS_KEYUSAGE_IDENTITY:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_IDENTITY;
+			break;
+		case TSS_KEYUSAGE_STORAGE:
+			rsakey->tcpaKey.keyUsage = TPM_KEY_STORAGE;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -592,8 +648,12 @@ obj_rsakey_get_flags(TSS_HKEY hKey, UINT32 *flags)
 	return TSS_SUCCESS;
 }
 
+/* WARN: Nobody should call this function directly except for the
+ * Get/Set Attrib functions. The TCPA_KEY structure wants values
+ * for keyLength to be in bytes and this function translates
+ * to TSS_KEY_SIZEVAL_*BIT values for passing to an app. */
 TSS_RESULT
-obj_rsakey_get_length(TSS_HKEY hKey, UINT32 *len)
+obj_rsakey_get_size(TSS_HKEY hKey, UINT32 *len)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
@@ -602,7 +662,21 @@ obj_rsakey_get_length(TSS_HKEY hKey, UINT32 *len)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*len = rsakey->tcpaKey.pubKey.keyLength;
+
+	switch (rsakey->tcpaKey.pubKey.keyLength) {
+		case 512/8:
+			*len = TSS_KEY_SIZEVAL_512BIT;
+			break;
+		case 1024/8:
+			*len = TSS_KEY_SIZEVAL_1024BIT;
+			break;
+		case 2048/8:
+			*len = TSS_KEY_SIZEVAL_2048BIT;
+			break;
+		default:
+			*len = rsakey->tcpaKey.pubKey.keyLength * 8;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
