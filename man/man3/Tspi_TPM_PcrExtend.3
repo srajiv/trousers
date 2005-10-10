@@ -64,8 +64,8 @@ The \fIpbPcrData\fR parameter is a pointer to data to be hashed by the TSS, whic
 be used in the extend operation.
 .SS pPcrEvent
 The \fIpPcrEvent\fR parameter is the TSS_PCR_EVENT structure to be passed to the TCS
-to record the extend event. If \fIpPcrEvent\fR is not NULL, all fields will be filled
-out by the TSS except ulEventLength and rgbEvent, which should be set by the application.
+to record the extend event. If \fIpPcrEvent\fR is not NULL, the application should
+fill out the members of the structure that it cares about.
 .SS pulPcrValueLength
 The \fIpulPcrValueLength\fR parameter receives the length in bytes of the \fIprgbPcrValue\fR parameter.
 .SS prgbPcrValue
