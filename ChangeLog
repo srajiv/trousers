@@ -1,4 +1,6 @@
 
+ - Corrected Tspi_TPM_PcrExtend manpage to state that the
+ application should fill out the TSS_PCR_EVENT structure.
  -Fixes for SF BUG#1312194, and SF BUG#1312196.  Get
  Attribs for key usage and size were not being returned
  correctly. Imported values for size from the TSS 1.2
