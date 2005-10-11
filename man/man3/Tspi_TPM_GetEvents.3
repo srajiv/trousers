@@ -34,9 +34,9 @@ Tspi_TPM_GetEvents\- get a specific number of PCR events for a given index.
 .B #include <tss/tss_structs.h>
 .B #include <tss/tspi.h>
 .sp
-.BI "TSS_RESULT Tspi_TPM_GetEvents(TSS_HTPM " hTPM ",            UINT32         " ulPcrIndex ", "
-.BI "                              UINT32   " ulStartNumber ",   UINT32         " ulEventNumber ", "
-.BI "                              UINT32*  " pulEventNumber "," TSS_PCR_EVENT* " prgPcrEvents ");"
+.BI "TSS_RESULT Tspi_TPM_GetEvents(TSS_HTPM       " hTPM ",            UINT32  " ulPcrIndex ", "
+.BI "                              UINT32         " ulStartNumber ",   UINT32* " pulEventNumber ", "
+.BI "                              TSS_PCR_EVENT* " prgbPcrEvents ");"
 .fi
 .sp
 .ad
@@ -44,25 +44,25 @@ Tspi_TPM_GetEvents\- get a specific number of PCR events for a given index.
 
 .SH "DESCRIPTION"
 .PP
-\fBTspi_TPM_GetEvents\fR provides a specific number of PCR events for a given index. This command only retuns one event at a time.
+\fBTspi_TPM_GetEvents\fR provides a specific number of PCR events for a given index.
 .SH "PARAMETERS"
 .PP
 .SS hTPM
 Handle of the TPM object.
-.PP 
+.PP
 .SS ulPcrIndex
 Index of the PCR to request.
 .PP
 .SS ulStartNumber
 Indext of the first event to request
 .PP
-.SS ulEventNumber
+.SS pulEventNumber
 [IN] Number of elements to request.
-[OUT] Receives number of returned event data structures in prgPcrEvents parameter.
+[OUT] Receives number of returned event data structures in prgbPcrEvents parameter.
 .PP
-.SS prgPcrEvents
+.SS prgbPcrEvents
 Receives a pointer to an array of PCR event data.
-If NULL, only the numberof elements is returned in pulEventNumber parameter.
+If NULL, only the number of elements is returned in pulEventNumber parameter.
 .SH "RETURN CODES"
 .PP
 \fBTspi_TPM_GetEvents\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
