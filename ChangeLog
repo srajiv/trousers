@@ -1,4 +1,6 @@
 
+ - Changed default return value for Tspi_GetAttribUin32 to
+ success.
  - Corrected Tspi_TPM_PcrExtend manpage to state that the
  application should fill out the TSS_PCR_EVENT structure.
  -Fixes for SF BUG#1312194, and SF BUG#1312196.  Get
