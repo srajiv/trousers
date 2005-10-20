@@ -593,10 +593,13 @@ done:
 	return result;
 }
 
+/* return a unicode string to the Tspi_GetAttribData function */
 TSS_RESULT
 obj_policy_get_string(TSS_HPOLICY hPolicy, UINT32 *size, BYTE **data)
 {
 	TSS_RESULT result = TSS_SUCCESS;
+	char *utf_string;
+	UINT32 utf_size;
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
 
@@ -609,15 +612,25 @@ obj_policy_get_string(TSS_HPOLICY hPolicy, UINT32 *size, BYTE **data)
 	if (policy->popupStringLength == 0) {
 		*data = NULL;
 	} else {
-		*data = calloc(1, policy->popupStringLength);
+		utf_size = policy->popupStringLength;
+		utf_string = Trspi_Native_To_UNICODE(policy->popupString,
+						     &utf_size);
+		if (utf_string == NULL) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*data = calloc_tspi(obj->tspContext, utf_size);
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.",
-				 policy->popupStringLength);
+			free(utf_string);
+			LogError("malloc of %d bytes failed.", utf_size);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 
-		memcpy(*data, policy->popupString, *size);
+		*size = utf_size;
+		memcpy(*data, utf_string, utf_size);
+		free(utf_string);
 	}
 
 done:
