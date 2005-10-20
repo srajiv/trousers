@@ -154,6 +154,56 @@ done:
 	return result;
 }
 
+/* This function converts the machine name to a TSS_UNICODE string before
+ * returning it, as Tspi_GetAttribData would like. We could do the conversion
+ * in Tspi_GetAttribData, but we don't have access to the TSP context there */
+TSS_RESULT
+obj_context_get_machine_name_attrib(TSS_HCONTEXT tspContext, UINT32 *size,
+				    BYTE **data)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+	char *utf_string;
+	UINT32 utf_size;
+	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	if (context->machineNameLength == 0) {
+		*data = NULL;
+		*size = 0;
+	} else {
+		utf_size = context->machineNameLength;
+		utf_string = Trspi_Native_To_UNICODE(context->machineName,
+						     &utf_size);
+		if (utf_string == NULL) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*data = calloc_tspi(obj->tspContext, utf_size);
+		if (*data == NULL) {
+			free(utf_string);
+			LogError("malloc of %u bytes failed.", utf_size);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		*size = utf_size;
+		memcpy(*data, utf_string, utf_size);
+		free(utf_string);
+	}
+
+	result = TSS_SUCCESS;
+
+done:
+	obj_list_put(&context_list);
+
+	return result;
+}
+
 TSS_RESULT
 obj_context_set_machine_name(TSS_HCONTEXT tspContext, BYTE *name, UINT32 len)
 {
