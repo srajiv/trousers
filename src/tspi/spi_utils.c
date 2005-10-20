@@ -183,7 +183,6 @@ HMAC_Auth(BYTE * secret, BYTE * Digest, TPM_AUTH * auth)
 	Blob[offset++] = auth->fContinueAuthSession;
 
 	Trspi_HMAC(TSS_HASH_SHA1, 20, secret, offset, Blob, (BYTE *)&auth->HMAC);
-	return;
 }
 
 TSS_RESULT
