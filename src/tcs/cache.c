@@ -996,7 +996,7 @@ getParentPubByPub(TCPA_STORE_PUBKEY *pub)
 			continue;
 		}
 		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
-			if (tmp->parent) {
+			if (tmp->parent && tmp->parent->blob) {
 				ret = &tmp->parent->blob->pubKey;
 				LogDebugFn1("Success");
 			} else {
