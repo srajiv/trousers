@@ -413,7 +413,6 @@ UINT32ToArray(UINT32 i, BYTE * out)
 	out[1] = (BYTE) ((i >> 16) & 0xFF);
 	out[2] = (BYTE) ((i >> 8) & 0xFF);
 	out[3] = (BYTE) (i & 0xFF);
-	return;
 }
 
 void
@@ -421,7 +420,6 @@ UINT16ToArray(UINT16 i, BYTE * out)
 {
 	out[0] = (BYTE) ((i >> 8) & 0xFF);
 	out[1] = (BYTE) (i & 0xFF);
-	return;
 }
 
 UINT32
@@ -555,7 +553,6 @@ LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal,
 #if 0
 	LogInfo("Blob's TPM Ordinal: 0x%x", ordinal);
 #endif
-	return;
 }
 
 TCPA_RESULT
@@ -577,7 +574,6 @@ LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
 	LoadBlob_UINT16(offset, mkAuth->migrationScheme, blob,
 			"mkauth migScheme");
 	LoadBlob(offset, 20, blob, mkAuth->digest.digest, "mkauth digest");
-	return;
 }
 
 void
@@ -588,7 +584,6 @@ UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset,
 	UnloadBlob_UINT16(offset, &mkAuth->migrationScheme, blob,
 			  "mkauth migScheme");
 	UnloadBlob(offset, 20, blob, mkAuth->digest.digest, "mkauth digest");
-	return;
 }
 
 void
@@ -606,7 +601,6 @@ UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, auth->NonceEven.nonce, "Nonce Even");
 	UnloadBlob_BOOL(offset, &auth->fContinueAuthSession, blob, "CAS");
 	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&auth->HMAC, "Auth HMAC");
-	return;
 }
 
 void

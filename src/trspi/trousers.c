@@ -192,7 +192,6 @@ Trspi_LoadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION version)
 	blob[(*offset)++] = version.bMinor;
 	blob[(*offset)++] = version.bRevMajor;
 	blob[(*offset)++] = version.bRevMinor;
-	return;
 }
 
 void
@@ -202,7 +201,6 @@ Trspi_UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
 	out->minor = blob[(*offset)++];
 	out->revMajor = blob[(*offset)++];
 	out->revMinor = blob[(*offset)++];
-	return;
 }
 
 void
@@ -212,7 +210,6 @@ Trspi_LoadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION version)
 	blob[(*offset)++] = version.minor;
 	blob[(*offset)++] = version.revMajor;
 	blob[(*offset)++] = version.revMinor;
-	return;
 }
 
 TSS_RESULT
@@ -492,12 +489,9 @@ Trspi_UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * 
 void
 LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY pubKey)
 {
-
 	LoadBlob_KEY_PARMS(offset, blob, &pubKey.algorithmParms);
 	LoadBlob_UINT32(offset, pubKey.pubKey.keyLength, blob);
 	LoadBlob(offset, pubKey.pubKey.keyLength, blob, pubKey.pubKey.key);
-
-	return;
 }
 
 void
@@ -514,7 +508,6 @@ LoadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify)
 	LoadBlob_BYTE(offset, (BYTE) certify->parentPCRStatus, blob);
 	LoadBlob_UINT32(offset, certify->PCRInfoSize, blob);
 	LoadBlob(offset, certify->PCRInfoSize, blob, certify->PCRInfo);
-	return;
 }
 
 void
