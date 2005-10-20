@@ -275,6 +275,7 @@ TSS_BOOL   obj_context_is_silent(TSS_HCONTEXT);
 TSS_RESULT obj_context_is_connected(TSS_HCONTEXT, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_context_set_policy(TSS_HCONTEXT, TSS_HPOLICY);
 TSS_RESULT obj_context_get_machine_name(TSS_HCONTEXT, UINT32 *, BYTE **);
+TSS_RESULT obj_context_get_machine_name_attrib(TSS_HCONTEXT, UINT32 *, BYTE **);
 TSS_RESULT obj_context_set_machine_name(TSS_HCONTEXT, BYTE *, UINT32);
 TSS_RESULT obj_context_add(TSS_HOBJECT *);
 TSS_RESULT obj_context_get_tcs_context(TSS_HCONTEXT, TCS_CONTEXT_HANDLE *);
