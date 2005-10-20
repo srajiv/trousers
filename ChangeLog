@@ -1,4 +1,7 @@
 
+ - Fix for SF#1332316, Tspi_GetAttribData doesn't always
+ return data alloc'd by TSP. Unicode data returned from the
+ function was being allocated off the TSP heap.
  - Changed default return value for Tspi_GetAttribUin32 to
  success.
  - Corrected Tspi_TPM_PcrExtend manpage to state that the
