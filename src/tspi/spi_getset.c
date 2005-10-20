@@ -1186,7 +1186,6 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
     )
 {
 	TSS_RESULT result;
-	BYTE *string = NULL;
 
 	if (pulAttribDataSize == NULL || prgbAttribData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1279,28 +1278,17 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 		if (attribFlag != TSS_TSPATTRIB_CONTEXT_MACHINE_NAME)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
-		if ((result = obj_context_get_machine_name(hObject,
-					pulAttribDataSize, &string)))
+		if ((result = obj_context_get_machine_name_attrib(hObject,
+								  pulAttribDataSize,
+								  prgbAttribData)))
 			return result;
-
-		if ((*prgbAttribData =
-		    Trspi_Native_To_UNICODE(string, pulAttribDataSize)) == NULL)
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-
-		free(string);
 	} else if (obj_is_policy(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
 		if ((result = obj_policy_get_string(hObject, pulAttribDataSize,
-						    &string)))
+						    prgbAttribData)))
 			return result;
-
-		if ((*prgbAttribData =
-		    Trspi_Native_To_UNICODE(string, pulAttribDataSize)) == NULL)
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-
-		free(string);
 	} else {
 		if (obj_is_tpm(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
