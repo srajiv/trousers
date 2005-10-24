@@ -1,4 +1,6 @@
 
+ - Fixes for SF#1332479: HMAC and XOR callbacks were being
+ passed wrong params.
  - Fix for SF#1334235, uuid data wasn't being set correctly
  when keys were registered or loaded by uuid.
  - Fix for SF#1332316, Tspi_GetAttribData doesn't always
