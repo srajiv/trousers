@@ -1059,7 +1059,7 @@ obj_rsakey_set_uuid(TSS_HKEY hKey, TSS_UUID *uuid)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	memcpy(uuid, &rsakey->uuid, sizeof(TSS_UUID));
+	memcpy(&rsakey->uuid, uuid, sizeof(TSS_UUID));
 
 	obj_list_put(&rsakey_list);
 
