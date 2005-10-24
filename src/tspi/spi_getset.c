@@ -108,10 +108,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
-		    secret_PerformAuth_OSAP(hPolicy, hNewPolicy, hNewPolicy,
-					    hObjectToChange, sharedSecret,
-					    &auth1, digest.digest,
-					    &nonceEvenOSAP)))
+		    secret_PerformAuth_OSAP(hObjectToChange,
+					    TPM_ORD_ChangeAuthOwner, hPolicy,
+					    hNewPolicy, hNewPolicy,
+					    sharedSecret, &auth1,
+					    digest.digest, &nonceEvenOSAP)))
 			return result;
 
 		if ((result = TCSP_ChangeAuthOwner(tcsContext,
@@ -126,7 +127,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					hashBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_ValidateAuth_OSAP(hPolicy, hNewPolicy,
+		if ((result = secret_ValidateAuth_OSAP(hObjectToChange,
+						       TPM_ORD_ChangeAuthOwner,
+						       hPolicy, hNewPolicy,
 						       hNewPolicy,
 						       sharedSecret, &auth1,
 						       digest.digest,
@@ -168,10 +171,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					digest.digest);
 
 			if ((result =
-			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
-						    hNewPolicy, hParentObject,
-						    sharedSecret, &auth1,
-						    digest.digest,
+			    secret_PerformAuth_OSAP(hParentObject,
+						    TPM_ORD_ChangeAuthOwner,
+						    hParentPolicy, hNewPolicy,
+						    hNewPolicy, sharedSecret,
+						    &auth1, digest.digest,
 						    &nonceEvenOSAP)))
 				return result;
 
@@ -191,7 +195,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					digest.digest);
 
 			if ((result =
-			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
+			    secret_ValidateAuth_OSAP(hParentObject,
+						     TPM_ORD_ChangeAuthOwner,
+						     hParentPolicy, hNewPolicy,
 						     hNewPolicy, sharedSecret,
 						     &auth1, digest.digest,
 						     &nonceEvenOSAP)))
@@ -255,15 +261,18 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					digest.digest);
 
 			if ((result =
-			    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
-						    hNewPolicy, hParentObject,
-						    sharedSecret, &auth1,
-						    digest.digest,
+			    secret_PerformAuth_OSAP(hParentObject,
+						    TPM_ORD_ChangeAuth,
+						    hParentPolicy, hNewPolicy,
+						    hNewPolicy, sharedSecret,
+						    &auth1, digest.digest,
 						    &nonceEvenOSAP)))
 				return result;
 
-			if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
-								&auth2))) {
+			if ((result = secret_PerformAuth_OIAP(hObjectToChange,
+							      TPM_ORD_ChangeAuth,
+							      hPolicy, &digest,
+							      &auth2))) {
 				TCSP_TerminateHandle(tcsContext,
 							auth1.AuthHandle);
 				return result;
@@ -290,7 +299,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					digest.digest);
 
 			if ((result =
-			    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
+			    secret_ValidateAuth_OSAP(hParentObject,
+						     TPM_ORD_ChangeAuth,
+						     hParentPolicy, hNewPolicy,
 						     hNewPolicy, sharedSecret,
 						     &auth1, digest.digest,
 						     &nonceEvenOSAP))) {
@@ -372,17 +383,19 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
-		    secret_PerformAuth_OSAP(hParentPolicy, hNewPolicy,
-					    hNewPolicy, hParentObject,
-					    sharedSecret, &auth1,
+		    secret_PerformAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
+					    hParentPolicy, hNewPolicy,
+					    hNewPolicy, sharedSecret, &auth1,
 					    digest.digest, &nonceEvenOSAP))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
 		}
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
-							&auth2))) {
+		if ((result = secret_PerformAuth_OIAP(hObjectToChange,
+						      TPM_ORD_ChangeAuth,
+						      hPolicy, &digest,
+						      &auth2))) {
 			TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
 			free(storedData.sealInfo);
 			free(storedData.encData);
@@ -410,7 +423,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 		if ((result =
-		    secret_ValidateAuth_OSAP(hParentPolicy, hNewPolicy,
+		    secret_ValidateAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
+					     hParentPolicy, hNewPolicy,
 					     hNewPolicy, sharedSecret, &auth1,
 					     digest.digest, &nonceEvenOSAP))) {
 			free(storedData.sealInfo);
@@ -581,7 +595,9 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 					digest.digest);
 
 			if (useAuth) {
-				if ((result = secret_PerformAuth_OIAP(hPolicy,
+				if ((result = secret_PerformAuth_OIAP(hIdentKey,
+								      TPM_ORD_ChangeAuthAsymStart,
+								      hPolicy,
 								      &digest,
 								      &auth))) {
 					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
@@ -756,8 +772,11 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			}
 #endif
 			if (useAuth) {
-				if ((result = secret_PerformAuth_OIAP(hParentPolicy,
-								&digest, &auth))) {
+				if ((result = secret_PerformAuth_OIAP(hParentObject,
+								      TPM_ORD_ChangeAuthAsymFinish,
+								      hParentPolicy,
+								      &digest,
+								      &auth))) {
 					TCSP_TerminateHandle(tcsContext,
 							     auth.AuthHandle);
 					free(encObject);
@@ -940,22 +959,30 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			if (ulAttrib == 0)
 				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 
-			result = obj_policy_set_cb_hmac(hObject, (PVOID)ulAttrib);
+			result = obj_policy_set_cb_hmac(hObject,
+							(PVOID)ulAttrib,
+							(PVOID)subFlag);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC) {
 			if (ulAttrib == 0)
 				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 
-			result = obj_policy_set_cb_xor(hObject, (PVOID)ulAttrib);
+			result = obj_policy_set_cb_xor(hObject,
+						       (PVOID)ulAttrib,
+						       (PVOID)subFlag);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP) {
 			if (ulAttrib == 0)
 				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 
-			result = obj_policy_set_cb_takeowner(hObject, (PVOID)ulAttrib);
+			result = obj_policy_set_cb_takeowner(hObject,
+							     (PVOID)ulAttrib,
+							     (PVOID)subFlag);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM) {
 			if (ulAttrib == 0)
 				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 
-			result = obj_policy_set_cb_changeauth(hObject, (PVOID)ulAttrib);
+			result = obj_policy_set_cb_changeauth(hObject,
+							      (PVOID)ulAttrib,
+							      (PVOID)subFlag);
 		} else if (attribFlag == TSS_TSPATTRIB_POLICY_SECRET_LIFETIME) {
 			if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
 				result = obj_policy_set_lifetime(hObject);

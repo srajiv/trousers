@@ -85,7 +85,10 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob);
 		Trspi_LoadBlob(&offset, keySize, blob, keyBlob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hUnwrappingKey,
+						      TPM_ORD_LoadKey,
+						      hPolicy, &digest,
+						      &auth)))
 			return result;
 		pAuth = &auth;
 	} else {
@@ -153,7 +156,9 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_GetPubKey, hashblob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_GetPubKey,
+						      hPolicy, &digest,
+						      &auth)))
 			return result;
 		pAuth = &auth;
 	} else {
@@ -280,13 +285,18 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	}
 
 	if (useAuthKey) {
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hash, &keyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_CertifyKey,
+						      hPolicy, &hash,
+						      &keyAuth)))
 			return result;
 	} else
 		pKeyAuth = NULL;
 
 	if (useAuthCert) {
-		if ((result = secret_PerformAuth_OIAP(hCertPolicy, &hash, &certAuth)))
+		if ((result = secret_PerformAuth_OIAP(hCertifyingKey,
+						      TPM_ORD_CertifyKey,
+						      hCertPolicy, &hash,
+						      &certAuth)))
 			return result;
 	} else
 		pCertAuth = NULL;
@@ -474,9 +484,11 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 
 	/* ---  do the first part of the OSAP */
 	if ((result =
-	    secret_PerformXOR_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy, hKey,
-				   TCPA_ET_KEYHANDLE, parentTCSKeyHandle,
-				   &encAuthUsage, &encAuthMig, sharedSecret, &auth, &nonceEvenOSAP)))
+	    secret_PerformXOR_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
+				   hWrappingKey, TCPA_ET_KEYHANDLE,
+				   parentTCSKeyHandle, &encAuthUsage,
+				   &encAuthMig, sharedSecret, &auth,
+				   &nonceEvenOSAP)))
 		return result;
 
 	/* ---  Setup the Hash Data for the HMAC */
@@ -488,8 +500,11 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	/* ---  Complete the Auth Structure */
-	if ((result = secret_PerformAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy, hKey,
-				    sharedSecret, &auth, digest.digest, &nonceEvenOSAP)))
+	if ((result = secret_PerformAuth_OSAP(hWrappingKey,
+					      TPM_ORD_CreateWrapKey,
+					      hWrapPolicy, hUsagePolicy,
+					      hMigPolicy, sharedSecret, &auth,
+					      digest.digest, &nonceEvenOSAP)))
 		return result;
 
 	/* ---  Now call the function */
@@ -508,8 +523,12 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateWrapKey, hashBlob);
 	Trspi_LoadBlob(&offset, newKeySize, hashBlob, newKey);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
-	if ((result = secret_ValidateAuth_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
-				     sharedSecret, &auth, digest.digest, &nonceEvenOSAP))) {
+	if ((result = secret_ValidateAuth_OSAP(hWrappingKey,
+					       TPM_ORD_CreateWrapKey,
+					       hWrapPolicy, hUsagePolicy,
+					       hMigPolicy, sharedSecret, &auth,
+					       digest.digest,
+					       &nonceEvenOSAP))) {
 		free(newKey);
 		return result;
 	}
@@ -738,7 +757,9 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	}
 	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hParentPolicy, &digest,
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
+						      TPM_ORD_CreateMigrationBlob,
+						      hParentPolicy, &digest,
 						      &parentAuth))) {
 			free_key_refs(&tcpaKey);
 			free(storedData.sealInfo);
@@ -749,7 +770,10 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	} else {
 		pParentAuth = NULL;
 	}
-	if ((result = secret_PerformAuth_OIAP(hMigratePolicy, &digest, &entityAuth))) {
+	if ((result = secret_PerformAuth_OIAP(hKeyToMigrate,
+					      TPM_ORD_CreateMigrationBlob,
+					      hMigratePolicy, &digest,
+					      &entityAuth))) {
 		free_key_refs(&tcpaKey);
 		free(storedData.sealInfo);
 		free(storedData.encData);
@@ -931,15 +955,15 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hParentPolicy, &digest, &parentAuth)))
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
+						      TPM_ORD_ConvertMigrationBlob,
+						      hParentPolicy, &digest,
+						      &parentAuth)))
 			return result;
 		pParentAuth = &parentAuth;
 	} else {
 		pParentAuth = NULL;
 	}
-
-/* 	if( result = secret_PerformAuth_OIAP( hParentPolicy, digest, &parentAuth )) */
-/* 		return result; */
 
 	if ((result = TCSP_ConvertMigrationBlob(tcsContext, parentHandle, ulMigrationBlobLength,
 				     rgbMigrationBlob, pParentAuth, ulRandomLength, rgbRandom,

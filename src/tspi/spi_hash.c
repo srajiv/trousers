@@ -69,7 +69,9 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 		pPrivAuth = &privAuth;
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &privAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_Sign,
+						      hPolicy, &digest,
+						      &privAuth)))
 			return result;
 	} else {
 		pPrivAuth = NULL;

@@ -65,7 +65,9 @@ popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 }
 
 TSS_RESULT
-secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
+secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
+			TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest,
+			TPM_AUTH *auth)
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -109,9 +111,9 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *
 
 	switch (mode) {
 		case TSS_SECRET_MODE_CALLBACK:
-			result = obj_policy_do_hmac(hPolicy, TRUE,
+			result = obj_policy_do_hmac(hPolicy, hAuthorizedObject,
+						    TRUE, ulPendingFn,
 						    auth->fContinueAuthSession,
-						    FALSE,
 						    20,
 						    auth->NonceEven.nonce,
 						    auth->NonceOdd.nonce,
@@ -140,7 +142,7 @@ secret_PerformAuth_OIAP(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *
 
 TSS_RESULT
 secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
-		       TSS_HPOLICY hMigrationPolicy, TSS_HOBJECT hKey,
+		       TSS_HPOLICY hMigrationPolicy, TSS_HOBJECT hOSAPObject,
 		       UINT16 osapType, UINT32 osapData,
 		       TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
 		       BYTE *sharedSecret, TPM_AUTH * auth, TCPA_NONCE * nonceEvenOSAP)
@@ -214,8 +216,8 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 					&auth->NonceEven, nonceEvenOSAP)))
 			return result;
 
-		if ((result = obj_policy_do_xor(hPolicy, NULL_HOBJECT, hKey,
-						FALSE, 20,
+		if ((result = obj_policy_do_xor(hPolicy, hOSAPObject,
+						hPolicy, TRUE, 20,
 						auth->NonceEven.nonce, NULL,
 						nonceEvenOSAP->nonce,
 						auth->NonceOdd.nonce, 20,
@@ -228,10 +230,11 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 }
 
 TSS_RESULT
-secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
-			TSS_HPOLICY hMigPolicy, TSS_HOBJECT hKey,
-			BYTE sharedSecret[20], TPM_AUTH * auth,
-			BYTE * hashDigest, TCPA_NONCE *nonceEvenOSAP)
+secret_PerformAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
+			TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
+			TSS_HPOLICY hMigPolicy, BYTE sharedSecret[20],
+			TPM_AUTH *auth, BYTE *hashDigest,
+			TCPA_NONCE *nonceEvenOSAP)
 {
 	TSS_RESULT result;
 	UINT32 keyMode, usageMode, migMode;
@@ -257,10 +260,9 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	}
 
 	if (keyMode == TSS_SECRET_MODE_CALLBACK) {
-		if ((result = obj_policy_do_hmac(hPolicy,
-						 TRUE,
+		if ((result = obj_policy_do_hmac(hPolicy, hAuthorizedObject,
+						 TRUE, ulPendingFn,
 						 auth->fContinueAuthSession,
-						 TRUE,
 						 20,
 						 auth->NonceEven.nonce,
 						 NULL,
@@ -286,9 +288,11 @@ secret_PerformAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 }
 
 TSS_RESULT
-secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
+secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
+			 TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			 TSS_HPOLICY hMigPolicy, BYTE sharedSecret[20],
-			 TPM_AUTH * auth, BYTE * hashDigest, TCPA_NONCE *nonceEvenOSAP)
+			 TPM_AUTH *auth, BYTE *hashDigest,
+			 TCPA_NONCE *nonceEvenOSAP)
 {
 	TSS_RESULT result;
 	UINT32 keyMode, usageMode, migMode;
@@ -317,10 +321,9 @@ secret_ValidateAuth_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		if (validateReturnAuth(sharedSecret, hashDigest, auth))
 			return TSPERR(TSS_E_TSP_AUTHFAIL);
 	} else {
-		if ((result = obj_policy_do_hmac(hPolicy,
-						 0,
+		if ((result = obj_policy_do_hmac(hPolicy, hAuthorizedObject,
+						 FALSE, ulPendingFn,
 						 auth->fContinueAuthSession,
-						 TRUE,
 						 20,
 						 auth->NonceEven.nonce,
 						 NULL,
@@ -472,7 +475,8 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 	/* HMAC for the final digest */
 
-	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, &digest, auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_TakeOwnership,
+					      hOwnerPolicy, &digest, auth)))
 		return result;
 
 	return TSS_SUCCESS;

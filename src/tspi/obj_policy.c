@@ -133,7 +133,7 @@ obj_policy_get_tcs_context(TSS_HPOLICY hPolicy,
 }
 
 TSS_RESULT
-obj_policy_do_hmac(TSS_HPOLICY hPolicy,
+obj_policy_do_hmac(TSS_HPOLICY hPolicy, TSS_HOBJECT hAuthorizedObject,
 		   TSS_BOOL returnOrVerify, UINT32 ulPendingFunction,
 		   TSS_BOOL continueUse, UINT32 ulSizeNonces,
 		   BYTE *rgbNonceEven, BYTE *rgbNonceOdd,
@@ -151,7 +151,7 @@ obj_policy_do_hmac(TSS_HPOLICY hPolicy,
 	policy = (struct tr_policy_obj *)obj->data;
 
 	result = policy->Tspicb_CallbackHMACAuth(
-			policy->hmacAppData, hPolicy,
+			policy->hmacAppData, hAuthorizedObject,
 			returnOrVerify,
 			ulPendingFunction,
 			continueUse,
@@ -271,6 +271,7 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 {
 	TCPA_DIGEST digest;
 	UINT32 secret_size = 0;
+	UINT32 cb = 0;
 
 	memset(&digest.digest, 0, sizeof(TCPA_DIGEST));
 
@@ -286,6 +287,13 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 			memcpy(&digest.digest, data, size);
 			secret_size = TCPA_SHA1_160_HASH_LEN;
 			break;
+		case TSS_SECRET_MODE_CALLBACK:
+			/* if this is going to be a callback policy, the
+			 * callbacks need to already be set. (See TSS 1.1b
+			 * spec pg. 62 */
+			if (obj_policy_get_cb_hmac(hPolicy, &cb) || !cb) {
+				return TSPERR(TSS_E_FAIL);
+			}
 		case TSS_SECRET_MODE_POPUP:
 		case TSS_SECRET_MODE_NONE:
 			break;
@@ -314,7 +322,7 @@ obj_policy_get_cb_hmac(TSS_HPOLICY hPolicy, UINT32 *cb)
 }
 
 TSS_RESULT
-obj_policy_set_cb_hmac(TSS_HPOLICY hPolicy, PVOID cb)
+obj_policy_set_cb_hmac(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -331,6 +339,7 @@ obj_policy_set_cb_hmac(TSS_HPOLICY hPolicy, PVOID cb)
 				BYTE *,BYTE *,
 				UINT32,BYTE *,
 				BYTE *))cb;
+	policy->hmacAppData = (PVOID)appData;
 
 	obj_list_put(&policy_list);
 
@@ -355,7 +364,7 @@ obj_policy_get_cb_xor(TSS_HPOLICY hPolicy, UINT32 *cb)
 }
 
 TSS_RESULT
-obj_policy_set_cb_xor(TSS_HPOLICY hPolicy, PVOID cb)
+obj_policy_set_cb_xor(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -371,6 +380,7 @@ obj_policy_set_cb_xor(TSS_HPOLICY hPolicy, PVOID cb)
 				BYTE *,BYTE *,
 				BYTE *,UINT32,
 				BYTE *,BYTE *))cb;
+	policy->xorAppData = (PVOID)appData;
 
 	obj_list_put(&policy_list);
 
@@ -395,7 +405,7 @@ obj_policy_get_cb_takeowner(TSS_HPOLICY hPolicy, UINT32 *cb)
 }
 
 TSS_RESULT
-obj_policy_set_cb_takeowner(TSS_HPOLICY hPolicy, PVOID cb)
+obj_policy_set_cb_takeowner(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -408,6 +418,7 @@ obj_policy_set_cb_takeowner(TSS_HPOLICY hPolicy, PVOID cb)
 				PVOID,TSS_HOBJECT,
 				TSS_HKEY,UINT32,
 				BYTE *))cb;
+	policy->takeownerAppData = (PVOID)appData;
 
 	obj_list_put(&policy_list);
 
@@ -432,7 +443,7 @@ obj_policy_get_cb_changeauth(TSS_HPOLICY hPolicy, UINT32 *cb)
 }
 
 TSS_RESULT
-obj_policy_set_cb_changeauth(TSS_HPOLICY hPolicy, PVOID cb)
+obj_policy_set_cb_changeauth(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -446,6 +457,7 @@ obj_policy_set_cb_changeauth(TSS_HPOLICY hPolicy, PVOID cb)
 				TSS_HKEY,UINT32,
 				UINT32,BYTE *,
 				BYTE *))cb;
+	policy->changeauthAppData = (PVOID)appData;
 
 	obj_list_put(&policy_list);
 

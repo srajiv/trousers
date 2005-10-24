@@ -453,7 +453,8 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 		Trspi_LoadBlob(&offset, ulBlobLength, blob, rgbBlobData);
 		Trspi_Hash(TSS_HASH_SHA1, offset, blob, digest.digest);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hUnwrappingKey, TPM_ORD_LoadKey,
+						      hPolicy, &digest, &auth)))
 			return result;
 
 		pAuth = &auth;

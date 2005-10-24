@@ -367,7 +367,8 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM,
 	UINT32ToArray(TPM_ORD_GetCapabilityOwner, hashBlob);
 	Trspi_Hash(TSS_HASH_SHA1, sizeof(UINT32), hashBlob, digest.digest);
 
-	if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_GetCapabilityOwner,
+					      hPolicy, &digest, &auth)))
 		return result;
 
 	if ((result = TCSP_GetCapabilityOwner(tcsContext,       /*  in */

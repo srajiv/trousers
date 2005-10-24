@@ -185,7 +185,9 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/*  in */
 
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &privAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_UnBind,
+						      hPolicy, &digest,
+						      &privAuth)))
 			return result;
 		pPrivAuth = &privAuth;
 	} else {
@@ -309,9 +311,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	Trspi_LoadBlob(&offset, ulDataLength, hashBlob, rgbDataToSeal);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	if ((result = secret_PerformAuth_OSAP(hPolicy, hEncPolicy, hEncPolicy,
-					  hEncKey, sharedSecret, &auth,
-					  digest.digest, &nonceEvenOSAP)))
+	if ((result = secret_PerformAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy,
+					      hEncPolicy, hEncPolicy,
+					      sharedSecret, &auth,
+					      digest.digest, &nonceEvenOSAP)))
 		return result;
 
 	if ((result = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage,
@@ -325,10 +328,11 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	Trspi_LoadBlob(&offset, encDataSize, hashBlob, encData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	if ((result = secret_ValidateAuth_OSAP(hPolicy, hEncPolicy,
-					hEncPolicy, sharedSecret,
-					&auth, digest.digest,
-					&nonceEvenOSAP))) {
+	if ((result = secret_ValidateAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy,
+					       hEncPolicy, hEncPolicy,
+					       sharedSecret, &auth,
+					       digest.digest,
+					       &nonceEvenOSAP))) {
 		free(encData);
 		return result;
 	}
@@ -397,16 +401,18 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
 	Trspi_LoadBlob(&offset, ulDataLen, hashblob, data);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest,
-							&privAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_Unseal,
+						      hPolicy, &digest,
+						      &privAuth)))
 			return result;
 		pPrivAuth = &privAuth;
 	} else {
 		pPrivAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hEncPolicy, &digest,
-					&privAuth2))) {
+	if ((result = secret_PerformAuth_OIAP(hEncData, TPM_ORD_Unseal,
+					      hEncPolicy, &digest,
+					      &privAuth2))) {
 		if (useAuth)
 			TCSP_TerminateHandle(tcsContext, privAuth.AuthHandle);
 		return result;

@@ -172,7 +172,9 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerReadPubek, hashblob);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &ownerAuth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerReadPubek,
+						      hPolicy, &digest,
+						      &ownerAuth)))
 			return result;
 
 		if ((result = TCSP_OwnerReadPubek(tcsContext, &ownerAuth, &pubEKSize, &pubEK)))
@@ -507,10 +509,11 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	free_key_refs(&keyContainer);
 
 	/* Start OSAP */
-	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
-				   TCPA_ET_OWNER, TPM_KEYHND_SRK,
-				   &encAuthUsage, &encAuthMig, sharedSecret,
-				   &ownerAuth, &nonceEvenOSAP)))
+	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy,
+					     hIDMigPolicy, hTPM, TCPA_ET_OWNER,
+					     TPM_KEYHND_SRK, &encAuthUsage,
+					     &encAuthMig, sharedSecret,
+					     &ownerAuth, &nonceEvenOSAP)))
 		return result;
 
 	/* Hash the Auth data */
@@ -523,15 +526,21 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* Do the Auth's */
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hSRKPolicy, &digest, &srkAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKeySRK,
+						      TPM_ORD_MakeIdentity,
+						      hSRKPolicy, &digest,
+						      &srkAuth)))
 			return result;
 		pSrkAuth = &srkAuth;
 	} else {
 		pSrkAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy, 0,
-				    sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP)))
+	if ((result = secret_PerformAuth_OSAP(hTPM, TPM_ORD_MakeIdentity,
+					      hTPMPolicy, hIDPolicy,
+					      hIDMigPolicy, sharedSecret,
+					      &ownerAuth, digest.digest,
+					      &nonceEvenOSAP)))
 		return result;
 
 	if ((result = TCSP_MakeIdentity(tcsContext,
@@ -567,8 +576,11 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = secret_ValidateAuth_OSAP(hTPMPolicy, hIDPolicy, hIDMigPolicy,
-				     sharedSecret, &ownerAuth, digest.digest, &nonceEvenOSAP)))
+	if ((result = secret_ValidateAuth_OSAP(hTPM, TPM_ORD_MakeIdentity,
+					       hTPMPolicy, hIDPolicy,
+					       hIDMigPolicy, sharedSecret,
+					       &ownerAuth, digest.digest,
+					       &nonceEvenOSAP)))
 		return result;
 
 	if (usesAuth == TRUE) {
@@ -682,14 +694,19 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hIDPolicy, &digest, &idKeyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hIDPolicy,
+						      TPM_ORD_ActivateTPMIdentity,
+						      hIDPolicy, &digest,
+						      &idKeyAuth)))
 			return result;
 		pIDKeyAuth = &idKeyAuth;
 	} else {
 		pIDKeyAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hTPMPolicy, &digest, &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_ActivateTPMIdentity,
+					      hTPMPolicy, &digest,
+					      &ownerAuth)))
 		return result;
 
 	if ((result = TCSP_ActivateTPMIdentity(tcsContext,
@@ -751,7 +768,9 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		free(hashBlob);
 		/* hashDigest now has the hash result */
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerClear,
+						      hPolicy, &hashDigest,
+						      &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerClear(tcsContext, &auth)))
@@ -812,7 +831,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM,
+						      TPM_ORD_DisableOwnerClear,
+						      hPolicy, &hashDigest,
+						      &auth)))
 			return result;
 
 		if ((result = TCSP_DisableOwnerClear(tcsContext, &auth)))
@@ -848,7 +870,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM,
+						      TPM_ORD_OwnerSetDisable,
+						      hPolicy, &hashDigest,
+						      &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerSetDisable(tcsContext, fTpmState, &auth)))
@@ -895,7 +920,10 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM,
+						      TPM_ORD_DisablePubekRead,
+						      hPolicy, &hashDigest,
+						      &auth)))
 			return result;
 
 		if ((result = TCSP_DisablePubekRead(tcsContext, &auth)))
@@ -1115,7 +1143,10 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 		free(hashBlob);
 
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &hash, &keyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey,
+						      TPM_ORD_CertifySelfTest,
+						      hPolicy, &hash,
+						      &keyAuth)))
 			return result;
 		pKeyAuth = &keyAuth;
 	} else {
@@ -1460,7 +1491,8 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	free(hashBlob);
 	/* hashDigest now has the hash result */
 	/* HMAC */
-	if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_GetCapabilitySigned,
+					      hPolicy, &hashDigest, &auth)))
 		return result;
 
 	if ((result = TCSP_GetCapabilitySigned(tcsContext,
@@ -1705,7 +1737,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	Trspi_LoadBlob(&offset, pubKeySize, hashblob, pubKeyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = secret_PerformAuth_OIAP(hOwnerPolicy, &digest, &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM,
+					      TPM_ORD_AuthorizeMigrationKey,
+					      hOwnerPolicy, &digest,
+					      &ownerAuth)))
 		return result;
 
 	/* Send command */
@@ -1885,7 +1920,9 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hPolicy, &digest, &privAuth))) {
+		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_Quote,
+						      hPolicy, &digest,
+						      &privAuth))) {
 			return result;
 		}
 		pPrivAuth = &privAuth;
@@ -2119,7 +2156,9 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
 	/*  hashDigest now has the hash result       */
-	if ((result = secret_PerformAuth_OIAP(hPolicy, &hashDigest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DirWriteAuth,
+					      hPolicy, &hashDigest,
+					      &auth)))
 		return result;
 
 	if ((result = TCSP_DirWriteAuth(tcsContext,

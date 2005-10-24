@@ -299,13 +299,13 @@ TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TCPA_SECRET *);
 TSS_RESULT obj_policy_set_type(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_tcs_context(TSS_HPOLICY, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_policy_get_cb_hmac(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_hmac(TSS_HPOLICY, PVOID);
+TSS_RESULT obj_policy_set_cb_hmac(TSS_HPOLICY, PVOID, UINT32 *);
 TSS_RESULT obj_policy_get_cb_xor(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_xor(TSS_HPOLICY, PVOID);
+TSS_RESULT obj_policy_set_cb_xor(TSS_HPOLICY, PVOID, UINT32 *);
 TSS_RESULT obj_policy_get_cb_takeowner(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_takeowner(TSS_HPOLICY, PVOID);
+TSS_RESULT obj_policy_set_cb_takeowner(TSS_HPOLICY, PVOID, UINT32 *);
 TSS_RESULT obj_policy_get_cb_changeauth(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_changeauth(TSS_HPOLICY, PVOID);
+TSS_RESULT obj_policy_set_cb_changeauth(TSS_HPOLICY, PVOID, UINT32 *);
 TSS_RESULT obj_policy_get_lifetime(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_set_lifetime(TSS_HPOLICY);
 TSS_RESULT obj_policy_get_counter(TSS_HPOLICY, UINT32 *);
@@ -317,8 +317,9 @@ TSS_RESULT obj_policy_get_secs_until_expired(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_has_expired(TSS_HPOLICY, TSS_BOOL *);
 TSS_RESULT obj_policy_get_mode(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_dec_counter(TSS_HPOLICY);
-TSS_RESULT obj_policy_do_hmac(TSS_HPOLICY, TSS_BOOL, UINT32, TSS_BOOL, UINT32,
-			BYTE *, BYTE *,	BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
+TSS_RESULT obj_policy_do_hmac(TSS_HPOLICY, TSS_HOBJECT, TSS_BOOL, UINT32,
+			      TSS_BOOL, UINT32, BYTE *, BYTE *, BYTE *, BYTE *,
+			      UINT32, BYTE *, BYTE *);
 TSS_RESULT obj_policy_do_xor(TSS_HPOLICY, TSS_HOBJECT, TSS_HOBJECT, TSS_FLAG,
 		UINT32, BYTE *, BYTE *, BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
 TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, BYTE *);
