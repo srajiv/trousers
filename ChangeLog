@@ -1,4 +1,6 @@
 
+ - Fix for SF#1334235, uuid data wasn't being set correctly
+ when keys were registered or loaded by uuid.
  - Fix for SF#1332316, Tspi_GetAttribData doesn't always
  return data alloc'd by TSP. Unicode data returned from the
  function was being allocated off the TSP heap.
