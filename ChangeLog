@@ -1,4 +1,7 @@
 
+ - Fix for RFE#1301441: Fallback support for the device
+ node. ioctl is tried first, if that fails, r/w is tried,
+ if that fails, error is returned.
  - Fixes for SF#1332479: HMAC and XOR callbacks were being
  passed wrong params.
  - Fix for SF#1334235, uuid data wasn't being set correctly
@@ -6,7 +9,7 @@
  - Fix for SF#1332316, Tspi_GetAttribData doesn't always
  return data alloc'd by TSP. Unicode data returned from the
  function was being allocated off the TSP heap.
- - Changed default return value for Tspi_GetAttribUin32 to
+ - Changed default return value for Tspi_GetAttribUint32 to
  success.
  - Corrected Tspi_TPM_PcrExtend manpage to state that the
  application should fill out the TSS_PCR_EVENT structure.
