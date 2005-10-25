@@ -14,12 +14,14 @@
 
 struct tpm_device_node {
 	char *path;
-	int ioctl;
+#define TDDL_TRANSMIT_IOCTL	1
+#define TDDL_TRANSMIT_RW	2
+	int transmit;
 	int fd;
 };
 
 #define TDDL_TXBUF_SIZE		2048
-#define TDDL_UNINITIALIZED	-1
+#define TDDL_UNDEF		-1
 
 TSS_RESULT Tddli_Open(void);
 

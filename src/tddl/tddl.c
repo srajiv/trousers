@@ -23,11 +23,11 @@
 #include "tddl.h"
 
 struct tpm_device_node tpm_device_nodes[] = {
-	{"/dev/tpm0", 0, TDDL_UNINITIALIZED},
-	{"/dev/tpm1", 0, TDDL_UNINITIALIZED},
-	{"/udev/tpm0", 0, TDDL_UNINITIALIZED},
-	{"/dev/tpm", 1, TDDL_UNINITIALIZED},
-	{NULL, 0, TDDL_UNINITIALIZED}
+	{"/dev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
+	{"/dev/tpm1", TDDL_UNDEF, TDDL_UNDEF},
+	{"/udev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
+	{"/dev/tpm", 1, TDDL_UNDEF},
+	{NULL, 0, 0}
 };
 
 struct tpm_device_node *opened_device = NULL;
@@ -85,7 +85,7 @@ Tddli_Close()
 	}
 
 	close(opened_device->fd);
-	opened_device->fd = TDDL_UNINITIALIZED;
+	opened_device->fd = TDDL_UNDEF;
 	opened_device = NULL;
 
 	return TSS_SUCCESS;
@@ -93,7 +93,7 @@ Tddli_Close()
 
 TSS_RESULT
 Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBuf,
-		  UINT32 * pReceiveBufLen)
+		   UINT32 * pReceiveBufLen)
 {
 	int sizeResult;
 
@@ -105,22 +105,40 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
 	LogDebug1("Calling write to driver");
 
-	if (opened_device->ioctl) {
-		if ((sizeResult = ioctl(opened_device->fd, TPMIOC_TRANSMIT, txBuffer)) == -1) {
+	switch (opened_device->transmit) {
+		case TDDL_UNDEF:
+			/* fall through */
+		case TDDL_TRANSMIT_IOCTL:
+			if ((sizeResult = ioctl(opened_device->fd, TPMIOC_TRANSMIT, txBuffer)) != -1) {
+				opened_device->transmit = TDDL_TRANSMIT_IOCTL;
+				break;
+			}
 			LogError("ioctl: (%d) %s", errno, strerror(errno));
-			return TDDLERR(TDDL_E_FAIL);
-		}
-	} else {
-		if ((sizeResult = write(opened_device->fd, txBuffer, TransmitBufLen)) < 0) {
-			LogError("write to device %s failed: %s", opened_device->path, strerror(errno));
+			LogError("Falling back to Read/Write device support.");
+			/* fall through */
+		case TDDL_TRANSMIT_RW:
+			if ((sizeResult = write(opened_device->fd,
+						txBuffer,
+						TransmitBufLen)) == (int)TransmitBufLen) {
+				opened_device->transmit = TDDL_TRANSMIT_RW;
+				sizeResult = read(opened_device->fd, txBuffer,
+						  TDDL_TXBUF_SIZE);
+				break;
+			} else {
+				if (sizeResult == -1) {
+					LogError("write to device %s failed: %s",
+						 opened_device->path,
+						 strerror(errno));
+				} else {
+					LogError("wrote %d bytes to %s (tried "
+						 "to write %d)", sizeResult,
+						 opened_device->path,
+						 TransmitBufLen);
+				}
+			}
+			/* fall through */
+		default:
 			return TDDLERR(TDDL_E_IOERROR);
-		} else if ((UINT32)sizeResult < TransmitBufLen) {
-			LogError("wrote %d bytes to %s (tried to write %d)", sizeResult,
-					opened_device->path, TransmitBufLen);
-			return TDDLERR(TDDL_E_IOERROR);
-		}
-
-		sizeResult = read(opened_device->fd, txBuffer, TDDL_TXBUF_SIZE);
 	}
 
 	if (sizeResult < 0) {
@@ -167,7 +185,7 @@ TSS_RESULT Tddli_Cancel(void)
 {
 	int rc;
 
-	if (opened_device->ioctl) {
+	if (opened_device->transmit == TDDL_TRANSMIT_IOCTL) {
 		if ((rc = ioctl(opened_device->fd, TPMIOC_CANCEL, NULL)) == -1) {
 			LogError("ioctl: (%d) %s", errno, strerror(errno));
 			return TDDLERR(TDDL_E_FAIL);
