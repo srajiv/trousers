@@ -1804,16 +1804,27 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
 	TSS_RESULT result;
 	TSS_PCR_EVENT *events = NULL;
 
-	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
+	if (pulEventNumber == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	if ((result = TCS_GetPcrEventsByPcr(tcsContext, ulPcrIndex, ulStartNumber, pulEventNumber, &events)))
-		return result;
+	if (prgbPcrEvents) {
+		if ((result = TCS_GetPcrEventsByPcr(tcsContext, ulPcrIndex,
+						    ulStartNumber,
+						    pulEventNumber,
+						    &events)))
+			return result;
 
-	*prgbPcrEvents = events;
+		*prgbPcrEvents = events;
+	} else {
+		/* if the pointer to receive events is NULL, the app only
+		 * wants a total number of events for this PCR. */
+		if ((result = TCS_GetPcrEvent(tcsContext, ulPcrIndex,
+					      pulEventNumber, NULL)))
+			return result;
+	}
 
 	return TSS_SUCCESS;
 }
@@ -1827,13 +1838,32 @@ Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	if (pulEventNumber == NULL || prgbPcrEvents == NULL)
+	if (pulEventNumber == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	return TCS_GetPcrEventLog(tcsContext, pulEventNumber, prgbPcrEvents);
+	/* if the pointer to receive events is NULL, the app only wants a
+	 * total number of events for all PCRs. */
+	if (prgbPcrEvents == NULL) {
+		UINT16 numPcrs = get_num_pcrs(tcsContext);
+		UINT32 i, numEvents;
+
+		*pulEventNumber = 0;
+		for (i = 0; i < numPcrs; i++) {
+			if ((result = TCS_GetPcrEvent(tcsContext, i,
+						      &numEvents, NULL)))
+				return result;
+
+			*pulEventNumber += numEvents;
+		}
+	} else {
+		return TCS_GetPcrEventLog(tcsContext, pulEventNumber,
+					  prgbPcrEvents);
+	}
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT

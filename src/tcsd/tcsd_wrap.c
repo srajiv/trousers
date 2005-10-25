@@ -2956,6 +2956,7 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 	TSS_RESULT result;
 	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	UINT32 pcrIndex, number, totalSize;
+	BYTE lengthOnly;
 
 	if (getData( TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data ))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -2968,10 +2969,21 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 	if (getData( TCSD_PACKET_TYPE_UINT32, 2, &number, 0, tsp_data ))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	result = TCS_GetPcrEvent_Internal(hContext, pcrIndex, &number, &pEvent);
+	if (getData( TCSD_PACKET_TYPE_BYTE, 3, &lengthOnly, 0, tsp_data ))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (lengthOnly) {
+		result = TCS_GetPcrEvent_Internal(hContext, pcrIndex, &number, NULL);
+	} else {
+		result = TCS_GetPcrEvent_Internal(hContext, pcrIndex, &number, &pEvent);
+	}
 
 	if(result == TSS_SUCCESS) {
-		totalSize = get_pcr_event_size(pEvent);
+		if (lengthOnly == FALSE) {
+			totalSize = get_pcr_event_size(pEvent);
+		} else {
+			totalSize = 0;
+		}
 
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
@@ -2986,12 +2998,14 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 
-		if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, pEvent, 0, *hdr)) {
-			free(*hdr);
+		if (lengthOnly == FALSE) {
+			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, pEvent, 0, *hdr)) {
+				free(*hdr);
+				free(pEvent);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
 			free(pEvent);
-			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		free(pEvent);
 	} else {
 		*hdr = calloc(1, size);
 		if (*hdr == NULL) {
