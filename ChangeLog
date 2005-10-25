@@ -1,4 +1,8 @@
 
+ - Changed default kernel and firmware controlled PCRs to
+ none, which should have happened a long time ago. :-/
+ - Fix for SF#1324108: Tspi_TPM_GetEvents should return a
+ number of events
  - Fix for RFE#1301441: Fallback support for the device
  node. ioctl is tried first, if that fails, r/w is tried,
  if that fails, error is returned.
