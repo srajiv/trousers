@@ -222,8 +222,10 @@ Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
 		rv = RSA_public_decrypt(sig_len, pSignature, buf, rsa, RSA_PKCS1_PADDING);
 		if ((UINT32)rv != iHashLength) {
 			rv = TSPERR(TSS_E_FAIL);
+			goto out;
 		} else if (memcmp(pHash, buf, iHashLength)) {
 			rv = TSPERR(TSS_E_FAIL);
+			goto out;
 		}
 	} else {
 		if ((rv = RSA_verify(nid, pHash, iHashLength, pSignature, sig_len, rsa)) == 0) {
