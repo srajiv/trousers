@@ -120,6 +120,12 @@ obj_hash_get_value(TSS_HHASH hHash, UINT32 *size, BYTE **value)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	hash = (struct tr_hash_obj *)obj->data;
+
+	if (hash->hashData == NULL) {
+		result = TSPERR(TSS_E_HASH_NO_DATA);
+		goto done;
+	}
+
 	if ((*value = calloc_tspi(obj->tspContext, hash->hashSize)) == NULL) {
 		LogError("malloc of %d bytes failed.", hash->hashSize);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
