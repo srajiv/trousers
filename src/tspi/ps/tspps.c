@@ -27,6 +27,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 
+extern pid_t getpgid(pid_t);
 
 int user_ps_fd = -1;
 char file_name[256];
