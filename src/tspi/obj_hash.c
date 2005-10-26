@@ -93,6 +93,12 @@ obj_hash_set_value(TSS_HHASH hHash, UINT32 size, BYTE *value)
 
 	hash = (struct tr_hash_obj *)obj->data;
 
+	if (hash->type != TSS_HASH_OTHER &&
+	    size != TCPA_SHA1_160_HASH_LEN) {
+		result = TSPERR(TSS_E_HASH_INVALID_LENGTH);
+		goto done;
+	}
+
 	free(hash->hashData);
 
 	if ((hash->hashData = calloc(1, size)) == NULL) {

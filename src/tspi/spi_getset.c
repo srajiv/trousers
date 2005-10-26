@@ -1193,9 +1193,17 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 
 		result = obj_policy_set_string(hObject, ulAttribDataSize, string);
+	} else if (obj_is_hash(hObject)) {
+		if (attribFlag != TSS_TSPATTRIB_HASH_IDENTIFIER)
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+
+		if (subFlag != 0)
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+
+		result = obj_hash_set_value(hObject, ulAttribDataSize, rgbAttribData);
 	} else {
-		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
-		    obj_is_pcrs(hObject) || obj_is_context(hObject))
+		if (obj_is_tpm(hObject) || obj_is_pcrs(hObject) ||
+		    obj_is_context(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
