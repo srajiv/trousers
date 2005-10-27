@@ -36,7 +36,11 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	}
 
 	policy->type = type;
+#ifndef TSS_SPEC_COMPLIANCE
 	policy->SecretMode = TSS_SECRET_MODE_NONE;
+#else
+	policy->SecretMode = TSS_SECRET_MODE_POPUP;
+#endif
 	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
 
 	if ((result = obj_list_add(&policy_list, tsp_context, policy,

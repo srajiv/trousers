@@ -73,6 +73,11 @@ AC_ARG_ENABLE(gprof,
 		[CFLAGS="$CFLAGS -pg"
 		 AC_MSG_RESULT([*** Enabling profiling at user request ***])],)
 
+# strict spec compliance
+AC_ARG_ENABLE(strict-spec-compliance,
+		[AC_HELP_STRING([--enable-strict-spec-compliance], [build TrouSerS as strictly spec compliant [default=off]])],
+		[CFLAGS="$CFLAGS -DTSS_SPEC_COMPLIANCE"
+		 AC_MSG_RESULT([*** Enabling spec compliance at user request ***])],)
 
 # section imported from Glade compile
 pkg_modules="gtk+-2.0 >= 2.0.0"

@@ -943,7 +943,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
-#ifndef TSS_COMPLIANCE
+#ifndef TSS_SPEC_COMPLIANCE
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
 		/* set the lifetime lock bit */
 		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LIFETIME_LOCK);
