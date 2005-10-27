@@ -13,12 +13,3 @@ Tspi_TPM_GetEvents
 	UINT32 five = 5;
 	Tspi_TPM_GetEvents(hTPM, ulPcrIndex, 0, &five, &prgbPcrEvents);
 
-
-Tspi_GetAttribData
-
-For an RSA key:
-
-  Unless you create a key object manually of type TSS_KEY_TYPE_LEGACY and set the private
-key yourself, the private key will be inaccessible.  Tspi_GetAttribData() will return
-TSS_E_INVALID_ATTRIB_DATA. This is because the private area of the key and its auth data
-comes back from the chip as a blob of encrypted data.
