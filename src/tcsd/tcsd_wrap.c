@@ -2692,24 +2692,23 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 	TCPA_ENCAUTH identityAuth;
 	TCPA_CHOSENID_HASH privCAHash;
 	UINT32 idKeyInfoSize;
-	BYTE *idKeyInfo;
+	BYTE *idKeyInfo = NULL;
 	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	TPM_AUTH srkAuth;
 	TPM_AUTH ownerAuth;
 	TPM_AUTH *pSRKAuth;
-/* 	TPM_AUTH* pOwnerauth; */
 
 	UINT32 idKeySize;
-	BYTE *idKey;
+	BYTE *idKey = NULL;
 	UINT32 pcIDBindSize;
-	BYTE *prgbIDBind;
+	BYTE *prgbIDBind = NULL;
 	UINT32 pcECSize;
-	BYTE *prgbEC;
+	BYTE *prgbEC = NULL;
 	UINT32 pcPlatCredSize;
-	BYTE *prgbPlatCred;
+	BYTE *prgbPlatCred = NULL;
 	UINT32 pcConfCredSize;
-	BYTE *prgbConfCred;
+	BYTE *prgbConfCred = NULL;
 	TSS_RESULT result;
 
 	int i;
@@ -2739,9 +2738,10 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 		free(idKeyInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	/* ---  if the next one is missing, then the previous was really the owner auth */
+	/* if the next one is missing, then the previous was really the owner auth */
 	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &ownerAuth, 0, tsp_data)) {
-		LogDebug1("Failed to get ownerAuth.  SRK auth is really NULL and single auth is ownerAuth");
+		LogDebug1("Failed to get ownerAuth.  SRK auth is really NULL "
+			  "and single auth is ownerAuth");
 		pSRKAuth = NULL;
 		memcpy(&ownerAuth, &srkAuth, sizeof (TPM_AUTH));
 	} else {
@@ -2755,7 +2755,7 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 				       &prgbEC, &pcPlatCredSize, &prgbPlatCred,
 				       &pcConfCredSize, &prgbConfCred);
 	free(idKeyInfo);
-	/*      printf( "before %.8X\n", pcECSize ); */
+
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		*hdr = calloc(1, size +
@@ -2821,8 +2821,6 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 		(*hdr)->packet_size = size;
 	}
 	(*hdr)->result = result;
-
-	LogDebug1("tcs_wrap_MakeIdentity done. SMDEBUG <<<<<<");
 
 	return TSS_SUCCESS;
 
