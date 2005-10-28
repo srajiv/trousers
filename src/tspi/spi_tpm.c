@@ -409,10 +409,10 @@ TSS_RESULT
 Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				TSS_HKEY hKeySRK,			/* in */
 				TSS_HKEY hCAPubKey,			/* in */
-				UINT32 ulIdentityLabelLength,		/* in  */
+				UINT32 ulIdentityLabelLength,		/* in */
 				BYTE * rgbIdentityLabelData,		/* in */
 				TSS_HKEY hIdentityKey,			/* in */
-				TSS_HKEY hSymKey,			/* in */
+				TSS_ALGORITHM_ID algID,			/* in */
 				UINT32 * pulTcpaIdentityReqLength,	/* out */
 				BYTE ** prgbTcpaIdentityReq		/* out */
     )
@@ -436,24 +436,24 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	TCPA_KEY keyContainer;
 	TCPA_CHOSENID_HASH chosenIDHash = { { 0, } };
 	UINT32 pcIdentityBindingSize;
-	BYTE *prgbIdentityBinding;
+	BYTE *prgbIdentityBinding = NULL;
 	UINT32 pcEndorsementCredentialSize;
-	BYTE *prgbEndorsementCredential;
+	BYTE *prgbEndorsementCredential = NULL;
 	UINT32 pcPlatformCredentialSize;
-	BYTE *prgbPlatformCredential;
+	BYTE *prgbPlatformCredential = NULL;
 	UINT32 NpcConformanceCredentialSize;
-	BYTE *prgbConformanceCredential;
+	BYTE *prgbConformanceCredential = NULL;
 	BYTE caPubKey[512];
 	UINT32 caPubKeySize;
-	UINT32 tAESSIZE;
-	BYTE *tAESkey;
 	TSS_HENCDATA hEncData;
 	TSS_HCONTEXT tspContext;
-	UINT32 symKeySize;
-	BYTE *symKey;
+	UINT32 symKeySize, encSymKeySize, symKeySizeBits;
+	BYTE *symKey, *encSymKey = NULL;
 	TSS_HPOLICY hIDMigPolicy;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
+	TCPA_IDENTITY_REQ *rgbTcpaTdentityReq = NULL;
+	TCPA_KEY_PARMS symParms;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -562,11 +562,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				       &prgbConformanceCredential)))
 		return result;
 
-	if (pcIdentityBindingSize > 0x2000) {
-		LogDebug1("SM DEBUG size is too BIG. ABORT");
-		return 1;
-	}
-
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
@@ -581,44 +576,60 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					       hIDMigPolicy, sharedSecret,
 					       &ownerAuth, digest.digest,
 					       &nonceEvenOSAP)))
-		return result;
+		goto error;
 
 	if (usesAuth == TRUE) {
 		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy, &digest, &srkAuth)))
-			return result;
+			goto error;
 	}
 
 	/* Push the new key into the existing object */
 	if ((result = Tspi_SetAttribData(hIdentityKey,
 					TSS_TSPATTRIB_KEY_BLOB,
 					TSS_TSPATTRIB_KEYBLOB_BLOB, idKeySize, idKey)))
-		return result;
+		goto error;
 
-	/*  encrypt the symmetric key with the identity pubkey */
-	/*  generate the symmetric key */
-	tAESSIZE = 16;
-	if ((result = Tspi_TPM_GetRandom(hTPM,
-					tAESSIZE,
-					&tAESkey)))
-		return result;
+	/* generate the symmetric key. We don't know how to check for DES weak
+	 * keys yet, so for now, AES is all we support. TODO */
+	switch (algID) {
+		case TSS_ALG_AES:
+			symKeySize = 256/8;
+			symParms.algorithmID = TSS_ALG_AES;
+			symParms.parmSize = sizeof(UINT32);
+			symKeySizeBits = 256;
+			symParms.parms = (BYTE *)&symKeySizeBits;
+			break;
+		case TSS_ALG_DES:
+			/* fall through */
+		case TSS_ALG_3DES:
+			/* fall through */
+		default:
+			result = TSPERR(TSS_E_NOTIMPL);
+			goto error;
+			break;
+	}
 
-	if ((result = Tspi_Context_CreateObject(tspContext, TSS_OBJECT_TYPE_ENCDATA, 0,	/*  will be type empty */
-					       &hEncData)))
-		return result;
+	if ((result = Tspi_TPM_GetRandom(hTPM, symKeySize, &symKey)))
+		goto error;
 
-	/*  encrypt the aeskey */
-	if ((result = Tspi_Data_Bind(hEncData,
-				    hCAPubKey,
-				    tAESSIZE,
-				    tAESkey)))
-		return result;
+	if ((result = Tspi_Context_CreateObject(tspContext,
+						TSS_OBJECT_TYPE_ENCDATA,
+						TSS_ENCDATA_BIND,
+						&hEncData)))
+		goto error;
 
-	/* Set encdata with the encrypted aes key */
-	if ((result = Tspi_GetAttribData(hSymKey,
-					TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, &symKeySize, &symKey)))
-		return result;
+	/* encrypt the symmetric key with the CA's pub key */
+	if ((result = Tspi_Data_Bind(hEncData, hCAPubKey, symKeySize, symKey)))
+		goto error;
 
+	/* get encrypted aes key */
+	if ((result = Tspi_GetAttribData(hEncData, TSS_TSPATTRIB_ENCDATA_BLOB,
+					 TSS_TSPATTRIB_ENCDATABLOB_BLOB,
+					 &encSymKeySize, &encSymKey)))
+		goto error;
+
+	Tspi_Context_CloseObject(tspContext, hEncData);
+#if 0
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_KEY(&offset, symKey, &keyContainer)))
 		return result;
@@ -643,8 +654,31 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					TSS_TSPATTRIB_KEYBLOB_BLOB,
 					symKeySize + tAESSIZE, symKey)))
 		return result;
+#endif
+	if ((rgbTcpaTdentityReq =
+	    calloc_tspi(tspContext, sizeof(TCPA_IDENTITY_REQ))) == NULL) {
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto error;
+	}
 
-	return TSS_SUCCESS;
+	//rgbTcpaTdentityReq->asymSize = ;
+	rgbTcpaTdentityReq->symSize = encSymKeySize;
+	//rgbTcpaTdentityReq->asymAlgorithm = ;
+	rgbTcpaTdentityReq->symAlgorithm = symParms;
+	//rgbTcpaTdentityReq->asymBlob = ;
+	rgbTcpaTdentityReq->symBlob = encSymKey;
+
+	*prgbTcpaIdentityReq = (BYTE *)rgbTcpaTdentityReq;
+	*pulTcpaIdentityReqLength = sizeof(TCPA_IDENTITY_REQ);
+error:
+	free_tspi(tspContext, encSymKey);
+	free(idKey);
+	free(prgbIdentityBinding);
+	free(prgbEndorsementCredential);
+	free(prgbPlatformCredential);
+	free(prgbConformanceCredential);
+
+	return result;
 }
 
 TSS_RESULT
