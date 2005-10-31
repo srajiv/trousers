@@ -1207,22 +1207,27 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	void *to_free;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	free(rsakey->tcpaKey.pubKey.key);
-	rsakey->tcpaKey.pubKey.keyLength = size;
+	to_free = rsakey->tcpaKey.pubKey.key;
 
 	rsakey->tcpaKey.pubKey.key = calloc(1, size);
 	if (rsakey->tcpaKey.pubKey.key == NULL) {
+		rsakey->tcpaKey.pubKey.key = to_free; // restore
 		LogError("malloc of %d bytes failed.", size);
-		return TSPERR(TSS_E_OUTOFMEMORY);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
 	}
-	memcpy(rsakey->tcpaKey.pubKey.key, data, size);
 
+	free(to_free);
+	rsakey->tcpaKey.pubKey.keyLength = size;
+	memcpy(rsakey->tcpaKey.pubKey.key, data, size);
+done:
 	obj_list_put(&rsakey_list);
 
 	return TSS_SUCCESS;
@@ -1233,22 +1238,27 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	void *to_free;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	free(rsakey->tcpaKey.encData);
-	rsakey->tcpaKey.encSize = size;
+	to_free = rsakey->tcpaKey.encData;
 
 	rsakey->tcpaKey.encData = calloc(1, size);
 	if (rsakey->tcpaKey.encData == NULL) {
+		rsakey->tcpaKey.encData = to_free; // restore
 		LogError("malloc of %d bytes failed.", size);
-		return TSPERR(TSS_E_OUTOFMEMORY);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
 	}
-	memcpy(rsakey->tcpaKey.encData, data, size);
 
+	free(to_free);
+	rsakey->tcpaKey.encSize = size;
+	memcpy(rsakey->tcpaKey.encData, data, size);
+done:
 	obj_list_put(&rsakey_list);
 
 	return TSS_SUCCESS;
@@ -1264,6 +1274,7 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	TCPA_PCRVALUE pcrComposite;
 	BYTE pcrBlob[1024];
 	UINT16 offset;
+	void *to_free;
 
 	memset(pcrBlob, 0, sizeof(pcrBlob));
 
@@ -1272,14 +1283,13 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	/* free the info that may already be set */
-	free(rsakey->tcpaKey.PCRInfo);
+	to_free = rsakey->tcpaKey.PCRInfo;
 
 	if ((result = obj_pcrs_get_composite(hPcrComposite, &pcrComposite)))
-		return result;
+		goto done;
 
 	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
-		return result;
+		goto done;
 
 	offset = 0;
 	Trspi_LoadBlob_PCR_SELECTION(&offset, pcrBlob, &pcrSelect);
@@ -1287,13 +1297,16 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	offset += TCPA_SHA1_160_HASH_LEN * 2; // skip over digestAtRelease
 
 	/* ---  Stuff it into the key container */
-	rsakey->tcpaKey.PCRInfoSize = offset;
 	rsakey->tcpaKey.PCRInfo = calloc(1, offset);
 	if (rsakey->tcpaKey.PCRInfo == NULL) {
+		rsakey->tcpaKey.PCRInfo = to_free; // restore
 		LogError("malloc of %d bytes failed.", offset);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
+	/* free the info that may already be set */
+	free(to_free);
+	rsakey->tcpaKey.PCRInfoSize = offset;
 	memcpy(rsakey->tcpaKey.PCRInfo, pcrBlob, offset);
 
 done:
