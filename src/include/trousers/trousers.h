@@ -58,7 +58,6 @@ void Trspi_LoadBlob_KEY_FLAGS(UINT16 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 void Trspi_LoadBlob_KEY_PARMS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyInfo);
 void Trspi_LoadBlob_STORE_PUBKEY(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store);
 void Trspi_LoadBlob_UUID(UINT16 *offset, BYTE *blob, TSS_UUID uuid);
-void Trspi_LoadBlob_PUBKEY(UINT16 *offset, BYTE *blob, TCPA_PUBKEY pubKey);
 void Trspi_LoadBlob_CERTIFY_INFO(UINT16 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify);
 void Trspi_LoadBlob_STORE_ASYMKEY(UINT16 *offset, BYTE *blob, TCPA_STORE_ASYMKEY *store);
 void Trspi_LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event);
