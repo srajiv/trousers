@@ -694,7 +694,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		goto error;
 
 	rgbTcpaIdentityReq.asymSize = encSymKeySize;
-	//rgbTcpaIdentityReq.symSize = offset;
 	rgbTcpaIdentityReq.asymAlgorithm = asymParms;
 	rgbTcpaIdentityReq.symAlgorithm = symParms;
 	rgbTcpaIdentityReq.asymBlob = encSymKey;
