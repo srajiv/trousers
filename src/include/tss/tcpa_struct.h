@@ -249,6 +249,16 @@ typedef struct tdTCPA_MIGRATIONKEYAUTH
 } TCPA_MIGRATIONKEYAUTH;
 
 //-------------------------------------------------------------------
+// section 4.30.1
+typedef struct tdTCPA_IDENTITY_CONTENTS
+{
+	TCPA_VERSION		ver;
+	UINT32			ordinal;
+	TCPA_CHOSENID_HASH	labelPrivCADigest;
+	TCPA_PUBKEY		identityPubKey;
+} TCPA_IDENTITY_CONTENTS;
+
+//-------------------------------------------------------------------
 // section 4.30.2
 typedef struct tdTCPA_IDENTITY_REQ
 {
@@ -265,6 +275,41 @@ typedef struct tdTCPA_IDENTITY_REQ
 #endif
 		BYTE*           symBlob;
 } TCPA_IDENTITY_REQ;
+
+//-------------------------------------------------------------------
+// section 4.30.3
+typedef struct tdTCPA_IDENTITY_PROOF
+{
+	TCPA_VERSION		ver;
+	UINT32			labelSize;
+	UINT32			identityBindingSize;
+	UINT32			endorsementSize;
+	UINT32			platformSize;
+	UINT32			conformanceSize;
+	TCPA_PUBKEY		identityKey;
+	BYTE*			labelArea;
+	BYTE*			identityBinding;
+	BYTE*			endorsementCredential;
+	BYTE*			platformCredential;
+	BYTE*			conformanceCredential;
+} TCPA_IDENTITY_PROOF;
+
+//-------------------------------------------------------------------
+// section 4.30.4
+typedef struct tdTCPA_ASYM_CA_CONTENTS
+{
+	TCPA_SYMMETRIC_KEY	sessionKey;
+	TCPA_DIGEST		idDigest;
+} TCPA_ASYM_CA_CONTENTS;
+
+//-------------------------------------------------------------------
+// section 4.30.5
+typedef struct tdTCPA_SYM_CA_ATTESTATION
+{
+	UINT32		credSize;
+	TCPA_KEY_PARMS	algorithm;
+	BYTE*		credential;
+} TCPA_SYM_CA_ATTESTATION;
 
 // Errata: Where is TCPA_IDENTITY_CONTENTS?
 
