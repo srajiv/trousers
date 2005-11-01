@@ -463,8 +463,12 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 
 	if (hPcrComposite) {
+		/* its possible that hPcrComposite could be a bad handle here,
+		 * or that no indices of it are yet set, which would throw
+		 * internal error. Blanket both those codes with bad
+		 * parameter to help the user out */
 		if ((result = obj_rsakey_set_pcr_data(hKey, hPcrComposite)))
-			return result;
+			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
