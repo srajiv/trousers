@@ -340,6 +340,18 @@ Trspi_LoadBlob_BOUND_DATA(UINT16 * offset, TCPA_BOUND_DATA bd,
 }
 
 void
+Trspi_LoadBlob_IDENTITY_REQ(UINT16 * offset, BYTE *blob,
+			    TCPA_IDENTITY_REQ *req)
+{
+	Trspi_LoadBlob_UINT32(offset, req->asymSize, blob);
+	Trspi_LoadBlob_UINT32(offset, req->symSize, blob);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &req->asymAlgorithm);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &req->symAlgorithm);
+	Trspi_LoadBlob(offset, req->asymSize, blob, req->asymBlob);
+	Trspi_LoadBlob(offset, req->symSize, blob, req->symBlob);
+}
+
+void
 Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT16 * offset, BYTE * blob,
 		TCPA_CHANGEAUTH_VALIDATE * caValidate)
 {
