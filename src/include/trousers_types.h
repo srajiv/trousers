@@ -232,18 +232,6 @@ typedef struct tdTCPA_MIGRATE_ASYMKEY {
 	TCPA_STORE_PRIVKEY partPrivKey;
 } TCPA_MIGRATE_ASYMKEY;
 
-typedef struct tdTCPA_IDENTITY_CONTENTS {
-	TCPA_VERSION ver;
-	UINT32 ordinal;
-	TCPA_CHOSENID_HASH labelPrivCADigest;
-	TCPA_PUBKEY identityPubKey;
-} TCPA_IDENTITY_CONTENTS;
-
-typedef struct tdTCPA_ASYM_CA_CONTENTS {
-	TCPA_SYMMETRIC_KEY sessionKey;
-	TCPA_DIGEST idDigest;
-} TCPA_ASYM_CA_CONTENTS;
-
 typedef struct tdTCPA_PRIVKEY {
 	UINT32 Privlen;
 	BYTE *Privkey;
