@@ -357,7 +357,9 @@ Trspi_LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo)
 	Trspi_LoadBlob_UINT16(offset, keyInfo->encScheme, blob);
 	Trspi_LoadBlob_UINT16(offset, keyInfo->sigScheme, blob);
 	Trspi_LoadBlob_UINT32(offset, keyInfo->parmSize, blob);
-	Trspi_LoadBlob(offset, keyInfo->parmSize, blob, keyInfo->parms);
+
+	if (keyInfo->parmSize > 0)
+		Trspi_LoadBlob(offset, keyInfo->parmSize, blob, keyInfo->parms);
 }
 
 void
