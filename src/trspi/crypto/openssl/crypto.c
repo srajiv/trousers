@@ -301,3 +301,34 @@ out:
 		RSA_free(rsa);
         return rv;
 }
+
+TSS_RESULT
+Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, UINT32 in_len, BYTE *in,
+		  UINT32 *out_len, BYTE *out)
+{
+	EVP_CIPHER_CTX ctx;
+	UINT32 out_total = 0;
+
+	switch (alg) {
+		case TSS_ALG_AES:
+			break;
+		default:
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	EVP_CIPHER_CTX_init(&ctx);
+
+	if (!EVP_EncryptInit_ex(&ctx, EVP_aes_256_ecb(), NULL, key, NULL))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	if (!EVP_EncryptUpdate(&ctx, out, out_len, in, in_len))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	out_total += *out_len;
+
+	if (!EVP_EncryptFinal_ex(&ctx, out, out_len))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	*out_len += out_total;
+
+	return TSS_SUCCESS;
+}
