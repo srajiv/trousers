@@ -1,6 +1,8 @@
 
- - Fix for SF#1338785: Support
- TSS_TSPATTRIB_HASH_IDENTIFIER.
+ - Several fixes added for list locking in the obj_*.c files.
+ - Added initial support for Tspi_TPM_CollateIdentityRequest
+ and its supporting functions (symmetric encryption).
+ - Fix for SF#1338785: Support TSS_TSPATTRIB_HASH_IDENTIFIER.
  - Changed default kernel and firmware controlled PCRs to
  none, which should have happened a long time ago. :-/
  - Fix for SF#1324108: Tspi_TPM_GetEvents should return a
