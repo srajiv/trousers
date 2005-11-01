@@ -1,4 +1,6 @@
 
+ - Return bad parameter when no the pcr object is not
+ initialized instead of internal error.
  - Several fixes added for list locking in the obj_*.c files.
  - Added initial support for Tspi_TPM_CollateIdentityRequest
  and its supporting functions (symmetric encryption).
