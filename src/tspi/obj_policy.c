@@ -63,10 +63,10 @@ obj_is_policy(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&policy_list, hObject)))
+	if ((obj_list_get_obj(&policy_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&policy_list);
+		obj_list_put(&policy_list);
+	}
 
 	return answer;
 }

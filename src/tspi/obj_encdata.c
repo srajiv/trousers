@@ -65,10 +65,10 @@ obj_is_encdata(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&encdata_list, hObject)))
+	if ((obj_list_get_obj(&encdata_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&encdata_list);
+		obj_list_put(&encdata_list);
+	}
 
 	return answer;
 }

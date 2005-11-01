@@ -75,10 +75,10 @@ obj_is_context(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&context_list, hObject)))
+	if ((obj_list_get_obj(&context_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&context_list);
+		obj_list_put(&context_list);
+	}
 
 	return answer;
 }

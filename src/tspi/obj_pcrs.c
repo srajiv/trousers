@@ -88,10 +88,10 @@ obj_is_pcrs(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&pcrs_list, hObject)))
+	if ((obj_list_get_obj(&pcrs_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&pcrs_list);
+		obj_list_put(&pcrs_list);
+	}
 
 	return answer;
 }

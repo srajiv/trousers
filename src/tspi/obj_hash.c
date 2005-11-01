@@ -58,10 +58,10 @@ obj_is_hash(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&hash_list, hObject)))
+	if ((obj_list_get_obj(&hash_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&hash_list);
+		obj_list_put(&hash_list);
+	}
 
 	return answer;
 }
@@ -159,8 +159,10 @@ obj_hash_update_value(TSS_HHASH hHash, UINT32 size, BYTE *data)
 	hash = (struct tr_hash_obj *)obj->data;
 
 	if (hash->type != TSS_HASH_SHA1 &&
-	    hash->type != TSS_HASH_DEFAULT)
-		return TSPERR(TSS_E_FAIL);
+	    hash->type != TSS_HASH_DEFAULT) {
+		result = TSPERR(TSS_E_FAIL);
+		goto done;
+	}
 
 	if (hash->hashUpdateBuffer == NULL) {
 		hash->hashUpdateBuffer = calloc(1, size);

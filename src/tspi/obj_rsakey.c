@@ -164,10 +164,10 @@ obj_is_rsakey(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&rsakey_list, hObject)))
+	if ((obj_list_get_obj(&rsakey_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&rsakey_list);
+		obj_list_put(&rsakey_list);
+	}
 
 	return answer;
 }
@@ -648,10 +648,6 @@ obj_rsakey_get_flags(TSS_HKEY hKey, UINT32 *flags)
 	return TSS_SUCCESS;
 }
 
-/* WARN: Nobody should call this function directly except for the
- * Get/Set Attrib functions. The TCPA_KEY structure wants values
- * for keyLength to be in bytes and this function translates
- * to TSS_KEY_SIZEVAL_*BIT values for passing to an app. */
 TSS_RESULT
 obj_rsakey_get_size(TSS_HKEY hKey, UINT32 *len)
 {
@@ -1207,6 +1203,7 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 	void *to_free;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
@@ -1230,7 +1227,7 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -1238,6 +1235,7 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 	void *to_free;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
@@ -1261,7 +1259,7 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT

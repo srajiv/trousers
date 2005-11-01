@@ -56,10 +56,10 @@ obj_is_tpm(TSS_HOBJECT hObject)
 {
 	TSS_BOOL answer = FALSE;
 
-	if ((obj_list_get_obj(&tpm_list, hObject)))
+	if ((obj_list_get_obj(&tpm_list, hObject))) {
 		answer = TRUE;
-
-	obj_list_put(&tpm_list);
+		obj_list_put(&tpm_list);
+	}
 
 	return answer;
 }
