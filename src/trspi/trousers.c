@@ -619,6 +619,38 @@ Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key)
 	/* exclude encSize, encData as spec'd in TPM 1.1b spec p.71 */
 }
 
+void
+Trspi_LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
+{
+	Trspi_LoadBlob_UINT32(offset, key->algId, blob);
+	Trspi_LoadBlob_UINT16(offset, key->encScheme, blob);
+	Trspi_LoadBlob_UINT16(offset, key->size, blob);
+
+	if (key->size > 0)
+		Trspi_LoadBlob(offset, key->size, blob, key->data);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
+{
+	Trspi_UnloadBlob_UINT32(offset, &key->algId, blob);
+	Trspi_UnloadBlob_UINT16(offset, &key->encScheme, blob);
+	Trspi_UnloadBlob_UINT16(offset, &key->size, blob);
+
+	if (key->size > 0) {
+		key->data = malloc(key->size);
+		if (key->data == NULL) {
+			key->size = 0;
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, key->size, blob, key->data);
+	} else {
+		key->data = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
 /* function to mimic strerror with TSS error codes */
 char *
 Trspi_Error_String(TSS_RESULT r)

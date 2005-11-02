@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2005
  *
  */
 
@@ -14,8 +14,8 @@
 /*
  * Utility functions offered by trousers for use in your TSS app.
  *
- * All functions prefixed by Trspi_ are specific to the trousers TSS and
- * should not be used in applications that are intended to be portable.
+ * All functions listed here are specific to the trousers TSS and should not be
+ * used in applications that are intended to be portable.
  *
  */
 
@@ -40,6 +40,7 @@ TSS_RESULT Trspi_UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
 TSS_RESULT Trspi_UnloadBlob_MigrationKeyAuth(UINT16 *offset, BYTE *blob, TCPA_MIGRATIONKEYAUTH *migAuth);
 TSS_RESULT Trspi_UnloadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 void       Trspi_UnloadBlob_KM_KEYINFO(UINT16 *offset, BYTE *blob, TSS_KM_KEYINFO *info);
+TSS_RESULT Trspi_UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key);
 
 /* Blob loading functions */
 void Trspi_LoadBlob(UINT16 *offset, UINT32 size, BYTE *container, BYTE *object);
@@ -62,6 +63,7 @@ void Trspi_LoadBlob_CERTIFY_INFO(UINT16 *offset, BYTE *blob, TCPA_CERTIFY_INFO *
 void Trspi_LoadBlob_STORE_ASYMKEY(UINT16 *offset, BYTE *blob, TCPA_STORE_ASYMKEY *store);
 void Trspi_LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 void Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key);
+void Trspi_LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key);
 
 
 /* Cryptographic Functions */
