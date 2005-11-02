@@ -445,14 +445,15 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	UINT32 chosenIDBlobSize;
 	TSS_HENCDATA hEncData;
 	TSS_HCONTEXT tspContext;
-	UINT32 symKeySize = 256/8, encSymKeySize;
-	BYTE *symKey, *encSymKey = NULL;
+	UINT32 encSymKeySize;
+	BYTE *encSymKey = NULL;
 	TSS_HPOLICY hIDMigPolicy;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
 	TCPA_IDENTITY_REQ rgbTcpaIdentityReq;
 	TCPA_KEY_PARMS symParms, asymParms;
 	TCPA_RSA_KEY_PARMS asymRsaParms;
+	TCPA_SYMMETRIC_KEY symKey;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -491,6 +492,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	switch (algID) {
 		case TSS_ALG_AES:
 			symParms.algorithmID = TCPA_ALG_AES;
+			symKey.algId = TCPA_ALG_AES;
+			symKey.size = 256/8;
 			break;
 		case TSS_ALG_DES:
 			/* fall through */
@@ -645,8 +648,12 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		goto error;
 
 	/* generate the symmetric key. */
-	if ((result = Tspi_TPM_GetRandom(hTPM, symKeySize, &symKey)))
+	if ((result = Tspi_TPM_GetRandom(hTPM, symKey.size, &symKey.data)))
 		goto error;
+
+	/* No encrpytion schemes exist in the TPM 1.1 spec for symmetric
+	 * algorithms, so just set this to 0. */
+	symKey.encScheme = 0;
 
 	if ((result = Tspi_Context_CreateObject(tspContext,
 						TSS_OBJECT_TYPE_ENCDATA,
@@ -654,11 +661,14 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 						&hEncData)))
 		goto error;
 
+	offset = 0;
+	Trspi_LoadBlob_SYMMETRIC_KEY(&offset, hashblob, &symKey);
+
 	/* encrypt the symmetric key with the CA's pub key */
-	if ((result = Tspi_Data_Bind(hEncData, hCAPubKey, symKeySize, symKey)))
+	if ((result = Tspi_Data_Bind(hEncData, hCAPubKey, offset, hashblob)))
 		goto error;
 
-	/* get encrypted aes key */
+	/* get encrypted symmetric blob */
 	if ((result = Tspi_GetAttribData(hEncData, TSS_TSPATTRIB_ENCDATA_BLOB,
 					 TSS_TSPATTRIB_ENCDATABLOB_BLOB,
 					 &encSymKeySize, &encSymKey)))
@@ -689,8 +699,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* encrypt the proof */
 	rgbTcpaIdentityReq.symSize = sizeof(hashblob);
-	if ((result = Trspi_Encrypt_ECB(TSS_ALG_AES, symKey, offset, hashblob,
-					&rgbTcpaIdentityReq.symSize, hashblob)))
+	if ((result = Trspi_Encrypt_ECB(TSS_ALG_AES, symKey.data, offset,
+					hashblob, &rgbTcpaIdentityReq.symSize,
+					hashblob)))
 		goto error;
 
 	rgbTcpaIdentityReq.asymSize = encSymKeySize;
