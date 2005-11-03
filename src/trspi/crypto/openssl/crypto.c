@@ -306,29 +306,88 @@ TSS_RESULT
 Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, UINT32 in_len, BYTE *in,
 		  UINT32 *out_len, BYTE *out)
 {
+	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
-	UINT32 out_total = 0;
+	UINT32 tmp;
 
 	switch (alg) {
 		case TSS_ALG_AES:
 			break;
 		default:
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
 			break;
 	}
 
 	EVP_CIPHER_CTX_init(&ctx);
 
-	if (!EVP_EncryptInit_ex(&ctx, EVP_aes_256_ecb(), NULL, key, NULL))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (!EVP_EncryptInit(&ctx, EVP_aes_256_ecb(), key, NULL)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
 
-	if (!EVP_EncryptUpdate(&ctx, out, out_len, in, in_len))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	out_total += *out_len;
+	if (*out_len < in_len + EVP_CIPHER_CTX_block_size(&ctx) - 1) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto done;
+	}
 
-	if (!EVP_EncryptFinal_ex(&ctx, out, out_len))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	*out_len += out_total;
+	if (!EVP_EncryptUpdate(&ctx, out, out_len, in, in_len)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
 
-	return TSS_SUCCESS;
+	if (!EVP_EncryptFinal(&ctx, out + *out_len, &tmp)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+	*out_len += tmp;
+done:
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return result;
 }
+
+TSS_RESULT
+Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, UINT32 in_len, BYTE *in,
+		  UINT32 *out_len, BYTE *out)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	EVP_CIPHER_CTX ctx;
+	UINT32 tmp;
+
+	switch (alg) {
+		case TSS_ALG_AES:
+			break;
+		default:
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	EVP_CIPHER_CTX_init(&ctx);
+
+	if (!EVP_DecryptInit(&ctx, EVP_aes_256_ecb(), key, NULL)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (!EVP_DecryptUpdate(&ctx, out, out_len, in, in_len)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (!EVP_DecryptFinal(&ctx, out + *out_len, &tmp)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+	*out_len += tmp;
+done:
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return result;
+}
+
