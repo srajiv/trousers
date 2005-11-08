@@ -183,7 +183,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 			initFlags |= (TSS_KEY_TYPE_STORAGE |
 				      TSS_KEY_NOT_MIGRATABLE |
 				      TSS_KEY_NON_VOLATILE | TSS_KEY_SIZE_2048 |
-				      TSS_KEY_NO_AUTHORIZATION);
+				      TSS_KEY_AUTHORIZATION);
 		}
 
 		/* Set default key flags */
