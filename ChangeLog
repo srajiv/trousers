@@ -1,4 +1,6 @@
 
+ - Bug fix in TCSP_Sign_TP, signature should be alloc'd using
+ the TSP heap.
  - Fix for SF#1351593, authdata was always 0 for the SRK. This
  was due to the defaults set in Tspi_Context_CreateObject for
  the SRK key flag. The default SRK key is now set to require
