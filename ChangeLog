@@ -1,4 +1,6 @@
 
+ - Implemented Tspi_TPM_CollateIdentityRequest and
+ Tspi_TPM_ActivateIdentity.
  - Bug fix in TCSP_Sign_TP, signature should be alloc'd using
  the TSP heap.
  - Fix for SF#1351593, authdata was always 0 for the SRK. This
