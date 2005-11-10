@@ -208,6 +208,7 @@ void LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
 void LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
 TSS_RESULT UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
 TSS_RESULT UnloadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob, TCPA_SYMMETRIC_KEY * key);
+void LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key);
 TSS_RESULT UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION * pcr);
 void LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION pcr);
 TSS_RESULT UnloadBlob_PCR_COMPOSITE(UINT16 * offset, BYTE * blob, TCPA_PCR_COMPOSITE * out);
