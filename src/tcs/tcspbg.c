@@ -692,11 +692,8 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (idKeyAuth != NULL) {
-		LogDebug1("Auth Used");
 		if ((result = auth_mgr_check(hContext, idKeyAuth->AuthHandle)))
 			goto done;
-	} else {
-		LogDebug1("No Auth");
 	}
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 		goto done;
@@ -724,22 +721,19 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset += 6;
-		UnloadBlob_UINT16(&offset, (UINT16 *) SymmetricKeySize,
-				  txBlob, "used to calculate size of symkey");
-		*SymmetricKeySize += 8;
-		offset = 10;
+		offset = 14;
+		UnloadBlob_UINT32(&offset, SymmetricKeySize, txBlob, NULL);
 		*SymmetricKey = getSomeMemory(*SymmetricKeySize, hContext);
 		if (*SymmetricKey == NULL) {
 			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey, "sym key");
+		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey,
+			   NULL);
 
 		if (idKeyAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, idKeyAuth);
