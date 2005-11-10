@@ -245,20 +245,14 @@ out:
         return rv;
 }
 
-/* No need to call the tss version of RSA_public_encrypt here, since
- * we're using PKCS 1.5 padding
- */
-
-TSS_RESULT
-Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
-                       unsigned int dataToEncryptLen,
-                       unsigned char *encryptedData,
-                       unsigned int *encryptedDataLen,
-                       unsigned char * publicKey,
-                       unsigned int keysize) /* BYTE* seed); this seed must be 256 - 11 */
+int
+Trspi_RSA_Public_Encrypt(unsigned char *in, unsigned int inlen,
+			 unsigned char *out, unsigned int *outlen,
+			 unsigned char *pubkey, unsigned int pubsize,
+			 unsigned int e, int padding)
 {
-	int rv;
-	unsigned char exp[] = { 0x01, 0x00, 0x01 }; /* 65537 hex */
+	int rv, e_size = 3;
+	unsigned char exp[] = { 0x01, 0x00, 0x01 };
 	RSA *rsa = RSA_new();
 
 	if (rsa == NULL) {
@@ -266,31 +260,54 @@ Trspi_RSA_PKCS15_Encrypt(unsigned char *dataToEncrypt,
 		goto err;
 	}
 
+	switch (e) {
+		case 0:
+			/* fall through */
+		case 65537:
+			break;
+		case 17:
+			exp[0] = 17;
+			e_size = 1;
+			break;
+		case 3:
+			exp[0] = 3;
+			e_size = 1;
+			break;
+		default:
+			rv = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto out;
+			break;
+	}
+
 	/* set the public key value in the OpenSSL object */
-	rsa->n = BN_bin2bn(publicKey, keysize, rsa->n);
+	rsa->n = BN_bin2bn(pubkey, pubsize, rsa->n);
 	/* set the public exponent */
-	rsa->e = BN_bin2bn(exp, sizeof(exp), rsa->e);
+	rsa->e = BN_bin2bn(exp, e_size, rsa->e);
 
 	if (rsa->n == NULL || rsa->e == NULL) {
 		rv = TSPERR(TSS_E_OUTOFMEMORY);
 		goto err;
 	}
 
-	/* XXX (CAST TO UNSIGNED) XXX  padding constraint for PKCS#1 v1.5 padding */
-	if ((int)dataToEncryptLen > (RSA_size(rsa) - 11)) {
-		rv = TSPERR(TSS_E_INTERNAL_ERROR);
-		goto err;
+	switch (padding) {
+		case RSA_PKCS1_PADDING:
+		case RSA_PKCS1_OAEP_PADDING:
+		case RSA_NO_PADDING:
+			break;
+		default:
+			rv = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto out;
+			break;
 	}
 
-	rv = RSA_public_encrypt(dataToEncryptLen, dataToEncrypt,
-				encryptedData, rsa, RSA_PKCS1_PADDING);
+	rv = RSA_public_encrypt(inlen, in, out, rsa, padding);
 	if (rv == -1) {
 		rv = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto err;
 	}
 
 	/* RSA_public_encrypt returns the size of the encrypted data */
-	*encryptedDataLen = rv;
+	*outlen = rv;
 	rv = TSS_SUCCESS;
 	goto out;
 
@@ -303,8 +320,8 @@ out:
 }
 
 TSS_RESULT
-Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, UINT32 in_len, BYTE *in,
-		  UINT32 *out_len, BYTE *out)
+Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len, BYTE *out,
+		  UINT32 *out_len)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
@@ -350,8 +367,8 @@ done:
 }
 
 TSS_RESULT
-Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, UINT32 in_len, BYTE *in,
-		  UINT32 *out_len, BYTE *out)
+Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len, BYTE *out,
+		  UINT32 *out_len)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
