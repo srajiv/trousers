@@ -2423,13 +2423,13 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 		}
 
-		*sig = (BYTE *) malloc(*sigSize);
+		*sig = (BYTE *) calloc_tspi(tspContext, *sigSize);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
-			free(*sig);
+			free_tspi(tspContext, *sig);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
