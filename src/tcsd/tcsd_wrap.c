@@ -3630,6 +3630,97 @@ tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
+			  struct tsp_packet *tsp_data,
+			  struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCS_KEY_HANDLE idKeyHandle;
+	TPM_AUTH *pIdKeyAuth = NULL, *pOwnerAuth = NULL, auth1, auth2;
+	UINT32 SymmetricKeySize, blobSize;
+	BYTE *SymmetricKey, *blob;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr), i;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &idKeyHandle, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &blobSize, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if ((blob = malloc(blobSize)) == NULL)
+		return TCSERR(TSS_E_OUTOFMEMORY);
+
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, blob, blobSize, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &auth1, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &auth2, 0, tsp_data)) {
+		LogDebugFn1("No auth for identity key");
+		pOwnerAuth = &auth1;
+	} else {
+		pIdKeyAuth = &auth1;
+		pOwnerAuth = &auth2;
+	}
+
+	result = TCSP_ActivateTPMIdentity_Internal(hContext, idKeyHandle, blobSize,
+						   blob, pIdKeyAuth, pOwnerAuth,
+						   &SymmetricKeySize,
+						   &SymmetricKey);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + (2 * sizeof(TPM_AUTH)) + sizeof(UINT32)
+					+ SymmetricKeySize);
+		if (*hdr == NULL) {
+			free(SymmetricKey);
+			LogError("malloc of %d bytes failed.", size +
+						(2 * sizeof(TPM_AUTH)) +
+						sizeof(UINT32) + blobSize);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		i = 0;
+		if (pIdKeyAuth) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pIdKeyAuth, 0, *hdr)) {
+				free(*hdr);
+				free(SymmetricKey);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, *hdr)) {
+			free(*hdr);
+			free(SymmetricKey);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &SymmetricKeySize, 0, *hdr)) {
+			free(*hdr);
+			free(SymmetricKey);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, SymmetricKey, SymmetricKeySize, *hdr)) {
+			free(*hdr);
+			free(SymmetricKey);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		free(SymmetricKey);
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+
+	return TSS_SUCCESS;
+}
+
 
 /* -------------------- */
 /*	Dispatch	*/
@@ -3672,7 +3763,7 @@ DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Error}, /* 27 */
 	{tcs_wrap_Error}, /* 28 */
 	{tcs_wrap_TerminateHandle}, /* 29 */
-	{tcs_wrap_Error}, /* 30 */
+	{tcs_wrap_ActivateIdentity}, /* 30 */
 	{tcs_wrap_Extend}, /* 31 */
 	{tcs_wrap_PcrRead}, /* 32 */
 	{tcs_wrap_Quote}, /* 33 */
