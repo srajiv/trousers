@@ -1684,7 +1684,69 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 					UINT32 * SymmetricKeySize,	/* out */
 					BYTE ** SymmetricKey	/* out */
     ) {
-	return TSPERR(TSS_E_NOTIMPL);
+	TSS_RESULT result;
+	TSS_HCONTEXT tspContext;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+	int i = 0;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_ACTIVATETPMIDENTITY;
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &idKey, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &blobSize, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, blob, blobSize, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	if (idKeyAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (hdr->result == TSS_SUCCESS) {
+		i = 0;
+		if (idKeyAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, hdr))
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, hdr)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, SymmetricKeySize, 0, hdr)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*SymmetricKey = malloc(*SymmetricKeySize);
+		if (*SymmetricKey == NULL) {
+			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *SymmetricKey, *SymmetricKeySize, hdr)) {
+			free(*SymmetricKey);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+done:
+	free(hdr);
+	return result;
 }
 
 TSS_RESULT
