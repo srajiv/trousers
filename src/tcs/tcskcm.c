@@ -949,11 +949,11 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		goto done;
 
 	if (pSrkAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug1("SRK Auth Used");
 		if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug1("No SRK Auth");
 	}
 
 	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
