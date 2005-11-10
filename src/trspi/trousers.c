@@ -36,6 +36,13 @@ Trspi_UnloadBlob_DIGEST(UINT16 * offset, BYTE * blob, TCPA_DIGEST digest)
 	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
 }
 
+void
+Trspi_LoadBlob_PUBKEY(UINT16 *offset, BYTE *blob, TCPA_PUBKEY *pubKey)
+{
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &pubKey->algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(offset, blob, &pubKey->pubKey);
+}
+
 TSS_RESULT
 Trspi_UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * pubKey)
 {
@@ -647,6 +654,215 @@ Trspi_UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *k
 	} else {
 		key->data = NULL;
 	}
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_IDENTITY_REQ(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req)
+{
+	Trspi_UnloadBlob_UINT32(offset, &req->asymSize, blob);
+	Trspi_UnloadBlob_UINT32(offset, &req->symSize, blob);
+	/* XXX */
+	Trspi_UnloadBlob_KEY_PARMS(offset, blob, &req->asymAlgorithm);
+	Trspi_UnloadBlob_KEY_PARMS(offset, blob, &req->symAlgorithm);
+
+	if (req->asymSize > 0) {
+		req->asymBlob = malloc(req->asymSize);
+		if (req->asymBlob == NULL) {
+			req->asymSize = 0;
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, req->asymSize, blob, req->asymBlob);
+	} else {
+		req->asymBlob = NULL;
+	}
+
+	if (req->symSize > 0) {
+		req->symBlob = malloc(req->symSize);
+		if (req->symBlob == NULL) {
+			req->symSize = 0;
+			req->asymSize = 0;
+			free(req->asymBlob);
+			req->asymBlob = NULL;
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, req->symSize, blob, req->symBlob);
+	} else {
+		req->symBlob = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_IDENTITY_PROOF(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_PROOF *proof)
+{
+	TSS_RESULT result;
+
+	/* helps when an error occurs */
+	memset(proof, 0, sizeof(TCPA_IDENTITY_PROOF));
+
+	Trspi_UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&proof->ver);
+	Trspi_UnloadBlob_UINT32(offset, &proof->labelSize, blob);
+	Trspi_UnloadBlob_UINT32(offset, &proof->identityBindingSize, blob);
+	Trspi_UnloadBlob_UINT32(offset, &proof->endorsementSize, blob);
+	Trspi_UnloadBlob_UINT32(offset, &proof->platformSize, blob);
+	Trspi_UnloadBlob_UINT32(offset, &proof->conformanceSize, blob);
+
+	if ((result = Trspi_UnloadBlob_PUBKEY(offset, blob,
+					      &proof->identityKey))) {
+		proof->labelSize = 0;
+		proof->identityBindingSize = 0;
+		proof->endorsementSize = 0;
+		proof->platformSize = 0;
+		proof->conformanceSize = 0;
+		return result;
+	}
+
+	if (proof->labelSize > 0) {
+		proof->labelArea = malloc(proof->labelSize);
+		if (proof->labelArea == NULL) {
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		Trspi_UnloadBlob(offset, proof->labelSize, blob, proof->labelArea);
+	} else {
+		proof->labelArea = NULL;
+	}
+
+	if (proof->identityBindingSize > 0) {
+		proof->identityBinding = malloc(proof->identityBindingSize);
+		if (proof->identityBinding == NULL) {
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		Trspi_UnloadBlob(offset, proof->identityBindingSize, blob,
+				 proof->identityBinding);
+	} else {
+		proof->identityBinding = NULL;
+	}
+
+	if (proof->endorsementSize > 0) {
+		proof->endorsementCredential = malloc(proof->endorsementSize);
+		if (proof->endorsementCredential == NULL) {
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		Trspi_UnloadBlob(offset, proof->endorsementSize, blob,
+				 proof->endorsementCredential);
+	} else {
+		proof->endorsementCredential = NULL;
+	}
+
+	if (proof->platformSize > 0) {
+		proof->platformCredential = malloc(proof->platformSize);
+		if (proof->platformCredential == NULL) {
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		Trspi_UnloadBlob(offset, proof->platformSize, blob,
+				 proof->platformCredential);
+	} else {
+		proof->platformCredential = NULL;
+	}
+
+	if (proof->conformanceSize > 0) {
+		proof->conformanceCredential = malloc(proof->conformanceSize);
+		if (proof->conformanceCredential == NULL) {
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		Trspi_UnloadBlob(offset, proof->conformanceSize, blob,
+				 proof->conformanceCredential);
+	} else {
+		proof->conformanceCredential = NULL;
+	}
+
+	return TSS_SUCCESS;
+error:
+	proof->labelSize = 0;
+	proof->identityBindingSize = 0;
+	proof->endorsementSize = 0;
+	proof->platformSize = 0;
+	proof->conformanceSize = 0;
+	free(proof->labelArea);
+	proof->labelArea = NULL;
+	free(proof->identityBinding);
+	proof->identityBinding = NULL;
+	free(proof->endorsementCredential);
+	proof->endorsementCredential = NULL;
+	free(proof->conformanceCredential);
+	proof->conformanceCredential = NULL;
+	/* free identityKey */
+	free(proof->identityKey.pubKey.key);
+	free(proof->identityKey.algorithmParms.parms);
+	proof->identityKey.pubKey.key = NULL;
+	proof->identityKey.pubKey.keyLength = 0;
+	proof->identityKey.algorithmParms.parms = NULL;
+	proof->identityKey.algorithmParms.parmSize = 0;
+
+	return result;
+}
+
+void
+Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
+				  TCPA_SYM_CA_ATTESTATION *sym)
+{
+	Trspi_LoadBlob_UINT32(offset, sym->credSize, blob);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &sym->algorithm);
+	Trspi_LoadBlob(offset, sym->credSize, blob, sym->credential);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
+				    TCPA_SYM_CA_ATTESTATION *sym)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT32(offset, &sym->credSize, blob);
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, blob,
+						 &sym->algorithm))) {
+		sym->credSize = 0;
+		return result;
+	}
+
+	if (sym->credSize > 0) {
+		if ((sym->credential = malloc(sym->credSize)) == NULL) {
+			free(sym->algorithm.parms);
+			sym->algorithm.parmSize = 0;
+			sym->credSize = 0;
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, sym->credSize, blob, sym->credential);
+	} else {
+		sym->credential = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT16 *offset, BYTE *blob,
+				TCPA_ASYM_CA_CONTENTS *asym)
+{
+	Trspi_LoadBlob_SYMMETRIC_KEY(offset, blob, &asym->sessionKey);
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob,
+		       (BYTE *)&asym->idDigest);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_ASYM_CA_CONTENTS(UINT16 *offset, BYTE *blob,
+				  TCPA_ASYM_CA_CONTENTS *asym)
+{
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(offset, blob,
+						     &asym->sessionKey)))
+		return result;
+
+	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob,
+			 (BYTE *)&asym->idDigest);
 
 	return TSS_SUCCESS;
 }
