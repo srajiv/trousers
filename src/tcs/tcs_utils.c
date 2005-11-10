@@ -784,24 +784,40 @@ UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob,
 	return rc;
 }
 
-#if 0
-TSS_RESULT
-UnloadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob,
-			 TCPA_SYMMETRIC_KEY * key)
+void
+LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 {
-	UnloadBlob_UINT32(offset, &key->algId, blob, "SYM_KEY algID");
-	UnloadBlob_UINT16(offset, &key->encScheme, blob, "SYM KEY encScheme");
-	UnloadBlob_UINT16(offset, &key->size, blob, "SYM KEY size");
+	LoadBlob_UINT32(offset, key->algId, blob, NULL);
+	LoadBlob_UINT16(offset, key->encScheme, blob, NULL);
+	LoadBlob_UINT16(offset, key->size, blob, NULL);
 
-	key->data = (BYTE *)malloc(key->size);
-        if (key->data == NULL) {
-		LogError("malloc of %d bytes failed.", key->size);
-                return TCSERR(TSS_E_OUTOFMEMORY);
-        }
-	UnloadBlob(offset, key->size, blob, key->data, "SYM KEY data");
+	if (key->size > 0) {
+		LoadBlob(offset, key->size, blob, key->data, NULL);
+	} else {
+		key->data = NULL;
+	}
+}
+
+TSS_RESULT
+UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
+{
+	UnloadBlob_UINT32(offset, &key->algId, blob, NULL);
+	UnloadBlob_UINT16(offset, &key->encScheme, blob, NULL);
+	UnloadBlob_UINT16(offset, &key->size, blob, NULL);
+
+	if (key->size > 0) {
+		key->data = (BYTE *)malloc(key->size);
+		if (key->data == NULL) {
+			LogError("malloc of %hu bytes failed.", key->size);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		UnloadBlob(offset, key->size, blob, key->data, "SYM KEY data");
+	} else {
+		key->data = NULL;
+	}
+
 	return TSS_SUCCESS;
 }
-#endif
 
 TSS_RESULT
 UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob,
