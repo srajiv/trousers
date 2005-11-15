@@ -642,8 +642,10 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	LogDebug1("Key is loaded, create a new key object for the user");
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey))) {
+		free(keyBlob);
 		return result;
+	}
 	initFlags = 0;
 
 	if (theKey.pubKey.keyLength == 0x100)
@@ -934,7 +936,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		 * the size of the blob's pubkey */
 		offset = 0;
 		if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &keyContainer))) {
-			free_tspi(tspContext, keyBlob);
+			free(keyBlob);
 			return result;
 		}
 
@@ -985,7 +987,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		else {
 			LogError1("keyContainer.authDataUsage was not "
 				  "always or never");
-			free_tspi(tspContext, keyBlob);
+			free(keyBlob);
 			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
