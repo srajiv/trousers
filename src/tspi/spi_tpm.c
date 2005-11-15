@@ -194,12 +194,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				LogDebug1("Failed to generate random nonce");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
-		} else {
-			if (pValidationData->DataLength != TCPA_SHA1_160_HASH_LEN)
-				return TSPERR(TSS_E_BAD_PARAMETER);
-
+		} else
 			memcpy(antiReplay.nonce, &pValidationData->ExternalData, TCPA_SHA1_160_HASH_LEN);
-		}
 
 		/* call down to the TPM */
 		if ((result = TCSP_ReadPubek(tcsContext, antiReplay, &pubEKSize, &pubEK, &checkSum)))
@@ -242,9 +238,9 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				return TSPERR(TSS_E_OUTOFMEMORY);
 			}
 
-			memcpy(pValidationData->Data, pubEK, pValidationData->DataLength);
-			memcpy(&(pValidationData->Data[pValidationData->DataLength]),
-					antiReplay.nonce, TCPA_SHA1_160_HASH_LEN);
+			memcpy(pValidationData->Data, pubEK, pubEKSize);
+			memcpy(&(pValidationData->Data[pubEKSize]), antiReplay.nonce,
+			       TCPA_SHA1_160_HASH_LEN);
 
 			pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
 			pValidationData->ValidationData = calloc_tspi(tspContext, TCPA_SHA1_160_HASH_LEN);
@@ -2106,51 +2102,58 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 			return result;
 		}
 	}
+
+	if ((result = Tspi_GetAttribData(hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
+					 TSS_TSPATTRIB_KEYBLOB_BLOB,
+					 &keyDataSize, &keyData))) {
+		free(pcrDataOut);
+		free(validationData);
+		return result;
+	}
+
+	/* create the validation data */
+	offset = 0;
+	memset(&keyContainer, 0, sizeof(TCPA_KEY));
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+		return result;
+
+	/*  creating pcrCompositeHash */
+	Trspi_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
+	free(pcrDataOut);
+
+	/* generate Quote_info struct */
+	/* 1. add version */
+	offset = 0;
+	Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.ver);
+	/* 2. add "QUOT" */
+	quoteinfo[offset++] = 'Q';
+	quoteinfo[offset++] = 'U';
+	quoteinfo[offset++] = 'O';
+	quoteinfo[offset++] = 'T';
+	/* 3. Composite Hash */
+	Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, quoteinfo,
+		       digest.digest);
+	/* 4. AntiReplay Nonce */
+	Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, quoteinfo,
+		       antiReplay.nonce);
+
 	if (verifyInternally) {
 		/* validate the data here */
-		if ((result = Tspi_GetAttribData(hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
-			free(pcrDataOut);
-			free(validationData);
-			return result;
-		}
-
-		offset = 0;
-		memset(&keyContainer, 0, sizeof(TCPA_KEY));
-		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
-			return result;
-
-		/*  creating pcrCompositeHash */
-		Trspi_Hash(TSS_HASH_SHA1, pcrDataOutSize, pcrDataOut, digest.digest);
-		free(pcrDataOut);
-
-		/* generate Quote_info struct */
-		/* 1. add version */
-		offset = 0;
-		Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.ver);
-		/* 2. add "QUOT" */
-		quoteinfo[offset++] = 'Q';
-		quoteinfo[offset++] = 'U';
-		quoteinfo[offset++] = 'O';
-		quoteinfo[offset++] = 'T';
-		/* 3. Composite Hash */
-		Trspi_LoadBlob(&offset, 20, quoteinfo, digest.digest);
-		/* 4. AntiReplay Nonce */
-		Trspi_LoadBlob(&offset, 20, quoteinfo, antiReplay.nonce);
-
-		/*  Hash 'em up good */
 		Trspi_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest);
 
 		if ((result = Trspi_Verify(TSS_HASH_SHA1, digest.digest, 20,
-					 keyContainer.pubKey.key, keyContainer.pubKey.keyLength,
-					 validationData, validationLength))) {
-			free(validationData);
+					   keyContainer.pubKey.key,
+					   keyContainer.pubKey.keyLength,
+					   validationData,
+					   validationLength))) {
 			free_key_refs(&keyContainer);
+			free(validationData);
 			return result;
 		}
-
 		free_key_refs(&keyContainer);
 	} else {
+		free_key_refs(&keyContainer);
+
 		pValidationData->ValidationDataLength = validationLength;
 		pValidationData->ValidationData = calloc_tspi(tspContext, validationLength);
 		if (pValidationData->ValidationData == NULL) {
@@ -2160,16 +2163,14 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 		memcpy(pValidationData->ValidationData, validationData,
 		       pValidationData->ValidationDataLength);
 		free(validationData);
-		pValidationData->DataLength = pcrDataOutSize;
-		pValidationData->Data = calloc_tspi(tspContext, pcrDataOutSize);
+
+		pValidationData->DataLength = offset;
+		pValidationData->Data = calloc_tspi(tspContext, offset);
 		if (pValidationData->Data == NULL) {
-			LogError("malloc of %d bytes failed.", pcrDataOutSize);
+			LogError("malloc of %d bytes failed.", offset);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->Data, pcrDataOut, pcrDataOutSize);
-		free(pcrDataOut);
-		pValidationData->DataLength = pcrDataOutSize;
-		memcpy(&pValidationData->ExternalData, antiReplay.nonce, 20);
+		memcpy(pValidationData->Data, quoteinfo, offset);
 	}
 
 	return TSS_SUCCESS;
