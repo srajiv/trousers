@@ -995,7 +995,7 @@ Trspi_Error_String(TSS_RESULT r)
 			case TSS_E_COMM_FAILURE:		return "Communication failure";
 			case TSS_E_TPM_UNSUPPORTED_FEATURE:	return "Unsupported feature";
 			case TSS_E_INVALID_OBJECT_TYPE:		return "Object type not valid for this operation";
-			case TSS_E_INVALID_OBJECT_INITFLAG:	return "Wrong flag creation for object creation";
+			case TSS_E_INVALID_OBJECT_INITFLAG:	return "Wrong flag information for object creation";
 			case TSS_E_INVALID_HANDLE:		return "Invalid handle";
 			case TSS_E_NO_CONNECTION:		return "Core service connection doesn't exist";
 			case TSS_E_CONNECTION_FAILED:		return "Core service connection failed";
