@@ -1,4 +1,6 @@
 
+ - Fixed validation data in Tspi_TPM_Quote and
+ Tspi_TPM_GetPubEndorsementKey.
  - Implemented Tspi_TPM_CollateIdentityRequest and
  Tspi_TPM_ActivateIdentity.
  - Bug fix in TCSP_Sign_TP, signature should be alloc'd using
