@@ -776,10 +776,13 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 				      TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
     ) {
 	TSS_RESULT result;
+	TSS_HCONTEXT tspContext;
 	struct tsp_packet data;
-	//TSS_UUID uuid;
 	struct tcsd_packet_hdr *hdr;
 	int i, j;
+
+	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -788,20 +791,10 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-#if 0
-	if (pKeyUUID == NULL) {
-		if (setData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data))
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	} else {
-		if (setData(TCSD_PACKET_TYPE_UUID, 1, pKeyUUID, 0, &data))
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-#else
 	if (pKeyUUID != NULL) {
 		if (setData(TCSD_PACKET_TYPE_UUID, 1, pKeyUUID, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-#endif
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -814,18 +807,26 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		*ppKeyHierarchy = malloc(*pcKeyHierarchySize * sizeof(TSS_KM_KEYINFO));
-		if (*ppKeyHierarchy == NULL) {
-			LogError("malloc of %u bytes failed.", *pcKeyHierarchySize);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		for (j = 0; (UINT32)j < *pcKeyHierarchySize; j++) {
-			if (getData( TCSD_PACKET_TYPE_KM_KEYINFO, i++, &((*ppKeyHierarchy)[j]), 0, hdr)) {
-				free(*ppKeyHierarchy);
-				result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		if (*pcKeyHierarchySize > 0) {
+			*ppKeyHierarchy = calloc_tspi(tspContext,
+						      (*pcKeyHierarchySize) *
+						      sizeof(TSS_KM_KEYINFO));
+			if (*ppKeyHierarchy == NULL) {
+				LogError("malloc of %u bytes failed.", *pcKeyHierarchySize);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
+			for (j = 0; (UINT32)j < *pcKeyHierarchySize; j++) {
+				if (getData(TCSD_PACKET_TYPE_KM_KEYINFO, i++,
+					    &((*ppKeyHierarchy)[j]), 0, hdr)) {
+					free(*ppKeyHierarchy);
+					result = TSPERR(TSS_E_INTERNAL_ERROR);
+					goto done;
+				}
+			}
+		} else {
+			*ppKeyHierarchy = NULL;
 		}
 	}
 
