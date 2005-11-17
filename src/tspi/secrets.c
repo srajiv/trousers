@@ -72,7 +72,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_BOOL bExpired;
-	UINT32 mode;
+	UINT32 mode, usage;
 	TCPA_SECRET secret;
 
 	/* This validates that the secret can be used */
@@ -83,6 +83,9 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
 	if ((result = obj_policy_get_tcs_context(hPolicy, &tcsContext)))
+		return result;
+
+	if ((result = obj_policy_get_mode(hPolicy, &mode)))
 		return result;
 
 	if ((result = Init_AuthNonce(tcsContext, auth)))
@@ -106,9 +109,6 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 			return result;
 	}
 
-	if ((result = obj_policy_get_mode(hPolicy, &mode)))
-		return result;
-
 	switch (mode) {
 		case TSS_SECRET_MODE_CALLBACK:
 			result = obj_policy_do_hmac(hPolicy, hAuthorizedObject,
@@ -125,8 +125,22 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 		case TSS_SECRET_MODE_PLAIN:
 		case TSS_SECRET_MODE_POPUP:
 			if ((result = obj_policy_get_secret(hPolicy, &secret)))
-				return result;
+				break;
 
+			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
+			break;
+		case TSS_SECRET_MODE_NONE:
+			/* if this is an RSA key that requires auth, then throw
+			 * an error */
+			if (!(obj_rsakey_get_authdata_usage(hAuthorizedObject,
+							    &usage)) && usage) {
+				result = TSPERR(TSS_E_POLICY_NO_SECRET);
+				break;
+			}
+
+			/* all 0's is TSS_WELL_KNOWN_SECRET, which we'll check
+			 * for in the validation function */
+			memset(&secret.authdata, 0, sizeof(TCPA_SECRET));
 			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
 			break;
 		default:
@@ -134,8 +148,10 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 			break;
 	}
 
-	if (result)
+	if (result) {
+		TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
 		return result;
+	}
 
 	return obj_policy_dec_counter(hPolicy);
 }
@@ -222,8 +238,10 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 						nonceEvenOSAP->nonce,
 						auth->NonceOdd.nonce, 20,
 						encAuthUsage->authdata,
-						encAuthMig->authdata)))
+						encAuthMig->authdata))) {
+			TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
 			return result;
+		}
 	}
 
 	return TSS_SUCCESS;
