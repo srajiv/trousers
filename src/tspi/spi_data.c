@@ -256,14 +256,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hEncKey, TSS_POLICY_USAGE,
-					&hPolicy, NULL)))
+					    &hPolicy, NULL)))
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
 		return result;
 
 	if ((result = obj_encdata_get_policy(hEncData, TSS_POLICY_USAGE,
-						&hEncPolicy)))
+					     &hEncPolicy)))
 		return result;
 
 	tcsKeyHandle = getTCSKeyHandle(hEncKey);
@@ -274,11 +274,11 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
 		if ((result = obj_pcrs_get_composite(hPcrComposite,
-						&digAtCreation)))
+						     &digAtCreation)))
 			return result;
 
 		if ((result = obj_pcrs_get_selection(hPcrComposite,
-						&pcrSelect)))
+						     &pcrSelect)))
 			return result;
 
 		LogDebug1("Digest at Creation:");
@@ -287,19 +287,19 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		offset = 0;
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
-				digAtCreation.digest);
+			       digAtCreation.digest);
 		/* XXX */
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
-				digAtCreation.digest);
+			       digAtCreation.digest);
 		pcrDataSize = offset;
 	}
 
 	if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy,
-					hEncKey, TCPA_ET_KEYHANDLE,
-					tcsKeyHandle,
-					&encAuthUsage, &encAuthMig,
-					sharedSecret, &auth,
-					&nonceEvenOSAP)))
+					     hEncKey, TCPA_ET_KEYHANDLE,
+					     tcsKeyHandle,
+					     &encAuthUsage, &encAuthMig,
+					     sharedSecret, &auth,
+					     &nonceEvenOSAP)))
 		return result;
 
 	offset = 0;
@@ -318,8 +318,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 		return result;
 
 	if ((result = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage,
-			    pcrDataSize, pcrData, ulDataLength, rgbDataToSeal,
-			    &auth, &encDataSize, &encData)))
+				pcrDataSize, pcrData, ulDataLength,
+				rgbDataToSeal, &auth, &encDataSize, &encData)))
 		return result;
 
 	offset = 0;
@@ -359,7 +359,6 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
     )
 {
 	TPM_AUTH privAuth, privAuth2;
-	TPM_AUTH *pPrivAuth;
 	UINT16 offset;
 	BYTE hashblob[0x400];
 	TCPA_DIGEST digest;
@@ -367,7 +366,6 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	TCS_KEY_HANDLE tcsKeyHandle;
-	TSS_BOOL useAuth;
         TSS_HCONTEXT tspContext;
 	UINT32 ulDataLen;
 	BYTE *data;
@@ -382,11 +380,11 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
-					&hPolicy, &useAuth)))
+					    &hPolicy, NULL)))
 		return result;
 
 	if ((result = obj_encdata_get_policy(hEncData, TSS_POLICY_USAGE,
-					&hEncPolicy)))
+					     &hEncPolicy)))
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &ulDataLen, &data)))
@@ -400,26 +398,19 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
 	Trspi_LoadBlob(&offset, ulDataLen, hashblob, data);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
-	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_Unseal,
-						      hPolicy, &digest,
-						      &privAuth)))
-			return result;
-		pPrivAuth = &privAuth;
-	} else {
-		pPrivAuth = NULL;
-	}
+
+	if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_Unseal,
+					      hPolicy, &digest,
+					      &privAuth)))
+		return result;
 
 	if ((result = secret_PerformAuth_OIAP(hEncData, TPM_ORD_Unseal,
 					      hEncPolicy, &digest,
-					      &privAuth2))) {
-		if (useAuth)
-			TCSP_TerminateHandle(tcsContext, privAuth.AuthHandle);
+					      &privAuth2)))
 		return result;
-	}
 
 	if ((result = TCSP_Unseal(tcsContext, tcsKeyHandle,
-				  ulDataLen, data, pPrivAuth,
+				  ulDataLen, data, &privAuth,
 				  &privAuth2, pulUnsealedDataLength,
 				  prgbUnsealedData)))
 		return result;
@@ -429,18 +420,17 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, *pulUnsealedDataLength, hashblob);
 	Trspi_LoadBlob(&offset, *pulUnsealedDataLength, hashblob,
-			*prgbUnsealedData);
+		       *prgbUnsealedData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
-	if (useAuth) {
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
-							&privAuth))) {
-			free_tspi(tspContext, *prgbUnsealedData);
-			return result;
-		}
+
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
+						    &privAuth))) {
+		free_tspi(tspContext, *prgbUnsealedData);
+		return result;
 	}
 
 	if ((result = obj_policy_validate_auth_oiap(hEncPolicy, &digest,
-					&privAuth2))) {
+						    &privAuth2))) {
 		free_tspi(tspContext, *prgbUnsealedData);
 		return result;
 	}
