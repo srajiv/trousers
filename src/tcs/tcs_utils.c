@@ -141,6 +141,8 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 				UnloadBlob_UINT32(&offset, v, resp, NULL);
 				break;
 			default:
+				LogDebug1("TCSP_GetCapability_Internal returned"
+					  " %u bytes", respSize);
 				result = TCSERR(TSS_E_FAIL);
 				break;
 		}
@@ -162,11 +164,13 @@ get_max_auths(UINT32 *auths)
 
 	if (TPM_VERSION(1,2)) {
 		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, (BYTE *)(&subCap));
-		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
+		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap,
+					sizeof(subCap), auths);
 	} else if (TPM_VERSION(1,1)) {
 		/* open auth sessions until we get a failure */
 		for (i = 0; i < TSS_MAX_AUTHS_CAP; i++) {
-			result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);
+			result = TCSP_OIAP_Internal(InternalContext,
+						    &(handles[i]), &nonce);
 			if (result != TSS_SUCCESS) {
 				/* this is not off by one since we're 0 indexed */
 				*auths = i;
@@ -197,6 +201,8 @@ get_max_auths(UINT32 *auths)
 	return result;
 }
 
+/* This is only called from init paths, so printing an error message is
+ * appropriate if something goes wrong */
 TSS_RESULT
 get_tpm_metrics(struct tpm_properties *p)
 {
@@ -204,40 +210,44 @@ get_tpm_metrics(struct tpm_properties *p)
 	UINT32 subCap, rv = 0;
 
 	if ((result = get_current_version(&p->version)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 
 	UINT32ToArray(TPM_ORD_SaveKeyContext, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_ORD, (BYTE *)&subCap, sizeof(UINT32), &rv)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 	p->keyctx_swap = rv ? TRUE : FALSE;
 
 	rv = 0;
 	UINT32ToArray(TPM_ORD_SaveAuthContext, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_ORD, (BYTE *)&subCap, sizeof(UINT32), &rv)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 	p->authctx_swap = rv ? TRUE : FALSE;
 
 	UINT32ToArray(TPM_CAP_PROP_PCR, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_pcrs)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 
 	UINT32ToArray(TPM_CAP_PROP_DIR, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_dirs)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 
 	UINT32ToArray(TPM_CAP_PROP_SLOTS, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					&p->num_keys)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 
 	UINT32ToArray(TPM_CAP_PROP_MANUFACTURER, (BYTE *)&subCap);
 	if ((result = get_cap_uint32(TCPA_CAP_PROPERTY, (BYTE *)&subCap, sizeof(UINT32),
 					(UINT32 *)&p->manufacturer)))
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		goto err;
 
 	result = get_max_auths(&(p->num_auths));
+
+err:
+	if (result)
+		LogError("TPM_GetCapability failed with result = 0x%x", result);
 
 	return result;
 }
