@@ -141,7 +141,7 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 				UnloadBlob_UINT32(&offset, v, resp, NULL);
 				break;
 			default:
-				LogDebug1("TCSP_GetCapability_Internal returned"
+				LogDebug("TCSP_GetCapability_Internal returned"
 					  " %u bytes", respSize);
 				result = TCSERR(TSS_E_FAIL);
 				break;
