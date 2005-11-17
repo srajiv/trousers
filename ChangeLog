@@ -1,4 +1,6 @@
 
+ - Added a logging statement when tcsd_startup fails due to an
+ error returned by the TPM itself.
  - Fixed validation data in Tspi_TPM_Quote and
  Tspi_TPM_GetPubEndorsementKey.
  - Implemented Tspi_TPM_CollateIdentityRequest and
