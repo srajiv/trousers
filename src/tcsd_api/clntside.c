@@ -44,8 +44,6 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	struct sockaddr_in addr;
 	struct hostent *hEnt = NULL;
 
-	LogDebug1("Sending TCS_OpenContext Packet");
-
 	sd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sd == -1) {
 		LogError("socket: %s", strerror(errno));
@@ -73,9 +71,8 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		memcpy(&addr.sin_addr, hEnt->h_addr_list[0], 4);
 	}
 
-	LogDebug("Resolved Address is %s", inet_ntoa(addr.sin_addr));
+	LogDebug("Connecting to %s", inet_ntoa(addr.sin_addr));
 
-	LogDebug1("Connecting");
 	if (connect(sd, (struct sockaddr *) &addr, sizeof (addr))) {
 		LogError("connect: %s", strerror(errno));
 		result = TSPERR(TSS_E_COMM_FAILURE);
@@ -106,8 +103,6 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 			returnSize = Decode_UINT32((BYTE *)&loc_hdr.packet_size);
 		else
 			returnSize = hdr_size;
-
-		LogDebug("Recieved %.8X bytes back", returnSize);
 
 		if (returnSize > 0) {
 			/* malloc space for the body of the packet */
@@ -197,8 +192,6 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 		returnSize = Decode_UINT32((BYTE *)&loc_hdr.packet_size);
 	else
 		returnSize = hdr_size;
-
-	LogDebug("TCS reports sending %.8X bytes to the TSP.", returnSize);
 
 	/* protect against a corrupted packet size value */
 	if (returnSize > 0) {
