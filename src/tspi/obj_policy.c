@@ -772,6 +772,7 @@ obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_
 	TSS_RESULT result = TSS_SUCCESS;
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	BYTE wellKnown[TCPA_SHA1_160_HASH_LEN] = TSS_WELL_KNOWN_SECRET;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -797,6 +798,10 @@ obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_
 		case TSS_SECRET_MODE_PLAIN:
 		case TSS_SECRET_MODE_POPUP:
 			if (validateReturnAuth(policy->Secret, hashDigest->digest, auth))
+				result = TSPERR(TSS_E_TSP_AUTHFAIL);
+			break;
+		case TSS_SECRET_MODE_NONE:
+			if (validateReturnAuth(wellKnown, hashDigest->digest, auth))
 				result = TSPERR(TSS_E_TSP_AUTHFAIL);
 			break;
 		default:
