@@ -243,7 +243,7 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	free(*hdr);
 	*hdr = tmp_hdr;
-	LogDebug1("Finished sending and receiving response from TCSD");
+
 	return TSS_SUCCESS;
 }
 
@@ -262,6 +262,7 @@ Atmel_TPM_SetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_ATMEL_SETSTATE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -293,6 +294,7 @@ Atmel_TPM_OwnerSetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_ATMEL_OWNERSETSTATE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -330,6 +332,7 @@ Atmel_TPM_GetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_ATMEL_GETSTATE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -381,6 +384,8 @@ TCS_OpenContext_RPC_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE * hConte
 	if (result == TSS_SUCCESS) {
 		if (getData(TCSD_PACKET_TYPE_UINT32, 0, hContext, 0, hdr))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		LogDebugFn("Received TCS Context: 0x%x", *hContext);
 	}
 
 	free(hdr);
@@ -403,6 +408,7 @@ TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETREGISTEREDKEYBYPUBLICINFO;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -457,6 +463,7 @@ TCS_CloseContext_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext)
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CLOSECONTEXT;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -491,6 +498,7 @@ TCS_LogPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_LOGPCREVENT;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -526,6 +534,7 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETPCREVENT;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -592,6 +601,7 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETPCREVENTBYPCR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -660,6 +670,7 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETPCREVENTLOG;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -718,6 +729,7 @@ TCS_RegisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_REGISTERKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -754,6 +766,7 @@ TCSP_UnregisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_UNREGISTERKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -787,6 +800,7 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_ENUMREGISTEREDKEYS;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -856,6 +870,7 @@ TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETREGISTEREDKEYBLOB;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -907,6 +922,7 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_LOADKEYBYBLOB;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -958,6 +974,7 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_LOADKEYBYUUID;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1000,6 +1017,7 @@ TCSP_EvictKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* i
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_EVICTKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1033,6 +1051,7 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CREATEWRAPKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1101,6 +1120,7 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETPUBKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1172,6 +1192,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_MAKEIDENTITY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1335,6 +1356,7 @@ TCSP_SetOwnerInstall_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_SETOWNERINSTALL;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1368,6 +1390,7 @@ TCSP_TakeOwnership_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_TAKEOWNERSHIP;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1432,6 +1455,7 @@ TCSP_OIAP_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_OIAP;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1468,6 +1492,7 @@ TCSP_OSAP_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_OSAP;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1497,7 +1522,7 @@ TCSP_OSAP_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE contextHandle,	/* in */
+TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			       TCS_KEY_HANDLE parentHandle,	/* in */
 			       TCPA_PROTOCOL_ID protocolID,	/* in */
 			       TCPA_ENCAUTH newAuth,	/* in */
@@ -1516,8 +1541,9 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE contextHandl
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CHANGEAUTH;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &contextHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1586,6 +1612,7 @@ TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CHANGEAUTHOWNER;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1660,6 +1687,7 @@ TCSP_TerminateHandle_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_TERMINATEHANDLE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1697,6 +1725,7 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_ACTIVATETPMIDENTITY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1763,6 +1792,7 @@ TCSP_Extend_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_EXTEND;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1797,6 +1827,7 @@ TCSP_PcrRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_PCRREAD;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1837,6 +1868,7 @@ TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in *
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_QUOTE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1918,6 +1950,7 @@ TCSP_DirWriteAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_DIRWRITEAUTH;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1954,6 +1987,7 @@ TCSP_DirRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_DIRREAD;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1995,6 +2029,7 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	memset(&emptyAuth, 0, sizeof(TPM_AUTH));
 
 	data.ordinal = TCSD_ORD_SEAL;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2082,6 +2117,7 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	memset(&emptyAuth, 0, sizeof(TPM_AUTH));
 
 	data.ordinal = TCSD_ORD_UNSEAL;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2169,6 +2205,7 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_UNBIND;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2287,6 +2324,7 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
 	data.ordinal = TCSD_ORD_CERTIFYKEY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2393,6 +2431,7 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_SIGN;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2456,6 +2495,7 @@ TCSP_GetRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETRANDOM;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2501,6 +2541,7 @@ TCSP_StirRandom_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_STIRRANDOM;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2533,6 +2574,7 @@ TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETCAPABILITY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2590,6 +2632,7 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_TCSGETCAPABILITY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2659,6 +2702,7 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETCAPABILITYOWNER;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2702,6 +2746,7 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CREATEENDORSEMENTKEYPAIR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2759,6 +2804,7 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_READPUBEK;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 	/*      data.numParms = 2; */
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
@@ -2809,6 +2855,7 @@ TCSP_DisablePubekRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_DISABLEPUBEKREAD;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
         if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2844,6 +2891,7 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
         memset(&data, 0, sizeof(struct tsp_packet));
 
         data.ordinal = TCSD_ORD_OWNERREADPUBEK;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
         if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2896,6 +2944,7 @@ TCSP_SelfTestFull_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_SELFTESTFULL;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2925,6 +2974,7 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_CERTIFYSELFTEST;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -2988,6 +3038,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_GETTESTRESULT;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	LogDebug1("TCSP_GetTestResult_TP");
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
@@ -3036,6 +3087,7 @@ TCSP_OwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
         memset(&data, 0, sizeof(struct tsp_packet));
 
         data.ordinal = TCSD_ORD_OWNERCLEAR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
         if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3068,6 +3120,7 @@ TCSP_DisableOwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
         memset(&data, 0, sizeof(struct tsp_packet));
 
         data.ordinal = TCSD_ORD_DISABLEOWNERCLEAR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
         if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3099,6 +3152,7 @@ TCSP_ForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_FORCECLEAR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3122,6 +3176,7 @@ TCSP_DisableForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
         memset(&data, 0, sizeof(struct tsp_packet));
 
         data.ordinal = TCSD_ORD_DISABLEFORCECLEAR;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
         if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3145,6 +3200,7 @@ TCSP_PhysicalDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_PHYSICALDISABLE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3168,6 +3224,7 @@ TCSP_PhysicalEnable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_PHYSICALENABLE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3193,6 +3250,7 @@ TCSP_OwnerSetDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_OWNERSETDISABLE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3227,6 +3285,7 @@ TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_PHYSICALSETDEACTIVATED;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3253,6 +3312,7 @@ TCSP_PhysicalPresence_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_PHYSICALPRESENCE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -3278,6 +3338,7 @@ TCSP_SetTempDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_SETTEMPDEACTIVATED;
+	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
