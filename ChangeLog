@@ -1,4 +1,6 @@
 
+ - Fixed bug in TCS_EnumRegisteredKeys_TP, returned data should
+ be alloc'd on the TSP heap.
  - Added a logging statement when tcsd_startup fails due to an
  error returned by the TPM itself.
  - Fixed validation data in Tspi_TPM_Quote and
