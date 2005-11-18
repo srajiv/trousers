@@ -29,7 +29,6 @@ inline TSS_RESULT read_data(int, void *, UINT32);
 inline TSS_RESULT write_data(int, void *, UINT32);
 int write_key_init(int, UINT32, UINT32);
 TSS_RESULT cache_key(UINT32, UINT16, TSS_UUID *, TSS_UUID *, UINT16, UINT32);
-TSS_RESULT UnloadBlob_KEY_PS(UINT16 *, BYTE *, TCPA_KEY *);
 TSS_RESULT ps_get_parent_uuid_by_uuid(int, TSS_UUID *, TSS_UUID *);
 TSS_RESULT ps_remove_key_by_uuid(int, TSS_UUID *);
 TSS_RESULT ps_get_key_by_uuid(int, TSS_UUID *, BYTE *, UINT16 *);
