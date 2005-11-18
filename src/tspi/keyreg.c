@@ -60,7 +60,7 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 	UINT16 short_blob_size = (UINT16)blob_size;
 
 	if (blob_size > USHRT_MAX) {
-		LogError("Blob data beign written to disk is too large(%u "
+		LogError("Blob data being written to disk is too large(%u "
 			 "bytes)!", blob_size);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
