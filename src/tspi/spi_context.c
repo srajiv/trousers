@@ -555,28 +555,19 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 						&keyBlob)))
 			return result;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-		/* ---  Get my KeyBlob */
-		if ((result = keyreg_GetKeyByUUID(&uuidData,
-						&keyBlobSize,
-						&keyBlob)))
-			return result;
-
 		/* ---  Get my Parent's UUID */
 		if ((result = keyreg_GetParentUUIDByUUID(&uuidData,
-						&parentUUID))) {
-			free(keyBlob);
+						&parentUUID)))
 			return result;
-		}
 
 		/* ---  Get my Parent's Storage Type */
 		if ((result = keyreg_GetParentPSTypeByUUID(&uuidData,
-						&parentPSType))) {
-			free(keyBlob);
+						&parentPSType)))
 			return result;
-		}
+
 		/******************************************
 		 * If the parent is system persistant, then just call
-		 *  the TCS Load.
+		 *  the TCS's LoadKeyByUUID function.
 		 * If the parent is in user storage, then we need to
 		 *  call Tspi_LoadKeyByUUID and get a parentKeyObject.
 		 *  This object can then be translated into a
@@ -587,26 +578,20 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			if ((result = TCSP_LoadKeyByUUID(tcsContext,
 							parentUUID,
 							NULL,
-							&parentTCSKeyHandle))) {
-				free(keyBlob);
+							&parentTCSKeyHandle)))
 				return result;
-			}
 		} else if (parentPSType == TSS_PS_TYPE_USER) {
 			if ((result = Tspi_Context_LoadKeyByUUID(tspContext,
 							parentPSType,
 							parentUUID,
-							&parentTspHandle))) {
-				free(keyBlob);
+							&parentTspHandle)))
 				return result;
-			}
-			/* Get the parentTCS Key Handle
-			 * from our table */
+
+			/* Get the parentTCS Key Handle from our table */
 			parentTCSKeyHandle = getTCSKeyHandle(parentTspHandle);
 			if (parentTCSKeyHandle == 0) {
-				free(keyBlob);
-				LogDebug1("XXX Can't find parent in table"
-						" after loading -"
-						" Unexpected XXX");
+				LogDebug1("Can't find parent's TCS key handle"
+					  " after loading");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 
@@ -614,9 +599,14 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			 * anymore */
 			obj_rsakey_remove(parentTspHandle, tspContext);
 		} else {
-			free(keyBlob);
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		}
+
+		/* ---  Get my KeyBlob */
+		if ((result = keyreg_GetKeyByUUID(&uuidData,
+						&keyBlobSize,
+						&keyBlob)))
+			return result;
 
 		/*******************************
 		 * Now the parent is loaded and we have the parent key
@@ -635,12 +625,9 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
-	/**************************
-	 *	Now the key is loaded.  Need to create a Key
-	 *		object and put the gus in there
-	 ****************************/
-	LogDebug1("Key is loaded, create a new key object for the user");
-
+	/* Now the key is loaded.  Need to create a Key object and put the
+	 * guts in there
+	 */
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &theKey))) {
 		free(keyBlob);
@@ -716,8 +703,8 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 		if (persistentStorageTypeParent == TSS_PS_TYPE_USER) {
 			return TSPERR(TSS_E_NOTIMPL);
 		} else if (persistentStorageTypeParent == TSS_PS_TYPE_SYSTEM) {
-			if ((result = obj_rsakey_get_blob(hKey,
-						&keyBlobSize, &keyBlob)))
+			if ((result = obj_rsakey_get_blob(hKey, &keyBlobSize,
+							  &keyBlob)))
 				return result;
 
 			if ((result = TCS_RegisterKey(tcsContext,
@@ -732,8 +719,8 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		}
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-		if ((result = obj_rsakey_get_blob(hKey,
-						&keyBlobSize, &keyBlob)))
+		if ((result = obj_rsakey_get_blob(hKey, &keyBlobSize,
+						  &keyBlob)))
 			return result;
 
 		if ((result = keyreg_IsKeyAlreadyRegistered(keyBlobSize,
