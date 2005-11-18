@@ -369,7 +369,7 @@ ps_write_key(int fd,
 
 	/* Unload the blob to get the public key */
 	offset = 0;
-	if ((rc = UnloadBlob_KEY_PS(&offset, key_blob, &key)))
+	if ((rc = Trspi_UnloadBlob_KEY(&offset, key_blob, &key)))
 		return rc;
 
 	offset = 0;
