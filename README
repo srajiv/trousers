@@ -15,13 +15,13 @@ is not fully functional.
 
   Packages needed to build:
 
-  automake
-  autoconf
+  automake > 1.4
+  autoconf > 1.4
   pkgconfig
   libtool
   gtk2-devel
-  openssl-0.9.7 or newer
-  openssl-devel-0.9.7 or newer
+  openssl > 0.9.7
+  openssl-devel > 0.9.7
   pthreads library (glibc-devel)
 
 
