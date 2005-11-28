@@ -27,23 +27,12 @@ is not fully functional.
 
 BUILDING the TSS
 
-  02/01/05: Right now there are 2 ways to get the TSS up and running:
-
-  A Grab the source code for an older version of the TPM device driver
-    from here:
-
-    http://www.research.ibm.com/gsal/tcpa/TPM-2.0.tar.gz, configure,
-    make, make install in the tpm-2.0 directory of that archive, then
-    follow the instructions under RUNNING The TSS, below.
-
-    or,
-
-  B Build and install the latest TPM device driver from
-    sf.net/projects/tpmdd either compiled in or loaded as a
-    module. UPDATE: This driver is now included in the vanilla 2.6.12
-    kernel!  If you are doing this, trousers should just work after a
-    vanilla build. Follow the build instructions below and read
-    RUNNING the TSS, below.
+  Build and install the latest TPM device driver from
+  sf.net/projects/tpmdd either compiled in or loaded as a
+  module. UPDATE: This driver is now included in the vanilla 2.6.12
+  kernel!  If you are doing this, trousers should just work after a
+  vanilla build. Follow the build instructions below and read
+  RUNNING the TSS, below.
 
   To build trousers after you have the device driver installed:
 
@@ -53,8 +42,24 @@ BUILDING the TSS
   $ make
   $ make install
 
+  Here are the default locations of files that trousers installs:
+
+  /usr/local/sbin/tcsd
+  /usr/local/etc/tcsd.conf
+  /usr/local/lib/libtspi.so.0.0.X
+  /usr/local/lib/libtspi.so.0 -> libtspi.so.0.0.X
+  /usr/local/lib/libtspi.so -> libtspi.so.0.0.X
+  /usr/local/lib/libtspi.la
+  /usr/local/lib/libtddl.a
+  /usr/local/var/lib/tpm
+
   By default the build will place everything in /usr/local. To install
 in a slightly more predictable place, use `./configure --prefix=/usr`.
+
+  'make install' will run ldconfig, but if /usr/local/lib is not in
+your /etc/ld.so.conf, this won't make a difference. You may need to
+manually add it and run ldconfig as root to allow your apps to link at
+run time to libtspi.so.
 
 
 ARCHITECTURE
@@ -92,21 +97,15 @@ ARCHITECTURE
 
 RUNNING the TSS
 
-  Before running your app:
+  By default, the TCS daemon is not reachable over the internet, so if
+you just plan to access it locally, running it as root with a root owned
+device node is probably ok.  Just make sure your device driver is loaded
+and start the tcsd as root.
 
-  If you're using the device driver from the IBM research site
-(section A of BUILDING), you'll need to do the following to create a
-device node:
+  If you would like to run the TCS daemon as an unprivleged user,
+please follow these instructions:
 
-  1) Create the device file for your tpm
-  # /bin/mknod /dev/tpm c 10 224
-  2) Change the device settings:
-  # chown tss:tss /dev/tpm
-  # chmod 0600 /dev/tpm
-  3) load the tpm device driver:
-  # modprobe tpm
-
-  If you're using the device driver from the tpmdd project and have
+  If you're using the device driver from a linux 2.6.12+ kernel and have
 udev enabled, you need to add the following line to your
 udev.permissions file (usually in /etc/udev somewhere):
 
@@ -120,18 +119,6 @@ udev.permissions file (usually in /etc/udev somewhere):
   start the TCS Core Services daemon, by default /usr/local/sbin/tcsd.
   # startproc -u tss /usr/local/sbin/tcsd
 
-  You can really just ignore this RUNNING section and run everything
-as root, with a root owned device and so on, but the security of the
-tcsd at this point is still in question, considering it's reachable
-over the internet.
-
-  At this point your apps should be ready to run!
-
-  'make install' will run ldconfig, but if /usr/local/lib is not in
-your /etc/ld.so.conf, this won't make a difference. You may need to
-manually add it and run ldconfig as root to allow your apps to link at
-run time to libtspi.so.
-
 
 BUILDING a TSS RPM
 
@@ -142,3 +129,5 @@ BUILDING a TSS RPM
  # tar zcvf /usr/src/packages/SOURCES/trousers-${version}.tar.gz \
             trousers-${version}
  # rpmbuild -bb trousers-${version}/dist/trousers.spec
+
+EOF
