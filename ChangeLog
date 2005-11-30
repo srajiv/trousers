@@ -1,4 +1,7 @@
 
+ - Updated unicode routines to NULL terminate their strings
+ with the same number of bytes as is the width of the
+ encoding.
  - Fixed bug in TCS_EnumRegisteredKeys_TP, returned data should
  be alloc'd on the TSP heap.
  - Added a logging statement when tcsd_startup fails due to an

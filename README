@@ -20,8 +20,8 @@ is not fully functional.
   pkgconfig
   libtool
   gtk2-devel
-  openssl > 0.9.7
-  openssl-devel > 0.9.7
+  openssl >= 0.9.7
+  openssl-devel >= 0.9.7
   pthreads library (glibc-devel)
 
 
