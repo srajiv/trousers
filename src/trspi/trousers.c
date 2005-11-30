@@ -1076,6 +1076,18 @@ hacky_strlen(char *codeset, BYTE *string)
 	return len;
 }
 
+static inline int
+char_width(char *codeset)
+{
+	if (strcmp("UTF-16", codeset) == 0) {
+		return 2;
+	} else if (strcmp("UTF-32", codeset) == 0) {
+		return 4;
+	}
+
+	return 1;
+}
+
 #define MAX_BUF_SIZE	4096
 
 BYTE *
@@ -1118,10 +1130,9 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 		return NULL;
 	}
 
-	/* add the max size for a char onto len, then malloc all bytes as
-	 * zeroed out. This may allocate a few more bytes than necessary, but
-	 * will ensure that the string is NULL terminated. */
-	if ((ret = calloc(1, len + 4)) == NULL) {
+	/* add terminating bytes of the correct width */
+	len += char_width("UTF-16");
+	if ((ret = calloc(1, len)) == NULL) {
 		LogDebug("malloc of %d bytes failed.", len);
 		iconv_close(cd);
 		return NULL;
@@ -1129,7 +1140,8 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 
 	memcpy(ret, &tmpbuf, len);
 	if (size)
-		*size = len + 4;
+		*size = len;
+
 	iconv_close(cd);
 
 	return ret;
@@ -1170,10 +1182,8 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
 	} while (rc == (size_t)-1 && errno == E2BIG);
 
-	/* add the max size for a char onto len, then malloc all bytes as
-	 * zeroed out. This may allocate a few more bytes than necessary, but
-	 * will ensure that the string is NULL terminated. */
-	len += 4;
+	/* add terminating bytes of the correct width */
+	len += char_width(nl_langinfo(CODESET));
 	if (len > MAX_BUF_SIZE) {
 		LogDebug1("string too long.");
 		iconv_close(cd);
