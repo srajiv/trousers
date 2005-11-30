@@ -130,8 +130,8 @@ TSS_RESULT Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
  * is non-NULL, *len will be set to the size of the returned buffer. */
 BYTE *Trspi_Native_To_UNICODE(BYTE *string, unsigned *len);
 
-/* convert UNICODE @string to a string from the current codeset. If there is
- * If len is non-NULL, *len will be set to the size of the returned buffer. */
+/* convert UNICODE @string to a string from the current codeset. If len
+ * is non-NULL, *len will be set to the size of the returned buffer. */
 BYTE *Trspi_UNICODE_To_Native(BYTE *string, unsigned *len);
 
 /* Error Functions */
