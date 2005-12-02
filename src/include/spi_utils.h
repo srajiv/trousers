@@ -81,8 +81,8 @@ void   free_key_refs(TCPA_KEY *);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
-TSS_RESULT DisplayPINWindow(char *, BYTE *);
-TSS_RESULT DisplayNewPINWindow(char *, BYTE *);
+TSS_RESULT DisplayPINWindow(BYTE *, UINT32 *, BYTE *);
+TSS_RESULT DisplayNewPINWindow(BYTE *, UINT32 *, BYTE *);
 
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
