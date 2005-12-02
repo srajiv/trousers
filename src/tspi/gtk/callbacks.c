@@ -23,6 +23,7 @@
 #include "support.h"
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
+#include "tsplog.h"
 
 
 /* Callbacks for the simple password dialog */
@@ -46,7 +47,9 @@ on_dialog1_close(GtkDialog *dialog, struct userdata *user_data)
 void
 on_cancelbutton1_clicked(GtkButton *button, struct userdata *user_data)
 {
+	LogDebugFn();
 	gtk_widget_destroy(user_data->window);
+	user_data->string_len = 0;
 	gtk_main_quit();
 }
 
@@ -55,13 +58,10 @@ void
 on_okbutton1_clicked(GtkButton *button, struct userdata	*user_data)
 {
 	const gchar *entry_text = gtk_entry_get_text (GTK_ENTRY(user_data->entry));
-	unsigned len = strlen(entry_text) + 1;
 
-#if 0
-	strncpy(user_data->string, entry_text, strlen(entry_text)+1);
-#else
-	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text, &len);
-#endif
+	LogDebugFn();
+	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text,
+						    &user_data->string_len);
 	gtk_widget_destroy(user_data->window);
 
 	gtk_main_quit();
@@ -72,13 +72,10 @@ gboolean
 enter_event(GtkWidget *widget, struct userdata *user_data)
 {
 	const gchar *entry_text = gtk_entry_get_text (GTK_ENTRY(user_data->entry));
-	unsigned len = strlen(entry_text) + 1;
 
-#if 0
-	strncpy(user_data->string, entry_text, strlen(entry_text)+1);
-#else
-	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text, &len);
-#endif
+	LogDebugFn();
+	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text,
+						    &user_data->string_len);
 	gtk_widget_destroy(user_data->window);
 
 	gtk_main_quit();
@@ -87,7 +84,6 @@ enter_event(GtkWidget *widget, struct userdata *user_data)
 
 
 /* Callbacks for the new password dialog */
-
 void
 on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 {
@@ -95,20 +91,20 @@ on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	int len = strlen(entryConf_text);
 
-	if (len == 0) {
-		gtk_widget_grab_focus(user_data->entryConf);
-		return;
+	if (strlen(entryConf_text) == strlen(entryPass_text)) {
+		if (!memcmp(entryPass_text, entryConf_text, len)) {
+			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+								    &user_data->string_len);
+			gtk_widget_destroy(user_data->window);
+			gtk_main_quit();
+
+			LogDebugFn("string len ptr: %p, value = %u", &user_data->string_len,
+				   user_data->string_len);
+			return;
+		}
 	}
 
-	/* Compare the two text boxes, if they're equal, we're done */
-	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
-		len++;
-		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
-		gtk_widget_destroy(user_data->window);
-		gtk_main_quit();
-	} else {
-		gtk_widget_grab_focus(user_data->entryConf);
-	}
+	gtk_widget_grab_focus(user_data->entryConf);
 }
 
 void
@@ -118,21 +114,28 @@ on_entryConfirm_activate(GtkEntry *entry, struct userdata *user_data)
 	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	unsigned len = strlen(entryConf_text);
 
-	/* Compare the two text boxes, if they're equal, we're done */
-	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
-		len++;
-		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
-		gtk_widget_destroy(user_data->window);
-		gtk_main_quit();
-	} else {
-		gtk_widget_grab_focus(user_data->entryPass);
+	if (strlen(entryConf_text) == strlen(entryPass_text)) {
+		if (!memcmp(entryPass_text, entryConf_text, len)) {
+			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+								    &user_data->string_len);
+			gtk_widget_destroy(user_data->window);
+			gtk_main_quit();
+
+			LogDebugFn("string len ptr: %p, value = %u", &user_data->string_len,
+				   user_data->string_len);
+			return;
+		}
 	}
+
+	gtk_widget_grab_focus(user_data->entryPass);
 }
 
 void
 on_cancelbutton2_clicked(GtkButton *button, struct userdata *user_data)
 {
+	LogDebugFn();
 	gtk_widget_destroy(user_data->window);
+	user_data->string_len = 0;
 	gtk_main_quit();
 }
 
@@ -143,13 +146,18 @@ on_okbutton2_clicked(GtkButton *button, struct userdata *user_data)
 	const gchar *entryConf_text = gtk_entry_get_text (GTK_ENTRY(user_data->entryConf));
 	unsigned len = strlen(entryConf_text);
 
-	/* Compare the two text boxes, if they're equal, we're done */
-	if(len && !memcmp(entryPass_text, entryConf_text, len)) {
-		len++;
-		user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text, &len);
-		gtk_widget_destroy(user_data->window);
-		gtk_main_quit();
-	} else {
-		gtk_widget_grab_focus(user_data->entryPass);
+	if (strlen(entryConf_text) == strlen(entryPass_text)) {
+		if (!memcmp(entryPass_text, entryConf_text, len)) {
+			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+								    &user_data->string_len);
+			gtk_widget_destroy(user_data->window);
+			gtk_main_quit();
+
+			LogDebugFn("string len ptr: %p, value = %u", &user_data->string_len,
+				   user_data->string_len);
+			return;
+		}
 	}
+
+	gtk_widget_grab_focus(user_data->entryPass);
 }
