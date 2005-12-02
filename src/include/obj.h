@@ -93,6 +93,7 @@ struct tr_rsakey_obj {
 
 struct tr_policy_obj {
 	BYTE SecretLifetime;    /* 0->Always, 1->Use Counter 2-> Use Timer */
+	TSS_BOOL SecretSet;
 	UINT32 SecretMode;
 	UINT32 SecretCounter;
 	UINT32 SecretTimer;     /* in seconds */
@@ -289,7 +290,8 @@ TSS_BOOL   obj_is_policy(TSS_HOBJECT);
 TSS_RESULT obj_policy_get_tsp_context(TSS_HPOLICY, TSS_HCONTEXT *);
 TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TCPA_SECRET *);
 TSS_RESULT obj_policy_flush_secret(TSS_HPOLICY);
-TSS_RESULT obj_policy_set_secret_object(TSS_HPOLICY, TSS_FLAG, UINT32, TCPA_DIGEST *);
+TSS_RESULT obj_policy_set_secret_object(TSS_HPOLICY, TSS_FLAG, UINT32,
+					TCPA_DIGEST *, TSS_BOOL);
 TSS_RESULT obj_policy_copy_secret(TSS_HPOLICY, TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
 TSS_RESULT obj_policy_get_type(TSS_HPOLICY, UINT32 *);
