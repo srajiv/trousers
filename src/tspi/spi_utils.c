@@ -82,22 +82,6 @@ get_port(void)
 	return (short)port;
 }
 
-TSS_BOOL
-check_flagset_collision(TSS_FLAG flagset, UINT32 flags)
-{
-	UINT32 on_flags = flagset & flags;
-	int i, one_bits = 0;
-
-	/* if more than 1 bit is set, there's a collision */
-	for (i = 0; i < (int)(sizeof(UINT32) * 8); i++) {
-		if (on_flags & 1)
-			one_bits++;
-		on_flags >>= 1;
-	}
-
-	return (one_bits > 1 ? TRUE : FALSE);
-}
-
 TSS_RESULT
 internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 {
