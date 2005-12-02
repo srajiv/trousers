@@ -62,6 +62,41 @@ manually add it and run ldconfig as root to allow your apps to link at
 run time to libtspi.so.
 
 
+USING TROUSERS ON AN ALREADY OWNED TPM
+
+  If you've already taken ownership of your TPM using a TSS under another
+operating system, there are a few issues you should be aware of.
+
+  Auth vs No-Auth SRK:  In order to trick trousers into thinking it has taken
+ownership of the TPM it's running on, you will need to create a persistent
+storage file for trousers to use.  Normally trousers would create this file
+itself at the time ownership is taken.  If your SRK has been given an
+authorization password by the non-Linux OS, you will need to move the file
+dist/system.data.auth to /usr/local/var/lib/tpm/system.data.  If you've
+taken ownership of your TPM with issuing a password, move
+dist/system.data.noauth to /usr/local/var/lib/tpm/system.data.
+
+  Passwords:  When entering passwords for keys you'd like to use in both
+Linux and other OS's, you'll need to take note of how you entered those
+passwords.  The TSS spec states that when a password is entered through a
+GUI popup dialog box provided by the TSS library, the password should be
+converted to the UTF-16 encoding and then hashed using SHA-1, including
+the UTF-16 null terminator in the hash calculation.
+
+  In order to work around this problem, specify the -u option to the
+tpm-tools command line to convert the password to UTF-16 before hashing.
+This, however, unfolds yet another problem...
+
+  Some TSS stacks aren't compliant with the TSS spec, in that they hash
+their passwords without including the terminating null character.  This
+means that there are effectively two versions of any password set through
+a popup dialog box.  Trousers will include the terminating null character
+in its hashes of UTF-16 data.
+
+  We'll do our best to track other TSS software and how it behaves.  Please
+see the trousers FAQ at http://trousers.sf.net for more information.
+
+
 ARCHITECTURE
 
   This TSS implementation has several components.
