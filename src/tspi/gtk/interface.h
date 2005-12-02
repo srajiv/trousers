@@ -17,6 +17,7 @@
 
 struct userdata {
 	char *string;
+	unsigned string_len;
 	GtkWidget *window;
 	GtkWidget *entry;
 	GtkWidget *entryPass;
