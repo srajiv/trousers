@@ -1095,14 +1095,11 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 {
 	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
 	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
-	iconv_t cd;
+	iconv_t cd = 0;
 	size_t rc;
 
-	if (string == NULL) {
-		if (size)
-			*size = 0;
-		return NULL;
-	}
+	if (string == NULL)
+		goto alloc_string;
 
 	if ((cd = iconv_open("UTF-16", nl_langinfo(CODESET))) == (iconv_t)-1) {
 		LogDebug("iconv_open: %s", strerror(errno));
@@ -1111,7 +1108,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 
 	if ((tmplen = hacky_strlen(nl_langinfo(CODESET), string)) == 0) {
 		LogDebug1("hacky_strlen returned 0");
-		return NULL;
+		goto alloc_string;
 	}
 
 	do {
@@ -1130,6 +1127,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 		return NULL;
 	}
 
+alloc_string:
 	/* add terminating bytes of the correct width */
 	len += char_width("UTF-16");
 	if ((ret = calloc(1, len)) == NULL) {
@@ -1142,7 +1140,8 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 	if (size)
 		*size = len;
 
-	iconv_close(cd);
+	if (cd)
+		iconv_close(cd);
 
 	return ret;
 
