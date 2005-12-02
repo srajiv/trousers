@@ -36,8 +36,9 @@
 TSS_RESULT
 popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 {
-	char secret[UI_MAX_SECRET_STRING_LENGTH] = "\0";
+	BYTE secret[UI_MAX_SECRET_STRING_LENGTH] = { 0 };
 	BYTE *dflt = "TSS Authentication Dialog";
+	UINT32 secret_len;
 
 	if (popup_str == NULL)
 		popup_str = dflt;
@@ -48,17 +49,22 @@ popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (new_pin) {
-		if (DisplayNewPINWindow(secret, popup_str))
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	} else if (DisplayPINWindow(secret, popup_str))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (new_pin)
+		DisplayNewPINWindow(secret, &secret_len, popup_str);
+	else
+		DisplayPINWindow(secret, &secret_len, popup_str);
 
-	/* allow a 0 length password here, as spec'd by the TSSWG */
-	Trspi_Hash(TSS_HASH_SHA1, strlen(secret), secret, (char *)auth_hash);
+	if (!secret_len) {
+		unpin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH);
+		return TSPERR(TSS_E_POLICY_NO_SECRET);
+	}
 
+	Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, (char *)auth_hash);
+
+	LogDebug("Secret's UNICODE data:");
+	LogDebugData(secret_len, secret);
 	/* zero, then unpin the memory */
-	memset(&secret, 0, UI_MAX_SECRET_STRING_LENGTH);
+	memset(secret, 0, secret_len);
 	unpin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH);
 
 	return TSS_SUCCESS;
