@@ -26,6 +26,7 @@
 #undef FALSE
 
 #include "trousers/tss.h"
+#include "tsplog.h"
 
 #include "interface.h"
 #include "support.h"
@@ -39,10 +40,13 @@
  * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayPINWindow(BYTE **string, BYTE *popup)
+TSS_RESULT
+DisplayPINWindow(BYTE *string, UINT32 *string_len, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
+
+  ud.string_len = 0;
 
 #ifdef ENABLE_NLS
   bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -50,17 +54,21 @@ TSS_RESULT DisplayPINWindow(BYTE **string, BYTE *popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  //ud.string = string;
-
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
 
+  LogDebug("address of string_len: %p", &ud.string_len);
   dialog1 = create_password_dialog(&ud, popup);
   gtk_widget_show(dialog1);
 
   gtk_main();
 
-  *string = ud.string;
+  if (ud.string_len) {
+	  memcpy(string, ud.string, ud.string_len);
+	  memset(ud.string, 0, ud.string_len);
+	  free(ud.string);
+  }
+  *string_len = ud.string_len;
 
   return TSS_SUCCESS;
 }
@@ -74,10 +82,13 @@ TSS_RESULT DisplayPINWindow(BYTE **string, BYTE *popup)
  * popup - UTF-8 string to be displayed in the title bar of the dialog box
  *
  */
-TSS_RESULT DisplayNewPINWindow(BYTE **string, BYTE *popup)
+TSS_RESULT
+DisplayNewPINWindow(BYTE *string, UINT32 *string_len, BYTE *popup)
 {
   GtkWidget *dialog1;
   struct userdata ud;
+
+  ud.string_len = 0;
 
 #ifdef ENABLE_NLS
   bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -85,17 +96,21 @@ TSS_RESULT DisplayNewPINWindow(BYTE **string, BYTE *popup)
   textdomain (GETTEXT_PACKAGE);
 #endif
 
-  //ud.string = string;
-
   gtk_set_locale();
   gtk_init_check((int *)NULL, (char ***)NULL);
 
+  LogDebug("address of string_len: %p", &ud.string_len);
   dialog1 = create_new_password_dialog(&ud, popup);
   gtk_widget_show(dialog1);
 
   gtk_main();
 
-  *string = ud.string;
+  if (ud.string_len) {
+	  memcpy(string, ud.string, ud.string_len);
+	  memset(ud.string, 0, ud.string_len);
+	  free(ud.string);
+  }
+  *string_len = ud.string_len;
 
   return TSS_SUCCESS;
 }
