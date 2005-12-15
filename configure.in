@@ -26,11 +26,8 @@ fi
 
 # Arch specific stuff
 case $target in
-        *ppc64* | *powerpc64*)
+        *ppc64* | *powerpc64* | *x86_64*)
 		CFLAGS="$CFLAGS -m64"
-		;;
-        *x86_64*)
-		CFLAGS="$CFLAGS -m32"
 		;;
         *)
                 ;;
