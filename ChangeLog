@@ -1,3 +1,6 @@
+- Fixed bug that only manifested on PPC64: if errno is not set
+to 0 explicitly before making a call to iconv, iconv will not
+set it on failure.
 
 * TROUSERS_0_2_4
 
