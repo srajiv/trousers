@@ -1117,6 +1117,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 		inbytesleft = tmplen;
 		outbuf = tmpbuf;
 		ptr = string;
+		errno = 0;
 
 		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
 	} while (rc == (size_t)-1 && errno == E2BIG);
@@ -1177,6 +1178,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		inbytesleft = tmplen;
 		outbuf = tmpbuf;
 		ptr = string;
+		errno = 0;
 
 		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
 	} while (rc == (size_t)-1 && errno == E2BIG);
