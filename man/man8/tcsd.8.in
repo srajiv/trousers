@@ -81,6 +81,10 @@ taken.
 .SH "CONFIGURATION"
 \fBtcsd\fR configuration is stored by default in /etc/tcsd.conf
 
+.SH "DEBUG OUTPUT"
+If TrouSerS has been compiled with debugging enabled, the debugging output
+can be supressed by setting the TSS_DEBUG_OFF environment variable.
+
 .SH "DEVICE DRIVERS"
 .PP
 \fBtcsd\fR is compatible with the IBM Research TPM device driver available

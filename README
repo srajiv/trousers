@@ -155,6 +155,13 @@ udev.permissions file (usually in /etc/udev somewhere):
   # startproc -u tss /usr/local/sbin/tcsd
 
 
+DEBUGGING
+
+  If you've compiled trousers with './configure --enable-debug' and would like
+to turn debugging output off at run-time, set the environment variable
+TSS_DEBUG_OFF to any value.
+
+
 BUILDING a TSS RPM
 
  # sh bootstrap.sh
