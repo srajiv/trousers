@@ -566,5 +566,16 @@ typedef UINT32  TSS_HMACHANDLE;        // handle to a HMAC session
 //
 #define TSS_WELL_KNOWN_SECRET {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
+/* Imported from the TSS 1.2 header files for use in 1.2 style callbacks */
+// *************
+// TPM object: *
+// *************
+
+//
+// Attributes:
+//
+#define TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY  0x00000001
+#define TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY 0x00000002
+
 
 #endif // __TSS_DEFINES_H__
