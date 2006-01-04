@@ -146,7 +146,7 @@ extern TSS_UUID	SRK_UUID;
 #define TPM_ORD_PhysicalPresence		(TCPA_CONNECTION_ORDINAL + 10)
 
 
-/* XXX 1.2 */
+/* TSS 1.2 stuff needed for backporting its functionality */
 
 #define TPM_VERSION_BYTE	BYTE
 typedef struct tdTPM_VERSION {
@@ -161,7 +161,7 @@ typedef struct tdTPM_VERSION {
 #define TPM_CAP_VERSION_VAL		0x0000001A
 #define TPM_CAP_PROPERTY		TCPA_CAP_PROPERTY
 
-/* XXX end 1.2 */
+/* XXX end 1.2 stuff */
 
 typedef struct tdTCPA_PERSISTENT_DATA{
 	BYTE revMajor;
