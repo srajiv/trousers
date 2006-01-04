@@ -162,3 +162,157 @@ obj_tpm_get(TSS_HCONTEXT tspContext, TSS_HTPM *phTpm)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+obj_tpm_get_cb11(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *cb)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if (sizeof(PVOID) != sizeof(UINT32))
+		return TSPERR(TSS_E_FAIL);
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	switch (type) {
+		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			*cb = (UINT32)tpm->Tspicb_CollateIdentity;
+			break;
+		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+			*cb = (UINT32)tpm->Tspicb_ActivateIdentity;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+
+	obj_list_put(&tpm_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_tpm_set_cb11(TSS_HTPM hTpm, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if (sizeof(PVOID) != sizeof(UINT32))
+		return TSPERR(TSS_E_FAIL);
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	switch (type) {
+		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			tpm->Tspicb_CollateIdentity = (PVOID)cb;
+			tpm->collateAppData = (PVOID)app_data;
+			break;
+		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+			tpm->Tspicb_ActivateIdentity = (PVOID)cb;
+			tpm->activateAppData = (PVOID)app_data;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+
+	obj_list_put(&tpm_list);
+
+	return result;
+}
+
+#ifndef TSS_SPEC_COMPLIANCE
+TSS_RESULT
+obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+	TSS_CALLBACK *cb = (TSS_CALLBACK *)in;
+
+	if (!cb)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	switch (flag) {
+		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			tpm->Tspicb_CollateIdentity = (TSS_RESULT (*)(PVOID,
+				UINT32, BYTE *, TSS_ALGORITHM_ID, UINT32,
+				BYTE *, UINT32 *, BYTE *))cb->callback;
+			tpm->collateAppData = cb->appData;
+			tpm->collateAlg = cb->alg;
+			break;
+		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+			tpm->Tspicb_ActivateIdentity = (TSS_RESULT (*)(PVOID,
+				UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
+				BYTE *))cb->callback;
+			tpm->activateAppData = cb->appData;
+			tpm->activateAlg = cb->alg;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+
+	obj_list_put(&tpm_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_tpm_get_cb12(TSS_HTPM hTpm, TSS_FLAG flag, UINT32 *size, BYTE **out)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+	TSS_CALLBACK *cb;
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	if ((cb = calloc_tspi(obj->tspContext, sizeof(TSS_CALLBACK))) == NULL) {
+		LogError("malloc of %d bytes failed.", sizeof(TSS_CALLBACK));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	switch (flag) {
+		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			cb->callback = tpm->Tspicb_CollateIdentity;
+			cb->appData = tpm->collateAppData;
+			cb->alg = tpm->collateAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+			cb->callback = tpm->Tspicb_ActivateIdentity;
+			cb->appData = tpm->activateAppData;
+			cb->alg = tpm->activateAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		default:
+			free_tspi(obj->tspContext, cb);
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+done:
+	obj_list_put(&tpm_list);
+
+	return result;
+}
+#endif
