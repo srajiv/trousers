@@ -92,6 +92,16 @@ typedef struct tdTSS_VALIDATION
 	BYTE*     ValidationData;
 } TSS_VALIDATION;
 
+/* TSS_CALLBACK has been imported from the TSS 1.2 header files in order to
+ * support TSS 1.2 style callbacks in Trousers 0.2.X.  This will enable 64bit
+ * apps to take advanatage of callbacks on TPM 1.1 hardware */
+typedef struct tdTSS_CALLBACK
+{
+	PVOID            callback;
+	PVOID            appData;
+	TSS_ALGORITHM_ID alg;
+} TSS_CALLBACK;
+
 
 #endif // __TSS_STRUCTS_H__
 
