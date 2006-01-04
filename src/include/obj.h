@@ -52,6 +52,10 @@ struct tr_encdata_obj {
 
 struct tr_tpm_obj {
 	TSS_HPOLICY policy;
+#ifndef TSS_SPEC_COMPLIANCE
+	TSS_ALGORITHM_ID collateAlg;
+	TSS_ALGORITHM_ID activateAlg;
+#endif
 	PVOID collateAppData;
 	PVOID activateAppData;
 	TSS_RESULT (*Tspicb_CollateIdentity)(
@@ -102,6 +106,12 @@ struct tr_policy_obj {
 	UINT32 type;
 	BYTE *popupString;
 	UINT32 popupStringLength;
+#ifndef TSS_SPEC_COMPLIANCE
+	TSS_ALGORITHM_ID hmacAlg;
+	TSS_ALGORITHM_ID xorAlg;
+	TSS_ALGORITHM_ID takeownerAlg;
+	TSS_ALGORITHM_ID changeauthAlg;
+#endif
 	PVOID hmacAppData;
 	PVOID xorAppData;
 	PVOID takeownerAppData;
@@ -252,6 +262,10 @@ TSS_RESULT obj_tpm_set_policy(TSS_HTPM, TSS_HPOLICY);
 TSS_RESULT obj_tpm_add(TSS_HCONTEXT, TSS_HOBJECT *);
 TSS_RESULT obj_tpm_get_policy(TSS_HTPM, TSS_HPOLICY *);
 TSS_RESULT obj_tpm_is_connected(TSS_HTPM, TCS_CONTEXT_HANDLE *);
+TSS_RESULT obj_tpm_set_cb12(TSS_HTPM, TSS_FLAG, BYTE *);
+TSS_RESULT obj_tpm_get_cb12(TSS_HTPM, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_tpm_set_cb11(TSS_HTPM, TSS_FLAG, TSS_FLAG, UINT32);
+TSS_RESULT obj_tpm_get_cb11(TSS_HTPM, TSS_FLAG, UINT32 *);
 
 /* obj_encdata.c */
 TSS_BOOL   obj_is_encdata(TSS_HOBJECT);
@@ -300,14 +314,10 @@ TSS_RESULT obj_policy_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
 TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TCPA_SECRET *);
 TSS_RESULT obj_policy_set_type(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_tcs_context(TSS_HPOLICY, TCS_CONTEXT_HANDLE *);
-TSS_RESULT obj_policy_get_cb_hmac(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_hmac(TSS_HPOLICY, PVOID, UINT32 *);
-TSS_RESULT obj_policy_get_cb_xor(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_xor(TSS_HPOLICY, PVOID, UINT32 *);
-TSS_RESULT obj_policy_get_cb_takeowner(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_takeowner(TSS_HPOLICY, PVOID, UINT32 *);
-TSS_RESULT obj_policy_get_cb_changeauth(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_cb_changeauth(TSS_HPOLICY, PVOID, UINT32 *);
+TSS_RESULT obj_policy_set_cb12(TSS_HPOLICY, TSS_FLAG, BYTE *);
+TSS_RESULT obj_policy_get_cb12(TSS_HPOLICY, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_policy_set_cb11(TSS_HPOLICY, TSS_FLAG, TSS_FLAG, UINT32);
+TSS_RESULT obj_policy_get_cb11(TSS_HPOLICY, TSS_FLAG, UINT32 *);
 TSS_RESULT obj_policy_get_lifetime(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_set_lifetime(TSS_HPOLICY);
 TSS_RESULT obj_policy_get_counter(TSS_HPOLICY, UINT32 *);
