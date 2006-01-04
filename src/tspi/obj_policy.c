@@ -242,20 +242,31 @@ obj_policy_set_secret_object(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size,
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
 
+	/* if this is going to be a callback policy, the
+	 * callbacks need to already be set. (See TSS 1.1b
+	 * spec pg. 62). */
+	if (mode == TSS_SECRET_MODE_CALLBACK) {
+		if (policy->Tspicb_CallbackHMACAuth == NULL) {
+			result = TSPERR(TSS_E_FAIL);
+			goto done;
+		}
+	}
+
 	memcpy(policy->Secret, digest, size);
 	policy->SecretMode = mode;
 	policy->SecretSize = size;
 	policy->SecretSet = set;
-
+done:
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -287,7 +298,6 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 {
 	TCPA_DIGEST digest;
 	UINT32 secret_size = 0;
-	UINT32 cb = 0;
 	TSS_BOOL secret_set = TRUE;
 
 	memset(&digest.digest, 0, sizeof(TCPA_DIGEST));
@@ -304,16 +314,10 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 			memcpy(&digest.digest, data, size);
 			secret_size = TCPA_SHA1_160_HASH_LEN;
 			break;
-		case TSS_SECRET_MODE_CALLBACK:
-			/* if this is going to be a callback policy, the
-			 * callbacks need to already be set. (See TSS 1.1b
-			 * spec pg. 62 */
-			if (obj_policy_get_cb_hmac(hPolicy, &cb) || !cb) {
-				return TSPERR(TSS_E_FAIL);
-			}
 		case TSS_SECRET_MODE_POPUP:
 		case TSS_SECRET_MODE_NONE:
 			secret_set = FALSE;
+		case TSS_SECRET_MODE_CALLBACK:
 			break;
 		default:
 			return TSPERR(TSS_E_BAD_PARAMETER);
@@ -324,164 +328,204 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 }
 
 TSS_RESULT
-obj_policy_get_cb_hmac(TSS_HPOLICY hPolicy, UINT32 *cb)
+obj_policy_get_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, UINT32 *cb)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if (sizeof(PVOID) != sizeof(UINT32))
+		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	*cb = (UINT32)policy->Tspicb_CallbackHMACAuth;
+
+	switch (type) {
+		case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			*cb = (UINT32)policy->Tspicb_CallbackHMACAuth;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			*cb = (UINT32)policy->Tspicb_CallbackXorEnc;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			*cb = (UINT32)policy->Tspicb_CallbackTakeOwnership;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+			*cb = (UINT32)policy->Tspicb_CallbackChangeAuthAsym;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
 
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
-obj_policy_set_cb_hmac(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
+obj_policy_set_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if (sizeof(PVOID) != sizeof(UINT32))
+		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	policy->Tspicb_CallbackHMACAuth = (TSS_RESULT (*)(
-				PVOID,TSS_HOBJECT,
-				TSS_BOOL,UINT32,
-				TSS_BOOL,UINT32,
-				BYTE *,BYTE *,
-				BYTE *,BYTE *,
-				UINT32,BYTE *,
-				BYTE *))cb;
-	policy->hmacAppData = (PVOID)appData;
+
+	switch (type) {
+		case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			policy->Tspicb_CallbackHMACAuth = (PVOID)cb;
+			policy->hmacAppData = (PVOID)app_data;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			policy->Tspicb_CallbackXorEnc = (PVOID)cb;
+			policy->xorAppData = (PVOID)app_data;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			policy->Tspicb_CallbackTakeOwnership = (PVOID)cb;
+			policy->takeownerAppData = (PVOID)app_data;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+			policy->Tspicb_CallbackChangeAuthAsym = (PVOID)cb;
+			policy->changeauthAppData = (PVOID)app_data;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
 
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
+	return result;
+}
+
+#ifndef TSS_SPEC_COMPLIANCE
+TSS_RESULT
+obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+	TSS_CALLBACK *cb = (TSS_CALLBACK *)in;
+
+	if (!cb)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	switch (flag) {
+		case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			policy->Tspicb_CallbackHMACAuth =
+				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
+				UINT32, TSS_BOOL, UINT32, BYTE *, BYTE *,
+				BYTE *, BYTE *, UINT32, BYTE *, BYTE *))
+				cb->callback;
+			policy->hmacAppData = cb->appData;
+			policy->hmacAlg = cb->alg;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			policy->Tspicb_CallbackXorEnc =
+				(TSS_RESULT (*)(PVOID, TSS_HOBJECT,
+				TSS_HOBJECT, TSS_FLAG, UINT32, BYTE *, BYTE *,
+				BYTE *, BYTE *, UINT32, BYTE *, BYTE *))
+				cb->callback;
+			policy->xorAppData = cb->appData;
+			policy->xorAlg = cb->alg;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			policy->Tspicb_CallbackTakeOwnership =
+				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HKEY,
+				UINT32, BYTE *))cb->callback;
+			policy->takeownerAppData = cb->appData;
+			policy->takeownerAlg = cb->alg;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+			policy->Tspicb_CallbackChangeAuthAsym =
+				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HKEY,
+				UINT32, UINT32, BYTE *, BYTE *))cb->callback;
+			policy->changeauthAppData = cb->appData;
+			policy->changeauthAlg = cb->alg;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+
+	obj_list_put(&policy_list);
+
+	return result;
 }
 
 TSS_RESULT
-obj_policy_get_cb_xor(TSS_HPOLICY hPolicy, UINT32 *cb)
+obj_policy_get_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, UINT32 *size, BYTE **out)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+	TSS_CALLBACK *cb;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	*cb = (UINT32)policy->Tspicb_CallbackXorEnc;
 
+	if ((cb = calloc_tspi(obj->tspContext, sizeof(TSS_CALLBACK))) == NULL) {
+		LogError("malloc of %d bytes failed.", sizeof(TSS_CALLBACK));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	switch (flag) {
+		case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			cb->callback = policy->Tspicb_CallbackHMACAuth;
+			cb->appData = policy->hmacAppData;
+			cb->alg = policy->hmacAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			cb->callback = policy->Tspicb_CallbackXorEnc;
+			cb->appData = policy->xorAppData;
+			cb->alg = policy->xorAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			cb->callback = policy->Tspicb_CallbackTakeOwnership;
+			cb->appData = policy->takeownerAppData;
+			cb->alg = policy->takeownerAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+			cb->callback = policy->Tspicb_CallbackChangeAuthAsym;
+			cb->appData = policy->changeauthAppData;
+			cb->alg = policy->changeauthAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+		default:
+			free_tspi(obj->tspContext, cb);
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+done:
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
-
-TSS_RESULT
-obj_policy_set_cb_xor(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	policy->Tspicb_CallbackXorEnc = (TSS_RESULT (*)(
-				PVOID,TSS_HOBJECT,
-				TSS_HOBJECT,TSS_FLAG,
-				UINT32,BYTE *,
-				BYTE *,BYTE *,
-				BYTE *,UINT32,
-				BYTE *,BYTE *))cb;
-	policy->xorAppData = (PVOID)appData;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_get_cb_takeowner(TSS_HPOLICY hPolicy, UINT32 *cb)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	*cb = (UINT32)policy->Tspicb_CallbackTakeOwnership;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_set_cb_takeowner(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	policy->Tspicb_CallbackTakeOwnership = (TSS_RESULT (*)(
-				PVOID,TSS_HOBJECT,
-				TSS_HKEY,UINT32,
-				BYTE *))cb;
-	policy->takeownerAppData = (PVOID)appData;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_get_cb_changeauth(TSS_HPOLICY hPolicy, UINT32 *cb)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	*cb = (UINT32)policy->Tspicb_CallbackChangeAuthAsym;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_set_cb_changeauth(TSS_HPOLICY hPolicy, PVOID cb, UINT32 *appData)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	policy->Tspicb_CallbackChangeAuthAsym = (TSS_RESULT (*)(
-				PVOID,TSS_HOBJECT,
-				TSS_HKEY,UINT32,
-				UINT32,BYTE *,
-				BYTE *))cb;
-	policy->changeauthAppData = (PVOID)appData;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
+#endif
 
 TSS_RESULT
 obj_policy_get_lifetime(TSS_HPOLICY hPolicy, UINT32 *lifetime)

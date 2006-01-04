@@ -955,46 +955,29 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 	} else if (obj_is_policy(hObject)) {
-		if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_HMAC) {
-			if (ulAttrib == 0)
-				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
-
-			result = obj_policy_set_cb_hmac(hObject,
-							(PVOID)ulAttrib,
-							(PVOID)subFlag);
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC) {
-			if (ulAttrib == 0)
-				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
-
-			result = obj_policy_set_cb_xor(hObject,
-						       (PVOID)ulAttrib,
-						       (PVOID)subFlag);
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP) {
-			if (ulAttrib == 0)
-				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
-
-			result = obj_policy_set_cb_takeowner(hObject,
-							     (PVOID)ulAttrib,
-							     (PVOID)subFlag);
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM) {
-			if (ulAttrib == 0)
-				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
-
-			result = obj_policy_set_cb_changeauth(hObject,
-							      (PVOID)ulAttrib,
-							      (PVOID)subFlag);
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_SECRET_LIFETIME) {
-			if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-				result = obj_policy_set_lifetime(hObject);
-			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-				result = obj_policy_set_counter(hObject, ulAttrib);
-			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-				result = obj_policy_set_timer(hObject, ulAttrib);
-			} else {
-				result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
-			}
-		} else
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+				result = obj_policy_set_cb11(hObject, attribFlag,
+							     ulAttrib, subFlag);
+				break;
+			case TSS_TSPATTRIB_POLICY_SECRET_LIFETIME:
+				if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
+					result = obj_policy_set_lifetime(hObject);
+				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
+					result = obj_policy_set_counter(hObject, ulAttrib);
+				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
+					result = obj_policy_set_timer(hObject, ulAttrib);
+				} else {
+					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else if (obj_is_context(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
@@ -1009,9 +992,20 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			result = obj_context_set_mode(hObject, ulAttrib);
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+	} else if (obj_is_tpm(hObject)) {
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+				if ((result = obj_tpm_set_cb11(hObject, attribFlag, subFlag,
+							       ulAttrib)))
+					return result;
+				break;
+			default:
+				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else {
-		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
-		    obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+		if (obj_is_hash(hObject) || obj_is_pcrs(hObject) || obj_is_encdata(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
@@ -1104,39 +1098,39 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 	} else if (obj_is_policy(hObject)) {
-		if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_HMAC) {
-			if ((result = obj_policy_get_cb_hmac(hObject, pulAttrib)))
-				return result;
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC) {
-			if ((result = obj_policy_get_cb_xor(hObject, pulAttrib)))
-				return result;
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP) {
-			if ((result = obj_policy_get_cb_takeowner(hObject, pulAttrib)))
-				return result;
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM) {
-			if ((result = obj_policy_get_cb_changeauth(hObject, pulAttrib)))
-				return result;
-		} else if (attribFlag == TSS_TSPATTRIB_POLICY_SECRET_LIFETIME) {
-			if ((result = obj_policy_get_lifetime(hObject, &attrib)))
-				return result;
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+				if ((result = obj_policy_get_cb11(hObject, attribFlag, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_POLICY_SECRET_LIFETIME:
+				if ((result = obj_policy_get_lifetime(hObject, &attrib)))
+					return result;
 
-			if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-				if (attrib == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS)
-					*pulAttrib = TRUE;
-				else
-					*pulAttrib = FALSE;
-			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-				if (attrib != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
-					return TSPERR(TSS_E_BAD_PARAMETER);
-				if ((result = obj_policy_get_counter(hObject, pulAttrib)))
-					return result;
-			} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-				if ((result = obj_policy_get_secs_until_expired(hObject, pulAttrib)))
-					return result;
-			} else
-				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
-		} else
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
+					if (attrib == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS)
+						*pulAttrib = TRUE;
+					else
+						*pulAttrib = FALSE;
+				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
+					if (attrib != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
+						return TSPERR(TSS_E_BAD_PARAMETER);
+					if ((result = obj_policy_get_counter(hObject, pulAttrib)))
+						return result;
+				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
+					if ((result =
+					    obj_policy_get_secs_until_expired(hObject, pulAttrib)))
+						return result;
+				} else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else if (obj_is_context(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
@@ -1145,9 +1139,19 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 
 		if ((result = obj_context_get_mode(hObject, pulAttrib)))
 			return result;
+	} else if (obj_is_tpm(hObject)) {
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+				if ((result = obj_tpm_get_cb11(hObject, attribFlag, pulAttrib)))
+					return result;
+				break;
+			default:
+				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else {
-		if (obj_is_tpm(hObject) || obj_is_hash(hObject) ||
-		    obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+		if (obj_is_hash(hObject) || obj_is_pcrs(hObject) || obj_is_encdata(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
@@ -1186,13 +1190,29 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 
 		result = obj_encdata_set_data(hObject, ulAttribDataSize, rgbAttribData);
 	} else if (obj_is_policy(hObject)) {
-		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_POLICY_POPUPSTRING:
+				if ((string = Trspi_UNICODE_To_Native(rgbAttribData,
+								      NULL)) == NULL)
+					return TSPERR(TSS_E_INTERNAL_ERROR);
 
-		if ((string = Trspi_UNICODE_To_Native(rgbAttribData, NULL)) == NULL)
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-
-		result = obj_policy_set_string(hObject, ulAttribDataSize, string);
+				result = obj_policy_set_string(hObject,
+							       ulAttribDataSize,
+							       string);
+				break;
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+				result = obj_policy_set_cb12(hObject, attribFlag,
+							     rgbAttribData);
+				break;
+#endif
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else if (obj_is_hash(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_HASH_IDENTIFIER)
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
@@ -1201,9 +1221,21 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
 		result = obj_hash_set_value(hObject, ulAttribDataSize, rgbAttribData);
+	} else if (obj_is_tpm(hObject)) {
+		switch (attribFlag) {
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+				result = obj_tpm_set_cb12(hObject, attribFlag,
+							  rgbAttribData);
+				break;
+#endif
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else {
-		if (obj_is_tpm(hObject) || obj_is_pcrs(hObject) ||
-		    obj_is_context(hObject))
+		if (obj_is_pcrs(hObject) || obj_is_context(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
@@ -1318,14 +1350,40 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 								  prgbAttribData)))
 			return result;
 	} else if (obj_is_policy(hObject)) {
-		if (attribFlag != TSS_TSPATTRIB_POLICY_POPUPSTRING)
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
-
-		if ((result = obj_policy_get_string(hObject, pulAttribDataSize,
-						    prgbAttribData)))
-			return result;
+		switch (attribFlag) {
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+				result = obj_policy_get_cb12(hObject, attribFlag,
+							     pulAttribDataSize, prgbAttribData);
+				break;
+#endif
+			case TSS_TSPATTRIB_POLICY_POPUPSTRING:
+				if ((result = obj_policy_get_string(hObject, pulAttribDataSize,
+								    prgbAttribData)))
+					return result;
+				break;
+			default:
+				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
+	} else if (obj_is_tpm(hObject)) {
+		switch (attribFlag) {
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+				result = obj_tpm_get_cb12(hObject, attribFlag,
+							  pulAttribDataSize, prgbAttribData);
+				break;
+#endif
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else {
-		if (obj_is_tpm(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
+		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
