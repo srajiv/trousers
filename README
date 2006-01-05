@@ -25,14 +25,14 @@ is not fully functional.
   pthreads library (glibc-devel)
 
 
-BUILDING the TSS
+BUILDING the TSS 32-bit
 
   Build and install the latest TPM device driver from
-  sf.net/projects/tpmdd either compiled in or loaded as a
-  module. UPDATE: This driver is now included in the vanilla 2.6.12
-  kernel!  If you are doing this, trousers should just work after a
-  vanilla build. Follow the build instructions below and read
-  RUNNING the TSS, below.
+sf.net/projects/tpmdd either compiled in or loaded as a
+module. UPDATE: This driver is now included in the vanilla 2.6.12
+kernel!  If you are doing this, trousers should just work after a
+vanilla build. Follow the build instructions below and read
+RUNNING the TSS, below.
 
   To build trousers after you have the device driver installed:
 
@@ -40,7 +40,7 @@ BUILDING the TSS
   $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] \
                 [--enable-gcov]
   $ make
-  $ make install
+  # make install
 
   Here are the default locations of files that trousers installs:
 
@@ -60,6 +60,25 @@ in a slightly more predictable place, use `./configure --prefix=/usr`.
 your /etc/ld.so.conf, this won't make a difference. You may need to
 manually add it and run ldconfig as root to allow your apps to link at
 run time to libtspi.so.
+
+
+BUILDING the TSS 64-bit
+
+  TrouSerS has been built and tested on ppc64 and x86_64, so please
+don't hesitate to report bugs on these platforms.  Building everything
+64-bit will require a few more flags than are necessary for a 32-bit
+platform.  Here are some example instructions for SLES9 ppc64:
+
+  $ sh bootstrap.sh
+  $ CFLAGS="-L/usr/lib64 -L/opt/gnome/lib64" LDFLAGS="-L/usr/lib64 \
+           -L/opt/gnome/lib64" ./configure --libdir="/usr/local/lib64"
+  $ make
+  # make install
+
+  Hopefully the above example will get you going on building in your
+64-bit environment.  If you need to do anything special, please send
+your build steps to trousers-users@lists.sf.net and I'll include it
+here.
 
 
 USING TROUSERS ON AN ALREADY OWNED TPM
