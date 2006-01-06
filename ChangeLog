@@ -1,3 +1,4 @@
+- Added an implementation of TSS 1.2 style callbacks.
 - Added Emily's patch to explain the TSS_DEBUG_OFF flag, added
  blurb to README.
 - Fixed bug that only manifested on PPC64: if errno is not set
