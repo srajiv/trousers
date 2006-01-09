@@ -1,3 +1,4 @@
+- SF#1397265 'getpubek' to 'readpubek' in tcsd.conf.
 - Added an implementation of TSS 1.2 style callbacks.
 - Added Emily's patch to explain the TSS_DEBUG_OFF flag, added
  blurb to README.
