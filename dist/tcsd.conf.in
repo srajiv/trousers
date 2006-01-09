@@ -80,7 +80,7 @@
 #		    getcapability - query the TCS/TPM for its capabilities
 #		    unbind - decrypt data
 #		    quote - request a signed blob containing all PCR values
-#		    getpubek - access the TPM's Public EndorsementKey
+#		    readpubek - access the TPM's Public EndorsementKey
 #		    getregisteredkeybypublicinfo - Search system persistent storage for a public key
 #		    getpubkey - Retrieve a loaded key's public data from inside the TPM
 #		    selftest - execute selftest and test results ordinals
