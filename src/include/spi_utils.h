@@ -154,7 +154,11 @@ void UINT32ToArray(UINT32, BYTE *);
 void UINT16ToArray(UINT16, BYTE *);
 UINT32 Decode_UINT32(BYTE *);
 
+#ifndef TSS_SPEC_COMPLIANCE
+TSS_RESULT popup_GetSecret2(UINT32, UINT32, BYTE *, void *);
+#else
 TSS_RESULT popup_GetSecret(UINT32, BYTE *, void *);
+#endif
 
 TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
