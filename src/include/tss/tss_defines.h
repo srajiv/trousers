@@ -186,6 +186,24 @@ typedef UINT32  TSS_HMACHANDLE;        // handle to a HMAC session
 //
 #define TSS_TSPATTRIB_CONTEXT_SILENT_MODE      (0x00000001)   // TSP dialog display control
 #define TSS_TSPATTRIB_CONTEXT_MACHINE_NAME   (0x00000002)
+// TSS 1.2 backport
+#define TSS_TSPATTRIB_SECRET_HASH_MODE           (0x00000006)
+							// flag indicating whether
+							// NUL is included in the
+							// hash of the password
+//
+// Subflags of TSS_TSPATTRIB_SECRET_HASH_MODE
+//
+#define TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP     (0x00000001)
+//
+
+//
+// Values for TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP subflag
+//
+#define TSS_TSPATTRIB_HASH_MODE_NOT_NULL         (0x00000000)
+#define TSS_TSPATTRIB_HASH_MODE_NULL             (0x00000001)
+// end TSS 1.2 backport
+
 //
 // Object Policy:
 //
