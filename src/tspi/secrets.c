@@ -23,6 +23,59 @@
 #include "tsplog.h"
 #include "obj.h"
 
+#ifndef TSS_SPEC_COMPLIANCE
+/*
+ *  popup_GetSecret2()
+ *
+ *    newPIN - non-zero to popup the dialog to enter a new PIN, zero to popup a dialog
+ *      to enter an existing PIN
+ *    hash_mode - flag indicating whether to include null terminating data in the hash
+ *      of the secret.
+ *    popup_str - string to appear in the title bar of the popup dialog
+ *    auth_hash - the 20+ byte buffer that receives the SHA1 hash of the auth data
+ *      entered into the dialog box
+ *
+ */
+TSS_RESULT
+popup_GetSecret2(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_hash)
+{
+	BYTE secret[UI_MAX_SECRET_STRING_LENGTH] = { 0 };
+	BYTE *dflt = "TSS Authentication Dialog";
+	UINT32 secret_len;
+
+	if (popup_str == NULL)
+		popup_str = dflt;
+
+	/* pin the area where the secret will be put in memory */
+	if (pin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH)) {
+		LogError1("Failed to pin secret in memory.");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if (new_pin)
+		DisplayNewPINWindow(secret, &secret_len, popup_str);
+	else
+		DisplayPINWindow(secret, &secret_len, popup_str);
+
+	if (!secret_len) {
+		unpin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH);
+		return TSPERR(TSS_E_POLICY_NO_SECRET);
+	}
+
+	if (hash_mode == TSS_TSPATTRIB_HASH_MODE_NULL)
+		Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, (char *)auth_hash);
+	else
+		Trspi_Hash(TSS_HASH_SHA1, secret_len - 2, secret, (char *)auth_hash);
+
+	LogDebug("Secret's UNICODE data:");
+	LogDebugData(secret_len, secret);
+	/* zero, then unpin the memory */
+	memset(secret, 0, secret_len);
+	unpin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH);
+
+	return TSS_SUCCESS;
+}
+#else
 /*
  *  popup_GetSecret()
  *
@@ -69,6 +122,7 @@ popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 
 	return TSS_SUCCESS;
 }
+#endif
 
 TSS_RESULT
 secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,

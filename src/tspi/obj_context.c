@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2006
  *
  */
 
@@ -60,6 +60,10 @@ obj_context_add(TSS_HOBJECT *phObject)
 	}
 	memcpy(context->machineName, TSS_LOCALHOST_STRING, len);
 	context->machineNameLength = len;
+
+#ifndef TSS_SPEC_COMPLIANCE
+	context->hashMode = TSS_TSPATTRIB_HASH_MODE_NULL;
+#endif
 
 	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, context,
 					phObject))) {
@@ -320,3 +324,46 @@ obj_context_has_popups(TSS_HCONTEXT tspContext)
 	return ret;
 }
 
+#ifndef TSS_SPEC_COMPLIANCE
+TSS_RESULT
+obj_context_get_hash_mode(TSS_HCONTEXT tspContext, UINT32 *mode)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+	*mode = context->hashMode;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_context_set_hash_mode(TSS_HCONTEXT tspContext, UINT32 mode)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	switch (mode) {
+		case TSS_TSPATTRIB_HASH_MODE_NULL:
+		case TSS_TSPATTRIB_HASH_MODE_NOT_NULL:
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+	}
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+	context->hashMode = mode;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
+#endif

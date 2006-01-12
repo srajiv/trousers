@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -974,24 +974,36 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				}
 				break;
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_SECRET_HASH_MODE:
+					result = obj_policy_set_hash_mode(hObject, subFlag);
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
 	} else if (obj_is_context(hObject)) {
-		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
-		if (subFlag)
-			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
-
-		if (ulAttrib == TSS_TSPATTRIB_CONTEXT_NOT_SILENT)
-			result = obj_context_set_mode(hObject, ulAttrib);
-		else if (ulAttrib == TSS_TSPATTRIB_CONTEXT_SILENT) {
-			if (obj_context_has_popups(hObject))
-				return TSPERR(TSS_E_SILENT_CONTEXT);
-			result = obj_context_set_mode(hObject, ulAttrib);
-		} else
-			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_CONTEXT_SILENT_MODE:
+				if (ulAttrib == TSS_TSPATTRIB_CONTEXT_NOT_SILENT)
+					result = obj_context_set_mode(hObject, ulAttrib);
+				else if (ulAttrib == TSS_TSPATTRIB_CONTEXT_SILENT) {
+					if (obj_context_has_popups(hObject))
+						return TSPERR(TSS_E_SILENT_CONTEXT);
+					result = obj_context_set_mode(hObject, ulAttrib);
+				} else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				break;
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_SECRET_HASH_MODE:
+				result = obj_context_set_hash_mode(hObject, subFlag);
+				break;
+#endif
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else if (obj_is_tpm(hObject)) {
 		switch (attribFlag) {
 			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
@@ -1127,18 +1139,36 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				} else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_SECRET_HASH_MODE:
+				if (subFlag == TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP)
+					result = obj_policy_get_hash_mode(hObject, pulAttrib);
+				else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
 	} else if (obj_is_context(hObject)) {
-		if (attribFlag != TSS_TSPATTRIB_CONTEXT_SILENT_MODE)
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
-		if (subFlag)
-			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
-
-		if ((result = obj_context_get_mode(hObject, pulAttrib)))
-			return result;
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_CONTEXT_SILENT_MODE:
+				if ((result = obj_context_get_mode(hObject, pulAttrib)))
+					return result;
+				break;
+#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_SECRET_HASH_MODE:
+				if (subFlag == TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP)
+					result = obj_context_get_hash_mode(hObject, pulAttrib);
+				else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				break;
+#endif
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
 	} else if (obj_is_tpm(hObject)) {
 		switch (attribFlag) {
 			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:

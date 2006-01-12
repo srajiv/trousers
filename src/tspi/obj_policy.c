@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2006
  *
  */
 
@@ -38,6 +38,11 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	policy->type = type;
 #ifndef TSS_SPEC_COMPLIANCE
 	policy->SecretMode = TSS_SECRET_MODE_NONE;
+	/* The policy object will inherit this attribute from the context */
+	if ((result = obj_context_get_hash_mode(tsp_context, &policy->hashMode))) {
+		free(policy);
+		return result;
+	}
 #else
 	policy->SecretMode = TSS_SECRET_MODE_POPUP;
 #endif
@@ -190,9 +195,15 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 		case TSS_SECRET_MODE_POPUP:
 			/* if the secret is still NULL, grab it using the GUI */
 			if (policy->SecretSet == FALSE) {
+#ifndef TSS_SPEC_COMPLIANCE
+				if ((result = popup_GetSecret2(TRUE, policy->hashMode,
+							      policy->popupString,
+							      policy->Secret)))
+#else
 				if ((result = popup_GetSecret(TRUE,
 							      policy->popupString,
 							      policy->Secret)))
+#endif
 					break;
 			}
 			policy->SecretSet = TRUE;
@@ -927,3 +938,47 @@ obj_policy_do_takeowner(TSS_HPOLICY hPolicy,
 
 	return result;
 }
+
+#ifndef TSS_SPEC_COMPLIANCE
+TSS_RESULT
+obj_policy_get_hash_mode(TSS_HPOLICY hPolicy, UINT32 *mode)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+	*mode = policy->hashMode;
+
+	obj_list_put(&policy_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_policy_set_hash_mode(TSS_HPOLICY hPolicy, UINT32 mode)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+
+	switch (mode) {
+		case TSS_TSPATTRIB_HASH_MODE_NULL:
+		case TSS_TSPATTRIB_HASH_MODE_NOT_NULL:
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+	}
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+	policy->hashMode = mode;
+
+	obj_list_put(&policy_list);
+
+	return TSS_SUCCESS;
+}
+#endif
