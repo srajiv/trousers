@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -79,6 +79,9 @@ struct tr_tpm_obj {
 
 struct tr_context_obj {
 	TSS_FLAG silentMode;
+#ifndef TSS_SPEC_COMPLIANCE
+	UINT32 hashMode;
+#endif
 	TSS_HPOLICY policy;
 	TCS_CONTEXT_HANDLE tcsHandle;
 	BYTE *machineName;
@@ -107,6 +110,7 @@ struct tr_policy_obj {
 	BYTE *popupString;
 	UINT32 popupStringLength;
 #ifndef TSS_SPEC_COMPLIANCE
+	UINT32 hashMode;
 	TSS_ALGORITHM_ID hmacAlg;
 	TSS_ALGORITHM_ID xorAlg;
 	TSS_ALGORITHM_ID takeownerAlg;
@@ -297,6 +301,8 @@ TSS_RESULT obj_context_get_tcs_context(TSS_HCONTEXT, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_context_set_mode(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_context_get_mode(TSS_HCONTEXT, UINT32 *);
 TSS_BOOL   obj_context_has_popups(TSS_HCONTEXT);
+TSS_RESULT obj_context_get_hash_mode(TSS_HCONTEXT, UINT32 *);
+TSS_RESULT obj_context_set_hash_mode(TSS_HCONTEXT, UINT32);
 
 /* obj_policy.c */
 TSS_BOOL   anyPopupPolicies(TSS_HCONTEXT);
@@ -337,4 +343,6 @@ TSS_RESULT obj_policy_do_xor(TSS_HPOLICY, TSS_HOBJECT, TSS_HOBJECT, TSS_FLAG,
 TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, BYTE *);
 TSS_RESULT obj_pcrs_get_selection(TSS_HPCRS, TCPA_PCR_SELECTION *);
 TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
+TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
+TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
 #endif
