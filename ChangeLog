@@ -1,3 +1,8 @@
+- Backport of the context and policy object's
+ TSS_TSPATTRIB_SECRET_HASH_MODE attribute from the TSS 1.2 spec.
+ This will allow 1.1 apps to decide whether they want to
+ include the 2 bytes of NULL in the hashes of their secrets.
+ This will in turn allow various TSS's to interoperate better.
 - SF#1397265 'getpubek' to 'readpubek' in tcsd.conf.
 - Added an implementation of TSS 1.2 style callbacks.
 - Added Emily's patch to explain the TSS_DEBUG_OFF flag, added
