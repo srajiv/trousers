@@ -1,3 +1,4 @@
+- Changed all prints of size_t to %z (matters on 64bit platforms).
 - Backport of the context and policy object's
  TSS_TSPATTRIB_SECRET_HASH_MODE attribute from the TSS 1.2 spec.
  This will allow 1.1 apps to decide whether they want to
