@@ -81,7 +81,7 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
 
 	if (list == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct event_wrapper));
+		LogError("malloc of %zd bytes failed.", sizeof(struct event_wrapper));
 		return TSS_E_OUTOFMEMORY;
 	}
 
@@ -194,7 +194,7 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 
 				cur->next = calloc(1, sizeof(struct event_wrapper));
 				if (cur->next == NULL) {
-					LogError("malloc of %d bytes failed.",
+					LogError("malloc of %zd bytes failed.",
 							sizeof(struct event_wrapper));
 					result = TSS_E_OUTOFMEMORY;
 					goto free_list;
@@ -218,7 +218,7 @@ copy_events:
 	 */
 	*events = calloc(copied_events, sizeof(TSS_PCR_EVENT));
 	if (*events == NULL) {
-		LogError("malloc of %d bytes failed.", copied_events * sizeof(TSS_PCR_EVENT));
+		LogError("malloc of %zd bytes failed.", copied_events * sizeof(TSS_PCR_EVENT));
 		result = TSS_E_OUTOFMEMORY;
 		goto free_list;
 	}
@@ -313,7 +313,7 @@ ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent
 			if (seen_indices == *num) {
 				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 				if (*ppEvent == NULL) {
-					LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT));
+					LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT));
 					return TSS_E_INTERNAL_ERROR;
 				}
 

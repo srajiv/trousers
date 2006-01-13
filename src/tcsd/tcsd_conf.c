@@ -142,7 +142,7 @@ get_file_path(char *ptr, char **dest)
 	tmp_buf[i] = '\0';
 	*dest = strdup(tmp_buf);
 	if (*dest == NULL) {
-		LogError("malloc of %d bytes failed", strlen(tmp_buf));
+		LogError("malloc of %zd bytes failed", strlen(tmp_buf));
 	}
 
 	return 0;

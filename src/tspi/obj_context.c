@@ -47,7 +47,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 	unsigned len = strlen(TSS_LOCALHOST_STRING) + 1;
 
 	if (context == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_context_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}

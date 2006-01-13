@@ -153,7 +153,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 		 */
 		table = calloc(1, sizeof(struct memTable));
 		if (table == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(struct memTable));
+			LogError("malloc of %zd bytes failed.", sizeof(struct memTable));
 			pthread_mutex_unlock(&memtable_lock);
 			return NULL;
 		}
@@ -163,7 +163,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 
 	newEntry = calloc(1, sizeof(struct memEntry));
 	if (newEntry == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct memEntry));
+		LogError("malloc of %zd bytes failed.", sizeof(struct memEntry));
 		pthread_mutex_unlock(&memtable_lock);
 		return NULL;
 	}

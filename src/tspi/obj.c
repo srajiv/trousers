@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -153,7 +153,7 @@ obj_list_add(struct obj_list *list,
 
         new_obj = calloc(1, sizeof(struct tsp_object));
         if (new_obj == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct tsp_object));
+		LogError("malloc of %zd bytes failed.", sizeof(struct tsp_object));
                 return TSPERR(TSS_E_OUTOFMEMORY);
         }
 
@@ -375,7 +375,7 @@ addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 	TSPKeyHandleContainer *newTSP = NULL;
 
 	if ((newTSP = calloc(1, sizeof(TSPKeyHandleContainer))) == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(TSPKeyHandleContainer));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -387,7 +387,7 @@ addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
 
 	if (newTCS == NULL) {
 		if ((newTCS = calloc(1, sizeof(TCSKeyHandleContainer))) == NULL) {
-			LogError("malloc of %d bytes failed.",
+			LogError("malloc of %zd bytes failed.",
 					sizeof(TCSKeyHandleContainer));
 			free(newTSP);
 			return TSPERR(TSS_E_OUTOFMEMORY);

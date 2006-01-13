@@ -30,7 +30,7 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	TSS_RESULT result;
 
 	if ((policy = calloc(1, sizeof(struct tr_policy_obj))) == NULL) {
-		LogError("malloc of %d bytes failed",
+		LogError("malloc of %zd bytes failed",
 				sizeof(struct tr_policy_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -492,7 +492,7 @@ obj_policy_get_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, UINT32 *size, BYTE **out
 	policy = (struct tr_policy_obj *)obj->data;
 
 	if ((cb = calloc_tspi(obj->tspContext, sizeof(TSS_CALLBACK))) == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TSS_CALLBACK));
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_CALLBACK));
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}

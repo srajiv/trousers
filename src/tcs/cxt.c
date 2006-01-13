@@ -288,7 +288,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle,
 	if (k == NULL) {
 		new = calloc(1, sizeof(struct keys_loaded));
 		if (new == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(struct keys_loaded));
+			LogError("malloc of %zd bytes failed.", sizeof(struct keys_loaded));
 			pthread_mutex_unlock(&tcs_ctx_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}

@@ -507,7 +507,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	/* Not found - we need to create a new entry */
 	entry = (struct key_mem_cache *)calloc(1, sizeof(struct key_mem_cache));
 	if (entry == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct key_mem_cache));
+		LogError("malloc of %zd bytes failed.", sizeof(struct key_mem_cache));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -520,7 +520,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	/* allocate space for the blob */
 	entry->blob = malloc(sizeof(TCPA_KEY));
 	if (entry->blob == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
+		LogError("malloc of %zd bytes failed.", sizeof(TCPA_KEY));
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
@@ -635,7 +635,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	/* Not found - we need to create a new entry */
 	entry = (struct key_mem_cache *)calloc(1, sizeof(struct key_mem_cache));
 	if (entry == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct key_mem_cache));
+		LogError("malloc of %zd bytes failed.", sizeof(struct key_mem_cache));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -648,7 +648,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	/* allocate space for the blob */
 	entry->blob = malloc(sizeof(TCPA_KEY));
 	if (entry->blob == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TCPA_KEY));
+		LogError("malloc of %zd bytes failed.", sizeof(TCPA_KEY));
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}

@@ -142,7 +142,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 		if (count != 0) {
 			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
 			if (ret == NULL) {
-				LogError("malloc of %d bytes failed.",
+				LogError("malloc of %zd bytes failed.",
 						(count * sizeof(TSS_KM_KEYINFO)));
 				count = 0;
 				result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -212,7 +212,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 		if (count != 0) {
 			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
 			if (ret == NULL) {
-				LogError("malloc of %d bytes failed.",
+				LogError("malloc of %zd bytes failed.",
 						(count * sizeof(TSS_KM_KEYINFO)));
 				count = 0;
 				result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -286,7 +286,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	*ppKeyInfo = malloc(sizeof(TSS_KM_KEYINFO));
 	if (*ppKeyInfo == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TSS_KM_KEYINFO));
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_KM_KEYINFO));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -562,7 +562,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE parentKeySlot;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 
-	LogDebugFn("Enter: uuid: 0x%x auth? 0x%x ***********", (UINT32)KeyUUID,
+	LogDebugFn("Enter: uuid: 0x%lx auth? 0x%x ***********", (unsigned long)KeyUUID,
 		  pLoadKeyInfo == NULL ? 0xdeadbeef : pLoadKeyInfo->authData.AuthHandle);
 	if ((result = ctx_verify_context(hContext)))
 		return result;

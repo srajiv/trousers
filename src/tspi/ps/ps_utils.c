@@ -117,7 +117,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size)
 	/* read the number of keys */
 	rc = read(fd, &num_keys, sizeof(UINT32));
 	if (rc == -1) {
-		LogError("read of %d bytes: %s", sizeof(UINT32), strerror(errno));
+		LogError("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return -1;
 	} else if (rc == 0) {
 		/* This is the first key being written */
@@ -195,7 +195,7 @@ cache_key(UINT32 offset, UINT16 flags,
 
 	tmp = malloc(sizeof(struct key_disk_cache));
 	if (tmp == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct key_disk_cache));
+		LogError("malloc of %zd bytes failed.", sizeof(struct key_disk_cache));
 		pthread_mutex_unlock(&disk_cache_lock);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -236,7 +236,7 @@ get_num_keys_in_file(int fd)
 
 	rc = read(fd, &num_keys, sizeof(UINT32));
 	if (rc == -1) {
-		LogError("read of %d bytes: %s", sizeof(UINT32), strerror(errno));
+		LogError("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return -1;
 	} else if ((unsigned)rc < sizeof(UINT32)) {
 		num_keys = 0;

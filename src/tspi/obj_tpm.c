@@ -30,7 +30,7 @@ obj_tpm_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 	struct tr_tpm_obj *tpm = calloc(1, sizeof(struct tr_tpm_obj));
 
 	if (tpm == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_tpm_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -285,7 +285,7 @@ obj_tpm_get_cb12(TSS_HTPM hTpm, TSS_FLAG flag, UINT32 *size, BYTE **out)
 	tpm = (struct tr_tpm_obj *)obj->data;
 
 	if ((cb = calloc_tspi(obj->tspContext, sizeof(TSS_CALLBACK))) == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TSS_CALLBACK));
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_CALLBACK));
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}

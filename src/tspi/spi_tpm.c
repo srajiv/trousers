@@ -877,7 +877,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		offset = 0;
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_OwnerClear, hashBlob);
@@ -897,7 +897,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		offset = 0;
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", 2 * sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -940,7 +940,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
@@ -960,7 +960,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		offset = 0;
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", 2 * sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -978,7 +978,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TSS_BOOL));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TSS_BOOL));
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32) + sizeof(TSS_BOOL));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
@@ -999,7 +999,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		offset = 0;
 		hashBlob = malloc(8);
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", 2 * sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -1029,7 +1029,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 
 		hashBlob = malloc(sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
@@ -1049,7 +1049,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		offset = 0;
 		hashBlob = malloc(2 * sizeof(UINT32));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", 2 * sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", 2 * sizeof(UINT32));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -1251,7 +1251,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		/* ===  now setup the auth's */
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE));
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE));
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
@@ -1284,7 +1284,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		offset = 0;
 		hashBlob = malloc((3 * sizeof(UINT32)) + outDataSize);
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", (3 * sizeof(UINT32)) + outDataSize);
+			LogError("malloc of %zd bytes failed.", (3 * sizeof(UINT32)) + outDataSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -1313,7 +1313,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		offset = 0;
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE) + strlen("Test Passed"));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE)
+			LogError("malloc of %zd bytes failed.", sizeof(UINT32) + sizeof(TCPA_NONCE)
 					+ strlen("Test Passed"));
 			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -2207,7 +2207,7 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,			/* in */
 
 	inDigest = malloc(TCPA_DIGEST_SIZE);
 	if (inDigest == NULL) {
-		LogError("malloc of %d bytes failed.", TCPA_DIGEST_SIZE);
+		LogError("malloc of %zd bytes failed.", TCPA_DIGEST_SIZE);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -2219,7 +2219,7 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,			/* in */
 
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));
 	if (*prgbPcrValue == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TCPA_PCRVALUE));
+		LogError("malloc of %zd bytes failed.", sizeof(TCPA_PCRVALUE));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -2262,7 +2262,7 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));
 	if (*prgbPcrValue == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TCPA_PCRVALUE));
+		LogError("malloc of %zd bytes failed.", sizeof(TCPA_PCRVALUE));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	memcpy(*prgbPcrValue, outDigest.digest, sizeof(TCPA_PCRVALUE));

@@ -1094,9 +1094,9 @@ BYTE *
 Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 {
 	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
-	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
+	unsigned len = 0, tmplen;
 	iconv_t cd = 0;
-	size_t rc;
+	size_t rc, outbytesleft, inbytesleft;
 
 	if (string == NULL)
 		goto alloc_string;
@@ -1152,9 +1152,9 @@ BYTE *
 Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 {
 	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
-	unsigned len = 0, outbytesleft, inbytesleft, tmplen;
+	unsigned len = 0, tmplen;
 	iconv_t cd;
-	size_t rc;
+	size_t rc, outbytesleft, inbytesleft;
 
 	if (string == NULL) {
 		if (size)

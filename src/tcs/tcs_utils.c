@@ -1021,7 +1021,7 @@ UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset,
 		return TSS_SUCCESS;
 	list->handle = malloc(list->loaded * sizeof (UINT32));
         if (list->handle == NULL) {
-		LogError("malloc of %d bytes failed.", list->loaded * sizeof (UINT32));
+		LogError("malloc of %zd bytes failed.", list->loaded * sizeof (UINT32));
                 return TCSERR(TSS_E_OUTOFMEMORY);
         }
 

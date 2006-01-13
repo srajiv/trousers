@@ -32,7 +32,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
 
 	if (rsakey == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_rsakey_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -1107,7 +1107,7 @@ obj_rsakey_get_pcr_atcreation(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	} else {
 		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -1144,7 +1144,7 @@ obj_rsakey_get_pcr_atrelease(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	} else {
 		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}

@@ -36,7 +36,7 @@ auth_mgr_init()
 
 	auth_mgr.overflow = calloc(TSS_DEFAULT_OVERFLOW_AUTHS, sizeof(pthread_cond_t *));
 	if (auth_mgr.overflow == NULL) {
-		LogError("malloc of %d bytes failed",
+		LogError("malloc of %zd bytes failed",
 				(TSS_DEFAULT_OVERFLOW_AUTHS * sizeof(pthread_cond_t *)));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}

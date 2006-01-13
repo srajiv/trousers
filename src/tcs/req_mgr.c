@@ -55,7 +55,7 @@ TSS_RESULT
 req_mgr_init()
 {
 	if ((trm = calloc(1, sizeof(struct tpm_req_mgr))) == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct tpm_req_mgr));
+		LogError("malloc of %zd bytes failed.", sizeof(struct tpm_req_mgr));
 		return TSS_E_OUTOFMEMORY;
 	}
 

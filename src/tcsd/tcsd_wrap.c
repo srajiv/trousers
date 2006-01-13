@@ -378,7 +378,7 @@ tcs_wrap_GetRandom(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + bytesRequested);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + bytesRequested);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + bytesRequested);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, *hdr)) {
@@ -450,7 +450,7 @@ tcs_wrap_CreateEndorsementKeyPair(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
 		if ( hdr == NULL ) {
-			LogError("malloc of %d bytes faile.", size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes faile.", size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
 			free(eK);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -508,7 +508,7 @@ tcs_wrap_ReadPubek(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + pubEKSize + sizeof(TCPA_DIGEST));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + pubEKSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + pubEKSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pubEKSize, 0, *hdr)) {
@@ -560,7 +560,7 @@ tcs_wrap_OwnerReadPubek(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + pubEKSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + pubEKSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -614,7 +614,7 @@ tcs_wrap_DisablePubekRead(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
@@ -728,7 +728,7 @@ tcs_wrap_GetPubkey(struct tcsd_thread_data *data,
 		i = 0;
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + pubKeySize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + pubKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -783,7 +783,7 @@ tcs_wrap_OIAP(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + sizeof(TCPA_NONCE));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size +
+			LogError("malloc of %zd bytes failed.", size +
 					sizeof(UINT32) + sizeof(TCPA_NONCE));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -864,7 +864,7 @@ tcs_wrap_Extend(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TCPA_DIGEST));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TCPA_DIGEST));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_DIGEST, 0, &outDigest, 0, *hdr)) {
@@ -907,7 +907,7 @@ tcs_wrap_PcrRead(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TCPA_DIGEST));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TCPA_DIGEST));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_DIGEST, 0, &digest, 0, *hdr)) {
@@ -972,7 +972,7 @@ tcs_wrap_GetCapability(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + respSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + respSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + respSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &respSize, 0, *hdr)) {
@@ -1025,7 +1025,7 @@ tcs_wrap_GetCapabilityOwner(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(TCPA_VERSION) + (2 * sizeof(UINT32)) +
 				sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TCPA_VERSION) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TCPA_VERSION) +
 					(2 * sizeof(UINT32)) + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1097,7 +1097,7 @@ tcs_wrap_TCSGetCapability(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + respSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + respSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + respSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &respSize, 0, *hdr)) {
@@ -1243,7 +1243,7 @@ tcs_wrap_TakeOwnership(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + srkKeySize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + srkKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1295,7 +1295,7 @@ tcs_wrap_OwnerClear(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
@@ -1337,7 +1337,7 @@ tcs_wrap_DisableOwnerClear(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
@@ -1580,7 +1580,7 @@ tcs_wrap_GetRegisteredKeyBlob(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + pcKeySize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + pcKeySize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + pcKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pcKeySize, 0, *hdr)) {
@@ -1664,7 +1664,7 @@ tcs_wrap_LoadKeyByBlob(struct tcsd_thread_data *data,
 		i = 0;
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + (2 * sizeof(UINT32)));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					(2 * sizeof(UINT32)));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1726,7 +1726,7 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + sizeof(TCS_LOADKEY_INFO));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &phKeyTCSI, 0, *hdr)) {
@@ -1790,7 +1790,7 @@ tcs_wrap_OSAP(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + (2 * sizeof(TCPA_NONCE)));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
 					(2 * sizeof(TCPA_NONCE)));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1871,7 +1871,7 @@ tcs_wrap_Sign(struct tcsd_thread_data *data,
 		i = 0;
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + sigSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -1931,7 +1931,7 @@ tcs_wrap_DirWriteAuth(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -1976,7 +1976,7 @@ tcs_wrap_DirRead(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TCPA_DIGEST));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -2079,7 +2079,7 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + outDataSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2172,7 +2172,7 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + (2 * sizeof(TPM_AUTH)) + sizeof(UINT32) + outDataSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
+			LogError("malloc of %zd bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
 					sizeof(UINT32) + outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2266,7 +2266,7 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data,
 		i = 0;
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + outDataSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2396,7 +2396,7 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + keyDataSize + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
 					keyDataSize + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2488,7 +2488,7 @@ tcs_wrap_ChangeAuth(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + (2 * sizeof(TPM_AUTH)) + sizeof(UINT32) + outDataSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
+			LogError("malloc of %zd bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
 					sizeof(UINT32) + outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2556,7 +2556,7 @@ tcs_wrap_ChangeAuthOwner(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
@@ -2632,7 +2632,7 @@ tcs_wrap_Quote(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + (2 * sizeof(UINT32)) +
 				pcrDataSizeOut + sigSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					(2 * sizeof(UINT32)) + pcrDataSizeOut + sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2869,7 +2869,7 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 		i=0;
 		*hdr = calloc(1, size + sizeof(UINT32) + (cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) +
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
 					(cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2922,7 +2922,7 @@ tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data,
 	if(result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32));
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -2985,7 +2985,7 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + totalSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
 			free(pEvent);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -3051,7 +3051,7 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
 
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + totalSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
 			free(ppEvents);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -3109,7 +3109,7 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + totalSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
 			free(ppEvents);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -3204,7 +3204,7 @@ tcs_wrap_CertifySelfTest(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + sigSize);
 		if (*hdr == NULL) {
 			free(sigData);
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH) + sizeof(UINT32) + sigSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) + sizeof(UINT32) + sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
                 if (pPrivAuth != NULL) {
@@ -3260,7 +3260,7 @@ tcs_wrap_GetTestResult(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(UINT32) + resultDataSize);
 		if (*hdr == NULL) {
 			free(resultData);
-			LogError("malloc of %d bytes failed.", size + sizeof(UINT32) + resultDataSize);
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + resultDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &resultDataSize, 0, *hdr)) {
@@ -3345,7 +3345,7 @@ tcs_wrap_OwnerSetDisable(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size + sizeof(TPM_AUTH));
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
@@ -3501,7 +3501,7 @@ tcs_wrap_CertifyKey(struct tcsd_thread_data *data,
 		if (*hdr == NULL) {
 			free(CertifyInfo);
 			free(outData);
-			LogError("malloc of %d bytes failed.", size +
+			LogError("malloc of %zd bytes failed.", size +
 						(2 * sizeof(TPM_AUTH)) +
 						(2 * sizeof(UINT32)) +
 						+ CertifyInfoSize + outDataSize);
@@ -3602,7 +3602,7 @@ tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(UINT32) + keySize);
 		if (*hdr == NULL) {
 			free(keyBlob);
-			LogError("malloc of %d bytes failed.", size +
+			LogError("malloc of %zd bytes failed.", size +
 						sizeof(UINT32) + keySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -3679,7 +3679,7 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
 					+ SymmetricKeySize);
 		if (*hdr == NULL) {
 			free(SymmetricKey);
-			LogError("malloc of %d bytes failed.", size +
+			LogError("malloc of %zd bytes failed.", size +
 						(2 * sizeof(TPM_AUTH)) +
 						sizeof(UINT32) + blobSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -3856,7 +3856,7 @@ dispatchCommand(struct tcsd_thread_data *data,
 	if (access_control(data, tsp_data)) {
 		*hdr = calloc(1, sizeof(struct tcsd_packet_hdr));
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.",
+			LogError("malloc of %zd bytes failed.",
 					sizeof(struct tcsd_packet_hdr));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}

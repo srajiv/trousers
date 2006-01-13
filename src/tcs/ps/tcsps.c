@@ -348,7 +348,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 
 		*ret_uuid = (TSS_UUID *)malloc(sizeof(TSS_UUID));
 		if (*ret_uuid == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TSS_UUID));
+			LogError("malloc of %zd bytes failed.", sizeof(TSS_UUID));
                         pthread_mutex_unlock(&disk_cache_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -682,7 +682,7 @@ ps_remove_key(int fd, struct key_disk_cache *c)
 
 	rc = read(fd, &num_keys, sizeof(UINT32));
 	if (rc != sizeof(UINT32)) {
-		LogError("read of %d bytes: %s", sizeof(UINT32),
+		LogError("read of %zd bytes: %s", sizeof(UINT32),
 						strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}

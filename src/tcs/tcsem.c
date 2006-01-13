@@ -43,7 +43,7 @@ event_log_init()
 
 	tcs_event_log = calloc(1, sizeof(struct event_log));
 	if (tcs_event_log == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct event_log));
+		LogError("malloc of %zd bytes failed.", sizeof(struct event_log));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -52,7 +52,7 @@ event_log_init()
 	/* allocate as many event lists as there are PCR's */
 	tcs_event_log->lists = calloc(tpm_metrics.num_pcrs, sizeof(struct event_wrapper *));
 	if (tcs_event_log->lists == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				tpm_metrics.num_pcrs * sizeof(struct event_wrapper *));
 		free(tcs_event_log);
 		return TCSERR(TSS_E_OUTOFMEMORY);
@@ -114,7 +114,7 @@ event_log_add(TSS_PCR_EVENT *event, UINT32 *pNumber)
 
 	new = calloc(1, sizeof(struct event_wrapper));
 	if (new == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct event_wrapper));
+		LogError("malloc of %zd bytes failed.", sizeof(struct event_wrapper));
 		pthread_mutex_unlock(&(tcs_event_log->lock));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
@@ -305,7 +305,7 @@ TCS_GetPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	} else {
 		*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 		if (*ppEvent == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT));
+			LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -439,7 +439,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 */
 	*ppEvents = calloc((lastEventNumber - FirstEvent), sizeof(TSS_PCR_EVENT));
 	if (*ppEvents == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(TSS_PCR_EVENT) * (lastEventNumber - FirstEvent));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
@@ -493,7 +493,7 @@ TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 
 	*ppEvents = calloc(numEvents, sizeof(TSS_PCR_EVENT));
 	if (*ppEvents == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * numEvents);
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * numEvents);
 		pthread_mutex_unlock(&(tcs_event_log->lock));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}

@@ -27,7 +27,7 @@ host_table_init()
 {
 	ht = calloc(1, sizeof(struct host_table));
 	if (ht == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct host_table));
+		LogError("malloc of %zd bytes failed.", sizeof(struct host_table));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 

@@ -62,7 +62,7 @@ tcsd_threads_init(void)
 	/* allocate the thread mgmt structure */
 	tm = calloc(1, sizeof(struct tcsd_thread_mgr));
 	if (tm == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct tcsd_thread_mgr));
+		LogError("malloc of %zd bytes failed.", sizeof(struct tcsd_thread_mgr));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -72,7 +72,7 @@ tcsd_threads_init(void)
 	/* allocate each thread's data structure */
 	tm->thread_data = calloc(tcsd_options.num_threads, sizeof(struct tcsd_thread_data));
 	if (tm->thread_data == NULL) {
-		LogError("malloc of %u bytes failed.",
+		LogError("malloc of %zu bytes failed.",
 			 tcsd_options.num_threads * sizeof(struct tcsd_thread_data));
 		free(tm);
 		return TCSERR(TSS_E_OUTOFMEMORY);

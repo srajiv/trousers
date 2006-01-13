@@ -30,7 +30,7 @@ TCS_OpenContext_RPC(BYTE *hostname, UINT32 *tcsContext, int type)
 
 	entry = calloc(1, sizeof(struct host_table_entry));
 	if (entry == NULL) {
-		LogError("malloc of %d bytes failed.", sizeof(struct host_table_entry));
+		LogError("malloc of %zd bytes failed.", sizeof(struct host_table_entry));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 

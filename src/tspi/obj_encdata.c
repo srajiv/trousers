@@ -30,7 +30,7 @@ obj_encdata_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 	struct tr_encdata_obj *encdata = calloc(1, sizeof(struct tr_encdata_obj));
 
 	if (encdata == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_encdata_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -200,7 +200,7 @@ obj_encdata_get_pcr_atcreation(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 	} else {
 		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -233,7 +233,7 @@ obj_encdata_get_pcr_atrelease(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 	} else {
 		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
 		if (*data == NULL) {
-			LogError("malloc of %d bytes failed.", sizeof(TCPA_DIGEST));
+			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}

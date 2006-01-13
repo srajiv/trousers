@@ -562,7 +562,7 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 		if (ppEvent) {
 			*ppEvent = malloc(sizeof(TSS_PCR_EVENT));
 			if (*ppEvent == NULL) {
-				LogError("malloc of %d bytes failed.",
+				LogError("malloc of %zd bytes failed.",
 					 sizeof(TSS_PCR_EVENT));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
@@ -629,7 +629,7 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 		if (*pEventCount > 0) {
 			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
-				LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
+				LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
@@ -689,7 +689,7 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		if (*pEventCount > 0) {
 			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
-				LogError("malloc of %d bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
+				LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
