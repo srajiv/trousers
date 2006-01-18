@@ -254,9 +254,8 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			auth_mgr.open_auth_sessions++;
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
-		}
-		/* XXX This is a hack. See SF BUG #1229838 */
-		else {
+		} else {
+			/* sanity check */
 			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 				LogDebug1("***************************** "
 						"UNCLEAN AUTH MAPPER TABLE");
