@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -43,7 +43,6 @@ UnloadBlob_Auth_Special(UINT16 * offset, BYTE * blob, TPM_AUTH * auth)
 	UnloadBlob(offset, 20, blob, (BYTE *)&auth->HMAC, NULL);
 }
 
-/* 2004-05-12 Seiji Munetoh added for EnumRegisterdKey */
 void
 LoadBlob_KM_KEYINFO( UINT16* offset, BYTE* blob, TSS_KM_KEYINFO* info )
 {
@@ -189,7 +188,6 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_pa
 	case TCSD_PACKET_TYPE_VERSION:
 		LoadBlob_VERSION(&offset, (void *)hdr, ((TCPA_VERSION *)theData));
 		break;
-		/* 2005-05-12 Seiji Munetoh  added */
 	case TCSD_PACKET_TYPE_KM_KEYINFO:
 		LoadBlob_KM_KEYINFO(&offset, (void *)hdr, ((TSS_KM_KEYINFO *)theData));
 		break;
@@ -216,12 +214,8 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 	TSS_RESULT result;
 	UINT16 offset;
 
-	if (index == 0) {
-		/*            memset( packet, 0x00, sizeof( packet )); */
+	if (index == 0)
 		packet->dataSize = 0;
-		/*      packet->numParms = 0; */
-		/*      memset( packet->types, 0x00, sizeof( packet->types )); */
-	}
 	offset = packet->dataSize;
 	if (index >= TCSD_MAX_NUM_PARMS) {
 		LogError1("Too many elements in TCSD packet!");
@@ -231,8 +225,7 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 #if 0
 		/* XXX getting rid of this Error log. Sometimes we allow this to check
 		 * for things like whether we got passed a NULL data object over the
-		 * wire.  This needs to be looked at thoroughly
-		 */
+		 * wire.  This needs to be looked at thoroughly */
 		LogError1("Attempted to get data past the end of the TCSD packet!");
 #endif
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -339,8 +332,7 @@ tcs_wrap_OpenContext(struct tcsd_thread_data *data,
 
 		/* Set the context in the thread's object. Later, if something goes wrong
 		 * and the connection can't be closed cleanly, we'll still have a reference
-		 * to what resources need to be freed.
-		 */
+		 * to what resources need to be freed. */
 		data->context = hContext;
 	} else {
 		*hdr = calloc(1, size);
@@ -1177,7 +1169,6 @@ tcs_wrap_TakeOwnership(struct tcsd_thread_data *data,
 
 	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
 
-	/*   printf( "hContext %x\n", hContext ); */
 	if (getData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, tsp_data))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &encOwnerAuthSize, 0, tsp_data))
@@ -2834,7 +2825,6 @@ internal_error:
 	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
 
-/* 2004-05-12 Seiji Munetoh added  */
 TSS_RESULT
 tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 			    struct tsp_packet *tsp_data,
@@ -3722,94 +3712,91 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
 }
 
 
-/* -------------------- */
-/*	Dispatch	*/
-/* -------------------- */
+/* Dispatch */
 typedef struct tdDispatchTable {
 	TSS_RESULT (*Func) (struct tcsd_thread_data *,
 			    struct tsp_packet *,
 			    struct tcsd_packet_hdr **);
 } DispatchTable;
 
-/* 2004-06-09 Seiji Munetoh update ORDs and table */
 DispatchTable table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Error},   /* 0 */
-	{tcs_wrap_OpenContext}, /*  1 */
-	{tcs_wrap_CloseContext}, /*  2 */
-	{tcs_wrap_Error}, /*  3 */
-	{tcs_wrap_TCSGetCapability}, /*  4 */
-	{tcs_wrap_RegisterKey}, /*  5 */
-	{tcs_wrap_UnregisterKey}, /*  6 */
-	{tcs_wrap_EnumRegisteredKeys}, /*  7  Seiji Munetoh Added */
-	{tcs_wrap_Error}, /*  8 */
-	{tcs_wrap_GetRegisteredKeyBlob}, /*  9 */
+	{tcs_wrap_OpenContext},
+	{tcs_wrap_CloseContext},
+	{tcs_wrap_Error},
+	{tcs_wrap_TCSGetCapability},
+	{tcs_wrap_RegisterKey}, /* 5 */
+	{tcs_wrap_UnregisterKey},
+	{tcs_wrap_EnumRegisteredKeys},
+	{tcs_wrap_Error},
+	{tcs_wrap_GetRegisteredKeyBlob},
 	{tcs_wrap_GetRegisteredKeyByPublicInfo}, /* 10 */
-	{tcs_wrap_LoadKeyByBlob}, /* 11 */
-	{tcs_wrap_LoadKeyByUUID}, /* 12 */
-	{tcs_wrap_EvictKey}, /* 13 */
-	{tcs_wrap_CreateWrapKey}, /* 14 */
+	{tcs_wrap_LoadKeyByBlob},
+	{tcs_wrap_LoadKeyByUUID},
+	{tcs_wrap_EvictKey},
+	{tcs_wrap_CreateWrapKey},
 	{tcs_wrap_GetPubkey}, /* 15 */
-	{tcs_wrap_MakeIdentity}, /* 16 */
-	{tcs_wrap_LogPcrEvent}, /* 17 */
-	{tcs_wrap_GetPcrEvent}, /* 18 */
-	{tcs_wrap_GetPcrEventsByPcr}, /* 19 */
+	{tcs_wrap_MakeIdentity},
+	{tcs_wrap_LogPcrEvent},
+	{tcs_wrap_GetPcrEvent},
+	{tcs_wrap_GetPcrEventsByPcr},
 	{tcs_wrap_GetPcrEventLog}, /* 20 */
-	{tcs_wrap_SetOwnerInstall}, /* 21 */
-	{tcs_wrap_TakeOwnership}, /* 22 */
-	{tcs_wrap_OIAP}, /* 23 */
-	{tcs_wrap_OSAP}, /* 24 */
+	{tcs_wrap_SetOwnerInstall},
+	{tcs_wrap_TakeOwnership},
+	{tcs_wrap_OIAP},
+	{tcs_wrap_OSAP},
 	{tcs_wrap_ChangeAuth}, /* 25 */
-	{tcs_wrap_ChangeAuthOwner}, /* 26 */
-	{tcs_wrap_Error}, /* 27 */
-	{tcs_wrap_Error}, /* 28 */
-	{tcs_wrap_TerminateHandle}, /* 29 */
+	{tcs_wrap_ChangeAuthOwner},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
+	{tcs_wrap_TerminateHandle},
 	{tcs_wrap_ActivateIdentity}, /* 30 */
-	{tcs_wrap_Extend}, /* 31 */
-	{tcs_wrap_PcrRead}, /* 32 */
-	{tcs_wrap_Quote}, /* 33 */
-	{tcs_wrap_DirWriteAuth}, /* 34 */
+	{tcs_wrap_Extend},
+	{tcs_wrap_PcrRead},
+	{tcs_wrap_Quote},
+	{tcs_wrap_DirWriteAuth},
 	{tcs_wrap_DirRead}, /* 35 */
-	{tcs_wrap_Seal}, /* 36 */
-	{tcs_wrap_UnSeal}, /* 37 */
-	{tcs_wrap_UnBind}, /* 38 */
-	{tcs_wrap_Error}, /* 39 */
+	{tcs_wrap_Seal},
+	{tcs_wrap_UnSeal},
+	{tcs_wrap_UnBind},
+	{tcs_wrap_Error},
 	{tcs_wrap_Error}, /* 40 */
-	{tcs_wrap_Error}, /* 41 */
-	{tcs_wrap_CertifyKey}, /* 42 */
-	{tcs_wrap_Sign}, /* 43 */
-	{tcs_wrap_GetRandom}, /* 44 */
+	{tcs_wrap_Error},
+	{tcs_wrap_CertifyKey},
+	{tcs_wrap_Sign},
+	{tcs_wrap_GetRandom},
 	{tcs_wrap_StirRandom}, /* 45 */
-	{tcs_wrap_GetCapability}, /* 46 */
-	{tcs_wrap_Error}, /* 47 */
-	{tcs_wrap_GetCapabilityOwner}, /* 48 */
-	{tcs_wrap_CreateEndorsementKeyPair}, /* 49 */
+	{tcs_wrap_GetCapability},
+	{tcs_wrap_Error},
+	{tcs_wrap_GetCapabilityOwner},
+	{tcs_wrap_CreateEndorsementKeyPair},
 	{tcs_wrap_ReadPubek}, /* 50 */
-	{tcs_wrap_DisablePubekRead}, /* 51 */
-	{tcs_wrap_OwnerReadPubek}, /* 52 */
-	{tcs_wrap_SelfTestFull}, /* 53 */
-	{tcs_wrap_CertifySelfTest}, /* 54 */
+	{tcs_wrap_DisablePubekRead},
+	{tcs_wrap_OwnerReadPubek},
+	{tcs_wrap_SelfTestFull},
+	{tcs_wrap_CertifySelfTest},
 	{tcs_wrap_Error}, /* 55 */
-	{tcs_wrap_GetTestResult}, /* 56 */
-	{tcs_wrap_OwnerSetDisable}, /* 57 */
-	{tcs_wrap_OwnerClear}, /* 58 */
-	{tcs_wrap_DisableOwnerClear}, /* 59 */
+	{tcs_wrap_GetTestResult},
+	{tcs_wrap_OwnerSetDisable},
+	{tcs_wrap_OwnerClear},
+	{tcs_wrap_DisableOwnerClear},
 	{tcs_wrap_ForceClear}, /* 60 */
-	{tcs_wrap_DisableForceClear}, /* 61 */
-	{tcs_wrap_PhysicalDisable}, /* 62 */
-	{tcs_wrap_PhysicalEnable}, /* 63 */
-	{tcs_wrap_PhysicalSetDeactivated}, /* 64 */
+	{tcs_wrap_DisableForceClear},
+	{tcs_wrap_PhysicalDisable},
+	{tcs_wrap_PhysicalEnable},
+	{tcs_wrap_PhysicalSetDeactivated},
 	{tcs_wrap_SetTempDeactivated}, /* 65 */
-	{tcs_wrap_PhysicalPresence}, /* 66 */
-	{tcs_wrap_Error}, /* 67 */
-	{tcs_wrap_Error}, /* 68 */
-	{tcs_wrap_Error}, /* 69 */
+	{tcs_wrap_PhysicalPresence},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
 	{tcs_wrap_Error}, /* 70 */
-	{tcs_wrap_Error}, /* 71 */
-	{tcs_wrap_Error}, /* 72 */
-	{tcs_wrap_Error}, /* 73 */
-	{tcs_wrap_Error}, /* 74 */ /* tcs_wrap_Atmel_SetState */
-	{tcs_wrap_Error}, /* 75 */ /* tcs_wrap_Atmel_OwnerSetState */
-	{tcs_wrap_Error}  /* 76  last */ /* tcs_wrap_Atmel_GetState */
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error},
+	{tcs_wrap_Error}, /* 75 */
+	{tcs_wrap_Error}
 };
 
 int
@@ -3846,7 +3833,7 @@ dispatchCommand(struct tcsd_thread_data *data,
 		struct tsp_packet *tsp_data,
 		struct tcsd_packet_hdr **hdr)
 {
-	/* ---  First, check the ordinal bounds */
+	/* First, check the ordinal bounds */
 	if (tsp_data->ordinal >= TCSD_MAX_NUM_ORDS) {
 		LogError1("Illegal TCSD Ordinal");
 		return TCSERR(TSS_E_FAIL);
@@ -3869,11 +3856,9 @@ dispatchCommand(struct tcsd_thread_data *data,
 		return TSS_SUCCESS;
 	}
 
-	/* --   Now, dispatch */
+	/* Now, dispatch */
 	return table[tsp_data->ordinal].Func(data, tsp_data, hdr);
 }
-
-/* -------------------- */
 
 TSS_RESULT
 getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
@@ -3904,10 +3889,7 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 		}
 	}
 
-#if 0
-	LogDebug("Dispatching command to TCSD_ORD_ 0x%X", tsp_data.ordinal);
-#endif
-	/* ---  dispatch the command to the TCS */
+	/* dispatch the command to the TCS */
 	if ((result = dispatchCommand(data, &tsp_data, hdr)))
 		return result;
 
@@ -3921,11 +3903,6 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 	if (operation_result == TSS_SUCCESS) {
 		LoadBlob_UINT16(&offset, (*hdr)->num_parms, (BYTE *)*hdr, NULL);
 
-#if 0
-		LoadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)*hdr, (*hdr)->parm_types, NULL);
-		LoadBlob(&offset, totalSize - offset, (BYTE *)*hdr, &((*hdr)->data), NULL);
-#else
-		/* XXX TEST */
 		tmp_offset = 0;
 		LoadBlob(&tmp_offset, TCSD_MAX_NUM_PARMS, tmp_data, (*hdr)->parm_types, NULL);
 		LoadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)*hdr, tmp_data, NULL);
@@ -3935,7 +3912,6 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 			LogError("%s: ************** ERROR ***********************", __FUNCTION__);
 		LoadBlob(&tmp_offset, totalSize - offset, tmp_data, &((*hdr)->data), NULL);
 		LoadBlob(&offset, totalSize - offset, (BYTE *)*hdr, tmp_data, NULL);
-#endif
 	}
 
 	return result;
