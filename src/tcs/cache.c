@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -28,21 +28,30 @@
 #include "tcsps.h"
 #include "req_mgr.h"
 
-/* This lock will be responsible for protecting the key_mem_cache_head list */
+/*
+ * mem_cache_lock will be responsible for protecting the key_mem_cache_head list. This is a
+ * TCSD global linked list of all keys which have been loaded into the TPM at some time.
+ */
 pthread_mutex_t mem_cache_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t tcs_keyhandle_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t timestamp_lock = PTHREAD_MUTEX_INITIALIZER;
 
-TSS_UUID SRK_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 1 } };
+/*
+ * tcs_keyhandle_lock is only used to make TCS keyhandle generation atomic for all TCSD
+ * threads.
+ */
+static pthread_mutex_t tcs_keyhandle_lock = PTHREAD_MUTEX_INITIALIZER;
 
-/*================================= */
-/*	proto's for just this file */
-UINT32 getNextTimeStamp();
+/*
+ * timestamp_lock is only used to make TCS key timestamp generation atomic for all TCSD
+ * threads.
+ */
+static pthread_mutex_t timestamp_lock = PTHREAD_MUTEX_INITIALIZER;
 
-TCS_KEY_HANDLE NextTcsKeyHandle = 0x22330000;
+TSS_UUID SRK_UUID = TSS_UUID_SRK;
+
 TCS_KEY_HANDLE
 getNextTcsKeyHandle()
 {
+	static TCS_KEY_HANDLE NextTcsKeyHandle = 0x22330000;
 	TCS_KEY_HANDLE ret;
 
 	pthread_mutex_lock(&tcs_keyhandle_lock);
@@ -56,44 +65,17 @@ getNextTcsKeyHandle()
 	return ret;
 }
 
-UINT32 NextTimeStamp = 1;
 UINT32
 getNextTimeStamp()
 {
+	static UINT32 time_stamp = 1;
 	UINT32 ret;
 
 	pthread_mutex_lock(&timestamp_lock);
-	ret = NextTimeStamp++;
+	ret = time_stamp++;
 	pthread_mutex_unlock(&timestamp_lock);
 
 	return ret;
-}
-
-/*-------------------------------------------------------------------------------------------- */
-
-TCPA_RESULT
-internal_BSOSAP(void)
-{
-	UINT16 offset;
-	UINT32 paramSize;
-	TCPA_RESULT result;
-/*	TCPA_PUBKEY pubContainer; */
-/*	TCPA_KEY_HANDLE keySlot; */
-	TCPA_NONCE nonce;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
-
-	offset = 10;
-	LoadBlob_UINT16(&offset, TCPA_ET_KEYHANDLE, txBlob, NULL);
-	LoadBlob_UINT32(&offset, SRK_TPM_HANDLE, txBlob, NULL);
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonce.nonce, NULL);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OSAP, txBlob);
-
-	result = req_mgr_submit_req(txBlob);
-
-	result = UnloadBlob_Header(txBlob, &paramSize);
-	if (!result)
-		internal_TerminateHandle(Decode_UINT32(&txBlob[10]));
-	return result;
 }
 
 TSS_RESULT
@@ -133,102 +115,6 @@ closeDiskCache(void)
 
 	put_file(fd);
 }
-
-#if 0
-void
-initKeyFile(TCS_CONTEXT_HANDLE hContext)
-{
-	TCPA_RESULT result;
-	TSS_BOOL hasOwner;
-	BYTE key[1024];
-	UINT16 keySize = sizeof (key);
-	int vendor;
-	static TSS_BOOL KeyFileInit = FALSE;
-
-	/*******************************
-	 *	If there is no owner inthe chip, but a keyfile exists,
-	 *		clear it.  The TCS will not worry about
-	 *		the case that there is an owner and no key file.
-	 *		Right now the TSP will take care of that.
-	 ***********************************/
-
-	LogDebug1("Init Key File");
-	if (KeyFileInit) {
-		LogDebug1("Key file is already init'd");
-		return;
-	}
-
-	LogDebug1("Key file is not init'd");
-	/*---	See if the chip has an owner and if the keyfile should be adjusted */
-	vendor = getVendor(InternalContext);
-	if (vendor == TPM_VENDOR_ATMEL) {
-		result = internal_BSOSAP();
-
-		/*---	Atmel is fixed at 0 and 1...can't hurt to have this for debug */
-		internal_TerminateHandle(0);
-		internal_TerminateHandle(1);
-
-		if (result == 0 || result == 0x15)
-			hasOwner = TRUE;
-		else if (result == 0x0D)	/*bs SRK */
-			hasOwner = FALSE;
-		else
-			return;
-	} else if (vendor == TPM_VENDOR_NATL) {
-		/*---	find out how they respond to fake OSAP */
-		result = internal_BSOSAP();
-
-		/*---	For giggles. */
-		internal_TerminateHandle(0);
-		internal_TerminateHandle(1);
-
-		if (result == 0 || result == 0x15)
-			hasOwner = TRUE;
-		else if (result == 0x12)
-			hasOwner = FALSE;
-		else
-			return;
-	} else
-		return;
-
-	/*      This stuff relies on the file */
-	LogDebug1("Checking if keyfile should be wacked");
-	result = getRegisteredKeyByUUID(&SRK_UUID, key, &keySize);
-	if (result == 0 && hasOwner == FALSE) {
-		LogDebug1("Clearing keyfile since chip detected to not have owner");
-		/*---	Clear out the file */
-		destroyKeyFile();
-	}
-
-	LogDebug1("Leaving initKeyFile");
-	KeyFileInit = TRUE;
-}
-#endif
-
-#if 0
-TCPA_STORE_PUBKEY *
-getParentPubBySlot(TCPA_KEY_HANDLE tpm_handle)
-{
-	struct key_mem_cache *tmp;
-	TCPA_STORE_PUBKEY *ret;
-
-	if (tpm_handle == NULL_TPM_HANDLE)
-		return NULL;
-
-	pthread_mutex_lock(&mem_cache_lock);
-
-	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		if (tmp->tpm_handle == tpm_handle) {
-			ret = &tmp->parent->blob->pubKey;
-			pthread_mutex_unlock(&mem_cache_lock);
-			return ret;
-		}
-	}
-	pthread_mutex_unlock(&mem_cache_lock);
-	return NULL;
-}
-#endif
-
 
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
@@ -304,7 +190,6 @@ done:
 	return TCSERR(TSS_E_FAIL);
 }
 
-/* XXX take a look at this function */
 TCPA_RESULT
 ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 		TCPA_KEY_HANDLE * keySlot)
@@ -319,7 +204,6 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 	*keySlot = getSlotByHandle(keyHandle);
 	LogDebug("keySlot is %08X", *keySlot);
 	if (*keySlot == NULL_TPM_HANDLE || isKeyLoaded(*keySlot) == FALSE) {
-		/*---   May have been evicted */
 		LogDebug1("calling getPubByHandle");
 		if ((myPub = getPubByHandle(keyHandle)) == NULL) {
 			LogDebug1("Failed to find pub by handle");
@@ -340,7 +224,6 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 		}
 	}
 	refreshTimeStampBySlot(*keySlot);
-	/*---   Now verify using get Cap */
 
 done:
 	pthread_mutex_unlock(&mem_cache_lock);
@@ -359,7 +242,6 @@ getUuidByPub(TCPA_STORE_PUBKEY *pub)
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
 		if (tmp->blob->pubKey.keyLength == pub->keyLength &&
-		    /* could this memcmp be less than pub->keyLength and still be ok? */
 		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			ret = &tmp->uuid;
 			return ret;
@@ -381,15 +263,6 @@ getUUIDByEncData(BYTE *encData)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-#if 0
-		if (entry->cacheStruct.blobSize == 0
-				|| entry->cacheStruct.blob == NULL)
-			continue;
-
-		offset = 0;
-		UnloadBlob_KEY(&offset,
-				entry->cacheStruct.blob, &keyContainer);
-#endif
 		if (tmp->blob->encSize == 0)
 			continue;
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
@@ -458,15 +331,6 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
 
-void
-replaceEncData_PS(TSS_UUID uuid, BYTE * encData, BYTE * newEncData)
-{
-	LogError("Passed through unfinished function: %s", __FUNCTION__);
-#if 0
-	TCPAPS_ReplaceEncdata(TCS_KEY_STORAGE_FILE, encData, newEncData);
-#endif
-}
-
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
 getPubByUuid(TSS_UUID *uuid)
@@ -486,7 +350,8 @@ getPubByUuid(TSS_UUID *uuid)
 	return NULL;
 }
 
-/* only called from load key paths and the init (single thread time) path,
+/*
+ * only called from load key paths and the init (single thread time) path,
  * so no locking
  */
 TSS_RESULT
@@ -569,15 +434,13 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 		/* set the reference count to 0 initially for all keys not being the SRK. Up
 		 * the call chain, a reference to this mem cache entry will be set in the
 		 * context object of the calling context and this reference count will be
-		 * incremented there.
-		 */
+		 * incremented there. */
 		entry->ref_cnt = 0;
 
 		key_mem_cache_head->prev = entry;
 	} else {
 		/* if we are the SRK, initially set the reference count to 1, so that it is
-		 * never unregistered.
-		 */
+		 * never unregistered. */
 		entry->ref_cnt = 1;
 	}
 	key_mem_cache_head = entry;
@@ -612,7 +475,8 @@ remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
 	return TCSERR(TSS_E_FAIL);
 }
 
-/* custom add mem cache entry function called only at take ownership time, since
+/*
+ * custom add mem cache entry function called only at take ownership time, since
  * that's the only non init-time instance where we need to create a mem cache
  * entry from outside a load key path
  */
@@ -694,11 +558,11 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	memcpy(&entry->uuid, &SRK_UUID, sizeof(TSS_UUID));
 
 	pthread_mutex_lock(&mem_cache_lock);
-	/* add to the front of the list */
+
 	entry->next = key_mem_cache_head;
-	if (key_mem_cache_head) {
+	if (key_mem_cache_head)
 		key_mem_cache_head->prev = entry;
-	}
+
 	entry->ref_cnt = 1;
 	key_mem_cache_head = entry;
 	pthread_mutex_unlock(&mem_cache_lock);
@@ -880,28 +744,6 @@ key_mgr_ref_count()
 	pthread_mutex_unlock(&mem_cache_lock);
 }
 
-#if 0
-TSS_RESULT
-setUuidsByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID *uuid, TSS_UUID *p_uuid)
-{
-	struct key_mem_cache *tmp;
-
-	pthread_mutex_lock(&mem_cache_lock);
-
-	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
-			memcpy(&tmp->uuid, uuid, sizeof(TSS_UUID));
-			memcpy(&tmp->parent->uuid, p_uuid, sizeof(TSS_UUID));
-			pthread_mutex_unlock(&mem_cache_lock);
-			return TSS_SUCCESS;
-		}
-	}
-
-	pthread_mutex_unlock(&mem_cache_lock);
-	return TCSERR(TSS_E_FAIL);
-}
-#endif
-
 /* only called from load key paths, so no locking */
 TCPA_KEY_HANDLE
 getSlotByHandle(TCS_KEY_HANDLE tcs_handle)
@@ -1012,26 +854,6 @@ getParentPubByPub(TCPA_STORE_PUBKEY *pub)
 	return NULL;
 }
 
-#if 0
-TSS_BOOL
-isKeyInMemCache(TCS_KEY_HANDLE tcs_handle)
-{
-	struct key_mem_cache *tmp;
-
-	pthread_mutex_lock(&mem_cache_lock);
-
-	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		if (tmp->tcs_handle == tcs_handle) {
-			pthread_mutex_unlock(&mem_cache_lock);
-			return TRUE;
-		}
-	}
-
-	pthread_mutex_unlock(&mem_cache_lock);
-	return FALSE;
-}
-#endif
-
 TSS_BOOL
 isKeyRegistered(TCPA_STORE_PUBKEY *pub)
 {
@@ -1075,27 +897,6 @@ getBlobByPub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 	return TCSERR(TSS_E_FAIL);
 }
 
-#if 0
-TSS_RESULT
-getBlobBySlot(TCPA_KEY_HANDLE tpm_handle, TCPA_KEY **ret_key)
-{
-	struct key_mem_cache *tmp;
-
-	pthread_mutex_lock(&mem_cache_lock);
-
-	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		if (tmp->tpm_handle == tpm_handle) {
-			*ret_key = tmp->blob;
-			pthread_mutex_unlock(&mem_cache_lock);
-			return TSS_SUCCESS;
-		}
-	}
-
-	pthread_mutex_unlock(&mem_cache_lock);
-	return TCSERR(TSS_E_FAIL);
-}
-#endif
-
 /* only called from load key paths, so no locking */
 TCS_KEY_HANDLE
 getAnyHandleBySlot(TCPA_KEY_HANDLE tpm_handle)
@@ -1113,27 +914,6 @@ getAnyHandleBySlot(TCPA_KEY_HANDLE tpm_handle)
 
 	return NULL_TCS_HANDLE;
 }
-
-#if 0
-TCS_KEY_HANDLE
-getKeyHandleByUuid(TSS_UUID *uuid)
-{
-	TCS_KEY_HANDLE ret;
-	struct key_mem_cache *tmp;
-
-	pthread_mutex_lock(&mem_cache_lock);
-
-	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
-		if (!memcmp(&tmp->uuid, uuid, sizeof(TSS_UUID))) {
-			ret = tmp->tcs_handle;
-			pthread_mutex_unlock(&mem_cache_lock);
-			return ret;
-		}
-	}
-	pthread_mutex_unlock(&mem_cache_lock);
-	return NULL_TCS_HANDLE;
-}
-#endif
 
 /* only called from load key paths, so no locking */
 TSS_RESULT
@@ -1154,8 +934,7 @@ refreshTimeStampBySlot(TCPA_KEY_HANDLE tpm_handle)
 	return ret;
 }
 
-/*---	Right now this evicts the LRU key assuming it's not the parent */
-/* XXX locking trouble if TCSP_ChangeAuthAsymStart_Internal is called */
+/* Right now this evicts the LRU key assuming it's not the parent */
 TSS_RESULT
 evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 {
@@ -1164,7 +943,7 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 	UINT32 smallestTimeStamp = ~(0U);	/* largest */
 	TSS_RESULT result;
 
-	/*---	First, see if there are any known keys worth evicting */
+	/* First, see if there are any known keys worth evicting */
 	if ((result = clearUnknownKeys(InternalContext)))
 		return result;
 
@@ -1185,10 +964,8 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 
 		LogDebugFn("Evicted key w/ TPM handle 0x%x", tpm_handle_to_evict);
 		result = setSlotBySlot(tpm_handle_to_evict, NULL_TPM_HANDLE);
-	} else {
-		/* success if the key is already evicted */
+	} else
 		return TSS_SUCCESS;
-	}
 
 	return result;
 }
@@ -1304,8 +1081,10 @@ removeRegisteredKey(TSS_UUID *uuid)
 	return TCSERR(TCSERR(TSS_E_PS_KEY_NOTFOUND));
 }
 
-/* temporary function to clean out blanked keys from a PS file from
- * trousers 0.2.0 and before */
+/*
+ * temporary function to clean out blanked keys from a PS file from
+ * trousers 0.2.0 and before
+ */
 TSS_RESULT
 clean_disk_cache(int fd)
 {
@@ -1446,7 +1225,7 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 		LogDebugFn("loaded TPM key handle: 0x%x", keyList.handle[i]);
 		if (keyList.handle[i] == keySlot) {
 			free(keyList.handle);
-			return TRUE;	/* key is already loaded */
+			return TRUE;
 		}
 	}
 
@@ -1475,27 +1254,24 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	TCS_KEY_HANDLE parentHandle;
 	BYTE keyBlob[1024];
 
-	/****************************************
-	 *	If I'm loaded, then no point being here.  Get the
-	 *	slot and return
-	 **************************************/
-
 	LogDebugFn1("calling getSlotByPub");
+
+	/* If I'm loaded, then no point being here.  Get the slot and return */
 	keySlot = getSlotByPub(pubKey);
 	if (keySlot != NULL_TPM_HANDLE && isKeyLoaded(keySlot)) {
 		*slotOut = keySlot;
 		return TCPA_SUCCESS;
 	}
 
-	/****************************************
-	 *	Before proceeding, the parent must be loaded.
-	 *	If the parent is registered, then it can be loaded by UUID.
-	 *	If not, then the shim will be called to load it's parent and then try
-	 *	to load it based on the persistent store.
-	 **************************************/
+	/*
+	 * Before proceeding, the parent must be loaded.
+	 * If the parent is registered, then it can be loaded by UUID.
+	 * If not, then the shim will be called to load it's parent and then try
+	 * to load it based on the persistent store.
+	 */
 
 	LogDebugFn1("calling getParentPubByPub");
-	/*---	Check if the Key is in the memory cache */
+	/* Check if the Key is in the memory cache */
 	if ((parentPub = getParentPubByPub(pubKey)) == NULL) {
 		LogDebugFn1("parentPub is NULL");
 		/* If parentUUID is not handed in, then this key was never
@@ -1505,30 +1281,23 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 		}
 
 		LogDebugFn1("calling TCSP_LoadKeyByUUID_Internal");
-		/*---	This will try to load my parent by UUID */
+		/* This will try to load my parent by UUID */
 		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, parentUuid, NULL, &parentSlot)))
 			return result;
-	}
-#if 0
-	/*---	The parent key is in the mem cache */
-	else if ((result = LoadKeyShim(hContext, parentPub, NULL, &parentSlot)))
-		return result;
-#else
-	else {
+	} else {
 		LogDebugFn1("calling LoadKeyShim");
 		if ((result = LoadKeyShim(hContext, parentPub, NULL, &parentSlot)))
 			return result;
 	}
-#endif
 
-	/****************************************
+	/*
 	 * Now that the parent is loaded, I can load myself.
 	 * If I'm registered, that's by UUID.  If I'm not,
 	 * that's by blob.  If there is no persistent storage data, then I cannot be
 	 * loaded by blob. The user must have some point loaded this key manually.
-	 **************************************/
+	 */
 
-	/*--- check the mem cache */
+	/* check the mem cache */
 	if (getBlobByPub(pubKey, &myKey) == 0) {
 		parentPub = getPubBySlot(parentSlot);
 		if (parentPub == NULL)
@@ -1547,16 +1316,15 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 							&tcsKeyHandle,
 							slotOut)))
 			return result;
-	}
-	/*---	check registered */
-	else {
+	} else {
+		/* check registered */
 		if (isPubRegistered(pubKey) == FALSE)
 			return TCSERR(TCS_E_KM_LOADFAILED);
 		KeyUUID = getUuidByPub(pubKey);
 		if ((result = TCSP_LoadKeyByUUID_Internal
 					(hContext,	/* in */
 					 KeyUUID,	/* in */
-					 NULL,	/*key info...for now */
+					 NULL,
 					 &tcsKeyHandle))) {
 			free(KeyUUID);
 			return result;
@@ -1596,313 +1364,3 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid,
         put_file(fd);
         return TSS_SUCCESS;
 }
-
-/*---------------------------------------------------------------------- */
-/*	KM_KEYINFO stuff */
-
-#if 0
-typedef struct tdKMList
-{
-	TSS_KM_KEYINFO* kmInfo;
-	struct tdKMList* next;
-	struct tdKMList* parent;
-	TSS_BOOL freekmInfo;
-}KMList;
-
-KMNode *
-createNewKMNode()
-{
-	KMNode *ret;
-	ret = malloc(sizeof(KMNode));
-	if (ret != NULL)
-		memset(ret, 0x00, sizeof(KMNode));
-	return ret;
-}
-
-KMNode *
-concatKMNode(KMNode ** first, KMNode * second)
-{
-	KMNode *index;
-	if (*first == NULL) {
-		*first = second;
-		return *first;
-	}
-	for (index = *first; index->next; next(index)) {
-		;
-	}
-	index->next = second;
-	return *first;
-}
-
-KMList *
-createNewKMList()
-{
-	KMList *ret;
-	ret = malloc(sizeof(KMList));
-	if (ret != NULL) {
-		memset(ret, 0x00, sizeof(KMList));
-		ret->kmInfo = malloc(sizeof(TSS_KM_KEYINFO));
-		if (ret->kmInfo == NULL) {
-			free(ret);
-			return(NULL);
-		}
-		ret->freekmInfo = TRUE;
-	}
-	return ret;
-}
-
-KMList *
-concatKMList(KMList ** first, KMList * second)
-{
-	KMList *index;
-	if (*first == NULL) {
-		*first = second;
-		return *first;
-	}
-	for (index = *first; index->next; next(index)) {
-		;
-	}
-	index->next = second;
-	return *first;
-}
-
-TSS_RESULT
-KM_AddKeyToList(KMList ** list, TSS_UUID myUUID, TSS_UUID parentUUID,
-		BYTE * keyBlob, UINT32 vDataLength, BYTE * vData)
-{
-	TCPA_KEY key;
-	UINT16 offset;
-	KMList *currentKMList = createNewKMList();
-	if (currentKMList == NULL) {
-		LogError1("Malloc Failure.");
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	memcpy(&(currentKMList->kmInfo->keyUUID), &myUUID, sizeof (TSS_UUID));
-	memcpy(&(currentKMList->kmInfo->parentKeyUUID), &parentUUID,
-	       sizeof (TSS_UUID));
-
-	offset = 0;
-	UnloadBlob_KEY(&offset, keyBlob, &key);
-
-	currentKMList->kmInfo->bAuthDataUsage = key.authDataUsage;
-	currentKMList->kmInfo->fIsLoaded = 0;	/*update this */
-	memcpy(&(currentKMList->kmInfo->versionInfo), &key.ver,
-	       sizeof (TCPA_VERSION));
-
-	if (vDataLength) {
-		currentKMList->kmInfo->rgbVendorData =  malloc(vDataLength);
-		if (currentKMList->kmInfo->rgbVendorData == NULL) {
-			LogError1("Malloc Failure.");
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		memcpy(currentKMList->kmInfo->rgbVendorData, vData, vDataLength);
-	}
-
-	concatKMList(list, currentKMList);
-
-	return TSS_SUCCESS;
-}
-
-int
-KM_LinkParents(KMList * list)
-{
-	KMList *currentIndex;
-	KMList *parentIndex;
-
-	for (currentIndex = list; currentIndex; next(currentIndex)) {
-		if (!memcmp
-		    (&currentIndex->kmInfo->keyUUID,
-		     &currentIndex->kmInfo->parentKeyUUID, sizeof (TSS_UUID))) {
-			/*it's the SRK */
-			currentIndex->parent = NULL;
-			continue;
-		}
-		for (parentIndex = list; parentIndex; next(parentIndex)) {
-			if (!memcmp(&parentIndex->kmInfo->keyUUID, &currentIndex->kmInfo->parentKeyUUID, sizeof (TSS_UUID))) {
-				currentIndex->parent = parentIndex;
-/*				concatKMNode( &parentIndex->children, currentIndex ); */
-			}
-		}
-		if (parentIndex == NULL)
-			return 1;
-	}
-	return 0;
-}
-
-int
-KM_AddChildren(KMList * list, KMList * startPoint, KMNode ** graphPoint)
-{
-	KMList *listIndex;
-	KMNode *tempNode;
-
-	for (listIndex = list; listIndex; next(listIndex)) {
-		if (listIndex->parent == startPoint) {
-			tempNode = createNewKMNode();
-			if (tempNode == NULL) {
-				LogError1("Malloc Failure.");
-				return TCSERR(TSS_E_OUTOFMEMORY);
-			}
-			tempNode->kmInfo = listIndex->kmInfo;
-			listIndex->freekmInfo = FALSE;
-/*			tempNode->parent = listIndex->parent; */
-			KM_AddChildren(list, listIndex, &(tempNode->children));
-			concatKMNode(graphPoint, tempNode);
-		}
-	}
-
-	return 0;
-}
-
-int
-KM_BuildGraph(TSS_UUID * uuid, KMList * list, KMNode ** newGraph)
-{
-/*	KMNode* graphIndex; */
-	KMNode *graphStart;
-	KMList *listIndex;
-	KMList *firstNode;
-
-	firstNode = NULL;
-	for (listIndex = list; listIndex; next(listIndex)) {
-		if (uuid == NULL) {
-			if (listIndex->parent == NULL) {
-				firstNode = listIndex;
-				break;
-			}
-			continue;
-		}
-		if (!memcmp(&listIndex->kmInfo->keyUUID, uuid, sizeof(TSS_UUID))) {
-			firstNode = listIndex;
-			break;
-		}
-	}
-	if (firstNode == NULL)
-		return 1;
-
-	graphStart = createNewKMNode();
-	if (graphStart == NULL) {
-		LogError1("Malloc Failure.");
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	graphStart->kmInfo = firstNode->kmInfo;
-	firstNode->freekmInfo = FALSE;
-	KM_AddChildren(list, firstNode, &(graphStart->children));
-
-	*newGraph = graphStart;
-	KM_DestroyKMList(list);
-	return 0;
-}
-
-int
-KM_GetHierarchy(TSS_UUID * startUUID, KMNode ** parmGraph)
-{
-	/*
-	   //   KMNode* list = NULL;
-	   TSS_UUID myUUID, parentUUID;
-	   UINT16 keyBlobSize;
-	   BYTE keyBlob[1024];
-	   KMList* list = NULL;
-	   KMNode* graph = NULL;
-
-	   UINT16       iResult, i;
-	   CHAR achSection[128], achKeyValue[128];
-	   BYTE currentUUID[16], buffer[1024];
-	   //   BOOL    bKeyFound;
-	   //   UINT16 keySize;
-	   UINT16 offset;
-	   int ret;
-
-	   LogDebug1("Get Key Hierarchy" );
-	   i =  0;
-	   memset( buffer, 0x00, sizeof( buffer ));
-	   WriteStringToFile( NULL, NULL, NULL, TCS_KEY_STORAGE_FILE ); 
-
-	   iResult = GetIntFromFile("NumKeys", "current", 0, TCS_KEY_STORAGE_FILE);
-	   if(!iResult)
-	   return 0;            //passing scenerio
-
-	   for( i = 0 ; i < iResult ; i++ )
-	   {
-	   #ifdef WIN32
-	   sprintf(achSection, "key %d", i+1);
-	   #else
-	   sprintf(achSection, "key_%d", i+1);
-	   #endif
-	   for(;;)
-	   {
-	   ret = 0;
-	   if( 0 == GetStructFromFile(achSection, "KeyUUID", currentUUID, 16, TCS_KEY_STORAGE_FILE))
-	   {
-	   LogDebug1("Failed to get myUUID" );
-	   ret = -1;
-	   break;
-	   }
-	   offset = 0;
-	   UnloadBlob_UUID( &offset, currentUUID, &myUUID );
-
-	   if( 0 == GetStructFromFile(achSection, "ParentUUID", currentUUID, 16, TCS_KEY_STORAGE_FILE))
-	   {
-	   LogDebug1("Failed to get ParentUUID" );
-	   ret = -1;
-	   break;
-	   }
-	   offset = 0;
-	   UnloadBlob_UUID( &offset, currentUUID, &parentUUID );
-
-	   if( 0 == GetStringFromFile(achSection, "TCPAKeySize", "", achKeyValue,  sizeof(achKeyValue), TCS_KEY_STORAGE_FILE))
-	   {
-	   LogDebug1("Failed to get KeySize" );
-	   ret = -1;
-	   break;
-	   }
-	   keyBlobSize = wrapper_atoi(achKeyValue);
-	   if( 0 == GetStructFromFile(achSection, "TCPAKey", keyBlob, keyBlobSize, TCS_KEY_STORAGE_FILE))
-	   {
-	   LogDebug1("Failed to get Key" );
-	   ret = -1;
-	   break;
-	   }
-
-	   if( KM_AddKeyToList( &list, myUUID, parentUUID, keyBlob, 0, NULL ))
-	   {
-	   LogDebug1("Failed to add key to list" );
-	   ret = -1;
-	   break;
-	   }
-
-	   break;
-	   }
-	   if( ret )
-	   {
-	   return 1;
-	   }
-	   }
-	   if( KM_LinkParents( list ))
-	   {
-	   return -2;
-	   }
-	   if( KM_BuildGraph( startUUID, list, &graph ))
-	   {
-	   return -2;
-	   }
-
-	   //   *parmList= list;
-	   *parmGraph = graph;
-	 */
-	return 0;
-}
-
-void
-KM_DestroyKMList(KMList * list)
-{
-	KMList *index;
-	for (index = list; index; next(index)) {
-		if (index->freekmInfo == FALSE) ;
-	}
-}
-void
-KM_DestroyKMNode(KMNode * list)
-{
-
-}
-#endif
-
