@@ -24,7 +24,6 @@
 
 struct tpm_device_node tpm_device_nodes[] = {
 	{"/dev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
-	{"/dev/tpm1", TDDL_UNDEF, TDDL_UNDEF},
 	{"/udev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
 	{"/dev/tpm", 1, TDDL_UNDEF},
 	{NULL, 0, 0}
@@ -41,9 +40,9 @@ open_device(void)
 
 	/* tpm_device_paths is filled out in tddl.h */
 	for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
-		if ((tpm_device_nodes[i].fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0) {
+		errno = 0;
+		if ((tpm_device_nodes[i].fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0)
 			continue;
-		}
 
 		opened_device = &(tpm_device_nodes[i]);
 		return opened_device->fd;
@@ -109,6 +108,7 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 		case TDDL_UNDEF:
 			/* fall through */
 		case TDDL_TRANSMIT_IOCTL:
+			errno = 0;
 			if ((sizeResult = ioctl(opened_device->fd, TPMIOC_TRANSMIT, txBuffer)) != -1) {
 				opened_device->transmit = TDDL_TRANSMIT_IOCTL;
 				break;
