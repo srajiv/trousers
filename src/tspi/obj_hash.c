@@ -210,8 +210,9 @@ hash_free(struct tr_hash_obj *hash)
 	free(hash);
 }
 
-/* remove an individual hash object from the hash list with handle
- * equal to hObject */
+/*
+ * remove hash object hObject from the list
+ */
 TSS_RESULT
 obj_hash_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
@@ -243,6 +244,9 @@ obj_hash_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 	return result;
 }
 
+/*
+ * remove all objects in the list with a TSP context matching tspContext
+ */
 void
 obj_list_hash_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 {
