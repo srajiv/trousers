@@ -37,7 +37,7 @@ auth_mgr_init()
 	auth_mgr.overflow = calloc(TSS_DEFAULT_OVERFLOW_AUTHS, sizeof(pthread_cond_t *));
 	if (auth_mgr.overflow == NULL) {
 		LogError("malloc of %zd bytes failed",
-				(TSS_DEFAULT_OVERFLOW_AUTHS * sizeof(pthread_cond_t *)));
+			 (TSS_DEFAULT_OVERFLOW_AUTHS * sizeof(pthread_cond_t *)));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -55,9 +55,8 @@ auth_mgr_final()
 
 	/* wake up any sleeping threads, so they can be joined */
 	for (i = 0; i < TSS_DEFAULT_OVERFLOW_AUTHS; i++) {
-		if (auth_mgr.overflow[i] != NULL) {
+		if (auth_mgr.overflow[i] != NULL)
 			pthread_cond_signal(auth_mgr.overflow[i]);
-		}
 	}
 
 	free(auth_mgr.overflow);
@@ -78,7 +77,8 @@ auth_mgr_swap_in()
 	} else {
 #endif
 		if (auth_mgr.overflow[auth_mgr.of_tail] != NULL) {
-			LogDebug("waking up thread %x, auth slot has opened", (UINT32)pthread_self());
+			LogDebug("waking up thread %x, auth slot has opened",
+				 (UINT32)pthread_self());
 			/* wake up the next sleeping thread in order and increment tail */
 			pthread_cond_signal(auth_mgr.overflow[auth_mgr.of_tail]);
 			auth_mgr.overflow[auth_mgr.of_tail] = NULL;
@@ -122,14 +122,15 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 			auth_mgr.overflow[auth_mgr.of_head] = cond;
 			auth_mgr.of_head = (auth_mgr.of_head + 1) % TSS_DEFAULT_OVERFLOW_AUTHS;
 			/* go to sleep */
-			LogDebug("thread %x going to sleep until auth slot opens", (UINT32)pthread_self());
+			LogDebug("thread %x going to sleep until auth slot opens",
+				 (UINT32)pthread_self());
 			auth_mgr.sleeping_threads++;
 			pthread_cond_wait(cond, &auth_mgr_lock);
 			auth_mgr.sleeping_threads--;
 		} else {
 			LogError("auth mgr queue is full! There are currently %d "
-					"TCS sessions waiting on an auth session!",
-					TSS_DEFAULT_OVERFLOW_AUTHS);
+				 "TCS sessions waiting on an auth session!",
+				 TSS_DEFAULT_OVERFLOW_AUTHS);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 #if 0
@@ -154,14 +155,14 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
 			if (result == TCPA_E_INVALID_AUTHHANDLE) {
 				LogDebug("Tried to close an invalid auth handle: %x",
-						auth_mgr.auth_mapper[i].auth);
+					 auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
 				LogDebug("TPM_TerminateHandle returned %d", result);
 			}
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
 			LogDebug("released auth for TCS %x TPM %x", tcs_handle,
-					auth_mgr.auth_mapper[i].auth);
+				 auth_mgr.auth_mapper[i].auth);
 			auth_mgr_swap_in();
 		}
 	}
@@ -174,13 +175,11 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 void
 auth_mgr_release_auth(TPM_AUTH *auth0, TPM_AUTH *auth1)
 {
-	if (auth0) {
+	if (auth0)
 		auth_mgr_release_auth_handle(auth0->AuthHandle);
-	}
 
-	if (auth1) {
+	if (auth1)
 		auth_mgr_release_auth_handle(auth1->AuthHandle);
-	}
 }
 
 /* unload the auth ctx associated with this auth handle */
@@ -198,14 +197,14 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle)
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
 			if (result == TCPA_E_INVALID_AUTHHANDLE) {
 				LogDebug("Tried to close an invalid auth handle: %x",
-						auth_mgr.auth_mapper[i].auth);
+					 auth_mgr.auth_mapper[i].auth);
 			} else if (result != TCPA_SUCCESS) {
 				LogDebug("TPM_TerminateHandle returned %d", result);
 			}
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
 			LogDebug("released auth for TCS %x TPM %x",
-					auth_mgr.auth_mapper[i].ctx, tpm_auth_handle);
+				 auth_mgr.auth_mapper[i].ctx, tpm_auth_handle);
 			auth_mgr_swap_in();
 		}
 	}
@@ -226,8 +225,7 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].auth  == tpm_auth_handle &&
-		    auth_mgr.auth_mapper[i].ctx   == tcsContext)
-		{
+		    auth_mgr.auth_mapper[i].ctx   == tcsContext) {
 			result = TSS_SUCCESS;
 			break;
 		}
@@ -258,7 +256,7 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			/* sanity check */
 			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 				LogDebug1("***************************** "
-						"UNCLEAN AUTH MAPPER TABLE");
+					  "UNCLEAN AUTH MAPPER TABLE");
 				auth_mgr.auth_mapper[i].full = FALSE;
 				auth_mgr.open_auth_sessions--;
 				i--;
@@ -308,8 +306,8 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 
 TSS_RESULT
 auth_mgr_oiap(TCS_CONTEXT_HANDLE hContext,	/* in */
-		TCS_AUTHHANDLE *authHandle,	/* out */
-		TCPA_NONCE *nonce0)		/* out */
+	      TCS_AUTHHANDLE *authHandle,	/* out */
+	      TCPA_NONCE *nonce0)		/* out */
 {
 	TSS_RESULT result;
 
@@ -321,12 +319,11 @@ auth_mgr_oiap(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 	}
 
-	result = TCSP_OIAP_Internal(hContext, authHandle, nonce0);
-	if (!result) {
-		/* success, add an entry to the table */
-		result = auth_mgr_add(hContext, *authHandle);
-	}
+	if ((result = TCSP_OIAP_Internal(hContext, authHandle, nonce0)))
+		goto done;
 
+	/* success, add an entry to the table */
+	result = auth_mgr_add(hContext, *authHandle);
 done:
 	pthread_mutex_unlock(&auth_mgr_lock);
 
@@ -335,30 +332,29 @@ done:
 
 TSS_RESULT
 auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
-		TCPA_ENTITY_TYPE entityType,	/* in */
-		UINT32 entityValue,		/* in */
-		TCPA_NONCE nonceOddOSAP,	/* in */
-		TCS_AUTHHANDLE *authHandle,	/* out */
-		TCPA_NONCE *nonceEven,		/* out */
-		TCPA_NONCE *nonceEvenOSAP)	/* out */
+	      TCPA_ENTITY_TYPE entityType,	/* in */
+	      UINT32 entityValue,		/* in */
+	      TCPA_NONCE nonceOddOSAP,		/* in */
+	      TCS_AUTHHANDLE *authHandle,	/* out */
+	      TCPA_NONCE *nonceEven,		/* out */
+	      TCPA_NONCE *nonceEvenOSAP)	/* out */
 {
 	TSS_RESULT result;
 
 	pthread_mutex_lock(&auth_mgr_lock);
 
 	/* are the maximum number of auth sessions open? */
-	if (auth_mgr_req_new(hContext) == FALSE)
+	if (auth_mgr_req_new(hContext) == FALSE) {
 		if ((result = auth_mgr_swap_out(hContext)))
 			goto done;
-
-	result = TCSP_OSAP_Internal(hContext, entityType, entityValue,nonceOddOSAP,
-					authHandle, nonceEven, nonceEvenOSAP);
-
-	if (!result) {
-		/* success, add an entry to the table */
-		result = auth_mgr_add(hContext, *authHandle);
 	}
 
+	if ((result = TCSP_OSAP_Internal(hContext, entityType, entityValue,nonceOddOSAP,
+					 authHandle, nonceEven, nonceEvenOSAP)))
+		goto done;
+
+	/* success, add an entry to the table */
+	result = auth_mgr_add(hContext, *authHandle);
 done:
 	pthread_mutex_unlock(&auth_mgr_lock);
 
