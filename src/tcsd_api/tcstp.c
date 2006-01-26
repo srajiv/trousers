@@ -932,9 +932,11 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, rgbWrappedKeyBlob, cWrappedKeyBlobSize, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (pAuth != NULL)
+
+	if (pAuth != NULL) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, pAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -980,9 +982,11 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UUID, 1, &KeyUUID, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (pLoadKeyInfo != NULL)
+
+	if (pLoadKeyInfo != NULL) {
 		if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 2, pLoadKeyInfo, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -1126,9 +1130,10 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (pAuth != NULL)
+	if (pAuth != NULL) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -1205,9 +1210,10 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, idKeyInfo, idKeyInfoSize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	i = 5;
-	if (pSrkAuth)
+	if (pSrkAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 	if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
@@ -1880,9 +1886,11 @@ TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in *
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, pcrDataIn, pcrDataSizeIn, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (privAuth)
+
+	if (privAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 5, privAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -2023,10 +2031,8 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
-	TPM_AUTH emptyAuth, tmpAuth;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
-	memset(&emptyAuth, 0, sizeof(TPM_AUTH));
 
 	data.ordinal = TCSD_ORD_SEAL;
 	LogDebugFn("TCS Context: 0x%x", hContext);
@@ -2046,10 +2052,7 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inData, inDataSize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (pubAuth == NULL) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, &emptyAuth, 0, &data))
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	} else {
+	if (pubAuth != NULL) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 7, pubAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -2062,11 +2065,6 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (hdr->result == TSS_SUCCESS) {
 		if (pubAuth != NULL) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, 0, pubAuth, 0, hdr)) {
-				result = TSPERR(TSS_E_INTERNAL_ERROR);
-				goto done;
-			}
-		} else {
-			if (getData(TCSD_PACKET_TYPE_AUTH, 0, &tmpAuth, 0, hdr)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -2107,14 +2105,12 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
-	TPM_AUTH emptyAuth;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memset(&data, 0, sizeof(struct tsp_packet));
-	memset(&emptyAuth, 0, sizeof(TPM_AUTH));
 
 	data.ordinal = TCSD_ORD_UNSEAL;
 	LogDebugFn("TCS Context: 0x%x", hContext);
@@ -2128,10 +2124,7 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, SealedData, SealedDataSize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (parentAuth == NULL) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, &emptyAuth, 0, &data))
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	} else {
+	if (parentAuth != NULL) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, parentAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -2145,12 +2138,7 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 		result = hdr->result;
 
 	if (result == TSS_SUCCESS) {
-		if (parentAuth == NULL) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, 0, &emptyAuth, 0, hdr)) {
-				result = TSPERR(TSS_E_INTERNAL_ERROR);
-				goto done;
-			}
-		} else {
+		if (parentAuth != NULL) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, 0, parentAuth, 0, hdr)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
@@ -2215,9 +2203,11 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (privAuth != NULL)
+
+	if (privAuth != NULL) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, privAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -2441,9 +2431,11 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, areaToSign, areaToSignSize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (privAuth)
+
+	if (privAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, privAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -2982,9 +2974,11 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (privAuth)
+
+	if (privAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 3, privAuth, 0, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -2993,12 +2987,13 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
-		if (privAuth)
+		if (privAuth) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, hdr)) {
 				LogDebug1("privAuth");
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
+		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, hdr)) {
 			LogDebug1("sigSize");
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
