@@ -222,18 +222,10 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 		LogError1("Too many elements in TCSD packet!");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (index >= packet->numParms) {
-#if 0
-		/* XXX getting rid of this Error log. Sometimes we allow this to check
-		 * for things like whether we got passed a NULL data object over the
-		 * wire.  This needs to be looked at thoroughly */
-		LogError1("Attempted to get data past the end of the TCSD packet!");
-#endif
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	if (dataType != packet->types[index]) {
+	if (index >= packet->numParms ||
+	    dataType != packet->types[index]) {
 		LogError("Data type of TCS packet element %d doesn't match!", index);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TSS_TCP_RPC_BAD_PACKET_TYPE;
 	}
 	switch (dataType) {
 	case TCSD_PACKET_TYPE_BYTE:
@@ -716,8 +708,12 @@ tcs_wrap_GetPubkey(struct tcsd_thread_data *data,
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, tsp_data))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_AUTH, 2, &auth, 0, tsp_data))
+
+	result = getData(TCSD_PACKET_TYPE_AUTH, 2, &auth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pAuth = NULL;
+	else if (result)
+		return result;
 	else
 		pAuth = &auth;
 
@@ -1644,9 +1640,13 @@ tcs_wrap_LoadKeyByBlob(struct tcsd_thread_data *data,
 		free(rgbWrappedKeyBlob);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, tsp_data))
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pAuth = NULL;
-	else
+	else if (result) {
+		free(rgbWrappedKeyBlob);
+		return result;
+	} else
 		pAuth = &auth;
 
 	if ((result = key_mgr_load_by_blob(hContext, hUnwrappingKey,
@@ -1713,8 +1713,11 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
 	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, tsp_data))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 2, &info, 0, tsp_data))
+	result = getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 2, &info, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pInfo = NULL;
+	else if (result)
+		return result;
 	else
 		pInfo = &info;
 
@@ -1850,9 +1853,13 @@ tcs_wrap_Sign(struct tcsd_thread_data *data,
 		free(areaToSign);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, tsp_data))
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pAuth = NULL;
-	else
+	else if (result) {
+		free(areaToSign);
+		return result;
+	} else
 		pAuth = &auth;
 
 	result = TCSP_Sign_Internal(hContext, hKey, areaToSignSize, areaToSign,
@@ -2058,7 +2065,7 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 		free(PCRInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-
+#if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pubAuth, 0, tsp_data)) {
 		free(inData);
 		free(PCRInfo);
@@ -2069,7 +2076,17 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 		pAuth = NULL;
 	else
 		pAuth = &pubAuth;
-
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, i++, &pubAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pAuth = NULL;
+	else if (result) {
+		free(inData);
+		free(PCRInfo);
+		return result;
+	} else
+		pAuth = &pubAuth;
+#endif
 	result = TCSP_Seal_Internal(hContext, keyHandle, KeyUsageAuth, PCRInfoSize, PCRInfo,
 			inDataSize, inData, pAuth, &outDataSize, &outData);
 	free(inData);
@@ -2085,12 +2102,6 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 		}
 		if (pAuth != NULL) {
 			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pAuth, 0, *hdr)) {
-				free(*hdr);
-				free(outData);
-				return TCSERR(TSS_E_INTERNAL_ERROR);
-			}
-		} else {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 0, &emptyAuth, 0, *hdr)) {
 				free(*hdr);
 				free(outData);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -2133,7 +2144,7 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	TPM_AUTH parentAuth, dataAuth, emptyAuth;
-	TPM_AUTH *pParentAuth;
+	TPM_AUTH *pParentAuth, *pDataAuth;
 
 	UINT32 outDataSize;
 	BYTE *outData;
@@ -2161,6 +2172,7 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &parentAuth, 0, tsp_data)) {
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -2174,9 +2186,28 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &parentAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pParentAuth = NULL;
+	else if (result) {
+		free(inData);
+		return result;
+	} else
+		pParentAuth = &parentAuth;
 
+	result = getData(TCSD_PACKET_TYPE_AUTH, 5, &dataAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE) {
+		pDataAuth = pParentAuth;
+		pParentAuth = NULL;
+	} else if (result) {
+		free(inData);
+		return result;
+	} else
+		pDataAuth = &dataAuth;
+#endif
 	result = TCSP_Unseal_Internal(hContext, parentHandle, inDataSize, inData,
-				 pParentAuth, &dataAuth, &outDataSize, &outData);
+				 pParentAuth, pDataAuth, &outDataSize, &outData);
 	free(inData);
 
 	if (result == TSS_SUCCESS) {
@@ -2263,11 +2294,21 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data,
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &privAuth, 0, tsp_data))
 		pPrivAuth = NULL;
 	else
 		pPrivAuth = &privAuth;
-
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &privAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pPrivAuth = NULL;
+	else if (result) {
+		free(inData);
+		return result;
+	} else
+		pPrivAuth = &privAuth;
+#endif
 	result = TCSP_UnBind_Internal(hContext, keyHandle, inDataSize, inData,
 				 pPrivAuth, &outDataSize, &outData);
 	free(inData);
@@ -2629,10 +2670,21 @@ tcs_wrap_Quote(struct tcsd_thread_data *data,
 		free(pcrDataIn);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &privAuth, 0, tsp_data))
 		pPrivAuth = NULL;
 	else
 		pPrivAuth = &privAuth;
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, 5, &privAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pPrivAuth = NULL;
+	else if (result) {
+		free(pcrDataIn);
+		return result;
+	} else
+		pPrivAuth = &privAuth;
+#endif
 
 	result = TCSP_Quote_Internal(hContext, hKey, antiReplay, pcrDataSizeIn,
 				pcrDataIn, pPrivAuth, &pcrDataSizeOut,
@@ -2706,9 +2758,8 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 	BYTE *idKeyInfo = NULL;
 	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	TPM_AUTH srkAuth;
-	TPM_AUTH ownerAuth;
-	TPM_AUTH *pSRKAuth;
+	TPM_AUTH auth1, auth2;
+	TPM_AUTH *pSRKAuth, *pOwnerAuth;
 
 	UINT32 idKeySize;
 	BYTE *idKey = NULL;
@@ -2745,10 +2796,11 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 		free(idKeyInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &srkAuth, 0, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &auth1, 0, tsp_data)) {
 		free(idKeyInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#if 0
 	/* if the next one is missing, then the previous was really the owner auth */
 	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &ownerAuth, 0, tsp_data)) {
 		LogDebug1("Failed to get ownerAuth.  SRK auth is really NULL "
@@ -2759,9 +2811,23 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 		LogDebug1("two Auth");
 		pSRKAuth = &srkAuth;
 	}
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, 6, &auth2, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE) {
+		pOwnerAuth = &auth1;
+		pSRKAuth = NULL;
+	} else if (result) {
+		free(idKeyInfo);
+		return result;
+	} else {
+		pOwnerAuth = &auth2;
+		pSRKAuth = &auth1;
+	}
+#endif
+
 	result = TCSP_MakeIdentity_Internal(hContext, identityAuth, privCAHash,
 				       idKeyInfoSize, idKeyInfo, pSRKAuth,
-				       &ownerAuth, &idKeySize, &idKey,
+				       pOwnerAuth, &idKeySize, &idKey,
 				       &pcIDBindSize, &prgbIDBind, &pcECSize,
 				       &prgbEC, &pcPlatCredSize, &prgbPlatCred,
 				       &pcConfCredSize, &prgbConfCred);
@@ -2783,7 +2849,7 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pSRKAuth, 0, *hdr))
 				goto internal_error;
 		}
-		if (setData(TCSD_PACKET_TYPE_AUTH, i++, &ownerAuth, 0, *hdr))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, *hdr))
 			goto internal_error;
 		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &idKeySize, 0, *hdr))
 			goto internal_error;
@@ -2852,11 +2918,20 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 
 	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
 
+#if 0
 	if (getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, tsp_data))
 		pUuid = NULL;
 	else
 		pUuid = &uuid;
-
+#else
+	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pUuid = NULL;
+	else if (result)
+		return result;
+	else
+		pUuid = &uuid;
+#endif
 	result = TCS_EnumRegisteredKeys_Internal(
 			hContext,
 			pUuid,
@@ -3189,11 +3264,21 @@ tcs_wrap_CertifySelfTest(struct tcsd_thread_data *data,
                 return TCSERR(TSS_E_INTERNAL_ERROR);
         if (getData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, tsp_data))
                 return TCSERR(TSS_E_INTERNAL_ERROR);
+#if 0
         if (getData(TCSD_PACKET_TYPE_AUTH, 3, &privAuth, 0, tsp_data))
                 pPrivAuth = NULL;
         else
                 pPrivAuth = &privAuth;
+#else
+        result = getData(TCSD_PACKET_TYPE_AUTH, 3, &privAuth, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+                pPrivAuth = NULL;
+	else if (result)
+		return result;
+        else
+                pPrivAuth = &privAuth;
 
+#endif
 	result = TCSP_CertifySelfTest_Internal(hContext, hKey, antiReplay, pPrivAuth, &sigSize, &sigData);
 	i = 0;
 	if (result == TSS_SUCCESS) {
@@ -3652,11 +3737,16 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
 	if ((blob = malloc(blobSize)) == NULL)
 		return TCSERR(TSS_E_OUTOFMEMORY);
 
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, blob, blobSize, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, blob, blobSize, tsp_data)) {
+		free(blob);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &auth1, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &auth1, 0, tsp_data)) {
+		free(blob);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+#if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &auth2, 0, tsp_data)) {
 		LogDebugFn1("No auth for identity key");
 		pOwnerAuth = &auth1;
@@ -3664,11 +3754,23 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
 		pIdKeyAuth = &auth1;
 		pOwnerAuth = &auth2;
 	}
-
+#else
+	result = getData(TCSD_PACKET_TYPE_AUTH, 5, &auth2, 0, tsp_data);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pOwnerAuth = &auth1;
+	else if (result) {
+		free(blob);
+		return result;
+	} else {
+		pIdKeyAuth = &auth1;
+		pOwnerAuth = &auth2;
+	}
+#endif
 	result = TCSP_ActivateTPMIdentity_Internal(hContext, idKeyHandle, blobSize,
 						   blob, pIdKeyAuth, pOwnerAuth,
 						   &SymmetricKeySize,
 						   &SymmetricKey);
+	free(blob);
 
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + (2 * sizeof(TPM_AUTH)) + sizeof(UINT32)
