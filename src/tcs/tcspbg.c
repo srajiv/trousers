@@ -406,7 +406,8 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TCS_KEY_HANDLE * ephHandle	/* out */
     )
 {
-
+#if 0
+#warning Locking trouble in evictFirstKey
 	UINT16 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
@@ -510,6 +511,9 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 done:
 	auth_mgr_release_auth(pAuth, NULL);
 	return result;
+#else
+	return TSPERR(TSS_E_NOTIMPL);
+#endif
 }
 
 TSS_RESULT
@@ -1110,6 +1114,9 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug1("Entering Unseal");
+
+	if (dataAuth == NULL)
+		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
