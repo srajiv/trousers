@@ -60,6 +60,9 @@ struct tcsd_config
 #define TCSD_OPTION_FIRMWARE_LOGFILE	0x0040
 #define TCSD_OPTION_REMOTE_OPS		0x0080
 
+#define TSS_TCP_RPC_MAX_DATA_LEN	8192
+#define TSS_TCP_RPC_BAD_PACKET_TYPE	0x10000000
+
 enum tcsd_config_option_code {
 	opt_port = 1,
 	opt_max_threads,
