@@ -408,7 +408,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 	entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
 	if (entry->blob->pubKey.key == NULL) {
 		LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
-		free(tmp_parms);
+		free(entry->blob->algorithmParms.parms);
 		free(entry->blob);
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
@@ -421,7 +421,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 		if (entry->blob->encData == NULL) {
 			LogError("malloc of %u bytes failed.", key_blob->encSize);
 			free(entry->blob->pubKey.key);
-			free(tmp_parms);
+			free(entry->blob->algorithmParms.parms);
 			free(entry->blob);
 			free(entry);
 			return TCSERR(TSS_E_OUTOFMEMORY);
