@@ -515,7 +515,7 @@ LoadBlob_BOOL(UINT16 * offset, TSS_BOOL data, BYTE * blob, char *log)
 }
 
 void
-UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL * dataOut, BYTE * blob, char *log)
+UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL *dataOut, BYTE * blob, char *log)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
@@ -716,7 +716,7 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 	UnloadBlob_VERSION(offset, blob, &key->ver);
 	UnloadBlob_UINT16(offset, &key->keyUsage, blob, "KEY keyUsage");
 	UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	UnloadBlob_BOOL(offset, &key->authDataUsage, blob, "KEY AuthDataUsage");
+	UnloadBlob_BOOL(offset, (TSS_BOOL *)&key->authDataUsage, blob, "KEY AuthDataUsage");
 	if ((rc = UnloadBlob_KEY_PARMS(offset, blob, &key->algorithmParms)))
 		return rc;
 	UnloadBlob_UINT32(offset, &key->PCRInfoSize, blob, "KEY PCRInfoSize");
@@ -985,7 +985,7 @@ UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob,
 	UnloadBlob_VERSION(offset, blob, &certify->version);
 	UnloadBlob_UINT16(offset, &certify->keyUsage, blob, "usage");
 	UnloadBlob_KEY_FLAGS(offset, blob, &certify->keyFlags);
-	UnloadBlob_BOOL(offset, &certify->authDataUsage, blob, "authDatausage");
+	UnloadBlob_BOOL(offset, (TSS_BOOL *)&certify->authDataUsage, blob, "authDatausage");
 
 	if ((rc = UnloadBlob_KEY_PARMS(offset, blob, &certify->algorithmParms)))
 		return rc;
