@@ -167,7 +167,7 @@ obj_context_get_machine_name_attrib(TSS_HCONTEXT tspContext, UINT32 *size,
 {
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
-	char *utf_string;
+	BYTE *utf_string;
 	UINT32 utf_size;
 	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 

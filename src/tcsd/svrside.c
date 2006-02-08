@@ -200,7 +200,8 @@ main(int argc, char **argv)
 {
 	struct sockaddr_in serv_addr, client_addr;
 	TSS_RESULT result;
-	int sd, newsd, c, option_index = 0, client_len;
+	int sd, newsd, c, option_index = 0;
+	unsigned client_len;
 	char *hostname = NULL;
 	struct hostent *client_hostent = NULL;
 	struct option long_options[] = {
@@ -260,7 +261,7 @@ main(int argc, char **argv)
 		LogError("Failed listen: %s", strerror(errno));
 		return -1;
 	}
-	client_len = sizeof (client_addr);
+	client_len = (unsigned)sizeof(client_addr);
 	LogInfo("%s: TCSD up and running.", PACKAGE_STRING);
 	do {
 		newsd = accept(sd, (struct sockaddr *) &client_addr, &client_len);
