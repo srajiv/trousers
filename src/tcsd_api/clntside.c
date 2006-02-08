@@ -58,10 +58,10 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 	LogDebug("Sending TSP packet to host %s.", hte->hostname);
 
 	/* try to resolve by hostname first */
-	hEnt = gethostbyname(hte->hostname);
+	hEnt = gethostbyname((char *)hte->hostname);
 	if (hEnt == NULL) {
 		/* if by hostname fails, try by dot notation */
-		if (inet_aton(hte->hostname, &addr.sin_addr) == 0) {
+		if (inet_aton((char *)hte->hostname, &addr.sin_addr) == 0) {
 			LogError("hostname %s does not resolve to a valid address.",
 				 hte->hostname);
 			result = TSPERR(TSS_E_CONNECTION_FAILED);

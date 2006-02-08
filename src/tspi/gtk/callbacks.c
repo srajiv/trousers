@@ -60,8 +60,8 @@ on_okbutton1_clicked(GtkButton *button, struct userdata	*user_data)
 	const gchar *entry_text = gtk_entry_get_text (GTK_ENTRY(user_data->entry));
 
 	LogDebugFn();
-	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text,
-						    &user_data->string_len);
+	user_data->string = (char *)Trspi_Native_To_UNICODE((BYTE *)entry_text,
+							    &user_data->string_len);
 	gtk_widget_destroy(user_data->window);
 
 	gtk_main_quit();
@@ -74,8 +74,8 @@ enter_event(GtkWidget *widget, struct userdata *user_data)
 	const gchar *entry_text = gtk_entry_get_text (GTK_ENTRY(user_data->entry));
 
 	LogDebugFn();
-	user_data->string = Trspi_Native_To_UNICODE((BYTE *)entry_text,
-						    &user_data->string_len);
+	user_data->string = (char *)Trspi_Native_To_UNICODE((BYTE *)entry_text,
+							    &user_data->string_len);
 	gtk_widget_destroy(user_data->window);
 
 	gtk_main_quit();
@@ -93,8 +93,8 @@ on_entryPassword_activate(GtkEntry *entry, struct userdata *user_data)
 
 	if (strlen(entryConf_text) == strlen(entryPass_text)) {
 		if (!memcmp(entryPass_text, entryConf_text, len)) {
-			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
-								    &user_data->string_len);
+			user_data->string = (char *)Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+									    &user_data->string_len);
 			gtk_widget_destroy(user_data->window);
 			gtk_main_quit();
 
@@ -116,8 +116,8 @@ on_entryConfirm_activate(GtkEntry *entry, struct userdata *user_data)
 
 	if (strlen(entryConf_text) == strlen(entryPass_text)) {
 		if (!memcmp(entryPass_text, entryConf_text, len)) {
-			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
-								    &user_data->string_len);
+			user_data->string = (char *)Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+									    &user_data->string_len);
 			gtk_widget_destroy(user_data->window);
 			gtk_main_quit();
 
@@ -148,8 +148,8 @@ on_okbutton2_clicked(GtkButton *button, struct userdata *user_data)
 
 	if (strlen(entryConf_text) == strlen(entryPass_text)) {
 		if (!memcmp(entryPass_text, entryConf_text, len)) {
-			user_data->string = Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
-								    &user_data->string_len);
+			user_data->string = (char *)Trspi_Native_To_UNICODE((BYTE *)entryConf_text,
+									    &user_data->string_len);
 			gtk_widget_destroy(user_data->window);
 			gtk_main_quit();
 

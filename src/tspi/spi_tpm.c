@@ -1318,7 +1318,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		Trspi_LoadBlob(&offset, strlen("Test Passed"), hashBlob, "Test Passed");
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), hashBlob, (BYTE *)"Test Passed");
 		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), hashBlob, antiReplay.nonce);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, hashBlob);
 
@@ -1341,7 +1341,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
-		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->Data, "Test Passed");
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->Data,
+			       (BYTE *)"Test Passed");
 		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->Data, antiReplay.nonce);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->Data);
 		pValidationData->ValidationDataLength = outDataSize;

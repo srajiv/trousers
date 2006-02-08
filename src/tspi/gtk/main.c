@@ -58,7 +58,7 @@ DisplayPINWindow(BYTE *string, UINT32 *string_len, BYTE *popup)
   gtk_init_check((int *)NULL, (char ***)NULL);
 
   LogDebug("address of string_len: %p", &ud.string_len);
-  dialog1 = create_password_dialog(&ud, popup);
+  dialog1 = create_password_dialog(&ud, (char *)popup);
   gtk_widget_show(dialog1);
 
   gtk_main();
@@ -100,7 +100,7 @@ DisplayNewPINWindow(BYTE *string, UINT32 *string_len, BYTE *popup)
   gtk_init_check((int *)NULL, (char ***)NULL);
 
   LogDebug("address of string_len: %p", &ud.string_len);
-  dialog1 = create_new_password_dialog(&ud, popup);
+  dialog1 = create_new_password_dialog(&ud, (char *)popup);
   gtk_widget_show(dialog1);
 
   gtk_main();

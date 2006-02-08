@@ -40,7 +40,7 @@ TSS_RESULT
 popup_GetSecret2(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_hash)
 {
 	BYTE secret[UI_MAX_SECRET_STRING_LENGTH] = { 0 };
-	BYTE *dflt = "TSS Authentication Dialog";
+	BYTE *dflt = (BYTE *)"TSS Authentication Dialog";
 	UINT32 secret_len;
 
 	if (popup_str == NULL)
@@ -63,9 +63,9 @@ popup_GetSecret2(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_h
 	}
 
 	if (hash_mode == TSS_TSPATTRIB_HASH_MODE_NULL)
-		Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, (char *)auth_hash);
+		Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, auth_hash);
 	else
-		Trspi_Hash(TSS_HASH_SHA1, secret_len - 2, secret, (char *)auth_hash);
+		Trspi_Hash(TSS_HASH_SHA1, secret_len - 2, secret, auth_hash);
 
 	LogDebug("Secret's UNICODE data:");
 	LogDebugData(secret_len, secret);

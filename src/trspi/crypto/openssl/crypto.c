@@ -349,13 +349,13 @@ Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len, BYTE *out,
 		goto done;
 	}
 
-	if (!EVP_EncryptUpdate(&ctx, out, out_len, in, in_len)) {
+	if (!EVP_EncryptUpdate(&ctx, out, (int *)out_len, in, in_len)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
 	}
 
-	if (!EVP_EncryptFinal(&ctx, out + *out_len, &tmp)) {
+	if (!EVP_EncryptFinal(&ctx, out + *out_len, (int *)&tmp)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
@@ -391,13 +391,13 @@ Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len, BYTE *out,
 		goto done;
 	}
 
-	if (!EVP_DecryptUpdate(&ctx, out, out_len, in, in_len)) {
+	if (!EVP_DecryptUpdate(&ctx, out, (int *)out_len, in, in_len)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
 	}
 
-	if (!EVP_DecryptFinal(&ctx, out + *out_len, &tmp)) {
+	if (!EVP_DecryptFinal(&ctx, out + *out_len, (int *)&tmp)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;

@@ -105,7 +105,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 			return result;
 
 		if ((result = obj_context_set_machine_name(tspContext, machine_name,
-						strlen(machine_name)+1)))
+						strlen((char *)machine_name)+1)))
 			return result;
 	}
 
@@ -713,7 +713,7 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 						     keyBlobSize,
 						     keyBlob,
 						     strlen(PACKAGE_STRING) + 1,
-						     PACKAGE_STRING)))
+						     (BYTE *)PACKAGE_STRING)))
 				return result;
 		} else {
 			return TSPERR(TSS_E_BAD_PARAMETER);
