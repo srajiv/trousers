@@ -1093,7 +1093,7 @@ char_width(char *codeset)
 BYTE *
 Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 {
-	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	char *ptr, *ret, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
 	unsigned len = 0, tmplen;
 	iconv_t cd = 0;
 	size_t rc, outbytesleft, inbytesleft;
@@ -1116,7 +1116,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 		outbytesleft = len;
 		inbytesleft = tmplen;
 		outbuf = tmpbuf;
-		ptr = string;
+		ptr = (char *)string;
 		errno = 0;
 
 		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
@@ -1144,7 +1144,7 @@ alloc_string:
 	if (cd)
 		iconv_close(cd);
 
-	return ret;
+	return (BYTE *)ret;
 
 }
 
@@ -1177,7 +1177,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		outbytesleft = len;
 		inbytesleft = tmplen;
 		outbuf = tmpbuf;
-		ptr = string;
+		ptr = (char *)string;
 		errno = 0;
 
 		rc = iconv(cd, &ptr, &inbytesleft, &outbuf, &outbytesleft);
@@ -1202,5 +1202,5 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		*size = len;
 	iconv_close(cd);
 
-	return ret;
+	return (BYTE *)ret;
 }
