@@ -101,7 +101,7 @@ UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
 	UnloadBlob_TCPA_VERSION(offset, blob, &key->ver);
 	UnloadBlob_UINT16(offset, &key->keyUsage, blob, NULL);
 	UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	UnloadBlob_BOOL(offset, &key->authDataUsage, blob, NULL);
+	UnloadBlob_BOOL(offset, (TSS_BOOL *)&key->authDataUsage, blob, NULL);
 	if (UnloadBlob_KEY_PARMS_PS(offset, blob, &key->algorithmParms))
 		return rc;
 
