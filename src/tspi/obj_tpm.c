@@ -166,12 +166,10 @@ obj_tpm_get(TSS_HCONTEXT tspContext, TSS_HTPM *phTpm)
 TSS_RESULT
 obj_tpm_get_cb11(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *cb)
 {
+#ifndef __LP64__
 	struct tsp_object *obj;
 	struct tr_tpm_obj *tpm;
 	TSS_RESULT result = TSS_SUCCESS;
-
-	if (sizeof(PVOID) != sizeof(UINT32))
-		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -193,17 +191,18 @@ obj_tpm_get_cb11(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *cb)
 	obj_list_put(&tpm_list);
 
 	return result;
+#else
+	return TSPERR(TSS_E_FAIL);
+#endif
 }
 
 TSS_RESULT
 obj_tpm_set_cb11(TSS_HTPM hTpm, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
 {
+#ifndef __LP64__
 	struct tsp_object *obj;
 	struct tr_tpm_obj *tpm;
 	TSS_RESULT result = TSS_SUCCESS;
-
-	if (sizeof(PVOID) != sizeof(UINT32))
-		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -227,6 +226,9 @@ obj_tpm_set_cb11(TSS_HTPM hTpm, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
 	obj_list_put(&tpm_list);
 
 	return result;
+#else
+	return TSPERR(TSS_E_FAIL);
+#endif
 }
 
 #ifndef TSS_SPEC_COMPLIANCE
