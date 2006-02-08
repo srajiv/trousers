@@ -341,12 +341,10 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 TSS_RESULT
 obj_policy_get_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, UINT32 *cb)
 {
+#ifndef __LP64__
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
 	TSS_RESULT result = TSS_SUCCESS;
-
-	if (sizeof(PVOID) != sizeof(UINT32))
-		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -374,17 +372,18 @@ obj_policy_get_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, UINT32 *cb)
 	obj_list_put(&policy_list);
 
 	return result;
+#else
+	return TSPERR(TSS_E_FAIL);
+#endif
 }
 
 TSS_RESULT
 obj_policy_set_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
 {
+#ifndef __LP64__
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
 	TSS_RESULT result = TSS_SUCCESS;
-
-	if (sizeof(PVOID) != sizeof(UINT32))
-		return TSPERR(TSS_E_FAIL);
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -416,6 +415,9 @@ obj_policy_set_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, TSS_FLAG app_data, UINT3
 	obj_list_put(&policy_list);
 
 	return result;
+#else
+	return TSPERR(TSS_E_FAIL);
+#endif
 }
 
 #ifndef TSS_SPEC_COMPLIANCE
@@ -684,7 +686,7 @@ TSS_RESULT
 obj_policy_get_string(TSS_HPOLICY hPolicy, UINT32 *size, BYTE **data)
 {
 	TSS_RESULT result = TSS_SUCCESS;
-	char *utf_string;
+	BYTE *utf_string;
 	UINT32 utf_size;
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
