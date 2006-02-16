@@ -224,7 +224,7 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 	}
 	if (index >= packet->numParms ||
 	    dataType != packet->types[index]) {
-		LogError("Data type of TCS packet element %d doesn't match!", index);
+		LogDebug("Data type of TCS packet element %d doesn't match.", index);
 		return TSS_TCP_RPC_BAD_PACKET_TYPE;
 	}
 	switch (dataType) {
