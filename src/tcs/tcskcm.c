@@ -551,22 +551,46 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TCS_KEY_HANDLE * phKeyTCSI		/* out */
     )
 {
-	UINT32 keyslot, keySize;
+	UINT32 keyslot = 0, keySize;
 	TSS_RESULT result;
-	UINT16 offset;
 	TSS_UUID parentUuid;
 	BYTE keyBlob[0x1000];
 	UINT16 blobSize = sizeof(keyBlob);
-	TCPA_KEY myKey;
-	TCPA_STORE_PUBKEY *parentPub;
-	TCPA_KEY_HANDLE parentKeySlot;
+	UINT16 offset;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 
 	LogDebugFn("Enter: uuid: 0x%lx auth? 0x%x ***********", (unsigned long)KeyUUID,
 		  pLoadKeyInfo == NULL ? 0xdeadbeef : pLoadKeyInfo->authData.AuthHandle);
+
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
+	memset(&parentUuid, 0, sizeof(TSS_UUID));
+
+	if (pLoadKeyInfo &&
+	    memcmp(&pLoadKeyInfo->parentKeyUUID, &parentUuid, sizeof(TSS_UUID))) {
+		if (getRegisteredKeyByUUID(&pLoadKeyInfo->keyUUID, keyBlob, &blobSize))
+			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
+
+		if (getHandlesByUUID(&pLoadKeyInfo->parentKeyUUID, &parentTCSKeyHandle, &keyslot))
+			return TCSERR(TCS_E_KM_LOADFAILED);
+
+		return TCSP_LoadKeyByBlob_Internal(hContext, parentTCSKeyHandle,
+						   blobSize, keyBlob,
+						   &pLoadKeyInfo->authData,
+						   phKeyTCSI, &keyslot);
+	}
+
+	/* if KeyUUID is already loaded, increment the ref count and return */
+	if (getHandlesByUUID(KeyUUID, phKeyTCSI, &keyslot) == TSS_SUCCESS) {
+		if (keyslot) {
+			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
+				LogError1("Error marking key as loaded");
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+			return TSS_SUCCESS;
+		}
+	}
 	/*********************************************************************
 	 *	The first thing to do in this func is setup all the info and make sure
 	 *		that we get it all from either the keyfile or the keyCache
@@ -578,66 +602,15 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* convert UINT16 to UIN32 */
 	keySize = blobSize;
 
-	/*---	Now that there is a key, unload it for later use */
-	offset = 0;
-	if ((result = UnloadBlob_KEY(&offset, keyBlob, &myKey)))
-		return result;
-
-	LogDebugKey(myKey);
-	LogDebugFn1("calling getTCSKeyHandleByPub");
-	/*---	First, check if it's actually loaded now or was previously loaded */
-	*phKeyTCSI = getTCSKeyHandleByPub(&myKey.pubKey);
-	LogDebugFn("TCSKeyHandle is 0x%x", *phKeyTCSI);
-	// XXX destroy_key_refs(&myKey); XXX
-
-	if (*phKeyTCSI != NULL_TCS_HANDLE) {
-		LogDebugFn1("calling getSlotByHandle");
-		/* The key was at least previously loaded, now check if its loaded now */
-		if (getSlotByHandle(*phKeyTCSI) != NULL_TPM_HANDLE) {
-			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
-				LogError1("Error marking key as loaded");
-				return TCSERR(TSS_E_INTERNAL_ERROR);
-			}
-			LogDebugFn1("Success, key is loaded.");
-			/* its loaded now */
-			return TSS_SUCCESS;
-		}
-		LogDebugFn1("Key not loaded.");
-	}
-
 	LogDebugFn1("calling getParentUUIDByUUID");
 	/*---	Get my parent's UUID.  Since My key is registered, my parent should be as well. */
 	if ((result = getParentUUIDByUUID(KeyUUID, &parentUuid)))
 		return TCSERR(TCS_E_KM_LOADFAILED);
 
-	LogDebugFn1("calling getPubByUuid");
-	/* Get the parentPublic key from the mem cache.
-	 * If this is NULL, the parent isn't loaded yet */
-	parentPub = getPubByUuid(&parentUuid);
+	if ((result = TCSP_LoadKeyByUUID_Internal(hContext, &parentUuid,
+						  pLoadKeyInfo, &parentTCSKeyHandle)))
+		return result;
 
-	/*********************************************************************
-	 *	At this point the parent should be loaded.  If the parent hasn't been loaded
-	 *		during this cycle, then it will not be in the cache knowledge.  If it is
-	 *		in the cache knowledge, then it has been loaded at some point, but there
-	 *		is no guarantee that it is still loaded so the shim should be called.
-	 ***********************************************************************/
-
-	/*---	If no parentPublic information is in the cache, then need to load the parent. */
-	if (parentPub == NULL) {
-		LogDebugFn1("calling TCSP_LoadKeyByUUID_Internal for parent's UUID");
-		/*---	Load the parent by it's UUID */
-		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, &parentUuid,
-							  pLoadKeyInfo, &parentTCSKeyHandle)))
-			return result;
-	}
-	/*---	Parent is already loaded, or was loaded at some time */
-	else {
-		LogDebugFn1("calling LoadKeyShim");
-		if ((result = LoadKeyShim(hContext, parentPub, &parentUuid, &parentKeySlot)))
-			return result;
-		parentTCSKeyHandle = getAnyHandleBySlot(parentKeySlot);
-	}
-	LogDebugKey(myKey);
 	LogDebugFn1("calling TCSP_LoadKeyByBlob_Internal");
 	/*******************************************************
 	 * If no errors have happend up till now, then the parent is loaded and ready for use.
@@ -645,14 +618,26 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 ******************************************************/
 	if ((result = TCSP_LoadKeyByBlob_Internal(hContext, parentTCSKeyHandle,
 						  keySize, keyBlob,
-						  NULL,//&pLoadKeyInfo->authData,
+						  NULL,
 						  phKeyTCSI, &keyslot))) {
 		LogDebugFn("TCSP_LoadKeyByBlob_Internal returned 0x%x", result);
-#if 0
 		if (result == TCPA_E_AUTHFAIL) {
+			BYTE blob[1000];
+
 			/* set up a load key info struct */
+			memcpy(&pLoadKeyInfo->parentKeyUUID, &parentUuid, sizeof(TSS_UUID));
+			memcpy(&pLoadKeyInfo->keyUUID, KeyUUID, sizeof(TSS_UUID));
+
+			/* calculate the paramDigest */
+			offset = 0;
+			LoadBlob_UINT32(&offset, TPM_ORD_LoadKey, blob, NULL);
+			LoadBlob(&offset, keySize, blob, keyBlob, NULL);
+			if (Hash(TSS_HASH_SHA1, offset, blob,
+				 (BYTE *)&pLoadKeyInfo->paramDigest.digest))
+				result = TCSERR(TSS_E_INTERNAL_ERROR);
+
+			result = TCSERR(TCS_E_KM_LOADFAILED);
 		}
-#endif
 	}
 
 	return result;

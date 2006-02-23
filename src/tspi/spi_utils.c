@@ -302,7 +302,11 @@ LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 	Trspi_LoadBlob_UUID(offset, blob, info->keyUUID);
 	Trspi_LoadBlob_UUID(offset, blob, info->parentKeyUUID);
 	Trspi_LoadBlob(offset, TCPA_DIGEST_SIZE, blob, info->paramDigest.digest);
-	LoadBlob_AUTH(offset, blob, &info->authData);
+	Trspi_LoadBlob_UINT32(offset, info->authData.AuthHandle, blob);
+	Trspi_LoadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceOdd.nonce);
+	Trspi_LoadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceEven.nonce);
+	Trspi_LoadBlob_BOOL(offset, info->authData.fContinueAuthSession, blob);
+	Trspi_LoadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&info->authData.HMAC);
 }
 
 void
@@ -310,8 +314,12 @@ UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 {
 	Trspi_UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	Trspi_UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
-	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, info->paramDigest.digest, blob);
-	UnloadBlob_AUTH(offset, blob, &info->authData);
+	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&info->paramDigest.digest);
+	Trspi_UnloadBlob_UINT32(offset, &info->authData.AuthHandle, blob);
+	Trspi_UnloadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceOdd.nonce);
+	Trspi_UnloadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceEven.nonce);
+	Trspi_UnloadBlob_BOOL(offset, &info->authData.fContinueAuthSession, blob);
+	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&info->authData.HMAC);
 }
 
 void

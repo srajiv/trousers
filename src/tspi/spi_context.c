@@ -533,6 +533,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	TCPA_KEY_HANDLE keySlot;
 	UINT32 parentPSType;
 	TSS_HKEY parentTspHandle;
+	TCS_LOADKEY_INFO info;
 
 	if (phKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -543,16 +544,46 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 
 	/* ---  This key is in the System Persistant storage */
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		if ((result = TCSP_LoadKeyByUUID(tcsContext,
-						uuidData,
-						NULL,
-						&tcsKeyHandle)))
+		memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
+
+		result = TCSP_LoadKeyByUUID(tcsContext,
+					    uuidData,
+					    &info,
+					    &tcsKeyHandle);
+
+		if (TSS_ERROR_CODE(result) == TCS_E_KM_LOADFAILED) {
+			TSS_HKEY keyHandle;
+			TSS_HPOLICY hPolicy;
+
+			/* load failed, due to some key in the chain needing auth
+			 * which doesn't yet exist at the TCS level. However, the
+			 * auth may already be set in policies at the TSP level.
+			 * To find out, get the key handle of the key requiring
+			 * auth */
+			if (obj_rsakey_get_by_uuid(&info.parentKeyUUID,
+						   &keyHandle))
+				return result;
+
+			if (obj_rsakey_get_policy(keyHandle, TSS_POLICY_USAGE,
+						  &hPolicy, NULL))
+				return result;
+
+			if (secret_PerformAuth_OIAP(keyHandle,
+						    TPM_ORD_LoadKey,
+						    hPolicy, &info.paramDigest,
+						    &info.authData))
+				return result;
+
+			if ((result = TCSP_LoadKeyByUUID(tcsContext, uuidData,
+							 &info, &tcsKeyHandle)))
+				return result;
+		} else if (result)
 			return result;
 
 		if ((result = TCS_GetRegisteredKeyBlob(tcsContext,
-						uuidData,
-						&keyBlobSize,
-						&keyBlob)))
+						       uuidData,
+						       &keyBlobSize,
+						       &keyBlob)))
 			return result;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		/* ---  Get my Parent's UUID */

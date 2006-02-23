@@ -73,7 +73,11 @@ LoadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 	LoadBlob_UUID(offset, blob, info->keyUUID);
 	LoadBlob_UUID(offset, blob, info->parentKeyUUID);
 	LoadBlob(offset, TCPA_DIGEST_SIZE, blob, info->paramDigest.digest, NULL);
-	LoadBlob_Auth(offset, blob, (TPM_AUTH *)&(info->authData));
+	LoadBlob_UINT32(offset, info->authData.AuthHandle, blob, NULL);
+	LoadBlob(offset, TCPA_NONCE_SIZE, blob, info->authData.NonceOdd.nonce, NULL);
+	LoadBlob(offset, TCPA_NONCE_SIZE, blob, info->authData.NonceEven.nonce, NULL);
+	LoadBlob_BOOL(offset, info->authData.fContinueAuthSession, blob, NULL);
+	LoadBlob(offset, TCPA_AUTHDATA_SIZE, blob, (BYTE *)&info->authData.HMAC, NULL);
 }
 
 void
@@ -81,8 +85,12 @@ UnloadBlob_LOADKEY_INFO(UINT16 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 {
 	UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
-	UnloadBlob(offset, TCPA_DIGEST_SIZE, info->paramDigest.digest, blob, NULL);
-	UnloadBlob_Auth(offset, blob, (TPM_AUTH *)&(info->authData));
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, info->paramDigest.digest, NULL);
+	UnloadBlob_UINT32(offset, &info->authData.AuthHandle, blob, NULL);
+	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceOdd.nonce, NULL);
+	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, (BYTE *)&info->authData.NonceEven.nonce, NULL);
+	UnloadBlob_BOOL(offset, &info->authData.fContinueAuthSession, blob, NULL);
+	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, (BYTE *)&info->authData.HMAC, NULL);
 }
 
 void
@@ -1740,12 +1748,25 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
 			}
 		}
 	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+		if (result == TCSERR(TCS_E_KM_LOADFAILED) && pInfo != NULL) {
+			*hdr = calloc(1, size + sizeof(TCS_LOADKEY_INFO));
+			if (*hdr == NULL) {
+				LogError("malloc of %d bytes failed.", size + sizeof(TCS_LOADKEY_INFO));
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+
+			if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 0, pInfo, 0, *hdr)) {
+				free(*hdr);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+		} else {
+			*hdr = calloc(1, size);
+			if (*hdr == NULL) {
+				LogError("malloc of %d bytes failed.", size);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			(*hdr)->packet_size = size;
 		}
-		(*hdr)->packet_size = size;
 	}
 	(*hdr)->result = result;
 	return TSS_SUCCESS;
@@ -4006,7 +4027,9 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 	LoadBlob_UINT32(&offset, (*hdr)->result, (BYTE *)*hdr, NULL);
 	LoadBlob_UINT32(&offset, (*hdr)->packet_size, (BYTE *)*hdr, NULL);
 
-	if (operation_result == TSS_SUCCESS) {
+	if (operation_result == TSS_SUCCESS ||
+	    (tsp_data.ordinal == TCSD_ORD_LOADKEYBYUUID &&
+	     operation_result == TCSERR(TCS_E_KM_LOADFAILED))) {
 		LoadBlob_UINT16(&offset, (*hdr)->num_parms, (BYTE *)*hdr, NULL);
 
 		tmp_offset = 0;

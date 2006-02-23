@@ -188,7 +188,9 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 	/* at this point there has been one header received. Check the return code. If
 	 * its success, we'll probably have more data to receive.
 	 */
-	if (Decode_UINT32((BYTE *)&loc_hdr.result) == TSS_SUCCESS)
+	/* XXX */
+	if (Decode_UINT32((BYTE *)&loc_hdr.result) == TSS_SUCCESS ||
+	    Decode_UINT32((BYTE *)&loc_hdr.result) == TCSERR(TCS_E_KM_LOADFAILED))
 		returnSize = Decode_UINT32((BYTE *)&loc_hdr.packet_size);
 	else
 		returnSize = hdr_size;

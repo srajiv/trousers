@@ -234,7 +234,9 @@ sendTCSDPacket(struct host_table_entry *hte,
 
 	Trspi_UnloadBlob_UINT32(&offset, &tmp_hdr->result, (BYTE *)(*hdr));
 
-	if (tmp_hdr->result == 0) {
+	if (tmp_hdr->result == 0 ||
+	    (dataToSend->ordinal == TCSD_ORD_LOADKEYBYUUID &&
+	     tmp_hdr->result == TCSERR(TCS_E_KM_LOADFAILED))) {
 		Trspi_UnloadBlob_UINT32(&offset, &tmp_hdr->packet_size, (BYTE *)(*hdr));
 		Trspi_UnloadBlob_UINT16(&offset, &tmp_hdr->num_parms, (BYTE *)(*hdr));
 		Trspi_UnloadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)(*hdr), tmp_hdr->parm_types);
@@ -971,7 +973,6 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
-	TCS_LOADKEY_INFO tmpInfo;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
@@ -998,12 +999,9 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		LogDebugFn("TCS key handle: 0x%x", *phKeyTCSI);
-
-		if (getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 1, &tmpInfo, 0, hdr)) {
-			pLoadKeyInfo = NULL;
-		} else {
-			memcpy(pLoadKeyInfo, &tmpInfo, sizeof(TCS_LOADKEY_INFO));
-		}
+	} else if (pLoadKeyInfo && (result == TCSERR(TCS_E_KM_LOADFAILED))) {
+		if (getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 0, pLoadKeyInfo, 0, hdr))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	free(hdr);
