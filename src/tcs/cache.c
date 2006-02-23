@@ -251,6 +251,22 @@ getUuidByPub(TCPA_STORE_PUBKEY *pub)
 	return NULL;
 }
 
+TSS_RESULT
+getHandlesByUUID(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slot)
+{
+	struct key_mem_cache *tmp;
+
+	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
+		if (!memcmp(&tmp->uuid, uuid, sizeof(TSS_UUID))) {
+			*tcsHandle = tmp->tcs_handle;
+			*slot = tmp->tpm_handle;
+			return TSS_SUCCESS;
+		}
+	}
+
+	return TCSERR(TSS_E_FAIL);
+}
+
 TSS_UUID *
 getUUIDByEncData(BYTE *encData)
 {

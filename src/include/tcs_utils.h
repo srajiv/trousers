@@ -101,6 +101,7 @@ TCPA_STORE_PUBKEY *getParentPubBySlot(TCPA_KEY_HANDLE slot);
 TCPA_STORE_PUBKEY *getPubBySlot(TCPA_KEY_HANDLE slot);
 TCPA_STORE_PUBKEY *getPubByHandle(TCS_KEY_HANDLE tcsKeyHandle);
 TSS_UUID *getUuidByPub(TCPA_STORE_PUBKEY *pub);
+TSS_RESULT getHandlesByUUID(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slot);
 TSS_UUID *getUUIDByEncData(BYTE *encData);
 TCS_KEY_HANDLE getTCSKeyHandleByEncData(BYTE *encData);
 TSS_RESULT initDiskCache(void);
@@ -222,6 +223,8 @@ TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset, BYTE * blob,
 				TCPA_KEY_HANDLE_LIST * list);
 void LoadBlob_UUID(UINT16 * offset, BYTE * outBlob, TSS_UUID uuid);
 void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);
+
+TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 
 TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
