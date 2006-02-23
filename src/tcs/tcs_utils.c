@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/evp.h>
+
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "spi_internal_types.h"
@@ -1081,4 +1083,50 @@ get_pcr_event_size(TSS_PCR_EVENT *e)
 {
 	return (sizeof(TSS_PCR_EVENT) + e->ulEventLength + e->ulPcrValueLength);
 }
+
+/*
+ * Hopefully this will make the code clearer since
+ * OpenSSL returns 1 on success
+ */
+#define EVP_SUCCESS 1
+
+TSS_RESULT
+Hash(UINT32 HashType, UINT32 BufSize, BYTE* Buf, BYTE* Digest)
+{
+	EVP_MD_CTX md_ctx;
+	unsigned int result_size;
+	int rv;
+
+	switch (HashType) {
+		case TSS_HASH_SHA1:
+			rv = EVP_DigestInit(&md_ctx, EVP_sha1());
+			break;
+		default:
+			rv = TSPERR(TSS_E_BAD_PARAMETER);
+			goto out;
+			break;
+	}
+
+	if (rv != EVP_SUCCESS) {
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto out;
+	}
+
+	rv = EVP_DigestUpdate(&md_ctx, Buf, BufSize);
+	if (rv != EVP_SUCCESS) {
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto out;
+	}
+
+	result_size = EVP_MD_CTX_size(&md_ctx);
+	rv = EVP_DigestFinal(&md_ctx, Digest, &result_size);
+	if (rv != EVP_SUCCESS) {
+		rv = TSPERR(TSS_E_INTERNAL_ERROR);
+	} else
+		rv = TSS_SUCCESS;
+
+out:
+	return rv;
+}
+
 
