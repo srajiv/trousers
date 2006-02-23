@@ -1392,3 +1392,30 @@ obj_list_rsakey_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
+/* find a key in memory that was loaded by UUID */
+TSS_RESULT
+obj_rsakey_get_by_uuid(TSS_UUID *uuid, TSS_HKEY *hKey)
+{
+	struct obj_list *list = &rsakey_list;
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	pthread_mutex_lock(&list->lock);
+
+	for (obj = list->head; obj; obj = obj->next) {
+		rsakey = (struct tr_rsakey_obj *)obj->data;
+
+		if (!memcmp(&rsakey->uuid, uuid, sizeof(TSS_UUID))) {
+			*hKey = obj->handle;
+			goto done;
+		}
+	}
+
+	result = TSS_E_FAIL;
+done:
+	pthread_mutex_unlock(&list->lock);
+
+	return result;
+}
+

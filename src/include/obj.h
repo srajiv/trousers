@@ -256,6 +256,7 @@ TSS_RESULT obj_rsakey_set_privkey(TSS_HKEY, UINT32 , BYTE *);
 TSS_RESULT obj_rsakey_set_pcr_data(TSS_HKEY, TSS_HPOLICY);
 TSS_RESULT obj_rsakey_set_key_parms(TSS_HKEY, TCPA_KEY_PARMS *);
 TSS_RESULT obj_rsakey_is_connected(TSS_HKEY, TCS_CONTEXT_HANDLE *);
+TSS_RESULT obj_rsakey_get_by_uuid(TSS_UUID *, TSS_HKEY *);
 
 /* obj_tpm.c */
 TSS_BOOL   obj_is_tpm(TSS_HOBJECT);
