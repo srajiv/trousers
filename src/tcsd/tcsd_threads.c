@@ -85,11 +85,11 @@ tcsd_threads_init(void)
 TSS_RESULT
 tcsd_thread_create(int socket, char *hostname)
 {
-	int rc;
 	UINT32 thread_num;
+#ifndef TCSD_SINGLE_THREAD_DEBUG
+	int rc;
 	pthread_attr_t tcsd_thread_attr;
 
-#ifndef TCSD_SINGLE_THREAD_DEBUG
 	/* init the thread attribute */
 	if ((rc = pthread_attr_init(&tcsd_thread_attr))) {
 		LogError("pthread_attr_init failed: error=%d: %s", rc, strerror(rc));
@@ -179,10 +179,11 @@ tcsd_thread_run(void *v)
 	BYTE buffer[TCSD_TXBUF_SIZE];
 	struct tcsd_packet_hdr *ret_buf = NULL;
 	TSS_RESULT result;
-	int sizeToSend, thread_buf_size, sent_total, sent, rc;
+	int sizeToSend, thread_buf_size, sent_total, sent;
 	UINT16 offset;
-
 #ifndef TCSD_SINGLE_THREAD_DEBUG
+	int rc;
+
 	thread_signal_init();
 #endif
 
