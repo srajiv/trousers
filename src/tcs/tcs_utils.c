@@ -188,6 +188,7 @@ get_max_auths(UINT32 *auths)
 			internal_TerminateHandle(handles[i]);
 		}
 	} else {
+		result = TCSERR(TSS_E_INTERNAL_ERROR);
 		*auths = 0;
 	}
 
