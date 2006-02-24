@@ -1,3 +1,4 @@
+- Fix for SF 1342026, print TPM error codes during bring-up.
 - Added support for a TCS_LOADKEY_INFO structure returned from
  a TCSP_LoadKeyByUUID call.
 - Fixed 2 free_tspi's that should have been plain free's
