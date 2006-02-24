@@ -2058,7 +2058,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
 		pcrDataSize = offset;
-		free_tspi(tspContext, pcrSelect.pcrSelect);
+		free(pcrSelect.pcrSelect);
 	}
 
 	offset = 0;

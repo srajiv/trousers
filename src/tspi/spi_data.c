@@ -286,6 +286,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 
 		offset = 0;
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
+		free(pcrSelect.pcrSelect);
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
 			       digAtCreation.digest);
 		/* XXX */
