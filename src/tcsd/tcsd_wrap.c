@@ -1751,7 +1751,7 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
 		if (result == TCSERR(TCS_E_KM_LOADFAILED) && pInfo != NULL) {
 			*hdr = calloc(1, size + sizeof(TCS_LOADKEY_INFO));
 			if (*hdr == NULL) {
-				LogError("malloc of %d bytes failed.", size + sizeof(TCS_LOADKEY_INFO));
+				LogError("malloc of %zd bytes failed.", size + sizeof(TCS_LOADKEY_INFO));
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 
