@@ -59,6 +59,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/unistd.h>
 
 #include <trousers/tss.h>
 
@@ -255,12 +258,28 @@ version_1_print(FILE *f)
 	return 0;
 }
 
+/* the smallest key on disk should be around 600 bytes total
+ * and the largest should be about 1000 bytes, so if the number
+ * of keys is not in this ballpark, this is probably not a PS
+ * file
+ */
 int
-inspect(FILE *f)
+bad_file_size(UINT32 num_keys, off_t file_size)
+{
+	if ((num_keys * 600) > (unsigned long)file_size)
+		return 1;
+
+	if ((num_keys * 1000) < (unsigned long)file_size)
+		return 1;
+
+	return 0;
+}
+
+int
+inspect(FILE *f, off_t file_size)
 {
 	int members = 0;
 	UINT32 *num_keys;
-	TSS_UUID SRK_UUID = TSS_UUID_SRK;
 
 	/* do the initial read, which should include sizeof(TSS_UUID)
 	 * + sizeof(UINT32) + 1 bytes */
@@ -273,17 +292,15 @@ inspect(FILE *f)
 
 	if (buf[0] == '\1') {
 		num_keys = (UINT32 *)&buf[1];
-		if (*num_keys == 0)
-			goto version0;
-
-		if (memcmp(&buf[5], &SRK_UUID, sizeof(TSS_UUID)))
+		if (*num_keys == 0 || bad_file_size(*num_keys, file_size))
 			goto version0;
 
 		return version_1_print(f);
 	}
 
 version0:
-	if (memcmp(&buf[4], &SRK_UUID, sizeof(TSS_UUID))) {
+	num_keys = (UINT32 *)&buf[0];
+	if (*num_keys == 0 || bad_file_size(*num_keys, file_size)) {
 		printf("This file does not appear to be a valid PS file.\n");
 		return -1;
 	}
@@ -296,6 +313,8 @@ main(int argc, char ** argv)
 {
 	FILE *f = NULL;
 	int rc;
+	struct stat stat_buf;
+	off_t file_size;
 
 	if (argc != 2)
 		usage(argv[0]);
@@ -305,9 +324,17 @@ main(int argc, char ** argv)
 		return -1;
 	}
 
-	PRINT("filename: %s\n", argv[1]);
+	if ((rc = fstat(fileno(f), &stat_buf))) {
+		PRINTERR("fstat(%s): %s\n", argv[1], strerror(errno));
+		fclose(f);
+		return -1;
+	}
 
-	rc = inspect(f);
+	file_size = stat_buf.st_size;
+
+	PRINT("filename: %s (%ld bytes)\n", argv[1], file_size);
+
+	rc = inspect(f, file_size);
 
 	fclose(f);
 
