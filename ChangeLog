@@ -1,3 +1,4 @@
+- Added contact info to the README.
 - Fix for ordering of params in call to set callback by
   Tspi_SetAttribUint32. Thanks to Thomas Winkler for the fix.
 - Fix for SF 1410948, get random numbers from /dev/urandom
