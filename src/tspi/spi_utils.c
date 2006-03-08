@@ -92,7 +92,7 @@ internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if ((result = TCSP_GetRandom(tcsContext, sizeof(TCPA_NONCE), &random)))
+	if ((result = get_local_random(tcsContext, sizeof(TCPA_NONCE), &random)))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memcpy(nonce->nonce, random, sizeof(TCPA_NONCE));
@@ -401,12 +401,10 @@ get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
 	FILE *f = NULL;
 	BYTE *buf = NULL;
 
-	LogWarn("Falling back to %s", TSS_LOCAL_RANDOM_DEVICE);
-
 	f = fopen(TSS_LOCAL_RANDOM_DEVICE, "r");
 	if (f == NULL) {
 		LogError("open of %s failed: %s",
-				TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
+			 TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -419,7 +417,7 @@ get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
 
 	if (fread(buf, size, 1, f) == 0) {
 		LogError("fread of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE,
-				strerror(errno));
+			 strerror(errno));
 		fclose(f);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}

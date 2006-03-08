@@ -647,7 +647,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		goto error;
 
 	/* generate the symmetric key. */
-	if ((result = Tspi_TPM_GetRandom(hTPM, symKey.size, &symKey.data)))
+	if ((result = get_local_random(tspContext, symKey.size, &symKey.data)))
 		goto error;
 
 	/* No encryption schemes exist in the TPM 1.1 spec for symmetric
