@@ -579,8 +579,9 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext, bytesRequested,
-					&randomBytes);
+			if ((result = get_local_random(tcsContext, bytesRequested,
+						       &randomBytes)))
+				return result;
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 
@@ -648,18 +649,26 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 
 			/*  generate random data for asymfinish */
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext, bytesRequested,
-				       &randomBytes);
+			if ((result = get_local_random(tcsContext, bytesRequested,
+						       &randomBytes)))
+				return result;
+
 			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext, bytesRequested,
-				       &randomBytes);
+
+			if ((result = get_local_random(tcsContext, bytesRequested,
+						       &randomBytes)))
+				return result;
+
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
-			TCSP_GetRandom(tcsContext, bytesRequested,
-				       &randomBytes);
+
+			if ((result = get_local_random(tcsContext, bytesRequested,
+						       &randomBytes)))
+				return result;
+
 			memcpy(seed, randomBytes, 20);
 			free_tspi(tspContext, randomBytes);
 
@@ -961,7 +970,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
 				result = obj_policy_set_cb11(hObject, attribFlag,
-							     ulAttrib, subFlag);
+							     subFlag, ulAttrib);
 				break;
 			case TSS_TSPATTRIB_POLICY_SECRET_LIFETIME:
 				if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
