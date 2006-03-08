@@ -1,3 +1,7 @@
+- Fix for ordering of params in call to set callback by
+  Tspi_SetAttribUint32. Thanks to Thomas Winkler for the fix.
+- Fix for SF 1410948, get random numbers from /dev/urandom
+  unless Tspi_TPM_GetRandom is called explicitly.
 - Fix for SF 1342026, print TPM error codes during bring-up.
 - Added support for a TCS_LOADKEY_INFO structure returned from
  a TCSP_LoadKeyByUUID call.
