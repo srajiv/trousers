@@ -1078,7 +1078,6 @@ TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
     ) {
 	TSS_RESULT result;
 	struct host_table_entry *entry = get_table_entry(hContext);
-	TSS_HCONTEXT tspContext;
 
 	if (entry == NULL)
 		return TSPERR(TSS_E_NO_CONNECTION);
@@ -1087,17 +1086,6 @@ TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
 		result =
 		    TCSP_GetRandom_TP(entry, hContext,
 				      bytesRequested, randomBytes);
-
-		if (result) {
-			LogWarn("%s: TPM random generation failed. result=0x%x",
-					__FUNCTION__, result);
-			if ((tspContext = obj_lookupTspContext(hContext)) ==
-							NULL_HCONTEXT) {
-				LogError("TCS context not found: %x", hContext);
-				return TSPERR(TSS_E_INTERNAL_ERROR);
-			}
-			result = get_local_random(tspContext, bytesRequested, randomBytes);
-		}
 
 		return result;
 	}
