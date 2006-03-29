@@ -30,22 +30,10 @@ extern int foreground;
 		} \
         } while (0)
 
-#define LogMessage1(dest, priority, layer, data) \
-        do { \
-		if (foreground) { \
-			fprintf(dest, "%s %s:%d %s\n", layer, __FILE__, __LINE__, data); \
-		} else { \
-			openlog(layer, LOG_NDELAY|LOG_PID, TSS_SYSLOG_LVL); \
-			syslog(priority, "%s:%d %s", __FILE__, __LINE__, data); \
-		} \
-        } while (0)
-
 /* Debug logging */
 #ifdef TSS_DEBUG
 #define LogDebug(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, fmt, ##__VA_ARGS__)
-#define LogDebug1(data)		LogMessage1(stdout, LOG_DEBUG, APPID, data)
 #define LogDebugFn(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
-#define LogDebugFn1(data)	LogMessage(stdout, LOG_DEBUG, APPID, "%s: " data, __FUNCTION__)
 #define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
 #define LogDebugKey(k) \
 	do { \
@@ -68,9 +56,7 @@ extern int foreground;
 	} while (0)
 #else
 #define LogDebug(fmt, ...)
-#define LogDebug1(data)
 #define LogDebugFn(fmt, ...)
-#define LogDebugFn1(data)
 #define LogBlob(sz,blb)
 #define LogDebugKey(s)
 #define LogDebugUnrollKey(b)
@@ -78,15 +64,12 @@ extern int foreground;
 
 /* Error logging */
 #define LogError(fmt, ...)	LogMessage(stderr, LOG_ERR, APPID, "ERROR: " fmt, ##__VA_ARGS__)
-#define LogError1(data)		LogMessage1(stderr, LOG_ERR, APPID, "ERROR: " data)
 
 /* Warn logging */
 #define LogWarn(fmt, ...)	LogMessage(stdout, LOG_WARNING, APPID, "WARNING: " fmt, ##__VA_ARGS__)
-#define LogWarn1(data)		LogMessage1(stdout, LOG_WARNING, APPID, "WARNING: " data)
 
 /* Info Logging */
 #define LogInfo(fmt, ...)	LogMessage(stdout, LOG_INFO, APPID, fmt, ##__VA_ARGS__)
-#define LogInfo1(data)		LogMessage1(stdout, LOG_INFO, APPID, data)
 
 void LogBlobData(char *appid, unsigned long sizeOfBlob, unsigned char *blob);
 
