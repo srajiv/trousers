@@ -118,7 +118,7 @@ closeDiskCache(void)
 
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
-getPubBySlot(TCPA_KEY_HANDLE tpm_handle)
+mc_get_pub_by_slot(TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
 	TCPA_STORE_PUBKEY *ret;
@@ -140,7 +140,7 @@ getPubBySlot(TCPA_KEY_HANDLE tpm_handle)
 
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
-getPubByHandle(TCS_KEY_HANDLE tcs_handle)
+mc_get_pub_by_handle(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *tmp;
 	TCPA_STORE_PUBKEY *ret;
@@ -162,7 +162,7 @@ getPubByHandle(TCS_KEY_HANDLE tcs_handle)
 
 /* only called from load key paths, so no locking */
 TSS_RESULT
-setParentByHandle(TCS_KEY_HANDLE tcs_handle, TCS_KEY_HANDLE p_tcs_handle)
+mc_set_parent_by_handle(TCS_KEY_HANDLE tcs_handle, TCS_KEY_HANDLE p_tcs_handle)
 {
 	struct key_mem_cache *tmp, *parent;
 
@@ -201,11 +201,11 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 
 	pthread_mutex_lock(&mem_cache_lock);
 
-	*keySlot = getSlotByHandle(keyHandle);
+	*keySlot = mc_get_slot_by_handle(keyHandle);
 	LogDebug("keySlot is %08X", *keySlot);
 	if (*keySlot == NULL_TPM_HANDLE || isKeyLoaded(*keySlot) == FALSE) {
-		LogDebug1("calling getPubByHandle");
-		if ((myPub = getPubByHandle(keyHandle)) == NULL) {
+		LogDebug1("calling mc_get_pub_by_handle");
+		if ((myPub = mc_get_pub_by_handle(keyHandle)) == NULL) {
 			LogDebug1("Failed to find pub by handle");
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto done;
@@ -223,7 +223,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 			goto done;
 		}
 	}
-	refreshTimeStampBySlot(*keySlot);
+	mc_update_time_stamp(*keySlot);
 
 done:
 	pthread_mutex_unlock(&mem_cache_lock);
@@ -234,7 +234,7 @@ done:
 
 /* only called from load key paths, so no locking */
 TSS_UUID *
-getUuidByPub(TCPA_STORE_PUBKEY *pub)
+mc_get_uuid_by_pub(TCPA_STORE_PUBKEY *pub)
 {
 	TSS_UUID *ret;
 	struct key_mem_cache *tmp;
@@ -252,7 +252,7 @@ getUuidByPub(TCPA_STORE_PUBKEY *pub)
 }
 
 TSS_RESULT
-getHandlesByUUID(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slot)
+mc_get_handles_by_uuid(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slot)
 {
 	struct key_mem_cache *tmp;
 
@@ -266,14 +266,14 @@ getHandlesByUUID(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slo
 
 	return TCSERR(TSS_E_FAIL);
 }
-
+#if 0
 TSS_UUID *
-getUUIDByEncData(BYTE *encData)
+mc_get_uuid_by_encdata(BYTE *encData)
 {
 	struct key_mem_cache *tmp;
 	TSS_UUID *ret;
 
-	LogDebug1("getUUIDByEncData");
+	LogDebug1("mc_get_uuid_by_encdata");
 
 	pthread_mutex_lock(&mem_cache_lock);
 
@@ -292,9 +292,9 @@ getUUIDByEncData(BYTE *encData)
 	pthread_mutex_unlock(&mem_cache_lock);
 	return NULL;
 }
-
+#endif
 TCS_KEY_HANDLE
-getTCSKeyHandleByEncData(BYTE *encData)
+mc_get_handle_by_encdata(BYTE *encData)
 {
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
@@ -316,7 +316,7 @@ getTCSKeyHandleByEncData(BYTE *encData)
 }
 
 TSS_RESULT
-replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
+mc_update_encdata(BYTE *encData, BYTE *newEncData)
 {
 	struct key_mem_cache *tmp;
 	BYTE *tmp_enc_data;
@@ -346,10 +346,10 @@ replaceEncData_knowledge(BYTE *encData, BYTE *newEncData)
 	LogError1("Couldn't find requested encdata in mem cache");
 	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
-
+#if 0
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
-getPubByUuid(TSS_UUID *uuid)
+mc_get_pub_by_uuid(TSS_UUID *uuid)
 {
 	TCPA_STORE_PUBKEY *ret;
 	struct key_mem_cache *tmp;
@@ -365,15 +365,16 @@ getPubByUuid(TSS_UUID *uuid)
 	LogDebugFn1("returning NULL");
 	return NULL;
 }
+#endif
 
 /*
  * only called from load key paths and the init (single thread time) path,
  * so no locking
  */
 TSS_RESULT
-add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
-			TCPA_KEY_HANDLE tpm_handle,
-			TCPA_KEY *key_blob)
+mc_add_entry(TCS_KEY_HANDLE tcs_handle,
+	     TCPA_KEY_HANDLE tpm_handle,
+	     TCPA_KEY *key_blob)
 {
 	struct key_mem_cache *entry, *tmp;
 
@@ -468,7 +469,7 @@ add_mem_cache_entry(TCS_KEY_HANDLE tcs_handle,
 
 /* caller must lock the mem cache before calling! */
 TSS_RESULT
-remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
+mc_remove_entry(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *cur;
 
@@ -499,9 +500,9 @@ remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle)
  * entry from outside a load key path
  */
 TSS_RESULT
-add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
-			TCPA_KEY_HANDLE tpm_handle,
-			TCPA_KEY *key_blob)
+mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
+		 TCPA_KEY_HANDLE tpm_handle,
+		 TCPA_KEY *key_blob)
 {
 	struct key_mem_cache *entry, *tmp;
 
@@ -509,7 +510,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	pthread_mutex_lock(&mem_cache_lock);
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		if (tcs_handle == tmp->tcs_handle) {
-			remove_mem_cache_entry(tcs_handle);
+			mc_remove_entry(tcs_handle);
 		}
 	}
 	pthread_mutex_unlock(&mem_cache_lock);
@@ -590,7 +591,7 @@ add_mem_cache_entry_srk(TCS_KEY_HANDLE tcs_handle,
 
 /* only called from evict key paths, so no locking */
 TSS_RESULT
-setSlotBySlot(TCPA_KEY_HANDLE old_handle, TCPA_KEY_HANDLE new_handle)
+mc_set_slot_by_slot(TCPA_KEY_HANDLE old_handle, TCPA_KEY_HANDLE new_handle)
 {
 	struct key_mem_cache *tmp;
 
@@ -613,7 +614,7 @@ setSlotBySlot(TCPA_KEY_HANDLE old_handle, TCPA_KEY_HANDLE new_handle)
 
 /* only called from load key paths, so no locking */
 TSS_RESULT
-setSlotByHandle(TCS_KEY_HANDLE tcs_handle, TCPA_KEY_HANDLE tpm_handle)
+mc_set_slot_by_handle(TCS_KEY_HANDLE tcs_handle, TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
 
@@ -764,7 +765,7 @@ key_mgr_ref_count()
 
 /* only called from load key paths, so no locking */
 TCPA_KEY_HANDLE
-getSlotByHandle(TCS_KEY_HANDLE tcs_handle)
+mc_get_slot_by_handle(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
@@ -783,7 +784,7 @@ getSlotByHandle(TCS_KEY_HANDLE tcs_handle)
 
 /* called from functions outside the load key path */
 TCPA_KEY_HANDLE
-getSlotByHandle_lock(TCS_KEY_HANDLE tcs_handle)
+mc_get_slot_by_handle_lock(TCS_KEY_HANDLE tcs_handle)
 {
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
@@ -806,7 +807,7 @@ getSlotByHandle_lock(TCS_KEY_HANDLE tcs_handle)
 
 /* only called from load key paths, so no locking */
 TCPA_KEY_HANDLE
-getSlotByPub(TCPA_STORE_PUBKEY *pub)
+mc_get_slot_by_pub(TCPA_STORE_PUBKEY *pub)
 {
 	struct key_mem_cache *tmp;
 	TCPA_KEY_HANDLE ret;
@@ -825,7 +826,7 @@ getSlotByPub(TCPA_STORE_PUBKEY *pub)
 
 /* only called from load key paths, so no locking */
 TCS_KEY_HANDLE
-getTCSKeyHandleByPub(TCPA_STORE_PUBKEY *pub)
+mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub)
 {
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
@@ -844,7 +845,7 @@ getTCSKeyHandleByPub(TCPA_STORE_PUBKEY *pub)
 
 /* only called from load key paths, so no locking */
 TCPA_STORE_PUBKEY *
-getParentPubByPub(TCPA_STORE_PUBKEY *pub)
+mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 {
 	struct key_mem_cache *tmp;
 	TCPA_STORE_PUBKEY *ret = NULL;
@@ -899,7 +900,7 @@ isKeyRegistered(TCPA_STORE_PUBKEY *pub)
 
 /* only called from load key paths, so no locking */
 TSS_RESULT
-getBlobByPub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
+mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 {
 	struct key_mem_cache *tmp;
 
@@ -914,10 +915,10 @@ getBlobByPub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 	LogDebugFn1("returning TSS_E_FAIL");
 	return TCSERR(TSS_E_FAIL);
 }
-
+#if 0
 /* only called from load key paths, so no locking */
 TCS_KEY_HANDLE
-getAnyHandleBySlot(TCPA_KEY_HANDLE tpm_handle)
+mc_get_handle_by_slot(TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
@@ -932,10 +933,10 @@ getAnyHandleBySlot(TCPA_KEY_HANDLE tpm_handle)
 
 	return NULL_TCS_HANDLE;
 }
-
+#endif
 /* only called from load key paths, so no locking */
 TSS_RESULT
-refreshTimeStampBySlot(TCPA_KEY_HANDLE tpm_handle)
+mc_update_time_stamp(TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
 	TSS_RESULT ret = TCSERR(TSS_E_FAIL);
@@ -981,7 +982,7 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 			return result;
 
 		LogDebugFn("Evicted key w/ TPM handle 0x%x", tpm_handle_to_evict);
-		result = setSlotBySlot(tpm_handle_to_evict, NULL_TPM_HANDLE);
+		result = mc_set_slot_by_slot(tpm_handle_to_evict, NULL_TPM_HANDLE);
 	} else
 		return TSS_SUCCESS;
 
@@ -1251,7 +1252,7 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 
 not_loaded:
 	LogDebugFn1("Key is not loaded, changing slot");
-	setSlotBySlot(keySlot, NULL_TPM_HANDLE);
+	mc_set_slot_by_slot(keySlot, NULL_TPM_HANDLE);
 	return FALSE;
 }
 
@@ -1272,10 +1273,10 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	TCS_KEY_HANDLE parentHandle;
 	BYTE keyBlob[1024];
 
-	LogDebugFn1("calling getSlotByPub");
+	LogDebugFn1("calling mc_get_slot_by_pub");
 
 	/* If I'm loaded, then no point being here.  Get the slot and return */
-	keySlot = getSlotByPub(pubKey);
+	keySlot = mc_get_slot_by_pub(pubKey);
 	if (keySlot != NULL_TPM_HANDLE && isKeyLoaded(keySlot)) {
 		*slotOut = keySlot;
 		return TCPA_SUCCESS;
@@ -1288,9 +1289,9 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	 * to load it based on the persistent store.
 	 */
 
-	LogDebugFn1("calling getParentPubByPub");
+	LogDebugFn1("calling mc_get_parent_pub_by_pub");
 	/* Check if the Key is in the memory cache */
-	if ((parentPub = getParentPubByPub(pubKey)) == NULL) {
+	if ((parentPub = mc_get_parent_pub_by_pub(pubKey)) == NULL) {
 		LogDebugFn1("parentPub is NULL");
 		/* If parentUUID is not handed in, then this key was never
 		 * loaded and isn't reg'd */
@@ -1316,11 +1317,11 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	 */
 
 	/* check the mem cache */
-	if (getBlobByPub(pubKey, &myKey) == 0) {
-		parentPub = getPubBySlot(parentSlot);
+	if (mc_get_blob_by_pub(pubKey, &myKey) == 0) {
+		parentPub = mc_get_pub_by_slot(parentSlot);
 		if (parentPub == NULL)
 			return TCSERR(TCS_E_KM_LOADFAILED);
-		parentHandle = getTCSKeyHandleByPub(parentPub);
+		parentHandle = mc_get_handle_by_pub(parentPub);
 		if (parentHandle == 0)
 			return TCSERR(TCS_E_KM_LOADFAILED);
 
@@ -1338,7 +1339,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 		/* check registered */
 		if (isPubRegistered(pubKey) == FALSE)
 			return TCSERR(TCS_E_KM_LOADFAILED);
-		KeyUUID = getUuidByPub(pubKey);
+		KeyUUID = mc_get_uuid_by_pub(pubKey);
 		if ((result = TCSP_LoadKeyByUUID_Internal
 					(hContext,	/* in */
 					 KeyUUID,	/* in */
@@ -1348,7 +1349,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 			return result;
 		}
 		free(KeyUUID);
-		*slotOut = getSlotByHandle(tcsKeyHandle);
+		*slotOut = mc_get_slot_by_handle(tcsKeyHandle);
 	}
 
 	return ctx_mark_key_loaded(hContext, tcsKeyHandle);

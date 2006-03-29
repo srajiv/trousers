@@ -394,10 +394,10 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* Check the mem cache to see if there is a TPM handle associated with the
 	 * parent's TCS handle */
-	LogDebugFn1("calling getSlotByHandle");
-	if ((parentKeySlot = getSlotByHandle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
-		LogDebugFn1("calling getPubBySlot");
-		parentPubKey = getPubBySlot(hUnwrappingKey);
+	LogDebugFn1("calling mc_get_slot_by_handle");
+	if ((parentKeySlot = mc_get_slot_by_handle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
+		LogDebugFn1("calling mc_get_pub_by_slot");
+		parentPubKey = mc_get_pub_by_slot(hUnwrappingKey);
 		if (parentPubKey == NULL) {
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto error;
@@ -417,11 +417,11 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LogDebugFn1("Checking if LoadKeyByBlob can be avoided by using"
 			    " existing key");
 
-		myTcsKeyHandle = getTCSKeyHandleByPub(&key.pubKey);
+		myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey);
 		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
 			LogDebugFn1("tcs key handle exists");
 
-			myKeySlot = getSlotByHandle(myTcsKeyHandle);
+			myKeySlot = mc_get_slot_by_handle(myTcsKeyHandle);
 			if (myKeySlot != NULL_TPM_HANDLE && isKeyLoaded(myKeySlot) == TRUE) {
 				needToSendPacket = FALSE;
 				LogDebugFn1("Don't need to reload this key.");
@@ -495,9 +495,9 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *	If it exists, then just register the new keySlot with that existing handle
 	 *****************************************/
 
-	LogDebugFn1("calling getTCSKeyHandleByPub");
+	LogDebugFn1("calling mc_get_handle_by_pub");
 add_cache_entry:
-	if ((myTcsKeyHandle = getTCSKeyHandleByPub(&(key.pubKey))) == NULL_TCS_HANDLE) {
+	if ((myTcsKeyHandle = mc_get_handle_by_pub(&(key.pubKey))) == NULL_TCS_HANDLE) {
 		LogDebugFn1("No existing key handle for this key, need to create a new one");
 		/* Get a new TCS Key Handle */
 		myTcsKeyHandle = getNextTcsKeyHandle();
@@ -511,9 +511,9 @@ add_cache_entry:
 				goto done;
 		}
 #endif
-		LogDebugFn("calling add_mem_cache_entry, TCS handle: 0x%x,"
+		LogDebugFn("calling mc_add_entry, TCS handle: 0x%x,"
 			 " TPM handle 0x%x", myTcsKeyHandle, myKeySlot);
-		if ((result = add_mem_cache_entry(myTcsKeyHandle, myKeySlot, &key)))
+		if ((result = mc_add_entry(myTcsKeyHandle, myKeySlot, &key)))
 			goto error;
 
 		LogDebugFn1("ctx_mark_key_loaded");
@@ -523,12 +523,12 @@ add_cache_entry:
 			goto error;
 		}
 
-		if ((result = setParentByHandle(myTcsKeyHandle, hUnwrappingKey))) {
+		if ((result = mc_set_parent_by_handle(myTcsKeyHandle, hUnwrappingKey))) {
 			LogError1("setParentBlobByHandle failed.");
 			goto error;
 		}
 	} else
-		setSlotByHandle(myTcsKeyHandle, myKeySlot);
+		mc_set_slot_by_handle(myTcsKeyHandle, myKeySlot);
 
 	result = TSS_SUCCESS;
 
@@ -572,7 +572,8 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (getRegisteredKeyByUUID(&pLoadKeyInfo->keyUUID, keyBlob, &blobSize))
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
-		if (getHandlesByUUID(&pLoadKeyInfo->parentKeyUUID, &parentTCSKeyHandle, &keyslot))
+		if (mc_get_handles_by_uuid(&pLoadKeyInfo->parentKeyUUID, &parentTCSKeyHandle,
+					   &keyslot))
 			return TCSERR(TCS_E_KM_LOADFAILED);
 
 		return TCSP_LoadKeyByBlob_Internal(hContext, parentTCSKeyHandle,
@@ -582,7 +583,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	/* if KeyUUID is already loaded, increment the ref count and return */
-	if (getHandlesByUUID(KeyUUID, phKeyTCSI, &keyslot) == TSS_SUCCESS) {
+	if (mc_get_handles_by_uuid(KeyUUID, phKeyTCSI, &keyslot) == TSS_SUCCESS) {
 		if (keyslot) {
 			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
 				LogError1("Error marking key as loaded");
@@ -654,14 +655,14 @@ TCSP_EvictKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	tpm_handle = getSlotByHandle(hKey);
+	tpm_handle = mc_get_slot_by_handle(hKey);
 	if (tpm_handle == NULL_TPM_HANDLE)
 		return TSS_SUCCESS;	/*let's call this success if the key is already evicted */
 
 	if ((result = internal_EvictByKeySlot(tpm_handle)))
 		return result;
 
-	result = setSlotBySlot(tpm_handle, NULL_TPM_HANDLE);
+	result = mc_set_slot_by_slot(tpm_handle, NULL_TPM_HANDLE);
 
 	return result;
 }
@@ -694,8 +695,8 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	/* Since hWrappingKey must already be loaded, we can fail immediately if
-	 * getSlotByHandle() fails.*/
-	parentSlot = getSlotByHandle_lock(hWrappingKey);
+	 * mc_get_slot_by_handle_lock() fails.*/
+	parentSlot = mc_get_slot_by_handle_lock(hWrappingKey);
 	if (parentSlot == NULL_TPM_HANDLE) {
 		result = TCSERR(TSS_E_FAIL);
 		goto done;

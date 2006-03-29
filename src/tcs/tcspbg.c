@@ -148,7 +148,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogError1("Error writing SRK to disk");
 			goto done;
 		}
-		result = add_mem_cache_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
+		result = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TSS_SUCCESS)
 			LogError1("Error creating SRK mem cache entry");
 	}
@@ -327,18 +327,18 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 #if 0
 			/*---	Check PS */
 			LogDebug1("Checking PS");
-			uuidKeyToEvict = getUUIDByEncData(encData);
+			uuidKeyToEvict = mc_get_uuid_by_encdata(encData);
 			if (uuidKeyToEvict != NULL) {
 				LogDebug1("UUID is not NULL, replace storage");
 				replaceEncData_PS(*uuidKeyToEvict, encData, *outData);
 			}
 #endif
-			tcsKeyHandleToEvict = getTCSKeyHandleByEncData(encData); /*    always 2K for keys */
+			tcsKeyHandleToEvict = mc_get_handle_by_encdata(encData);
 			LogDebug("tcsKeyHandle being evicted is %.8X", tcsKeyHandleToEvict);
 			/*---	If it was found in knowledge, replace it */
 			if (tcsKeyHandleToEvict != 0) {
 				key_mgr_evict(contextHandle, tcsKeyHandleToEvict);
-				replaceEncData_knowledge(encData, *outData);
+				mc_update_encdata(encData, *outData);
 			}
 
 		}
@@ -611,10 +611,10 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (entityType == TCPA_ET_KEYHANDLE ||
 		    entityType == TCPA_ET_KEY) {
 			/*---	Compare the EncData against the TCS tables */
-			tcsKeyHandleToEvict = getTCSKeyHandleByEncData(encDataIn);	/*  always 2K for keys */
+			tcsKeyHandleToEvict = mc_get_handle_by_encdata(encDataIn);
 #if 0
 			/*---	Check PS */
-			uuidKeyToEvict = getUUIDByEncData(encDataIn);
+			uuidKeyToEvict = mc_get_uuid_by_encdata(encDataIn);
 			if (uuidKeyToEvict != NULL) {
 				replaceEncData_PS(*uuidKeyToEvict,
 						  encDataIn, *encDataOut);
@@ -623,7 +623,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			/*---	If it was found in knowledge, replace it */
 			if (tcsKeyHandleToEvict != 0) {
 				key_mgr_evict(hContext, tcsKeyHandleToEvict);
-				replaceEncData_knowledge(encDataIn, *encDataOut);
+				mc_update_encdata(encDataIn, *encDataOut);
 			}
 		}
 	}
@@ -2737,7 +2737,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 		}
 	} else {
-		keySlot = getSlotByHandle_lock(keyHandle);
+		keySlot = mc_get_slot_by_handle_lock(keyHandle);
 		if (keySlot == NULL_TPM_HANDLE)
 			return TCSERR(TSS_E_FAIL);
 		LogDebug1("No Auth");

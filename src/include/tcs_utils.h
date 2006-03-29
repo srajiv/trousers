@@ -95,38 +95,35 @@ extern TCS_CONTEXT_HANDLE InternalContext;
 
 void initKeyFile(TCS_CONTEXT_HANDLE hContext);
 //TSS_RESULT initCache();
-TSS_RESULT refreshTimeStampBySlot(TCPA_KEY_HANDLE keySlot);
+TSS_RESULT mc_update_time_stamp(TCPA_KEY_HANDLE);
 TCS_KEY_HANDLE getNextTcsKeyHandle();
 TCPA_STORE_PUBKEY *getParentPubBySlot(TCPA_KEY_HANDLE slot);
-TCPA_STORE_PUBKEY *getPubBySlot(TCPA_KEY_HANDLE slot);
-TCPA_STORE_PUBKEY *getPubByHandle(TCS_KEY_HANDLE tcsKeyHandle);
-TSS_UUID *getUuidByPub(TCPA_STORE_PUBKEY *pub);
-TSS_RESULT getHandlesByUUID(TSS_UUID *uuid, TCS_KEY_HANDLE *tcsHandle, TCPA_KEY_HANDLE *slot);
-TSS_UUID *getUUIDByEncData(BYTE *encData);
-TCS_KEY_HANDLE getTCSKeyHandleByEncData(BYTE *encData);
+TCPA_STORE_PUBKEY *mc_get_pub_by_slot(TCPA_KEY_HANDLE);
+TCPA_STORE_PUBKEY *mc_get_pub_by_handle(TCS_KEY_HANDLE);
+TSS_UUID *mc_get_uuid_by_pub(TCPA_STORE_PUBKEY *);
+TSS_RESULT mc_get_handles_by_uuid(TSS_UUID *, TCS_KEY_HANDLE *, TCPA_KEY_HANDLE *);
+//TSS_UUID *mc_get_uuid_by_encdata(BYTE *);
+TCS_KEY_HANDLE mc_get_handle_by_encdata(BYTE *);
+TSS_RESULT mc_update_encdata(BYTE *, BYTE *);
+
 TSS_RESULT initDiskCache(void);
 void closeDiskCache(void);
+void replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
 
-TSS_RESULT
-replaceEncData_knowledge(BYTE *encData, BYTE *newEncData);
-
-void
-replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
-
-TCPA_STORE_PUBKEY *getPubByUuid(TSS_UUID *);
-TSS_RESULT add_mem_cache_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
-TSS_RESULT add_mem_cache_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
-TSS_RESULT remove_mem_cache_entry(TCS_KEY_HANDLE tcs_handle);
-TSS_RESULT setSlotBySlot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
-TSS_RESULT setSlotByHandle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
-TCPA_KEY_HANDLE getSlotByHandle(TCS_KEY_HANDLE);
-TCPA_KEY_HANDLE getSlotByHandle_lock(TCS_KEY_HANDLE);
-TCPA_KEY_HANDLE getSlotByPub(TCPA_STORE_PUBKEY *);
-TCS_KEY_HANDLE getTCSKeyHandleByPub(TCPA_STORE_PUBKEY *);
-TCPA_STORE_PUBKEY *getParentPubByPub(TCPA_STORE_PUBKEY *);
+//TCPA_STORE_PUBKEY *mc_get_pub_by_uuid(TSS_UUID *);
+TSS_RESULT mc_add_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
+TSS_RESULT mc_add_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
+TSS_RESULT mc_remove_entry(TCS_KEY_HANDLE);
+TSS_RESULT mc_set_slot_by_slot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
+TSS_RESULT mc_set_slot_by_handle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
+TCPA_KEY_HANDLE mc_get_slot_by_handle(TCS_KEY_HANDLE);
+TCPA_KEY_HANDLE mc_get_slot_by_handle_lock(TCS_KEY_HANDLE);
+TCPA_KEY_HANDLE mc_get_slot_by_pub(TCPA_STORE_PUBKEY *);
+TCS_KEY_HANDLE mc_get_handle_by_pub(TCPA_STORE_PUBKEY *);
+TCPA_STORE_PUBKEY *mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *);
 TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
-TSS_RESULT getBlobByPub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
-TCS_KEY_HANDLE getAnyHandleBySlot(TCPA_KEY_HANDLE);
+TSS_RESULT mc_get_blob_by_pub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
+//TCS_KEY_HANDLE mc_get_handle_by_slot(TCPA_KEY_HANDLE);
 TSS_RESULT evictFirstKey(TCS_KEY_HANDLE);
 TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT removeRegisteredKeyFromFile(TSS_UUID *);
@@ -138,7 +135,7 @@ TSS_BOOL isKeyLoaded(TCPA_KEY_HANDLE);
 TSS_RESULT LoadKeyShim(TCS_CONTEXT_HANDLE, TCPA_STORE_PUBKEY *, TSS_UUID *,TCPA_KEY_HANDLE *);
 TSS_RESULT writeRegisteredKeyToFile(TSS_UUID *, TSS_UUID *, BYTE *, UINT32, BYTE *, UINT32);
 TSS_BOOL isKeyInMemCache(TCS_KEY_HANDLE);
-TSS_RESULT setParentByHandle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
+TSS_RESULT mc_set_parent_by_handle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
 TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
 TSS_RESULT destroyKeyFile(void);
 void destroy_key_refs(TCPA_KEY *);
