@@ -27,15 +27,17 @@ state using cryptographic hashes and more.
 %package	devel
 Summary:	TrouSerS header files and documentation
 Group:		Productivity/Security
-Requires:	trousers >= 0.2.0
+Requires:	trousers
 
 %description	devel
-Header files and man pages for use in creating TSS enabled applications.
+Header files and man pages for use in creating Trusted Computing enabled
+applications.
 
 %prep
 %setup
 
 %build
+./configure --prefix=/usr --libdir=%{_libdir}
 make
 
 %clean
@@ -67,10 +69,10 @@ make
 
 %post
 # create the default location for the persistent store files
-if test -e @localstatedir@/tpm; then
-	mkdir -p @localstatedir@/tpm
-	/bin/chown tss:tss @localstatedir@/tpm
-	/bin/chmod 1777 @localstatedir@/tpm
+if test -e %{_localstatedir}/tpm; then
+	mkdir -p %{_localstatedir}/tpm
+	/bin/chown tss:tss %{_localstatedir}/tpm
+	/bin/chmod 1777 %{_localstatedir}/tpm
 fi
 
 # chown the daemon
@@ -91,11 +93,10 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 
 # The files for the base package, 'trousers'
 %files
-%doc TODO README NICETOHAVES AUTHORS
+%doc README AUTHORS
 %attr(755, tss, tss) %{_sbindir}/tcsd
 %{_libdir}/libtspi.la
-%{_libdir}/libtspi.so
-%{_libdir}/libtspi.so.0.0.2
+%{_libdir}/libtspi.so*
 %{_libdir}/libtddl.a
 %config %attr(600, tss, tss) %{_sysconfdir}/tcsd.conf
 %{_mandir}/man5/*
