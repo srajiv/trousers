@@ -68,7 +68,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
-			LogError1("Failed to create random nonce");
+			LogError("Failed to create random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
@@ -86,7 +86,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hash.digest);
 
 		if (memcmp(hash.digest, digest.digest, TCPA_SHA1_160_HASH_LEN)) {
-			LogError1("Internal verification failed");
+			LogError("Internal verification failed");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
@@ -191,7 +191,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	} else {
 		if (pValidationData == NULL) {
 			if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
-				LogDebug1("Failed to generate random nonce");
+				LogDebug("Failed to generate random nonce");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else
@@ -386,7 +386,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	/* ---  Now that it's all happy, stuff the keyBlob into the object */
 	/* ---  If atmel, need to adjust the authDataUsage if it changed */
 	if (oldAuthDataUsage != newSrkBlob[10]) {	/* hardcoded blob stuff */
-		LogDebug1("auth data usage changed. Atmel bug. Fixing in key object");
+		LogDebug("auth data usage changed. Atmel bug. Fixing in key object");
 		newSrkBlob[10] = oldAuthDataUsage;	/* this will fix it  */
 	}
 
@@ -816,7 +816,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		if ((result = obj_policy_validate_auth_oiap(hIDPolicy, &digest,
 							    &idKeyAuth))) {
 			/* XXX For some reason, this always fails. */
-			LogDebugFn1("Identity key auth validation of the "
+			LogDebugFn("Identity key auth validation of the "
 				    "symmetric key failed.");
 		}
 	}
@@ -824,7 +824,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_policy_validate_auth_oiap(hTPMPolicy, &digest,
 						    &ownerAuth))) {
 		/* XXX For some reason, this always fails. */
-		LogDebugFn1("Owner auth validation of the symmetric key "
+		LogDebugFn("Owner auth validation of the symmetric key "
 			    "failed.");
 	}
 
@@ -1239,14 +1239,14 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
-			LogError1("Failed creating random nonce");
+			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
 		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
 
 	if (useAuth) {
-		LogDebug1("Uses Auth");
+		LogDebug("Uses Auth");
 
 		/* ===  now setup the auth's */
 		hashBlob = malloc(sizeof(UINT32) + sizeof(TCPA_NONCE));
@@ -1267,7 +1267,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			return result;
 		pKeyAuth = &keyAuth;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 		pKeyAuth = NULL;
 	}
 
@@ -1301,7 +1301,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 	if (verifyInternally) {
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
-			LogError1("Failed call to GetAttribData to get key blob");
+			LogError("Failed call to GetAttribData to get key blob");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
@@ -1586,7 +1586,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
-			LogError1("Failed creating random nonce");
+			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
@@ -1651,7 +1651,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 			free(sig);
-			LogError1("Failed call to GetAttribData to get key blob");
+			LogError("Failed call to GetAttribData to get key blob");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 

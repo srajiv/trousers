@@ -513,7 +513,7 @@ ps_write_key(int fd,
 
 #ifdef TSS_DEBUG
 	if (offset == 0)
-		LogDebug1("ERROR: key being written with offset 0!!");
+		LogDebug("ERROR: key being written with offset 0!!");
 #endif
 
 	/* [TSS_UUID uuid0           ] yes */

@@ -317,7 +317,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 				conf->system_ps_dir = strdup(tmp_ptr);
 
 			if (conf->system_ps_dir == NULL) {
-				LogError1("malloc failed.");
+				LogError("malloc failed.");
 				free(tmp_ptr);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}

@@ -1107,7 +1107,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 	}
 
 	if ((tmplen = hacky_strlen(nl_langinfo(CODESET), string)) == 0) {
-		LogDebug1("hacky_strlen returned 0");
+		LogDebug("hacky_strlen returned 0");
 		goto alloc_string;
 	}
 
@@ -1123,7 +1123,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 	} while (rc == (size_t)-1 && errno == E2BIG);
 
 	if (len > MAX_BUF_SIZE) {
-		LogDebug1("string too long.");
+		LogDebug("string too long.");
 		iconv_close(cd);
 		return NULL;
 	}
@@ -1168,7 +1168,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 	}
 
 	if ((tmplen = hacky_strlen("UTF-16", string)) == 0) {
-		LogDebug1("hacky_strlen returned 0");
+		LogDebug("hacky_strlen returned 0");
 		return 0;
 	}
 
@@ -1186,7 +1186,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 	/* add terminating bytes of the correct width */
 	len += char_width(nl_langinfo(CODESET));
 	if (len > MAX_BUF_SIZE) {
-		LogDebug1("string too long.");
+		LogDebug("string too long.");
 		iconv_close(cd);
 		return NULL;
 	}

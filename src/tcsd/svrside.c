@@ -58,10 +58,10 @@ tcsd_signal_int(int signal)
 {
 	switch (signal) {
 		case SIGINT:
-			LogInfo1("Caught SIGINT. Cleaning up and exiting.");
+			LogInfo("Caught SIGINT. Cleaning up and exiting.");
 			break;
 		case SIGHUP:
-			LogInfo1("Caught SIGHUP. Cleaning up and exiting.");
+			LogInfo("Caught SIGHUP. Cleaning up and exiting.");
 			break;
 		default:
 			LogError("Caught signal %d (which I didn't register for!)."

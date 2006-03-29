@@ -130,7 +130,7 @@ freeEntry(struct memTable *table, void *pointer)
 		}
 
 	}
-	LogError1("Internal error: pointer to allocated memory not found.");
+	LogError("Internal error: pointer to allocated memory not found.");
 	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 

@@ -37,29 +37,29 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	TSS_BOOL is_reg;
 
-	LogDebug1("TCS_RegisterKey");
+	LogDebug("TCS_RegisterKey");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
 	/*---	Check if parent is registered here */
 	if (isUUIDRegistered(WrappingKeyUUID, &is_reg) != TSS_SUCCESS) {
-		LogDebug1("Parent not found");
+		LogDebug("Parent not found");
 		return TCSERR(TSS_E_FAIL);
 	}
 
 	if (is_reg == FALSE) {
-		LogDebug1("Wrapping UUID is not registered");
+		LogDebug("Wrapping UUID is not registered");
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	}
 
 	/*---	Check if key is already regisitered */
 	if (isUUIDRegistered(KeyUUID, &is_reg) != TSS_SUCCESS) {
-		LogError1("Failed checking if UUID is registered.");
+		LogError("Failed checking if UUID is registered.");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if (is_reg == TRUE) {
-		LogDebug1("UUID is already registered");
+		LogDebug("UUID is already registered");
 		return TCSERR(TSS_E_KEY_ALREADY_REGISTERED);
 	}
 
@@ -69,11 +69,11 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID,
 						gbVendorData, cVendorData,
 						rgbKey, cKeySize))) {
-		LogError1("Error writing key to file");
+		LogError("Error writing key to file");
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	LogDebug1("Leaving TCS_RegisterKey");
+	LogDebug("Leaving TCS_RegisterKey");
 	return TSS_SUCCESS;
 }
 
@@ -105,7 +105,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 	struct key_mem_cache *mem_ptr;
 	TSS_BOOL is_reg = FALSE;
 
-	LogDebug1("Enum Reg Keys");
+	LogDebug("Enum Reg Keys");
 
 	if (pcKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
 		return TCSERR(TSS_E_BAD_PARAMETER);
@@ -362,18 +362,18 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_BOOL needToSendPacket = TRUE, canLoad;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebugFn1("Enter");
+	LogDebugFn("Enter");
 	LogDebugUnrollKey(rgbWrappedKeyBlob);
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
 	if (pAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
 			return result;
 	} else {
-		LogDebug1("No Auth Used");
+		LogDebug("No Auth Used");
 	}
 
 	offset = 0;
@@ -394,15 +394,15 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* Check the mem cache to see if there is a TPM handle associated with the
 	 * parent's TCS handle */
-	LogDebugFn1("calling mc_get_slot_by_handle");
+	LogDebugFn("calling mc_get_slot_by_handle");
 	if ((parentKeySlot = mc_get_slot_by_handle(hUnwrappingKey)) == NULL_TPM_HANDLE) {
-		LogDebugFn1("calling mc_get_pub_by_slot");
+		LogDebugFn("calling mc_get_pub_by_slot");
 		parentPubKey = mc_get_pub_by_slot(hUnwrappingKey);
 		if (parentPubKey == NULL) {
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto error;
 		}
-		LogDebugFn1("calling LoadKeyShim");
+		LogDebugFn("calling LoadKeyShim");
 		/* Otherwise, try to load it using the shim */
 		if ((result = LoadKeyShim(hContext, parentPubKey, NULL, &parentKeySlot)))
 			goto error;
@@ -414,17 +414,17 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/*---	If it's an authorized load, then assume that we brute-force load it every time */
 	if (pAuth == NULL) {
-		LogDebugFn1("Checking if LoadKeyByBlob can be avoided by using"
+		LogDebugFn("Checking if LoadKeyByBlob can be avoided by using"
 			    " existing key");
 
 		myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey);
 		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
-			LogDebugFn1("tcs key handle exists");
+			LogDebugFn("tcs key handle exists");
 
 			myKeySlot = mc_get_slot_by_handle(myTcsKeyHandle);
 			if (myKeySlot != NULL_TPM_HANDLE && isKeyLoaded(myKeySlot) == TRUE) {
 				needToSendPacket = FALSE;
-				LogDebugFn1("Don't need to reload this key.");
+				LogDebugFn("Don't need to reload this key.");
 				result = TSS_SUCCESS;
 				goto add_cache_entry;
 			}
@@ -435,22 +435,22 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *Now we just have to check if there is enough room in the chip.
 	 *********************************************/
 
-	LogDebugFn1("calling canILoadThisKey");
+	LogDebugFn("calling canILoadThisKey");
 	if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 		goto error;
 
 	while (canLoad == FALSE) {
-		LogDebugFn1("calling evictFirstKey");
+		LogDebugFn("calling evictFirstKey");
 		/* Evict a key that isn't the parent */
 		if ((result = evictFirstKey(hUnwrappingKey)))
 			goto error;
 
-		LogDebugFn1("calling canILoadThisKey");
+		LogDebugFn("calling canILoadThisKey");
 		if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 			goto error;
 	}
 
-	LogDebugFn1("Entering LoadKey by blob");
+	LogDebugFn("Entering LoadKey by blob");
 
 	/****************************************
 	 *	Now the parent is loaded and all of the info is ready.
@@ -468,12 +468,12 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
 
 	LogDebugUnrollKey(rgbWrappedKeyBlob);
-	LogDebugFn1("Submitting request to the TPM");
+	LogDebugFn("Submitting request to the TPM");
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto error;
 
 	if (needToSendPacket == TRUE) {
-		LogDebugFn1("calling UnloadBlob_Header");
+		LogDebugFn("calling UnloadBlob_Header");
 		if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
 			LogDebugFn("UnloadBlob_Header failed: rc=%u", result);
 			goto error;
@@ -495,10 +495,10 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *	If it exists, then just register the new keySlot with that existing handle
 	 *****************************************/
 
-	LogDebugFn1("calling mc_get_handle_by_pub");
+	LogDebugFn("calling mc_get_handle_by_pub");
 add_cache_entry:
 	if ((myTcsKeyHandle = mc_get_handle_by_pub(&(key.pubKey))) == NULL_TCS_HANDLE) {
-		LogDebugFn1("No existing key handle for this key, need to create a new one");
+		LogDebugFn("No existing key handle for this key, need to create a new one");
 		/* Get a new TCS Key Handle */
 		myTcsKeyHandle = getNextTcsKeyHandle();
 		/* if it was an authorized load, then we can't make complete knowledge about it */
@@ -516,15 +516,15 @@ add_cache_entry:
 		if ((result = mc_add_entry(myTcsKeyHandle, myKeySlot, &key)))
 			goto error;
 
-		LogDebugFn1("ctx_mark_key_loaded");
+		LogDebugFn("ctx_mark_key_loaded");
 		if (ctx_mark_key_loaded(hContext, myTcsKeyHandle)) {
-			LogError1("Error marking key as loaded");
+			LogError("Error marking key as loaded");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto error;
 		}
 
 		if ((result = mc_set_parent_by_handle(myTcsKeyHandle, hUnwrappingKey))) {
-			LogError1("setParentBlobByHandle failed.");
+			LogError("setParentBlobByHandle failed.");
 			goto error;
 		}
 	} else
@@ -586,7 +586,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (mc_get_handles_by_uuid(KeyUUID, phKeyTCSI, &keyslot) == TSS_SUCCESS) {
 		if (keyslot) {
 			if (ctx_mark_key_loaded(hContext, *phKeyTCSI)) {
-				LogError1("Error marking key as loaded");
+				LogError("Error marking key as loaded");
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			return TSS_SUCCESS;
@@ -597,13 +597,13 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *		that we get it all from either the keyfile or the keyCache
 	 *		also, it's important to return if the key is already loaded
 	 ***********************************************************************/
-	LogDebugFn1("calling getRegisteredKeyByUUID");
+	LogDebugFn("calling getRegisteredKeyByUUID");
 	if (getRegisteredKeyByUUID(KeyUUID, keyBlob, &blobSize))
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	/* convert UINT16 to UIN32 */
 	keySize = blobSize;
 
-	LogDebugFn1("calling getParentUUIDByUUID");
+	LogDebugFn("calling getParentUUIDByUUID");
 	/*---	Get my parent's UUID.  Since My key is registered, my parent should be as well. */
 	if ((result = getParentUUIDByUUID(KeyUUID, &parentUuid)))
 		return TCSERR(TCS_E_KM_LOADFAILED);
@@ -612,7 +612,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  pLoadKeyInfo, &parentTCSKeyHandle)))
 		return result;
 
-	LogDebugFn1("calling TCSP_LoadKeyByBlob_Internal");
+	LogDebugFn("calling TCSP_LoadKeyByBlob_Internal");
 	/*******************************************************
 	 * If no errors have happend up till now, then the parent is loaded and ready for use.
 	 * The parent's TCS Handle should be in parentTCSKeyHandle.
@@ -686,7 +686,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE parentSlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Create Wrap Key");
+	LogDebug("Entering Create Wrap Key");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -762,16 +762,16 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Get pub key");
+	LogDebug("Entering Get pub key");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (pAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
@@ -812,17 +812,17 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 #if 0
 		if (keySlot == SRK_TPM_HANDLE) {
 			/*---	If it's the SRK, make sure the key storage isn't stale */
-			LogDebug1("Checking SRK in storage");
+			LogDebug("Checking SRK in storage");
 			srkKeySize = sizeof (srkKeyBlob);
 			rc = getRegisteredKeyByUUID(&SRK_UUID, srkKeyBlob, &srkKeySize);
 			if (rc) {
-				LogDebug1("SRK isn't in storage, setting it.  Have to guess at some parms");
+				LogDebug("SRK isn't in storage, setting it.  Have to guess at some parms");
 				memset(&srkKey, 0x00, sizeof (TCPA_KEY));
 
 				srkKey.pubKey.keyLength = 0x100;
 				srkKey.pubKey.key = malloc(0x100);
 				if (srkKey.pubKey.key == NULL) {
-					LogError1("Malloc Failure.");
+					LogError("Malloc Failure.");
 					return TCSERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(srkKey.pubKey.key, pubContainer.pubKey.key, 0x100);
@@ -831,7 +831,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				srkKey.algorithmParms.parmSize = pubContainer.algorithmParms.parmSize;
 				srkKey.algorithmParms.parms = malloc(pubContainer.algorithmParms.parmSize);
 				if (srkKey.algorithmParms.parms == NULL) {
-					LogError1("Malloc Failure.");
+					LogError("Malloc Failure.");
 					return TCSERR(TSS_E_OUTOFMEMORY);
 				}
 				memcpy(srkKey.algorithmParms.parms,
@@ -856,7 +856,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				free(srkKey.algorithmParms.parms);
 
 				if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
-					LogError1("Error writing SRK to disk");
+					LogError("Error writing SRK to disk");
 					return result;
 				}
 			} else {
@@ -867,15 +867,15 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				    && pubContainer.pubKey.key != NULL
 				    && !memcmp(srkKey.pubKey.key, pubContainer.pubKey.key, 20)) {
 					/*this is good */
-					LogDebug1("SRK in storage is the same");
+					LogDebug("SRK in storage is the same");
 				} else {
-					LogDebug1("SRK in storage is different.  Resetting storage");
+					LogDebug("SRK in storage is different.  Resetting storage");
 					removeRegisteredKeyFromFile(NULL);
 
 					if (srkKey.pubKey.key == NULL) {
 						srkKey.pubKey.key = malloc(0x100);
 						if (srkKey.pubKey.key == NULL) {
-							LogError1("Malloc Failure.");
+							LogError("Malloc Failure.");
 							return TCSERR(TSS_E_OUTOFMEMORY);
 						}
 					}
@@ -886,7 +886,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					srkKeySize = offset;
 
 					if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
-						LogError1("Error writing SRK to disk");
+						LogError("Error writing SRK to disk");
 						return result;
 					}
 #if 0
@@ -935,11 +935,11 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		goto done;
 
 	if (pSrkAuth != NULL) {
-		LogDebug1("SRK Auth Used");
+		LogDebug("SRK Auth Used");
 		if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No SRK Auth");
+		LogDebug("No SRK Auth");
 	}
 
 	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
@@ -1030,7 +1030,7 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,	/* in 
 		}
 
 		if ((result = getRegisteredKeyByPub(&pubKey, keySize, keyBlob))) {
-			LogDebug1("Public key data not found in PS");
+			LogDebug("Public key data not found in PS");
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 		}
 	}

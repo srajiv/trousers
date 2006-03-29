@@ -191,7 +191,7 @@ tcsd_thread_run(void *v)
 		LogError("Failed Receive: %s", strerror(errno));
 		goto done;
 	}
-	LogDebug1("Rx'd packet");
+	LogDebug("Rx'd packet");
 
 	/* we've just received the initial blob from a TSP */
 
@@ -267,7 +267,7 @@ tcsd_thread_run(void *v)
 			LogError("TSP has closed its connection: %s. Thread exiting.", strerror(errno));
 			break;
 		} else if (thread_buf_size == 0) {
-			LogDebug1("The TSP has closed the socket's connection. Thread exiting.");
+			LogDebug("The TSP has closed the socket's connection. Thread exiting.");
 			break;
 		}
 	}

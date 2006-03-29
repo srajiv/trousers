@@ -206,7 +206,7 @@ fill_cache_entry:
 	tmp->offset = offset;
 #ifdef TSS_DEBUG
 	if (offset == 0)
-		LogDebug1("Storing key with file offset==0!!!");
+		LogDebug("Storing key with file offset==0!!!");
 #endif
 	tmp->flags = flags;
 	tmp->blob_size = blob_size;

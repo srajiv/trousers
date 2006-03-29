@@ -57,7 +57,7 @@ Tddli_Open()
 	int rc;
 
 	if (opened_device != NULL) {
-		LogDebug1("attempted to re-open the TPM driver!");
+		LogDebug("attempted to re-open the TPM driver!");
 		return TDDLERR(TDDL_E_ALREADY_OPENED);
 	}
 
@@ -79,7 +79,7 @@ TSS_RESULT
 Tddli_Close()
 {
 	if (opened_device == NULL) {
-		LogDebug1("attempted to re-close the TPM driver!");
+		LogDebug("attempted to re-close the TPM driver!");
 		return TDDLERR(TDDL_E_ALREADY_CLOSED);
 	}
 
@@ -102,7 +102,7 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 	}
 
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
-	LogDebug1("Calling write to driver");
+	LogDebug("Calling write to driver");
 
 	switch (opened_device->transmit) {
 		case TDDL_UNDEF:

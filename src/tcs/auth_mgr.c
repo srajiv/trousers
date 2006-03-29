@@ -73,7 +73,7 @@ auth_mgr_swap_in()
 #if 0
 	if (tpm_metrics.authctx_swap) {
 		// XXX
-		LogError1("IN AUTHCTX SWAP PATH.");
+		LogError("IN AUTHCTX SWAP PATH.");
 	} else {
 #endif
 		if (auth_mgr.overflow[auth_mgr.of_tail] != NULL) {
@@ -97,7 +97,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 {
 #if 0
 	if (tpm_metrics.authctx_swap) {
-		LogError1("IN AUTHCTX SWAP PATH.");
+		LogError("IN AUTHCTX SWAP PATH.");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	} else {
 #endif
@@ -114,7 +114,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 		 * swapping.
 		 */
 		if (auth_mgr.sleeping_threads == (tcsd_options.num_threads - 1)) {
-			LogError1("auth mgr failing: too many threads already waiting");
+			LogError("auth mgr failing: too many threads already waiting");
 			return TCPA_E_RESOURCES;
 		}
 
@@ -255,18 +255,18 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 		} else {
 			/* sanity check */
 			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
-				LogDebug1("***************************** "
+				LogDebug("***************************** "
 					  "UNCLEAN AUTH MAPPER TABLE");
 				auth_mgr.auth_mapper[i].full = FALSE;
 				auth_mgr.open_auth_sessions--;
 				i--;
-				LogDebug1("CLEANED TABLE");
+				LogDebug("CLEANED TABLE");
 			}
 		}
 	}
 
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
-		LogError1("auth_mapper table is full!!");
+		LogError("auth_mapper table is full!!");
 
 	return result;
 }
@@ -286,7 +286,7 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 	/* If this TSP has already opened its max open auth handles, deny
 	 *  another open */
 	if (opened >= MAX(2, auth_mgr.max_auth_sessions/2)) {
-		LogDebug1("Max opened auth handles already opened.");
+		LogDebug("Max opened auth handles already opened.");
 		return FALSE;
 	}
 

@@ -78,7 +78,7 @@ UnloadBlob_STORE_PUBKEY_PS(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 	UnloadBlob_UINT32(offset, &store->keyLength, blob, NULL);
 
 	if (store->keyLength == 0) {
-		LogWarn1("Unloading public key of size 0!");
+		LogWarn("Unloading public key of size 0!");
 		store->key = NULL;
 	} else {
 		store->key = malloc(store->keyLength);
@@ -340,7 +340,7 @@ cache_key(UINT32 offset, UINT16 flags,
 
 	tmp = malloc(sizeof(struct key_disk_cache));
 	if (tmp == NULL) {
-		LogError1("malloc of %d bytes failed.");
+		LogError("malloc of %zd bytes failed.", sizeof(struct key_disk_cache));
 		pthread_mutex_unlock(&disk_cache_lock);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -351,7 +351,7 @@ fill_cache_entry:
 	tmp->offset = offset;
 #ifdef TSS_DEBUG
 	if (offset == 0)
-		LogDebug1("Storing key with file offset==0!!!");
+		LogDebug("Storing key with file offset==0!!!");
 #endif
 	tmp->flags = flags;
 	tmp->blob_size = blob_size;
@@ -496,7 +496,7 @@ init_disk_cache(int fd)
 		tmp->offset = offset;
 #ifdef TSS_DEBUG
 		if (offset == 0)
-			LogDebug1("Storing key with file offset==0!!!");
+			LogDebug("Storing key with file offset==0!!!");
 #endif
 		/* read UUID */
 		if ((rc = read_data(fd, (void *)&tmp->uuid, sizeof(TSS_UUID)))) {
@@ -565,7 +565,7 @@ init_disk_cache(int fd)
 			/* add to the mem cache */
 			if ((rc = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE,
 						   &srk_key))) {
-				LogError1("Error adding SRK to mem cache.");
+				LogError("Error adding SRK to mem cache.");
 				destroy_key_refs(&srk_key);
 				goto err_exit;
 			}

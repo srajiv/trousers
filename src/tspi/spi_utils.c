@@ -35,7 +35,7 @@ pin_mem(void *addr, size_t len)
 {
 	/* only root can lock pages into RAM */
 	if (getuid() != (uid_t)0) {
-		LogWarn1("Not pinning secrets in memory due to insufficient perms.");
+		LogWarn("Not pinning secrets in memory due to insufficient perms.");
 		return 0;
 	}
 
@@ -136,7 +136,7 @@ Init_AuthNonce(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTH * auth)
 
 	auth->fContinueAuthSession = 0x00;
 	if ((result = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
-		LogError1("Failed creating random nonce");
+		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -186,7 +186,7 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 	UINT32 i;
 
 	if ((rc = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
-		LogError1("Failed creating random nonce");
+		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	auth->fContinueAuthSession = 0x00;

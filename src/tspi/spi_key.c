@@ -265,11 +265,11 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		verifyInternally = 1;
 
 	if (verifyInternally) {
-		LogDebug1("Internal Verify");
+		LogDebug("Internal Verify");
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
 			return result;
 	} else {
-		LogDebug1("External Verify");
+		LogDebug("External Verify");
 		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
 	}
 
@@ -354,7 +354,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 			if (useAuthCert)
 				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
-			LogError1("Error in calling GetAttribData internally");
+			LogError("Error in calling GetAttribData internally");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 

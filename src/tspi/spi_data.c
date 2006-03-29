@@ -125,7 +125,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
 	}
 
 	if ((result = obj_encdata_set_data(hEncData, encDataLength, encData))) {
-		LogError1("Error in calling SetAttribData on the encrypted "
+		LogError("Error in calling SetAttribData on the encrypted "
 				"data object.");
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
@@ -281,7 +281,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 						     &pcrSelect)))
 			return result;
 
-		LogDebug1("Digest at Creation:");
+		LogDebug("Digest at Creation:");
 		LogDebugData(sizeof(digAtCreation), (BYTE *)&digAtCreation);
 
 		offset = 0;

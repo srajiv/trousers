@@ -175,7 +175,7 @@ make_context()
 	if (!index) {
 		tcs_context_table = create_tcs_context();
 		if (tcs_context_table == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("Malloc Failure.");
 			pthread_mutex_unlock(&tcs_ctx_lock);
 			return 0;
 		}
@@ -186,7 +186,7 @@ make_context()
 		}
 		index->next = create_tcs_context();
 		if (index->next == NULL) {
-			LogError1("Malloc Failure.");
+			LogError("Malloc Failure.");
 			pthread_mutex_unlock(&tcs_ctx_lock);
 			return 0;
 		}

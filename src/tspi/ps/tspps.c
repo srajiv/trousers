@@ -106,7 +106,7 @@ destroy_ps()
 
 	/* attempt to get the lock first */
 	if ((fd = get_file()) < 0 ) {
-		LogError1("Could not destroy user ps file.");
+		LogError("Could not destroy user ps file.");
 	}
 
 	/* remove the PS file */
@@ -387,7 +387,7 @@ ps_write_key(int fd,
 
 #ifdef TSS_DEBUG
         if (offset == 0)
-                LogDebug1("ERROR: key being written with offset 0!!");
+                LogDebug("ERROR: key being written with offset 0!!");
 #endif
 
         if ((rc = write_data(fd, (void *)uuid, sizeof(TSS_UUID)))) {

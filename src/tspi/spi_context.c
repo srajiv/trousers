@@ -271,7 +271,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 		result = obj_hash_add(tspContext, initFlags, phObject);
 		break;
 	default:
-		LogDebug1("Invalid Object type");
+		LogDebug("Invalid Object type");
 		return TSPERR(TSS_E_INVALID_OBJECT_TYPE);
 		break;
 	}
@@ -429,7 +429,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 	/* ---  Get the Parent Handle */
 	parentTCSKeyHandle = getTCSKeyHandle(hUnwrappingKey);
 	if (parentTCSKeyHandle == NULL_HCONTEXT) {
-		LogDebug1("parentTCSKeyHandle == 0 - Failure");
+		LogDebug("parentTCSKeyHandle == 0 - Failure");
 		return TSPERR(TSS_E_KEY_NOT_LOADED);
 	}
 
@@ -500,12 +500,12 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 							   should be. */
 
 	if ((result = obj_rsakey_add(tspContext, initFlags, phKey))) {
-		LogDebug1("Failed create object");
+		LogDebug("Failed create object");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((result = obj_rsakey_set_tcpakey(*phKey,realKeyBlobSize, rgbBlobData))) {
-		LogDebug1("Key loaded but failed to setup the key object"
+		LogDebug("Key loaded but failed to setup the key object"
 			  "correctly");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -621,7 +621,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			/* Get the parentTCS Key Handle from our table */
 			parentTCSKeyHandle = getTCSKeyHandle(parentTspHandle);
 			if (parentTCSKeyHandle == 0) {
-				LogDebug1("Can't find parent's TCS key handle"
+				LogDebug("Can't find parent's TCS key handle"
 					  " after loading");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
@@ -938,7 +938,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		if (algID == TSS_ALG_RSA)
 			tcsAlgID = TCPA_ALG_RSA;
 		else {
-			LogError1("Algorithm ID was not type RSA.");
+			LogError("Algorithm ID was not type RSA.");
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		}
 
@@ -979,7 +979,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 				flag |= TSS_KEY_SIZE_512;
 				break;
 			default:
-				LogError1("Key was not a known keylength.");
+				LogError("Key was not a known keylength.");
 				free(keyBlob);
 				free_key_refs(&keyContainer);
 				return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1003,7 +1003,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 		else if (keyContainer.authDataUsage == TPM_AUTH_ALWAYS)
 			flag |= TSS_KEY_AUTHORIZATION;
 		else {
-			LogError1("keyContainer.authDataUsage was not "
+			LogError("keyContainer.authDataUsage was not "
 				  "always or never");
 			free(keyBlob);
 			free_key_refs(&keyContainer);

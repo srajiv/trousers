@@ -36,7 +36,7 @@ TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering SetOwnerInstall");
+	LogDebug("Entering SetOwnerInstall");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -122,7 +122,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 		}
 		if (srkKeyContainer.authDataUsage != oldAuthDataUsage) {
-			LogDebug1("AuthDataUsage was changed by TPM.  Atmel Bug. Fixing it in PS");
+			LogDebug("AuthDataUsage was changed by TPM.  Atmel Bug. Fixing it in PS");
 			srkKeyContainer.authDataUsage = oldAuthDataUsage;
 		}
 		memcpy(*srkKey, &txBlob[10], *srkKeySize);
@@ -138,19 +138,19 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		 */
 		result = removeRegisteredKey(&SRK_UUID);
 		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
-			LogError1("Error removing SRK from key file.");
+			LogError("Error removing SRK from key file.");
 			goto done;
 		}
 
 		if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID,
 						       NULL, 0,	newSRK,
 						       bugOffset))) {
-			LogError1("Error writing SRK to disk");
+			LogError("Error writing SRK to disk");
 			goto done;
 		}
 		result = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TSS_SUCCESS)
-			LogError1("Error creating SRK mem cache entry");
+			LogError("Error creating SRK mem cache entry");
 	}
 	LogResult("TakeOwnership", result);
 done:
@@ -169,7 +169,7 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering TCSI_OIAP");
+	LogDebug("Entering TCSI_OIAP");
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -209,7 +209,7 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 newEntValue = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering OSAP");
+	LogDebug("Entering OSAP");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -264,7 +264,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Changeauth");
+	LogDebug("Entering Changeauth");
 	if ((result = ctx_verify_context(contextHandle)))
 		goto done;
 
@@ -322,14 +322,14 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 		 ****************************************/
 		if (entityType == TCPA_ET_KEYHANDLE ||
 		    entityType == TCPA_ET_KEY) {
-			LogDebug1("entity type is a key.  Check if storage/knowledge must be updated");
+			LogDebug("entity type is a key.  Check if storage/knowledge must be updated");
 			/*---	Compare the EncData against the TCS tables */
 #if 0
 			/*---	Check PS */
-			LogDebug1("Checking PS");
+			LogDebug("Checking PS");
 			uuidKeyToEvict = mc_get_uuid_by_encdata(encData);
 			if (uuidKeyToEvict != NULL) {
-				LogDebug1("UUID is not NULL, replace storage");
+				LogDebug("UUID is not NULL, replace storage");
 				replaceEncData_PS(*uuidKeyToEvict, encData, *outData);
 			}
 #endif
@@ -362,7 +362,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering ChangeAuthOwner");
+	LogDebug("Entering ChangeAuthOwner");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -419,22 +419,22 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_BOOL canLoad;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering ChangeAuthAsymStart");
+	LogDebug("Entering ChangeAuthAsymStart");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (pAuth != NULL) {
-		LogDebug1("Auth Command");
+		LogDebug("Auth Command");
 		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, idHandle, &keySlot)))
 		goto done;
 
-	LogDebug1("Checking for room to load the eph key");
+	LogDebug("Checking for room to load the eph key");
 	offset = 0;
 	if ((result = UnloadBlob_KEY_PARMS(&offset, KeyDataIn, &keyParmsContainer)))
 		goto done;
@@ -546,16 +546,16 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCS_KEY_HANDLE tcsKeyHandleToEvict;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering ChangeAuthAsymFinish");
+	LogDebug("Entering ChangeAuthAsymFinish");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (ownerAuth != NULL) {
-		LogDebug1("Auth used");
+		LogDebug("Auth used");
 		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
 		goto done;
@@ -660,7 +660,7 @@ TCSP_TerminateHandle_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 
-	LogDebug1("Entering TCSI_TerminateHandle");
+	LogDebug("Entering TCSI_TerminateHandle");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -690,7 +690,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("TCSP_ActivateTPMIdentity");
+	LogDebug("TCSP_ActivateTPMIdentity");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -762,7 +762,7 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Extend");
+	LogDebug("Entering Extend");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -813,7 +813,7 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering PCRRead");
+	LogDebug("Entering PCRRead");
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -860,17 +860,17 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PCR_COMPOSITE pcrComp;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering quote");
+	LogDebug("Entering quote");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
@@ -932,7 +932,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering dirwriteauth");
+	LogDebug("Entering dirwriteauth");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
@@ -978,7 +978,7 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering DirRead");
+	LogDebug("Entering DirRead");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -1025,16 +1025,16 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_STORED_DATA storedData;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Seal");
+	LogDebug("Entering Seal");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (pubAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, pubAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 		result = TCSERR(TSS_E_BAD_PARAMETER);
 		goto done;
 	}
@@ -1113,7 +1113,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Unseal");
+	LogDebug("Entering Unseal");
 
 	if (dataAuth == NULL)
 		return TCSERR(TSS_E_BAD_PARAMETER);
@@ -1122,11 +1122,11 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (parentAuth != NULL) {
-		LogDebug1("Auth used");
+		LogDebug("Auth used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
@@ -1192,16 +1192,16 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering TCSI_UnBind");
+	LogDebug("Entering TCSI_UnBind");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	LogDebugFn("calling ensureKeyIsLoaded for TCS handle 0x%x",
@@ -1270,17 +1270,17 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keyHandle;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering TPM_CreateMigrationBlob");
+	LogDebug("Entering TPM_CreateMigrationBlob");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (parentAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("no Auth");
+		LogDebug("no Auth");
 	}
 
 	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
@@ -1356,16 +1356,16 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("ConvertMigBlob");
+	LogDebug("ConvertMigBlob");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (parentAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
 		goto done;
@@ -1429,7 +1429,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_MIGRATIONKEYAUTH container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("TCSP_AuthorizeMigrationKey");
+	LogDebug("TCSP_AuthorizeMigrationKey");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
@@ -1489,25 +1489,25 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 tag;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Certify Key");
+	LogDebug("Entering Certify Key");
 	offset = 10;
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (certAuth != NULL) {
-		LogDebug1("Auth Used for Cert signing key");
+		LogDebug("Auth Used for Cert signing key");
 		if ((result = auth_mgr_check(hContext, certAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth used for Cert signing key");
+		LogDebug("No Auth used for Cert signing key");
 	}
 
 	if (keyAuth != NULL) {
-		LogDebug1("Auth Used for Key being signed");
+		LogDebug("Auth Used for Key being signed");
 		if ((result = auth_mgr_check(hContext, keyAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth used for Key being signed");
+		LogDebug("No Auth used for Key being signed");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, certHandle, &certKeySlot)))
@@ -1589,16 +1589,16 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Sign");
+	LogDebug("Entering Sign");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
@@ -1712,7 +1712,7 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering stir random");
+	LogDebug("Entering stir random");
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -1747,10 +1747,10 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LogDebug1("Checking Software Cap of TCS");
+	LogDebug("Checking Software Cap of TCS");
 	switch (capArea) {
 	case TSS_TCSCAP_ALG:
-		LogDebug1("TSS_TCSCAP_ALG");
+		LogDebug("TSS_TCSCAP_ALG");
 		tcsSubCapContainer = Decode_UINT32(subCap);
 		*respSize = 1;
 		*resp = getSomeMemory(1, hContext);
@@ -1782,7 +1782,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		}
 		break;
 	case TSS_TCSCAP_VERSION:
-		LogDebug1("TSS_TCSCAP_VERSION");
+		LogDebug("TSS_TCSCAP_VERSION");
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", 4);
@@ -1793,7 +1793,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*respSize = offset;
 		break;
 	case TSS_TCSCAP_PERSSTORAGE:
-		LogDebug1("TSS_TCSCAP_PERSSTORAGE");
+		LogDebug("TSS_TCSCAP_PERSSTORAGE");
 		*respSize = 1;
 		*resp = getSomeMemory(1, hContext);
 		if (*resp == NULL) {
@@ -1804,10 +1804,10 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		break;
 
 	case TSS_TCSCAP_CACHING:
-		LogDebug1("TSS_TCSCAP_CACHINE");
+		LogDebug("TSS_TCSCAP_CACHINE");
 		tcsSubCapContainer = Decode_UINT32(subCap);
 		if (tcsSubCapContainer == TSS_TCSCAP_PROP_KEYCACHE) {
-			LogDebug1("PROP_KEYCACHE");
+			LogDebug("PROP_KEYCACHE");
 			*respSize = 1;
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
@@ -1816,7 +1816,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
 		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_AUTHCACHE) {
-			LogDebug1("PROP_AUTHCACHE");
+			LogDebug("PROP_AUTHCACHE");
 			*respSize = 1;
 			*resp = getSomeMemory(1, hContext);
 			if (*resp == NULL) {
@@ -1825,12 +1825,12 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
 		} else {
-			LogDebug1("Bad subcap");
+			LogDebug("Bad subcap");
 			return TCSERR(TSS_E_FAIL);
 		}
 		break;
 	case TSS_TCSCAP_MANUFACTURER:
-		LogDebug1("TSS_TCSCAP_MANUFACTURER");
+		LogDebug("TSS_TCSCAP_MANUFACTURER");
 		*resp = getSomeMemory(4, hContext);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", 4);
@@ -1840,11 +1840,11 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		*respSize = 4;
 		break;
 	default:
-		LogDebug1("Bad subcap");
+		LogDebug("Bad subcap");
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	LogDebug1("Passed internal GetCap");
+	LogDebug("Passed internal GetCap");
 	return TCPA_SUCCESS;
 }
 
@@ -1883,7 +1883,7 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LogDebug1("Entering Get Cap");
+	LogDebug("Entering Get Cap");
 	offset = 10;
 	LoadBlob_UINT32(&offset, capArea, txBlob, "capArea");
 	LoadBlob_UINT32(&offset, subCapSize, txBlob, "sub cap size");
@@ -1934,11 +1934,11 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	switch (capArea) {
@@ -1951,7 +1951,7 @@ TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
-	LogDebug1("Entering Get Cap Signed");
+	LogDebug("Entering Get Cap Signed");
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
@@ -2017,7 +2017,7 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Getcap owner");
+	LogDebug("Entering Getcap owner");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2066,7 +2066,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PUBKEY pubKey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("\nEntering TCSI_CreateEKPair:");
+	LogDebug("\nEntering TCSI_CreateEKPair:");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2115,7 +2115,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PUBKEY pubkey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("\nEntering ReadPubek");
+	LogDebug("\nEntering ReadPubek");
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -2156,7 +2156,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("DisablePubekRead");
+	LogDebug("DisablePubekRead");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2196,7 +2196,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PUBKEY container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering OwnerReadPubek");
+	LogDebug("Entering OwnerReadPubek");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2239,7 +2239,7 @@ TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Self Test Full");
+	LogDebug("Entering Self Test Full");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2269,17 +2269,17 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Certify Self Test");
+	LogDebug("Entering Certify Self Test");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
 	} else {
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
@@ -2334,7 +2334,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Get Test Result");
+	LogDebug("Entering Get Test Result");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2354,7 +2354,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *outDataSize, txBlob, *outData, "outdata");
-		LogDebug1("outdata");
+		LogDebug("outdata");
 		LogBlob(*outDataSize, *outData);
 	}
 	LogResult("Get Test Result", result);
@@ -2409,7 +2409,7 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering OwnerClear");
+	LogDebug("Entering OwnerClear");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2447,7 +2447,7 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering DisableownerClear");
+	LogDebug("Entering DisableownerClear");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2483,7 +2483,7 @@ TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Force Clear");
+	LogDebug("Entering Force Clear");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2505,7 +2505,7 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Disable Force Clear");
+	LogDebug("Entering Disable Force Clear");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2562,7 +2562,7 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Physical Disable");
+	LogDebug("Entering Physical Disable");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2587,7 +2587,7 @@ TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Physical Enable");
+	LogDebug("Entering Physical Enable");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2613,7 +2613,7 @@ TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Physical Set Decativated");
+	LogDebug("Entering Physical Set Decativated");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2638,7 +2638,7 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Set Temp Deactivated");
+	LogDebug("Entering Set Temp Deactivated");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
@@ -2668,7 +2668,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Field Upgrade");
+	LogDebug("Field Upgrade");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2725,13 +2725,13 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Set Redirection");
+	LogDebug("Set Redirection");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug1("Auth Used");
+		LogDebug("Auth Used");
 		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot))) {
 			result = TCSERR(TSS_E_FAIL);
 			goto done;
@@ -2740,7 +2740,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		keySlot = mc_get_slot_by_handle_lock(keyHandle);
 		if (keySlot == NULL_TPM_HANDLE)
 			return TCSERR(TSS_E_FAIL);
-		LogDebug1("No Auth");
+		LogDebug("No Auth");
 	}
 
 	offset = 10;
@@ -2786,7 +2786,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Create Main Archive");
+	LogDebug("Create Main Archive");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2845,7 +2845,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Load Maint Archive");
+	LogDebug("Load Maint Archive");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2899,7 +2899,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Kill Maint Feature");
+	LogDebug("Entering Kill Maint Feature");
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -2938,7 +2938,7 @@ TCSP_LoadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Load Manu Maint Pub");
+	LogDebug("Entering Load Manu Maint Pub");
 
 	offset = 10;
 	LoadBlob(&offset, 20, txBlob, antiReplay.nonce, "checksum");
@@ -2969,7 +2969,7 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Read Manu Maint Pub");
+	LogDebug("Entering Read Manu Maint Pub");
 
 	offset = 10;
 	LoadBlob(&offset, 20, txBlob, antiReplay.nonce, "checksum");

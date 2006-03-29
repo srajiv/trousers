@@ -107,7 +107,7 @@ closeDiskCache(void)
 	int fd;
 
 	if ((fd = get_file()) < 0) {
-		LogError1("get_file() failed while trying to close disk cache.");
+		LogError("get_file() failed while trying to close disk cache.");
 		return;
 	}
 
@@ -134,7 +134,7 @@ mc_get_pub_by_slot(TCPA_KEY_HANDLE tpm_handle)
 			return ret;
 		}
 	}
-	LogDebugFn1("returning NULL TCPA_STORE_PUBKEY");
+	LogDebugFn("returning NULL TCPA_STORE_PUBKEY");
 	return NULL;
 }
 
@@ -156,7 +156,7 @@ mc_get_pub_by_handle(TCS_KEY_HANDLE tcs_handle)
 		}
 	}
 
-	LogDebugFn1("returning NULL TCPA_STORE_PUBKEY");
+	LogDebugFn("returning NULL TCPA_STORE_PUBKEY");
 	return NULL;
 }
 
@@ -204,21 +204,21 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 	*keySlot = mc_get_slot_by_handle(keyHandle);
 	LogDebug("keySlot is %08X", *keySlot);
 	if (*keySlot == NULL_TPM_HANDLE || isKeyLoaded(*keySlot) == FALSE) {
-		LogDebug1("calling mc_get_pub_by_handle");
+		LogDebug("calling mc_get_pub_by_handle");
 		if ((myPub = mc_get_pub_by_handle(keyHandle)) == NULL) {
-			LogDebug1("Failed to find pub by handle");
+			LogDebug("Failed to find pub by handle");
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto done;
 		}
 
-		LogDebugFn1("calling LoadKeyShim");
+		LogDebugFn("calling LoadKeyShim");
 		if ((result = LoadKeyShim(hContext, myPub, NULL, keySlot))) {
-			LogDebug1("Failed shim");
+			LogDebug("Failed shim");
 			goto done;
 		}
 
 		if (*keySlot == NULL_TPM_HANDLE) {
-			LogDebug1("Key slot is still invalid after ensureKeyIsLoaded");
+			LogDebug("Key slot is still invalid after ensureKeyIsLoaded");
 			result = TCSERR(TCS_E_KM_LOADFAILED);
 			goto done;
 		}
@@ -227,7 +227,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle,
 
 done:
 	pthread_mutex_unlock(&mem_cache_lock);
-	LogDebugFn1("Exit");
+	LogDebugFn("Exit");
 	return result;
 }
 
@@ -273,7 +273,7 @@ mc_get_uuid_by_encdata(BYTE *encData)
 	struct key_mem_cache *tmp;
 	TSS_UUID *ret;
 
-	LogDebug1("mc_get_uuid_by_encdata");
+	LogDebug("mc_get_uuid_by_encdata");
 
 	pthread_mutex_lock(&mem_cache_lock);
 
@@ -282,13 +282,13 @@ mc_get_uuid_by_encdata(BYTE *encData)
 		if (tmp->blob->encSize == 0)
 			continue;
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
-			LogDebug1("Found it in knowledge by encData");
+			LogDebug("Found it in knowledge by encData");
 			ret = &tmp->uuid;
 			pthread_mutex_unlock(&mem_cache_lock);
 			return ret;
 		}
 	}
-	LogDebug1("Never found UUID in mem cache by encData");
+	LogDebug("Never found UUID in mem cache by encData");
 	pthread_mutex_unlock(&mem_cache_lock);
 	return NULL;
 }
@@ -343,7 +343,7 @@ mc_update_encdata(BYTE *encData, BYTE *newEncData)
 		}
 	}
 	pthread_mutex_unlock(&mem_cache_lock);
-	LogError1("Couldn't find requested encdata in mem cache");
+	LogError("Couldn't find requested encdata in mem cache");
 	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
 #if 0
@@ -362,7 +362,7 @@ mc_get_pub_by_uuid(TSS_UUID *uuid)
 		}
 	}
 
-	LogDebugFn1("returning NULL");
+	LogDebugFn("returning NULL");
 	return NULL;
 }
 #endif
@@ -778,7 +778,7 @@ mc_get_slot_by_handle(TCS_KEY_HANDLE tcs_handle)
 		}
 	}
 
-	LogDebugFn1("returning NULL_TPM_HANDLE");
+	LogDebugFn("returning NULL_TPM_HANDLE");
 	return NULL_TPM_HANDLE;
 }
 
@@ -801,7 +801,7 @@ mc_get_slot_by_handle_lock(TCS_KEY_HANDLE tcs_handle)
 	}
 
 	pthread_mutex_unlock(&mem_cache_lock);
-	LogDebugFn1("returning NULL_TPM_HANDLE");
+	LogDebugFn("returning NULL_TPM_HANDLE");
 	return NULL_TPM_HANDLE;
 }
 
@@ -820,7 +820,7 @@ mc_get_slot_by_pub(TCPA_STORE_PUBKEY *pub)
 		}
 	}
 
-	LogDebugFn1("returning NULL_TPM_HANDLE");
+	LogDebugFn("returning NULL_TPM_HANDLE");
 	return NULL_TPM_HANDLE;
 }
 
@@ -839,7 +839,7 @@ mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub)
 		}
 	}
 
-	LogDebugFn1("returning NULL_TPM_HANDLE");
+	LogDebugFn("returning NULL_TPM_HANDLE");
 	return NULL_TPM_HANDLE;
 }
 
@@ -853,13 +853,13 @@ mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
 		if (tmp->tcs_handle == TPM_KEYHND_SRK) {
-			LogDebugFn1("skipping the SRK");
+			LogDebugFn("skipping the SRK");
 			continue;
 		}
 		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			if (tmp->parent && tmp->parent->blob) {
 				ret = &tmp->parent->blob->pubKey;
-				LogDebugFn1("Success");
+				LogDebugFn("Success");
 			} else {
 				LogError("parent pointer not set in key mem "
 					 "cache object w/ TCS handle: 0x%x",
@@ -869,7 +869,7 @@ mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 		}
 	}
 
-	LogDebugFn1("returning NULL TCPA_STORE_PUBKEY");
+	LogDebugFn("returning NULL TCPA_STORE_PUBKEY");
 	return NULL;
 }
 
@@ -912,7 +912,7 @@ mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 		}
 	}
 
-	LogDebugFn1("returning TSS_E_FAIL");
+	LogDebugFn("returning TSS_E_FAIL");
 	return TCSERR(TSS_E_FAIL);
 }
 #if 0
@@ -1087,7 +1087,7 @@ removeRegisteredKey(TSS_UUID *uuid)
 				}
 				free(tmp);
 			} else {
-				LogError1("Error removing registered key.");
+				LogError("Error removing registered key.");
 			}
 
 			pthread_mutex_unlock(&disk_cache_lock);
@@ -1128,7 +1128,7 @@ clean_disk_cache(int fd)
 				}
 				free(tmp);
 			} else {
-				LogError1("Error removing blank key.");
+				LogError("Error removing blank key.");
 			}
 
 			pthread_mutex_unlock(&disk_cache_lock);
@@ -1251,7 +1251,7 @@ isKeyLoaded(TCPA_KEY_HANDLE keySlot)
 	free(keyList.handle);
 
 not_loaded:
-	LogDebugFn1("Key is not loaded, changing slot");
+	LogDebugFn("Key is not loaded, changing slot");
 	mc_set_slot_by_slot(keySlot, NULL_TPM_HANDLE);
 	return FALSE;
 }
@@ -1273,7 +1273,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	TCS_KEY_HANDLE parentHandle;
 	BYTE keyBlob[1024];
 
-	LogDebugFn1("calling mc_get_slot_by_pub");
+	LogDebugFn("calling mc_get_slot_by_pub");
 
 	/* If I'm loaded, then no point being here.  Get the slot and return */
 	keySlot = mc_get_slot_by_pub(pubKey);
@@ -1289,22 +1289,22 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	 * to load it based on the persistent store.
 	 */
 
-	LogDebugFn1("calling mc_get_parent_pub_by_pub");
+	LogDebugFn("calling mc_get_parent_pub_by_pub");
 	/* Check if the Key is in the memory cache */
 	if ((parentPub = mc_get_parent_pub_by_pub(pubKey)) == NULL) {
-		LogDebugFn1("parentPub is NULL");
+		LogDebugFn("parentPub is NULL");
 		/* If parentUUID is not handed in, then this key was never
 		 * loaded and isn't reg'd */
 		if (parentUuid == NULL) {
 			return TCSERR(TCS_E_KM_LOADFAILED);
 		}
 
-		LogDebugFn1("calling TCSP_LoadKeyByUUID_Internal");
+		LogDebugFn("calling TCSP_LoadKeyByUUID_Internal");
 		/* This will try to load my parent by UUID */
 		if ((result = TCSP_LoadKeyByUUID_Internal(hContext, parentUuid, NULL, &parentSlot)))
 			return result;
 	} else {
-		LogDebugFn1("calling LoadKeyShim");
+		LogDebugFn("calling LoadKeyShim");
 		if ((result = LoadKeyShim(hContext, parentPub, NULL, &parentSlot)))
 			return result;
 	}

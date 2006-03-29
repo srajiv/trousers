@@ -830,7 +830,7 @@ obj_rsakey_get_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	Trspi_LoadBlob_KEY(&offset, temp, &rsakey->tcpaKey);
 
 	if (offset > 2048) {
-		LogError1("memory corruption");
+		LogError("memory corruption");
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	} else {

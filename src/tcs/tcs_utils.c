@@ -194,7 +194,7 @@ get_max_auths(UINT32 *auths)
 
 	if (*auths < 2) {
 		LogError("%s reported only %d auth available!", __FUNCTION__, *auths);
-		LogError1("Your TPM must be reset before the TCSD can be started.");
+		LogError("Your TPM must be reset before the TCSD can be started.");
 	} else {
 		LogDebug("get_max_auths reports %u auth contexts found", *auths);
 		result = TSS_SUCCESS;
@@ -291,7 +291,7 @@ canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 					    &respDataLength,	/* out */
 					    &respData))) {	/* out */
 		*b = FALSE;
-		LogDebugFn1("NO");
+		LogDebugFn("NO");
 		return result;
 	}
 
@@ -310,7 +310,7 @@ internal_EvictByKeySlot(TCPA_KEY_HANDLE slot)
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug1("Entering Evict Key");
+	LogDebug("Entering Evict Key");
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, slot, txBlob, "key handle");
@@ -348,12 +348,12 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 		return result;
 
 #ifdef TSS_DEBUG
-	LogDebug1("Loaded TPM key handles:");
+	LogDebug("Loaded TPM key handles:");
 	for (i = 0; i < keyList.loaded; i++) {
 		LogDebugFn("%d: %x", i, keyList.handle[i]);
 	}
 
-	LogDebug1("Loaded TCSD key handles:");
+	LogDebug("Loaded TCSD key handles:");
 	i=0;
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("%d: 0x%x -> 0x%x", i++, tmp->tpm_handle,
@@ -544,7 +544,7 @@ UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object,
 #if 0
 	/* commenting out for now, logs getting too chatty */
 	if (log && size) {
-		LogDebug1(log);
+		LogDebug(log);
 		/* XXX Crashes sometimes. Investigate. */
 		//LogBlob(size, object);
 	}
@@ -667,7 +667,7 @@ UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob,
 
 	if (store->keyLength == 0) {
 		store->key = NULL;
-		LogWarn1("Unloading a public key of size 0!");
+		LogWarn("Unloading a public key of size 0!");
 	} else {
 		store->key = (BYTE *)malloc(store->keyLength);
 		if (store->key == NULL) {
@@ -983,7 +983,7 @@ UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob,
 {
 	TSS_RESULT rc;
 
-	LogDebug1("Certify Info");
+	LogDebug("Certify Info");
 	UnloadBlob_VERSION(offset, blob, &certify->version);
 	UnloadBlob_UINT16(offset, &certify->keyUsage, blob, "usage");
 	UnloadBlob_KEY_FLAGS(offset, blob, &certify->keyFlags);

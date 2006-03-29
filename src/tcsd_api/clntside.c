@@ -90,7 +90,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	} else if (returnSize == 0) {
-		LogError1("recv: No bytes returned from the TCSD.");
+		LogError("recv: No bytes returned from the TCSD.");
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	} else if ((UINT32)returnSize < (2 * sizeof(UINT32))) {
@@ -122,14 +122,14 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				} else if (returnSize == 0) {
-					LogError1("recv: No bytes returned....something went wrong");
+					LogError("recv: No bytes returned....something went wrong");
 					free(hdr_p);
 					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				}
 			}
 		} else {
-			LogError1("Packet received from TCSD has an invalid size field.");
+			LogError("Packet received from TCSD has an invalid size field.");
 			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		}
@@ -178,7 +178,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		} else if (recd == 0) {
-			LogError1("Connection closed by the TCSD.");
+			LogError("Connection closed by the TCSD.");
 			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
 		}
@@ -227,7 +227,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
 				} else if (recd == 0) {
-					LogError1("Connection closed by the TCSD.");
+					LogError("Connection closed by the TCSD.");
 					free(hdr_p);
 					result = TSPERR(TSS_E_COMM_FAILURE);
 					goto err_exit;
@@ -237,7 +237,7 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 			}
 		}
 	} else {
-		LogError1("Packet received from TCSD has an invalid size field.");
+		LogError("Packet received from TCSD has an invalid size field.");
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}

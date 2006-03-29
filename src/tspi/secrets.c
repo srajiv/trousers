@@ -48,7 +48,7 @@ popup_GetSecret2(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_h
 
 	/* pin the area where the secret will be put in memory */
 	if (pin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH)) {
-		LogError1("Failed to pin secret in memory.");
+		LogError("Failed to pin secret in memory.");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -98,7 +98,7 @@ popup_GetSecret(UINT32 new_pin, BYTE *popup_str, void *auth_hash)
 
 	/* pin the area where the secret will be put in memory */
 	if (pin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH)) {
-		LogError1("Failed to pin secret in memory.");
+		LogError("Failed to pin secret in memory.");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -472,7 +472,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	    ownerMode == TSS_SECRET_MODE_CALLBACK) {
 		if (srkMode != TSS_SECRET_MODE_CALLBACK ||
 		    ownerMode != TSS_SECRET_MODE_CALLBACK) {
-			LogError1("Policy callback modes for SRK policy and "
+			LogError("Policy callback modes for SRK policy and "
 					"Owner policy differ");
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		}

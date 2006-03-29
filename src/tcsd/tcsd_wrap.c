@@ -160,7 +160,7 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_pa
 	}
 	offset = hdr->packet_size;
 	if (index >= TCSD_MAX_NUM_PARMS) {
-		LogError1("Too many elements in TCSD packet!");
+		LogError("Too many elements in TCSD packet!");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	switch (dataType) {
@@ -227,7 +227,7 @@ getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 		packet->dataSize = 0;
 	offset = packet->dataSize;
 	if (index >= TCSD_MAX_NUM_PARMS) {
-		LogError1("Too many elements in TCSD packet!");
+		LogError("Too many elements in TCSD packet!");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (index >= packet->numParms ||
@@ -2824,12 +2824,12 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data,
 #if 0
 	/* if the next one is missing, then the previous was really the owner auth */
 	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &ownerAuth, 0, tsp_data)) {
-		LogDebug1("Failed to get ownerAuth.  SRK auth is really NULL "
+		LogDebug("Failed to get ownerAuth.  SRK auth is really NULL "
 			  "and single auth is ownerAuth");
 		pSRKAuth = NULL;
 		memcpy(&ownerAuth, &srkAuth, sizeof (TPM_AUTH));
 	} else {
-		LogDebug1("two Auth");
+		LogDebug("two Auth");
 		pSRKAuth = &srkAuth;
 	}
 #else
@@ -3769,7 +3769,7 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data,
 	}
 #if 0
 	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &auth2, 0, tsp_data)) {
-		LogDebugFn1("No auth for identity key");
+		LogDebugFn("No auth for identity key");
 		pOwnerAuth = &auth1;
 	} else {
 		pIdKeyAuth = &auth1;
@@ -3963,7 +3963,7 @@ dispatchCommand(struct tcsd_thread_data *data,
 {
 	/* First, check the ordinal bounds */
 	if (tsp_data->ordinal >= TCSD_MAX_NUM_ORDS) {
-		LogError1("Illegal TCSD Ordinal");
+		LogError("Illegal TCSD Ordinal");
 		return TCSERR(TSS_E_FAIL);
 	}
 

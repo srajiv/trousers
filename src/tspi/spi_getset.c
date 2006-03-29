@@ -142,7 +142,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return TSPERR(TSS_E_KEY_NOT_LOADED);
 
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
-			LogDebug1("SRK Handle");
+			LogDebug("SRK Handle");
 			/* get the owner policy */
 			if ((result = obj_tpm_get_policy(hParentObject,
 							 &hParentPolicy)))

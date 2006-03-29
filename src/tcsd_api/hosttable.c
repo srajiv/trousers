@@ -75,7 +75,7 @@ add_table_entry(struct host_table_entry *entry, TCS_CONTEXT_HANDLE tcsContext)
 
 	for (hte = ht->entries; hte; hte = hte->next) {
 		if (hte->tcsContext == tcsContext) {
-			LogError1("Tspi_Context_Connect() attempted on an "
+			LogError("Tspi_Context_Connect() attempted on an "
 					"already connected context!");
 			return TSPERR(TSS_E_CONNECTION_FAILED);
 		}
