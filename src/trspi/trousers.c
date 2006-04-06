@@ -301,6 +301,25 @@ Trspi_UnloadBlob_PCR_SELECTION(UINT16 *offset, BYTE *blob, TCPA_PCR_SELECTION *p
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+Trspi_UnloadBlob_PCR_COMPOSITE(UINT16 *offset, BYTE *blob, TCPA_PCR_COMPOSITE *out)
+{
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &out->select)))
+		return result;
+
+	Trspi_UnloadBlob_UINT32(offset, &out->valueSize, blob);
+	out->pcrValue = malloc(out->valueSize);
+	if (out->pcrValue == NULL) {
+		LogError("malloc of %d bytes failed.", out->valueSize);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(offset, out->valueSize, blob, (BYTE *)out->pcrValue);
+
+	return TSS_SUCCESS;
+}
+
 void
 Trspi_LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION *pcr)
 {
