@@ -136,15 +136,14 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		/* Once the key file is created, it stays forever. There could be
 		 * migratable keys in the hierarchy that are still useful to someone.
 		 */
-		result = removeRegisteredKey(&SRK_UUID);
+		result = ps_remove_key(&SRK_UUID);
 		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
 			LogError("Error removing SRK from key file.");
 			goto done;
 		}
 
-		if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID,
-						       NULL, 0,	newSRK,
-						       bugOffset))) {
+		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0,newSRK,
+					   bugOffset))) {
 			LogError("Error writing SRK to disk");
 			goto done;
 		}

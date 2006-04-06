@@ -51,7 +51,7 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/*  in */
 
 	/* XXX Assume 1 TSPi context per process. Is there a reason to
 	 * open more than 1? */
-	destroy_ps();
+	ps_destroy();
 
 	/* free all context related memory */
 	free_tspi(tspContext, NULL);
@@ -587,13 +587,11 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			return result;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		/* ---  Get my Parent's UUID */
-		if ((result = keyreg_GetParentUUIDByUUID(&uuidData,
-						&parentUUID)))
+		if ((result = ps_get_parent_uuid_by_uuid(&uuidData, &parentUUID)))
 			return result;
 
 		/* ---  Get my Parent's Storage Type */
-		if ((result = keyreg_GetParentPSTypeByUUID(&uuidData,
-						&parentPSType)))
+		if ((result = ps_get_parent_ps_type_by_uuid(&uuidData, &parentPSType)))
 			return result;
 
 		/******************************************
@@ -634,9 +632,8 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		}
 
 		/* ---  Get my KeyBlob */
-		if ((result = keyreg_GetKeyByUUID(&uuidData,
-						&keyBlobSize,
-						&keyBlob)))
+		if ((result = ps_get_key_by_uuid(&uuidData, &keyBlobSize,
+						 &keyBlob)))
 			return result;
 
 		/*******************************
@@ -754,17 +751,15 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 						  &keyBlob)))
 			return result;
 
-		if ((result = keyreg_IsKeyAlreadyRegistered(keyBlobSize,
-							    keyBlob,
-							    &answer)))
+		if ((result = ps_is_key_registered(keyBlobSize, keyBlob, &answer)))
 			return result;
 
 		if (answer == TRUE)
 			return TSPERR(TSS_E_KEY_ALREADY_REGISTERED);
 
-		if ((result = keyreg_WriteKeyToFile(&uuidKey, &uuidParentKey,
-					  persistentStorageTypeParent,
-					  keyBlobSize, keyBlob)))
+		if ((result = ps_write_key(&uuidKey, &uuidParentKey,
+					   persistentStorageTypeParent,
+					   keyBlobSize, keyBlob)))
 			return result;
 	} else {
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -821,7 +816,7 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 			return result;
 
 		/* now unregister it */
-		if ((result = keyreg_RemoveKey(&uuidKey)))
+		if ((result = ps_remove_key(&uuidKey)))
 			return result;
 	} else {
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -868,8 +863,8 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		if (!obj_is_context(tspContext))
 			return TSPERR(TSS_E_INVALID_HANDLE);
 
-		if ((result = keyreg_GetKeyByUUID(&uuidData, &keyBlobSize,
-						&keyBlob)))
+		if ((result = ps_get_key_by_uuid(&uuidData, &keyBlobSize,
+						 &keyBlob)))
 			return result;
 
 		offset = 0;

@@ -66,9 +66,8 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebugUnrollKey(rgbKey);
 
 	/*---	Go ahead and store it in system persistant storage */
-	if ((result = writeRegisteredKeyToFile(KeyUUID, WrappingKeyUUID,
-						gbVendorData, cVendorData,
-						rgbKey, cKeySize))) {
+	if ((result = ps_write_key(KeyUUID, WrappingKeyUUID, gbVendorData,
+				   cVendorData, rgbKey, cKeySize))) {
 		LogError("Error writing key to file");
 		return TCSERR(TSS_E_FAIL);
 	}
@@ -87,7 +86,7 @@ TCSP_UnregisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	return removeRegisteredKey(&KeyUUID);
+	return ps_remove_key(&KeyUUID);
 }
 
 TSS_RESULT
@@ -277,7 +276,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if ((result = getRegisteredKeyByUUID(KeyUUID, tcpaKeyBlob, &keySize))) {
+	if ((result = ps_get_key_by_uuid(KeyUUID, tcpaKeyBlob, &keySize))) {
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	}
 
@@ -326,7 +325,7 @@ TCS_GetRegisteredKeyBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	keySize = sizeof (buffer);
-	if ((result = getRegisteredKeyByUUID(KeyUUID, buffer, &keySize)))
+	if ((result = ps_get_key_by_uuid(KeyUUID, buffer, &keySize)))
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 	*prgbKey = getSomeMemory(keySize, hContext);
@@ -569,7 +568,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (pLoadKeyInfo &&
 	    memcmp(&pLoadKeyInfo->parentKeyUUID, &parentUuid, sizeof(TSS_UUID))) {
-		if (getRegisteredKeyByUUID(&pLoadKeyInfo->keyUUID, keyBlob, &blobSize))
+		if (ps_get_key_by_uuid(&pLoadKeyInfo->keyUUID, keyBlob, &blobSize))
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
 		if (mc_get_handles_by_uuid(&pLoadKeyInfo->parentKeyUUID, &parentTCSKeyHandle,
@@ -597,8 +596,8 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	 *		that we get it all from either the keyfile or the keyCache
 	 *		also, it's important to return if the key is already loaded
 	 ***********************************************************************/
-	LogDebugFn("calling getRegisteredKeyByUUID");
-	if (getRegisteredKeyByUUID(KeyUUID, keyBlob, &blobSize))
+	LogDebugFn("calling ps_get_key_by_uuid");
+	if (ps_get_key_by_uuid(KeyUUID, keyBlob, &blobSize))
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 	/* convert UINT16 to UIN32 */
 	keySize = blobSize;
@@ -814,7 +813,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			/*---	If it's the SRK, make sure the key storage isn't stale */
 			LogDebug("Checking SRK in storage");
 			srkKeySize = sizeof (srkKeyBlob);
-			rc = getRegisteredKeyByUUID(&SRK_UUID, srkKeyBlob, &srkKeySize);
+			rc = ps_get_key_by_uuid(&SRK_UUID, srkKeyBlob, &srkKeySize);
 			if (rc) {
 				LogDebug("SRK isn't in storage, setting it.  Have to guess at some parms");
 				memset(&srkKey, 0x00, sizeof (TCPA_KEY));
@@ -855,7 +854,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 				free(srkKey.algorithmParms.parms);
 
-				if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
+				if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
 					LogError("Error writing SRK to disk");
 					return result;
 				}
@@ -885,7 +884,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					LoadBlob_KEY(&offset, srkKeyBlob, &srkKey);
 					srkKeySize = offset;
 
-					if ((result = writeRegisteredKeyToFile(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
+					if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
 						LogError("Error writing SRK to disk");
 						return result;
 					}
@@ -1029,7 +1028,7 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,	/* in 
 			memcpy(pubKey.key, rgbPublicInfo, pubKey.keyLength);
 		}
 
-		if ((result = getRegisteredKeyByPub(&pubKey, keySize, keyBlob))) {
+		if ((result = ps_get_key_by_pub(&pubKey, keySize, keyBlob))) {
 			LogDebug("Public key data not found in PS");
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 		}

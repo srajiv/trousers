@@ -42,17 +42,15 @@ TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE, TCPA_NONCE *);
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
 
-/*---	keyReg.c */
-//void keyreg_SetUUIDOfKeyObject(TSS_HKEY, TSS_UUID, TSS_FLAG);
-TSS_RESULT keyreg_IsKeyAlreadyRegistered(UINT32, BYTE *, TSS_BOOL *);
-TSS_RESULT keyreg_WriteKeyToFile(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
-TSS_RESULT keyreg_RemoveKey(TSS_UUID *);
-TSS_RESULT keyreg_GetKeyByUUID(TSS_UUID *, UINT32 *, BYTE **);
-TSS_RESULT keyreg_GetParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
-TSS_RESULT keyreg_GetParentPSTypeByUUID(TSS_UUID *, UINT32 *);
-TSS_RESULT keyreg_replaceEncData_PS(BYTE *, BYTE *);
+/* keyreg.c */
+TSS_RESULT ps_is_key_registered(UINT32, BYTE *, TSS_BOOL *);
+TSS_RESULT ps_write_key(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
+TSS_RESULT ps_remove_key(TSS_UUID *);
+TSS_RESULT ps_get_key_by_uuid(TSS_UUID *, UINT32 *, BYTE **);
+TSS_RESULT ps_get_parent_uuid_by_uuid(TSS_UUID *, TSS_UUID *);
+TSS_RESULT ps_get_parent_ps_type_by_uuid(TSS_UUID *, UINT32 *);
 
-/*---	secrets.c */
+/* secrets.c */
 
 TSS_RESULT policy_UsesAuth(TSS_HPOLICY, TSS_BOOL *);
 

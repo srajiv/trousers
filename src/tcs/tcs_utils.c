@@ -48,7 +48,7 @@ fill_key_info(struct key_disk_cache *d,
 		key_info->fIsLoaded = FALSE;
 
 		/* read key from disk */
-		if ((result = getKeyByCacheEntry(d, (BYTE *)&tmp_blob, &tmp_blob_size)))
+		if ((result = ps_get_key_by_cache_entry(d, (BYTE *)&tmp_blob, &tmp_blob_size)))
 			return result;
 
 		offset = 0;

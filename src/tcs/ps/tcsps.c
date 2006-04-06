@@ -87,7 +87,7 @@ close_file(int fd)
 }
 
 TSS_RESULT
-ps_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
+psfile_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -130,7 +130,7 @@ ps_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
  * return a key blob from PS given a uuid
  */
 TSS_RESULT
-ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_size)
+psfile_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_size)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -182,7 +182,7 @@ ps_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buffer_
  * locked by the caller.
  */
 TSS_RESULT
-ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer,
+psfile_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer,
 			  UINT16 *ret_buffer_size)
 {
         int rc;
@@ -215,7 +215,7 @@ ps_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer,
 }
 
 TSS_RESULT
-ps_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
+psfile_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 {
         struct key_disk_cache *tmp;
 
@@ -242,7 +242,7 @@ ps_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 }
 
 TSS_RESULT
-ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
+psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -301,7 +301,7 @@ ps_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 
 
 TSS_RESULT
-ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
+psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -365,7 +365,7 @@ ps_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 }
 
 TSS_RESULT
-ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
+psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
 {
         int rc;
         UINT32 file_offset = 0;
@@ -479,7 +479,7 @@ ps_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_key)
  *
  */
 TSS_RESULT
-ps_write_key(int fd,
+psfile_write_key(int fd,
 		TSS_UUID *uuid,
 		TSS_UUID *parent_uuid,
 		UINT32 *parent_ps,
@@ -579,7 +579,7 @@ ps_write_key(int fd,
 }
 
 TSS_RESULT
-ps_remove_key(int fd, struct key_disk_cache *c)
+psfile_remove_key(int fd, struct key_disk_cache *c)
 {
         TSS_RESULT result;
         UINT32 head_offset = 0, tail_offset, num_keys;

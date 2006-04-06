@@ -79,7 +79,7 @@ getNextTimeStamp()
 }
 
 TSS_RESULT
-initDiskCache(void)
+ps_init_disk_cache(void)
 {
 	int fd;
 	TSS_RESULT rc;
@@ -102,7 +102,7 @@ initDiskCache(void)
 }
 
 void
-closeDiskCache(void)
+ps_close_disk_cache(void)
 {
 	int fd;
 
@@ -874,7 +874,7 @@ mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 }
 
 TSS_BOOL
-isKeyRegistered(TCPA_STORE_PUBKEY *pub)
+ps_is_key_registered(TCPA_STORE_PUBKEY *pub)
 {
 	TSS_UUID *uuid;
 	int fd;
@@ -884,7 +884,7 @@ isKeyRegistered(TCPA_STORE_PUBKEY *pub)
 	if ((fd = get_file()) < 0)
 		return FALSE;
 
-	if ((rc = ps_get_uuid_by_pub(fd, pub, &uuid))) {
+	if ((rc = psfile_get_uuid_by_pub(fd, pub, &uuid))) {
 		put_file(fd);
 		return FALSE;
 	}
@@ -1053,7 +1053,7 @@ disk_cache_shift(struct key_disk_cache *c)
 }
 
 TSS_RESULT
-removeRegisteredKey(TSS_UUID *uuid)
+ps_remove_key(TSS_UUID *uuid)
 {
 	struct key_disk_cache *tmp, *prev = NULL;
 	TSS_RESULT rc;
@@ -1070,7 +1070,7 @@ removeRegisteredKey(TSS_UUID *uuid)
 				break;
 			}
 
-			rc = ps_remove_key(fd, tmp);
+			rc = psfile_remove_key(fd, tmp);
 
 			put_file(fd);
 
@@ -1115,7 +1115,7 @@ clean_disk_cache(int fd)
 
 	for (; tmp; prev = tmp, tmp = tmp->next) {
 		if (!(tmp->flags & CACHE_FLAG_VALID)) {
-			rc = ps_remove_key(fd, tmp);
+			rc = psfile_remove_key(fd, tmp);
 
 			/* if moving the file contents around succeeded, then
 			 * change the offsets of the keys in the cache in
@@ -1141,7 +1141,7 @@ clean_disk_cache(int fd)
 }
 
 TSS_RESULT
-getRegisteredKeyByUUID(TSS_UUID *uuid, BYTE *blob, UINT16 *blob_size)
+ps_get_key_by_uuid(TSS_UUID *uuid, BYTE *blob, UINT16 *blob_size)
 {
         int fd = -1;
         TSS_RESULT rc = TSS_SUCCESS;
@@ -1149,14 +1149,14 @@ getRegisteredKeyByUUID(TSS_UUID *uuid, BYTE *blob, UINT16 *blob_size)
         if ((fd = get_file()) < 0)
                 return TCSERR(TSS_E_INTERNAL_ERROR);
 
-        rc = ps_get_key_by_uuid(fd, uuid, blob, blob_size);
+        rc = psfile_get_key_by_uuid(fd, uuid, blob, blob_size);
 
         put_file(fd);
         return rc;
 }
 
 TSS_RESULT
-getKeyByCacheEntry(struct key_disk_cache *c, BYTE *blob, UINT16 *blob_size)
+ps_get_key_by_cache_entry(struct key_disk_cache *c, BYTE *blob, UINT16 *blob_size)
 {
         int fd = -1;
         TSS_RESULT rc = TSS_SUCCESS;
@@ -1164,14 +1164,14 @@ getKeyByCacheEntry(struct key_disk_cache *c, BYTE *blob, UINT16 *blob_size)
         if ((fd = get_file()) < 0)
                 return TCSERR(TSS_E_INTERNAL_ERROR);
 
-        rc = ps_get_key_by_cache_entry(fd, c, blob, blob_size);
+        rc = psfile_get_key_by_cache_entry(fd, c, blob, blob_size);
 
         put_file(fd);
         return rc;
 }
 
 TCPA_RESULT
-isPubRegistered(TCPA_STORE_PUBKEY *key)
+ps_is_pub_registered(TCPA_STORE_PUBKEY *key)
 {
         int fd = -1;
         TSS_BOOL answer;
@@ -1179,7 +1179,7 @@ isPubRegistered(TCPA_STORE_PUBKEY *key)
         if ((fd = get_file()) < 0)
                 return FALSE;
 
-        if (ps_is_pub_registered(fd, key, &answer)) {
+        if (psfile_is_pub_registered(fd, key, &answer)) {
                 put_file(fd);
                 return FALSE;
         }
@@ -1189,7 +1189,7 @@ isPubRegistered(TCPA_STORE_PUBKEY *key)
 }
 
 TSS_RESULT
-getRegisteredUuidByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
+ps_get_uuid_by_pub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
 {
         int fd = -1;
 	TSS_RESULT ret;
@@ -1197,14 +1197,14 @@ getRegisteredUuidByPub(TCPA_STORE_PUBKEY *pub, TSS_UUID **uuid)
         if ((fd = get_file()) < 0)
                 return TCSERR(TSS_E_INTERNAL_ERROR);
 
-        ret = ps_get_uuid_by_pub(fd, pub, uuid);
+        ret = psfile_get_uuid_by_pub(fd, pub, uuid);
 
         put_file(fd);
         return ret;
 }
 
 TSS_RESULT
-getRegisteredKeyByPub(TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **key)
+ps_get_key_by_pub(TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **key)
 {
         int fd = -1;
 	TSS_RESULT ret;
@@ -1212,7 +1212,7 @@ getRegisteredKeyByPub(TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **key)
         if ((fd = get_file()) < 0)
                 return TCSERR(TSS_E_INTERNAL_ERROR);
 
-        ret = ps_get_key_by_pub(fd, pub, size, key);
+        ret = psfile_get_key_by_pub(fd, pub, size, key);
 
         put_file(fd);
         return ret;
@@ -1337,7 +1337,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 			return result;
 	} else {
 		/* check registered */
-		if (isPubRegistered(pubKey) == FALSE)
+		if (ps_is_pub_registered(pubKey) == FALSE)
 			return TCSERR(TCS_E_KM_LOADFAILED);
 		KeyUUID = mc_get_uuid_by_pub(pubKey);
 		if ((result = TCSP_LoadKeyByUUID_Internal
@@ -1356,9 +1356,8 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 }
 
 TSS_RESULT
-writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid,
-			 BYTE *vendor_data, UINT32 vendor_size,
-			 BYTE *blob, UINT32 blob_size)
+ps_write_key(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *vendor_data,
+	     UINT32 vendor_size, BYTE *blob, UINT32 blob_size)
 {
         int fd = -1;
         TSS_RESULT rc;
@@ -1369,16 +1368,16 @@ writeRegisteredKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid,
                 return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	/* this case needed for PS file init. if the key file doesn't yet exist, the
-	 * ps_get_parent_ps_type_by_uuid() call would fail. */
+	 * psfile_get_parent_ps_type_by_uuid() call would fail. */
 	if (!memcmp(parent_uuid, &NULL_UUID, sizeof(TSS_UUID))) {
 		parent_ps = TSS_PS_TYPE_SYSTEM;
 	} else {
-		if ((rc = ps_get_parent_ps_type_by_uuid(fd, parent_uuid, &parent_ps)))
+		if ((rc = psfile_get_parent_ps_type_by_uuid(fd, parent_uuid, &parent_ps)))
 			return rc;
 	}
 
-        rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, vendor_data,
-			  vendor_size, blob, short_blob_size);
+        rc = psfile_write_key(fd, uuid, parent_uuid, &parent_ps, vendor_data,
+			      vendor_size, blob, short_blob_size);
 
         put_file(fd);
         return TSS_SUCCESS;

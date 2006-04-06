@@ -26,7 +26,7 @@
 #include "tsplog.h"
 
 TSS_RESULT
-keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob, TSS_BOOL *answer)
+ps_is_key_registered(UINT32 keyBlobSize, BYTE *keyBlob, TSS_BOOL *answer)
 {
 	TCPA_KEY key;
 	UINT16 offset;
@@ -43,7 +43,7 @@ keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob, TSS_BOOL *answe
 		return FALSE;
 	}
 
-	if (ps_is_pub_registered(fd, &key.pubKey, answer))
+	if (psfile_is_pub_registered(fd, &key.pubKey, answer))
 		*answer = FALSE;
 
 	free_key_refs(&key);
@@ -52,8 +52,8 @@ keyreg_IsKeyAlreadyRegistered(UINT32 keyBlobSize, BYTE *keyBlob, TSS_BOOL *answe
 }
 
 TSS_RESULT
-keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
-		      UINT32 blob_size, BYTE *blob)
+ps_write_key(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
+	     UINT32 blob_size, BYTE *blob)
 {
 	int fd = -1;
 	TSS_RESULT rc;
@@ -68,7 +68,7 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 	if ((fd = get_file()) < 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	rc = ps_write_key(fd, uuid, parent_uuid, &parent_ps, blob, short_blob_size);
+	rc = psfile_write_key(fd, uuid, parent_uuid, &parent_ps, blob, short_blob_size);
 
 	put_file(fd);
 	return TSS_SUCCESS;
@@ -76,7 +76,7 @@ keyreg_WriteKeyToFile(TSS_UUID *uuid, TSS_UUID *parent_uuid, UINT32 parent_ps,
 
 
 TSS_RESULT
-keyreg_RemoveKey(TSS_UUID *uuid)
+ps_remove_key(TSS_UUID *uuid)
 {
         struct key_disk_cache *tmp;
 
@@ -102,7 +102,7 @@ keyreg_RemoveKey(TSS_UUID *uuid)
 }
 
 TSS_RESULT
-keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
+ps_get_key_by_uuid(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 {
 	BYTE tempBlob[2048];
 	UINT16 tempBlobSize = sizeof (tempBlob);
@@ -113,7 +113,7 @@ keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	/* XXX need the PS funcs to return TSS_RESULTs */
-	if ((rc = ps_get_key_by_uuid(fd, uuid, tempBlob, &tempBlobSize))) {
+	if ((rc = psfile_get_key_by_uuid(fd, uuid, tempBlob, &tempBlobSize))) {
 		put_file(fd);
 		return rc;
 	}
@@ -131,7 +131,7 @@ keyreg_GetKeyByUUID(TSS_UUID *uuid, UINT32 * blobSizeOut, BYTE ** blob)
 }
 
 TSS_RESULT
-keyreg_GetParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID *parent_uuid)
+ps_get_parent_uuid_by_uuid(TSS_UUID *uuid, TSS_UUID *parent_uuid)
 {
 	int fd = -1;
 	TSS_RESULT rc = TSS_SUCCESS;
@@ -139,14 +139,14 @@ keyreg_GetParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID *parent_uuid)
 	if ((fd = get_file()) < 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	rc = ps_get_parent_uuid_by_uuid(fd, uuid, parent_uuid);
+	rc = psfile_get_parent_uuid_by_uuid(fd, uuid, parent_uuid);
 
 	put_file(fd);
 	return rc;
 }
 
 TSS_RESULT
-keyreg_GetParentPSTypeByUUID(TSS_UUID *uuid, UINT32 *psTypeOut)
+ps_get_parent_ps_type_by_uuid(TSS_UUID *uuid, UINT32 *psTypeOut)
 {
         struct key_disk_cache *tmp;
 
@@ -174,7 +174,7 @@ keyreg_GetParentPSTypeByUUID(TSS_UUID *uuid, UINT32 *psTypeOut)
 
 #if 0
 TSS_RESULT
-keyreg_replaceEncData_PS(BYTE *enc_data, BYTE *new_enc_data)
+ps_replaceEncData(BYTE *enc_data, BYTE *new_enc_data)
 {
 	int fd = -1;
 	TSS_RESULT rc = TSS_SUCCESS;
@@ -182,7 +182,7 @@ keyreg_replaceEncData_PS(BYTE *enc_data, BYTE *new_enc_data)
 	if ((fd = get_file()) < 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	
-	rc = ps_replace_enc_data(fd, enc_data, new_enc_data);
+	rc = psfile_replace_enc_data(fd, enc_data, new_enc_data);
 	put_file(fd);
 
 	return rc;
