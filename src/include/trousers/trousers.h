@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -12,6 +12,10 @@
 #define _TROUSERS_H_
 
 #include <openssl/rsa.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Utility functions offered by trousers for use in your TSS app.
@@ -31,6 +35,7 @@ void       Trspi_UnloadBlob_TSS_VERSION(UINT16 *offset, BYTE *blob, TSS_VERSION 
 void       Trspi_UnloadBlob_TCPA_VERSION(UINT16 *offset, BYTE *blob, TCPA_VERSION *out);
 TSS_RESULT Trspi_UnloadBlob_PCR_INFO(UINT16 *offset, BYTE *blob, TCPA_PCR_INFO *pcr);
 TSS_RESULT Trspi_UnloadBlob_PCR_SELECTION(UINT16 *offset, BYTE *blob, TCPA_PCR_SELECTION *pcr);
+TSS_RESULT Trspi_UnloadBlob_PCR_COMPOSITE(UINT16 *offset, BYTE *blob, TCPA_PCR_COMPOSITE *out);
 TSS_RESULT Trspi_UnloadBlob_STORED_DATA(UINT16 *offset, BYTE *blob, TCPA_STORED_DATA *data);
 void       Trspi_UnloadBlob_KEY_FLAGS(UINT16 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags);
 TSS_RESULT Trspi_UnloadBlob_KEY_PARMS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms);
@@ -144,6 +149,10 @@ char *Trspi_Error_Layer(TSS_RESULT);
 
 /* return just the error code bits of the result */
 TSS_RESULT Trspi_Error_Code(TSS_RESULT);
+
+#ifdef __cplusplus
+}
+#endif
 
 /* masks */
 #define TSS_KEY_SIZE_MASK	0x00000F00
