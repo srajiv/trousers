@@ -35,7 +35,7 @@ Tspi_PcrComposite_GetPcrValue \- get the digest value of a given PCR index insid
 .B #include <tss/tspi.h>
 .sp
 .BI "TSS_RESULT Tspi_PcrComposite_GetPcrValue(TSS_HPCRS " hPcrComposite ",    UINT32 " ulPcrIndex ","
-.BI "                                         UINT32    " ulPcrValueLength ", BYTE*  " rgbPcrValue ");"
+.BI "                                         UINT32*   " ulPcrValueLength ", BYTE** " rgbPcrValue ");"
 .fi
 .sp
 .ad
