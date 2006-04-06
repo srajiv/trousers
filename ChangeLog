@@ -1,3 +1,13 @@
+- Removed unnecessary call to obj_encdata_get_data in
+ Tspi_Data_Seal.
+- Added support for using the trousers.h APIs in C++.
+- Fixed Tspi_PcrComposite_GetPcrValue's man page, which had
+ left out *'s in two parameters.
+- Fix for SF 1414817, Quote's PCR object doesn't get set on
+ return.
+- Lots of function renaming to make code reading clearer.
+- Return TSS_E_INVALID_OBJ_ACCESS when trying to retrieve data
+ from an encrypted data object that hasn't been set.
 - Added contact info to the README.
 - Fix for ordering of params in call to set callback by
   Tspi_SetAttribUint32. Thanks to Thomas Winkler for the fix.
