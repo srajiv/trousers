@@ -46,7 +46,7 @@ tcsd_shutdown()
 	/* order is important here:
 	 * allow all threads to complete their current request */
 	tcsd_threads_final();
-	closeDiskCache();
+	ps_close_disk_cache();
 	auth_mgr_final();
 	(void)req_mgr_final();
 	conf_file_final(&tcsd_options);
@@ -153,7 +153,7 @@ tcsd_startup()
 		return result;
 	}
 
-	if ((result = initDiskCache())) {
+	if ((result = ps_init_disk_cache())) {
 		conf_file_final(&tcsd_options);
 		(void)req_mgr_final();
 		return result;
@@ -161,7 +161,7 @@ tcsd_startup()
 
 	if ((result = get_tpm_metrics(&tpm_metrics))) {
 		conf_file_final(&tcsd_options);
-		closeDiskCache();
+		ps_close_disk_cache();
 		(void)req_mgr_final();
 		return result;
 	}
@@ -169,7 +169,7 @@ tcsd_startup()
 	/* must happen after get_tpm_metrics() */
 	if ((result = auth_mgr_init())) {
 		conf_file_final(&tcsd_options);
-		closeDiskCache();
+		ps_close_disk_cache();
 		(void)req_mgr_final();
 		return result;
 	}
@@ -177,7 +177,7 @@ tcsd_startup()
 	if ((result = event_log_init())) {
 		auth_mgr_final();
 		conf_file_final(&tcsd_options);
-		closeDiskCache();
+		ps_close_disk_cache();
 		(void)req_mgr_final();
 		return result;
 	}
