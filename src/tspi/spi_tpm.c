@@ -1596,7 +1596,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	offset = 0;
 	hashBlob = malloc((3 * sizeof(UINT32)) + sizeof(TCPA_NONCE) + ulSubCapLength);
 	if (hashBlob == NULL) {
-		LogError("malloc of %d bytes failed.", (3 * sizeof(UINT32)) + sizeof(TCPA_NONCE)
+		LogError("malloc of %zd bytes failed.", (3 * sizeof(UINT32)) + sizeof(TCPA_NONCE)
 				+ ulSubCapLength);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -1661,7 +1661,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		offset = 0;
 		hashBlob = malloc(*pulRespDataLength + sizeof(TCPA_NONCE));
 		if (hashBlob == NULL) {
-			LogError("malloc of %d bytes failed.", *pulRespDataLength + sizeof(TCPA_NONCE));
+			LogError("malloc of %zd bytes failed.", *pulRespDataLength + sizeof(TCPA_NONCE));
 			free(sig);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
@@ -2098,6 +2098,24 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
 
 	if (usesAuth == TRUE) {
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
+			free(pcrDataOut);
+			free(validationData);
+			return result;
+		}
+	}
+
+	if (hPcrComposite) {
+		TCPA_PCR_COMPOSITE pcrComp;
+
+		offset = 0;
+		if ((result = Trspi_UnloadBlob_PCR_COMPOSITE(&offset, pcrDataOut,
+							     &pcrComp))) {
+			free(pcrDataOut);
+			free(validationData);
+			return result;
+		}
+
+		if ((result = obj_pcrs_set_values(hPcrComposite, &pcrComp))) {
 			free(pcrDataOut);
 			free(validationData);
 			return result;
