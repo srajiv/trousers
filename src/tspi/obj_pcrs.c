@@ -145,6 +145,26 @@ done:
 }
 
 TSS_RESULT
+obj_pcrs_set_values(TSS_HPCRS hPcrs, TCPA_PCR_COMPOSITE *pcrComp)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	TCPA_PCR_SELECTION *select = &(pcrComp->select);
+	UINT16 i, val_idx = 0;
+
+	for (i = 0; i < select->sizeOfSelect * 8; i++) {
+		if (select->pcrSelect[i / 8] & (1 << (i % 8))) {
+			if ((result = obj_pcrs_set_value(hPcrs, i, TCPA_SHA1_160_HASH_LEN,
+							 (BYTE *)&pcrComp->pcrValue[val_idx])))
+				break;
+
+			val_idx++;
+		}
+	}
+
+	return result;
+}
+
+TSS_RESULT
 obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 {
 	struct tsp_object *obj;
@@ -233,8 +253,7 @@ obj_pcrs_get_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 *size, BYTE **value)
 	}
 
 	*size = TCPA_SHA1_160_HASH_LEN;
-	/* idx + 1 since PCRs are 0 based */
-	memcpy(*value, &pcrs->pcrs[idx + 1], TCPA_SHA1_160_HASH_LEN);
+	memcpy(*value, &pcrs->pcrs[idx], TCPA_SHA1_160_HASH_LEN);
 
 done:
 	obj_list_put(&pcrs_list);
