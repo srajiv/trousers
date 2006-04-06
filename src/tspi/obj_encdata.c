@@ -162,8 +162,8 @@ obj_encdata_get_data(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 	encdata = (struct tr_encdata_obj *)obj->data;
 
 	if (encdata->encryptedDataLength == 0) {
-		*data = NULL;
-		*size = 0;
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
 	} else {
 		*data = calloc_tspi(obj->tspContext, encdata->encryptedDataLength);
 		if (*data == NULL) {
