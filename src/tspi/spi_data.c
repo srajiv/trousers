@@ -259,9 +259,6 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 					    &hPolicy, NULL)))
 		return result;
 
-	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
-		return result;
-
 	if ((result = obj_encdata_get_policy(hEncData, TSS_POLICY_USAGE,
 					     &hEncPolicy)))
 		return result;
