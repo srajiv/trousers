@@ -92,10 +92,11 @@ internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
 	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if ((result = get_local_random(tcsContext, sizeof(TCPA_NONCE), &random)))
+	if ((result = get_local_random(tspContext, sizeof(TCPA_NONCE), &random)))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	memcpy(nonce->nonce, random, sizeof(TCPA_NONCE));
+	free_tspi(tspContext, random);
 
 	return TSS_SUCCESS;
 }

@@ -579,7 +579,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
-			if ((result = get_local_random(tcsContext, bytesRequested,
+			if ((result = get_local_random(tspContext, bytesRequested,
 						       &randomBytes)))
 				return result;
 			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
@@ -649,7 +649,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 
 			/*  generate random data for asymfinish */
 			bytesRequested = 20;
-			if ((result = get_local_random(tcsContext, bytesRequested,
+			if ((result = get_local_random(tspContext, bytesRequested,
 						       &randomBytes)))
 				return result;
 
@@ -657,7 +657,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 
-			if ((result = get_local_random(tcsContext, bytesRequested,
+			if ((result = get_local_random(tspContext, bytesRequested,
 						       &randomBytes)))
 				return result;
 
@@ -665,7 +665,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			free_tspi(tspContext, randomBytes);
 			bytesRequested = 20;
 
-			if ((result = get_local_random(tcsContext, bytesRequested,
+			if ((result = get_local_random(tspContext, bytesRequested,
 						       &randomBytes)))
 				return result;
 
