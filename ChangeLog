@@ -1,3 +1,6 @@
+
+* TROUSERS_0_2_6
+
 - Removed unnecessary call to obj_encdata_get_data in
  Tspi_Data_Seal.
 - Added support for using the trousers.h APIs in C++.
