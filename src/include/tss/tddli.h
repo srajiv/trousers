@@ -59,7 +59,6 @@ extern "C" {
 			UINT32        CapArea,
 			UINT32        SubCap,
 			BYTE*         pCapBuf,
-			UINT32*       puntCapBufLen
 			UINT32       puntCapBufLen
 			);
 
