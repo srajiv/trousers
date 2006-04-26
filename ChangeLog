@@ -1,4 +1,6 @@
 
+- Fix for SF 1477178, random numbers get hosed by the tcsd.
+
 * TROUSERS_0_2_6
 
 - Removed unnecessary call to obj_encdata_get_data in
