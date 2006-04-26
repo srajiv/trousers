@@ -1650,8 +1650,8 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	UINT16 offset;
 	TSS_RESULT result;
-	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 5;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 6;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *rnd_tmp = NULL;
 
 	LogDebugFn("%u bytes", *bytesRequested);
 
@@ -1677,25 +1677,24 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			LogDebugFn("received %u bytes from the TPM",
 				   bytesReturned);
 
-			*randomBytes = realloc(*randomBytes,
-					       totalReturned + bytesReturned);
-			if (*randomBytes == NULL) {
+			rnd_tmp = realloc(rnd_tmp, totalReturned + bytesReturned);
+			if (rnd_tmp == NULL) {
 				LogError("malloc of %d bytes failed.",
 					 bytesReturned);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
-			UnloadBlob(&offset, totalReturned + bytesReturned,
-				   txBlob, *randomBytes, "random bytes");
+			UnloadBlob(&offset, bytesReturned, txBlob,
+				   &rnd_tmp[totalReturned], "random bytes");
 			totalReturned += bytesReturned;
 		}
 	} while (totalReturned < *bytesRequested && retries--);
 
 	if (totalReturned != *bytesRequested) {
-		LogDebugFn("only %u bytes recieved from TPM after 5 tries",
-			   totalReturned);
-		free(*randomBytes);
+		LogDebugFn("Only %u random bytes recieved from TPM.", totalReturned);
+		free(rnd_tmp);
 		result = TCSERR(TSS_E_FAIL);
-	}
+	} else
+		*randomBytes = rnd_tmp;
 
 	return result;
 }
