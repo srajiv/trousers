@@ -89,10 +89,8 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	if (initFlags & TSS_KEY_MIGRATABLE)
 		rsakey->tcpaKey.keyFlags |= migratable;
 	if (initFlags & TSS_KEY_AUTHORIZATION) {
-		rsakey->usesAuth = TRUE;
+		rsakey->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 		rsakey->tcpaKey.authDataUsage = TPM_AUTH_ALWAYS;
-	} else {
-		rsakey->usesAuth = FALSE;
 	}
 
 	/* set the key length */
@@ -425,7 +423,7 @@ obj_rsakey_set_authdata_usage(TSS_HKEY hKey, UINT32 usage)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	rsakey->tcpaKey.authDataUsage = (BYTE)usage;
-	rsakey->usesAuth = (TSS_BOOL)usage;
+	rsakey->flags |= usage ? TSS_OBJ_FLAG_USAGEAUTH : 0;
 
 	obj_list_put(&rsakey_list);
 
@@ -799,13 +797,23 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	if (policyType == TSS_POLICY_USAGE)
+	if (policyType == TSS_POLICY_USAGE) {
 		*phPolicy = rsakey->usagePolicy;
-	else
+		if (auth != NULL) {
+			if (rsakey->flags & TSS_OBJ_FLAG_USAGEAUTH)
+				*auth = TRUE;
+			else
+				*auth = FALSE;
+		}
+	} else {
 		*phPolicy = rsakey->migPolicy;
-
-	if (auth != NULL)
-		*auth = rsakey->usesAuth;
+		if (auth != NULL) {
+			if (rsakey->flags & TSS_OBJ_FLAG_MIGAUTH)
+				*auth = TRUE;
+			else
+				*auth = FALSE;
+		}
+	}
 
 	obj_list_put(&rsakey_list);
 
@@ -1079,7 +1087,8 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	if ((result = Spi_UnloadBlob_KEY(&offset, data, &rsakey->tcpaKey)))
 		goto done;
 
-	rsakey->usesAuth = rsakey->tcpaKey.authDataUsage;
+	if (rsakey->tcpaKey.authDataUsage)
+		rsakey->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 
 done:
 	obj_list_put(&rsakey_list);
