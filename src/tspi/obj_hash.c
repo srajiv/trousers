@@ -30,7 +30,7 @@ obj_hash_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 	struct tr_hash_obj *hash = calloc(1, sizeof(struct tr_hash_obj));
 
 	if (hash == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_hash_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}

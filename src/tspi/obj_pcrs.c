@@ -30,7 +30,7 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 	struct tr_pcrs_obj *pcrs = calloc(1, sizeof(struct tr_pcrs_obj));
 
 	if (pcrs == NULL) {
-		LogError("malloc of %d bytes failed.",
+		LogError("malloc of %zd bytes failed.",
 				sizeof(struct tr_pcrs_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
