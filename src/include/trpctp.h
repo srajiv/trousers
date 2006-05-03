@@ -321,9 +321,9 @@
 						 TCS_KEY_HANDLE parentHandle,	/* in */
 						 UINT32 inDataSize,	/* in */
 						 BYTE * inData,	/* in */
+						 UINT32 randomSize,	/* in */
+						 BYTE * random,	/* in */
 						 TPM_AUTH * parentAuth,	/* in , out */
-						 UINT32 randomSize,	/* should be in */
-						 BYTE * random,	/* should be in */
 						 UINT32 * outDataSize,	/* out */
 						 BYTE ** outData	/* out */
 	    );
