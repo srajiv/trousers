@@ -1815,6 +1815,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	TPM_AUTH ownerAuth;
 	UINT32 pubKeySize;
 	TSS_HCONTEXT tspContext;
+	UINT32 tpmMigrationScheme;
 
 	if (pulMigTicketLength == NULL || prgbMigTicket == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1829,6 +1830,21 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
 		return result;
 
+	switch (migrationScheme) {
+		case TSS_MS_MIGRATE:
+			tpmMigrationScheme = TCPA_MS_MIGRATE;
+			break;
+		case TSS_MS_REWRAP:
+			tpmMigrationScheme = TCPA_MS_REWRAP;
+			break;
+		case TSS_MS_MAINT:
+			tpmMigrationScheme = TCPA_MS_MAINT;
+			break;
+		default:
+			return TSPERR(TSS_E_BAD_PARAMETER);
+			break;
+	}
+
 	/*  Get the migration key blob */
 	if ((result = obj_rsakey_get_blob(hMigrationKey,
 					&migrationKeySize, &migrationKeyBlob)))
@@ -1837,8 +1853,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	/* First, turn the keyBlob into a TCPA_KEY structure */
 	offset = 0;
 	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
-	if ((result = Trspi_UnloadBlob_KEY(&offset, migrationKeyBlob, &tcpaKey)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, migrationKeyBlob, &tcpaKey))) {
+		free_tspi(tspContext, migrationKeyBlob);
 		return result;
+	}
 	free_tspi(tspContext, migrationKeyBlob);
 
 	/* Then pull the _PUBKEY portion out of that struct into a blob */
@@ -1851,7 +1869,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	/* Auth */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_AuthorizeMigrationKey, hashblob);
-	Trspi_LoadBlob_UINT16(&offset, migrationScheme, hashblob);
+	Trspi_LoadBlob_UINT16(&offset, tpmMigrationScheme, hashblob);
 	Trspi_LoadBlob(&offset, pubKeySize, hashblob, pubKeyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
@@ -1878,8 +1896,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	Trspi_LoadBlob(&offset, *pulMigTicketLength, hashblob, *prgbMigTicket);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
-	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth))) {
+		free_tspi(tspContext, prgbMigTicket);
 		return result;
+	}
 
 	return TSS_SUCCESS;
 }
