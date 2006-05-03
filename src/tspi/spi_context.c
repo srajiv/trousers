@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -1069,6 +1069,4 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/*  in */
 		return TSPERR(TSS_E_NOTIMPL);	/* TODO */
 	} else
 		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	return TSS_SUCCESS;
 }
