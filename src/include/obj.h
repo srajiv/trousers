@@ -11,6 +11,15 @@
 #ifndef _OBJ_H_
 #define _OBJ_H_
 
+/* definitions */
+
+/* When TRUE, the object has PCRs associated with it */
+#define TSS_OBJ_FLAG_PCRS	0x00000001
+/* When TRUE, the object has a usage auth secret associated with it */
+#define TSS_OBJ_FLAG_USAGEAUTH	0x00000002
+/* When TRUE, the object has a migration auth secret associated with it */
+#define TSS_OBJ_FLAG_MIGAUTH	0x00000004
+
 /* structures */
 
 struct tsp_object {
@@ -46,7 +55,7 @@ struct tr_encdata_obj {
 	UINT32 encryptedDataLength;
 	BYTE encryptedData[512];
 	TCPA_PCR_INFO pcrInfo;
-	TSS_BOOL usePCRs;
+	TSS_FLAG flags;
 	UINT32 type;
 };
 
@@ -95,7 +104,7 @@ struct tr_rsakey_obj {
 	TSS_FLAG persStorageType;
 	TSS_UUID uuid;
 	TCPA_PRIVKEY privateKey;
-	TSS_BOOL usesAuth;
+	TSS_FLAG flags;
 };
 
 struct tr_policy_obj {
