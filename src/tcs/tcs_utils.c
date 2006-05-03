@@ -249,7 +249,7 @@ get_tpm_metrics(struct tpm_properties *p)
 
 err:
 	if (result)
-		LogError("TPM_GetCapability failed with result = 0x%x", result);
+		LogError("TCS GetCapability failed with result = 0x%x", result);
 
 	return result;
 }
