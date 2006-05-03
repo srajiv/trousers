@@ -17,8 +17,8 @@ AC_ARG_ENABLE(debug,
 test_CFLAGS=${CFLAGS+set}
 if test "$test_CFLAGS" != set; then
 	if test "x$enable_debug" == "xyes"; then
-		CFLAGS="-O0 -g -DTSS_DEBUG -Wreturn-type -Wunreachable-code"
-#		CFLAGS="-O0 -g -DTSS_DEBUG -Wreturn-type -Wunreachable-code -DTCSD_SINGLE_THREAD_DEBUG"
+		CFLAGS="-O0 -g -DTSS_DEBUG -Wreturn-type"
+#		CFLAGS="-O0 -g -DTSS_DEBUG -Wreturn-type -DTCSD_SINGLE_THREAD_DEBUG"
 	else
 		CFLAGS="-O2"
 	fi
