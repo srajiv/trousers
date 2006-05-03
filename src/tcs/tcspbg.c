@@ -1247,10 +1247,7 @@ done:
 TSS_RESULT
 TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TCS_KEY_HANDLE parentHandle,	/* in */
-				  TCPA_MIGRATE_SCHEME migrationType,	/* in */
-#if 0
-				  TCPA_MIGRATION_SCHEME migrationType,  /* in */
-#endif
+				  TSS_MIGRATE_SCHEME migrationType,	/* in */
 				  UINT32 MigrationKeyAuthSize,	/* in */
 				  BYTE * MigrationKeyAuth,	/* in */
 				  UINT32 encDataSize,	/* in */
@@ -1275,18 +1272,32 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (parentAuth != NULL) {
-		LogDebug("Auth Used");
 		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
 			goto done;
-	} else {
-		LogDebug("no Auth");
 	}
 
-	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
-		goto done;
+	if (entityAuth != NULL) {
+		if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
+			goto done;
+	}
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
 		goto done;
+
+	switch (migrationType) {
+		case TSS_MS_MIGRATE:
+			migrationType = TCPA_MS_MIGRATE;
+			break;
+		case TSS_MS_REWRAP:
+			migrationType = TCPA_MS_REWRAP;
+			break;
+		case TSS_MS_MAINT:
+			migrationType = TCPA_MS_MAINT;
+			break;
+		default:
+			/* Let the TPM return an error */
+			break;
+	}
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, keyHandle, txBlob, "parent handle");
@@ -1295,16 +1306,14 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			MigrationKeyAuth, "mig key auth");
 	LoadBlob_UINT32(&offset, encDataSize, txBlob, "enc size");
 	LoadBlob(&offset, encDataSize, txBlob, encData, "enc data");
-	if (parentAuth != NULL) {
+	if (parentAuth && entityAuth) {
 		LoadBlob_Auth(&offset, txBlob, parentAuth);
 		LoadBlob_Auth(&offset, txBlob, entityAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
-				offset,
+		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset,
 				TPM_ORD_CreateMigrationBlob, txBlob);
 	} else {
 		LoadBlob_Auth(&offset, txBlob, entityAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset,
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 				TPM_ORD_CreateMigrationBlob, txBlob);
 	}
 
@@ -1342,9 +1351,9 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				   TCS_KEY_HANDLE parentHandle,	/* in */
 				   UINT32 inDataSize,	/* in */
 				   BYTE * inData,	/* in */
+				   UINT32 randomSize,	/* in */
+				   BYTE * random,	/* in */
 				   TPM_AUTH * parentAuth,	/* in, out */
-				   UINT32 randomSize,	/* should be in */
-				   BYTE * random,	/* should be in */
 				   UINT32 * outDataSize,	/* out */
 				   BYTE ** outData	/* out */
     )
@@ -1413,7 +1422,7 @@ done:
 
 TSS_RESULT
 TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				    TCPA_MIGRATE_SCHEME migrateScheme,	/* in */
+				    TSS_MIGRATE_SCHEME migrateScheme,	/* in */
 				    UINT32 MigrationKeySize,	/* in */
 				    BYTE * MigrationKey,	/* in */
 				    TPM_AUTH * ownerAuth,	/* in, out */
@@ -1434,6 +1443,21 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 		goto done;
+
+	switch (migrateScheme) {
+		case TSS_MS_MIGRATE:
+			migrateScheme = TCPA_MS_MIGRATE;
+			break;
+		case TSS_MS_REWRAP:
+			migrateScheme = TCPA_MS_REWRAP;
+			break;
+		case TSS_MS_MAINT:
+			migrateScheme = TCPA_MS_MAINT;
+			break;
+		default:
+			/* Let the TPM return an error */
+			break;
+	}
 
 	offset = 10;
 	LoadBlob_UINT16(&offset, migrateScheme, txBlob, "migation scheme");
@@ -1460,7 +1484,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-	LogResult("TPM_AuthorizeMigrationKey", result);
+	LogDebugFn("TPM_AuthorizeMigrationKey result: 0x%x", result);
 done:
 	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;
@@ -2113,7 +2137,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PUBKEY pubkey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug("\nEntering ReadPubek");
+	LogDebugFn("Enter");
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -2139,8 +2163,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   checksum->digest, "digest");
 	}
-	LogResult("Read Pubek", result);
-/*	LogData( "Leaving ReadPubek with result:", result ); */
+	LogDebugFn("result: 0x%x", result);
 	return result;
 }
 
