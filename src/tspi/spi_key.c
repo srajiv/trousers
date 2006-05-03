@@ -635,21 +635,195 @@ done:
 	free_tspi(tspContext, wrappingPubKey);
 	return result;
 }
-
+#if 0
 TSS_RESULT
-Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
-			     TSS_HKEY hParentKey,	/*  in */
-			     UINT32 ulMigTicketLength,	/*  in */
-			     BYTE * rgbMigTicket,	/*  in */
-			     UINT32 * pulRandomLength,	/*  out */
-			     BYTE ** prgbRandom,	/*  out */
-			     UINT32 * pulMigrationBlobLength,	/*  out */
-			     BYTE ** prgbMigrationBlob	/*  out */
-    )
+create_migration_blob_encdata(TSS_HENCDATA hDataToMigrate,
+			      TSS_HKEY hParentKey,
+			      UINT32 ulMigTicketLength,
+			      BYTE * rgbMigTicket,
+			      UINT32 * pulRandomLength,
+			      BYTE ** prgbRandom,
+			      UINT32 * pulMigrationBlobLength,
+			      BYTE ** prgbMigrationBlob)
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TPM_AUTH parentAuth;
 	TPM_AUTH entityAuth;
+	TCPA_RESULT result;
+	UINT16 offset;
+	BYTE hashblob[0x1000];
+	TCPA_DIGEST digest;
+	UINT32 parentKeySize;
+	BYTE *parentKeyBlob;
+	UINT32 dataToMigrateSize;
+	BYTE *dataToMigrateBlob;
+	TSS_HPOLICY hParentPolicy;
+	TSS_HPOLICY hMigratePolicy;
+	TCPA_MIGRATIONKEYAUTH migAuth;
+	TCS_KEY_HANDLE parentHandle;
+	TPM_AUTH *pParentAuth;
+	TSS_BOOL useAuth;
+	UINT32 blobSize;
+	BYTE *blob;
+	TCPA_STORED_DATA storedData;
+	TSS_HCONTEXT tspContext;
+
+	if ((result = obj_encdata_get_tsp_context(hDataToMigrate, &tspContext)))
+		return result;
+
+	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+		return result;
+
+	if ((result = obj_rsakey_get_blob(hParentKey, &parentKeySize, &parentKeyBlob)))
+		return result;
+
+	if ((result = obj_encdata_get_data(hDataToMigrate, &dataToMigrateSize, &dataToMigrateBlob)))
+		return result;
+
+	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE, &hParentPolicy,
+					    &useAuth)))
+		return result;
+
+	if ((result = obj_encdata_get_policy(hDataToMigrate, TSS_POLICY_MIGRATION, &hMigratePolicy)))
+		return result;
+
+	/*  Parsing the migration scheme from the blob and key object */
+	memset(&migAuth, 0, sizeof(TCPA_MIGRATIONKEYAUTH));
+
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_MigrationKeyAuth(&offset, rgbMigTicket, &migAuth)))
+		return result;
+
+	/* free these now, since none are used below */
+	free(migAuth.migrationKey.algorithmParms.parms);
+	migAuth.migrationKey.algorithmParms.parmSize = 0;
+	free(migAuth.migrationKey.pubKey.key);
+	migAuth.migrationKey.pubKey.keyLength = 0;
+#if 1
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataToMigrateBlob, &storedData)))
+		return result;
+#endif
+	/* Generate the Authorization data */
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMigrationBlob, hashblob);
+	Trspi_LoadBlob_UINT16(&offset, migAuth.migrationScheme, hashblob);
+	Trspi_LoadBlob(&offset, ulMigTicketLength, hashblob, rgbMigTicket);
+#if 1
+	Trspi_LoadBlob_UINT32(&offset, storedData.encDataSize, hashblob);
+	Trspi_LoadBlob(&offset, storedData.encDataSize, hashblob, storedData.encData);
+#else
+	Trspi_LoadBlob_UINT32(&offset, dataToMigrateSize, hashblob);
+	Trspi_LoadBlob(&offset, dataToMigrateSize, hashblob, dataToMigrateBlob);
+#endif
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+
+	if (useAuth) {
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
+						      TPM_ORD_CreateMigrationBlob,
+						      hParentPolicy, &digest,
+						      &parentAuth))) {
+			//free(storedData.sealInfo);
+			//free(storedData.encData);
+			return result;
+		}
+		pParentAuth = &parentAuth;
+	} else
+		pParentAuth = NULL;
+
+	if ((result = secret_PerformAuth_OIAP(hDataToMigrate,
+					      TPM_ORD_CreateMigrationBlob,
+					      hMigratePolicy, &digest,
+					      &entityAuth))) {
+		//free(storedData.sealInfo);
+		//free(storedData.encData);
+		return result;
+	}
+
+	if ((parentHandle = getTCSKeyHandle(hParentKey)) == NULL_HKEY) {
+		//free(storedData.sealInfo);
+		//free(storedData.encData);
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	}
+
+	if ((result = TCSP_CreateMigrationBlob(tcsContext, parentHandle, migAuth.migrationScheme,
+					       ulMigTicketLength, rgbMigTicket,
+					       //storedData.encDataSize, storedData.encData,
+					       dataToMigrateSize, dataToMigrateBlob,
+					       pParentAuth, &entityAuth, pulRandomLength,
+					       prgbRandom, pulMigrationBlobLength,
+					       prgbMigrationBlob))) {
+		//free(storedData.sealInfo);
+		//free(storedData.encData);
+		return result;
+	}
+	//free(storedData.sealInfo);
+	//free(storedData.encData);
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMigrationBlob, hashblob);
+	Trspi_LoadBlob_UINT32(&offset, *pulRandomLength, hashblob);
+	Trspi_LoadBlob(&offset, *pulRandomLength, hashblob, *prgbRandom);
+	Trspi_LoadBlob_UINT32(&offset, *pulMigrationBlobLength, hashblob);
+	Trspi_LoadBlob(&offset, *pulMigrationBlobLength, hashblob, *prgbMigrationBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+	if (useAuth) {
+		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
+			goto error;
+	}
+	if ((result = obj_policy_validate_auth_oiap(hMigratePolicy, &digest, &entityAuth)))
+		goto error;
+
+	if (migAuth.migrationScheme == TSS_MS_REWRAP) {
+#if 1
+		if ((result = obj_encdata_get_data(hDataToMigrate, &blobSize, &blob)))
+			goto error;
+
+		offset = 0;
+		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, blob, &storedData)))
+			goto error;
+
+		/* keyContainer.encData = calloc_tspi(tspContext, outDataSize); */
+		storedData.encDataSize = *pulMigrationBlobLength;
+		memcpy(storedData.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
+
+		offset = 0;
+		Trspi_LoadBlob_STORED_DATA(&offset, blob, &storedData);
+		free(storedData.sealInfo);
+		free(storedData.encData);
+
+		if ((result = obj_encdata_set_data(hDataToMigrate, blobSize, blob)))
+			goto error;
+#else
+		if ((result = obj_encdata_set_data(hDataToMigrate, *pulMigrationBlobLength,
+						   *prgbMigrationBlob)))
+			goto error;
+#endif
+	}
+
+	return result;
+error:
+	if (*pulRandomLength)
+		free_tspi(tspContext, prgbRandom);
+	free_tspi(tspContext, prgbMigrationBlob);
+	return result;
+}
+#endif
+
+TSS_RESULT
+create_migration_blob_key(TSS_HKEY hKeyToMigrate,
+			  TSS_HKEY hParentKey,
+			  UINT32 ulMigTicketLength,
+			  BYTE * rgbMigTicket,
+			  UINT32 * pulRandomLength,
+			  BYTE ** prgbRandom,
+			  UINT32 * pulMigrationBlobLength,
+			  BYTE ** prgbMigrationBlob)
+{
+	TCS_CONTEXT_HANDLE tcsContext;
+	TPM_AUTH parentAuth, entityAuth;
+	TPM_AUTH *pParentAuth;
 	TCPA_RESULT result;
 	UINT16 offset;
 	BYTE hashblob[0x1000];
@@ -663,62 +837,37 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	TCPA_MIGRATIONKEYAUTH migAuth;
 	TCPA_KEY tcpaKey;
 	TCS_KEY_HANDLE parentHandle;
-	TPM_AUTH *pParentAuth;
-	TSS_BOOL useAuth;
+	TSS_BOOL parentUsesAuth;
 	UINT32 blobSize;
 	BYTE *blob;
 	TCPA_KEY keyContainer;
-	TCPA_STORED_DATA storedData;
 	TSS_HCONTEXT tspContext;
-	UINT32 migratingKey = 1;
 
-	if (pulRandomLength == NULL || prgbRandom == NULL || rgbMigTicket == NULL ||
-	    pulMigrationBlobLength == NULL || prgbMigrationBlob == NULL)
-		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	if (!obj_is_rsakey(hKeyToMigrate))
-		migratingKey = 0;
-
-	if (migratingKey) {
-		if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
-			return result;
-	} else {
-		if ((result = obj_encdata_get_tsp_context(hKeyToMigrate, &tspContext)))
-			return result;
-	}
+	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
+		return result;
 
 	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	if ((result = obj_rsakey_get_blob(hParentKey,
-					&parentKeySize, &parentKeyBlob)))
+	if ((result = obj_rsakey_get_blob(hParentKey, &parentKeySize, &parentKeyBlob)))
 		return result;
 
-	if (migratingKey) {
-		if ((result = obj_rsakey_get_blob(hKeyToMigrate,
-						&keyToMigrateSize, &keyToMigrateBlob)))
-			return result;
-	} else {
-		if ((result = obj_encdata_get_data(hKeyToMigrate,
-						&keyToMigrateSize, &keyToMigrateBlob)))
-			return result;
-	}
-
-	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE,
-					    &hParentPolicy, &useAuth)))
+	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &keyToMigrateSize, &keyToMigrateBlob)))
 		return result;
 
-	if ((result = obj_rsakey_get_policy(hKeyToMigrate, TSS_POLICY_MIGRATION,
-					    &hMigratePolicy, NULL)))
+	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE, &hParentPolicy,
+					    &parentUsesAuth)))
 		return result;
 
-	/* ////////////////////////////////////////////////////////////////////// */
+	if ((result = obj_rsakey_get_policy(hKeyToMigrate, TSS_POLICY_MIGRATION, &hMigratePolicy,
+					    NULL)))
+		return result;
+
 	/*  Parsing the migration scheme from the blob and key object */
 	memset(&migAuth, 0, sizeof(TCPA_MIGRATIONKEYAUTH));
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_MigrationKeyAuth(&offset, rgbMigTicket,
-							&migAuth)))
+	if ((result = Trspi_UnloadBlob_MigrationKeyAuth(&offset, rgbMigTicket, &migAuth)))
 		return result;
 
 	/* free these now, since none are used below */
@@ -730,102 +879,53 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
 
 	offset = 0;
-	if (migratingKey) {
-		if ((result = Trspi_UnloadBlob_KEY(&offset, keyToMigrateBlob,
-						   &tcpaKey)))
-			return result;
-	} else {
-		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset,
-							   keyToMigrateBlob,
-							   &storedData)))
-			return result;
-	}
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyToMigrateBlob, &tcpaKey)))
+		return result;
 
-	/* //////////////////////////////////////////////////////////////////////////////////// */
 	/* Generate the Authorization data */
-	if (migratingKey) {
-		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMigrationBlob, hashblob);
-		Trspi_LoadBlob_UINT16(&offset, migAuth.migrationScheme, hashblob);
-		Trspi_LoadBlob(&offset, ulMigTicketLength, hashblob, rgbMigTicket);
-		Trspi_LoadBlob_UINT32(&offset, tcpaKey.encSize, hashblob);
-		Trspi_LoadBlob(&offset, tcpaKey.encSize, hashblob, tcpaKey.encData);
-		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
-	} else {
-		offset = 0;
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMigrationBlob, hashblob);
-		Trspi_LoadBlob_UINT16(&offset, migAuth.migrationScheme, hashblob);
-		Trspi_LoadBlob(&offset, ulMigTicketLength, hashblob, rgbMigTicket);
-		Trspi_LoadBlob_UINT32(&offset, storedData.encDataSize, hashblob);
-		Trspi_LoadBlob(&offset, storedData.encDataSize, hashblob, storedData.encData);
-		Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
-	}
-	if (useAuth) {
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMigrationBlob, hashblob);
+	Trspi_LoadBlob_UINT16(&offset, migAuth.migrationScheme, hashblob);
+	Trspi_LoadBlob(&offset, ulMigTicketLength, hashblob, rgbMigTicket);
+	Trspi_LoadBlob_UINT32(&offset, tcpaKey.encSize, hashblob);
+	Trspi_LoadBlob(&offset, tcpaKey.encSize, hashblob, tcpaKey.encData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
+
+	if (parentUsesAuth) {
 		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
 						      TPM_ORD_CreateMigrationBlob,
 						      hParentPolicy, &digest,
 						      &parentAuth))) {
 			free_key_refs(&tcpaKey);
-			free(storedData.sealInfo);
-			free(storedData.encData);
 			return result;
 		}
 		pParentAuth = &parentAuth;
 	} else {
 		pParentAuth = NULL;
 	}
+
 	if ((result = secret_PerformAuth_OIAP(hKeyToMigrate,
 					      TPM_ORD_CreateMigrationBlob,
 					      hMigratePolicy, &digest,
 					      &entityAuth))) {
 		free_key_refs(&tcpaKey);
-		free(storedData.sealInfo);
-		free(storedData.encData);
 		return result;
 	}
 
 	if ((parentHandle = getTCSKeyHandle(hParentKey)) == NULL_HKEY) {
 		free_key_refs(&tcpaKey);
-		free(storedData.sealInfo);
-		free(storedData.encData);
 		return TSPERR(TSS_E_KEY_NOT_LOADED);
 	}
 
-	if (migratingKey) {
-		if ((result = TCSP_CreateMigrationBlob(tcsContext,
-						       parentHandle,
-						       migAuth.migrationScheme,
-						       ulMigTicketLength,
-						       rgbMigTicket,
-						       tcpaKey.encSize,
-						       tcpaKey.encData,
-						       pParentAuth,
-						       &entityAuth,
-						       pulRandomLength,
-						       prgbRandom,
-						       pulMigrationBlobLength,
-						       prgbMigrationBlob))) {
-			free_key_refs(&tcpaKey);
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
+	if ((result = TCSP_CreateMigrationBlob(tcsContext, parentHandle, migAuth.migrationScheme,
+					       ulMigTicketLength, rgbMigTicket, tcpaKey.encSize,
+					       tcpaKey.encData, pParentAuth, &entityAuth,
+					       pulRandomLength, prgbRandom, pulMigrationBlobLength,
+					       prgbMigrationBlob))) {
 		free_key_refs(&tcpaKey);
-	} else {
-		if ((result = TCSP_CreateMigrationBlob(tcsContext,
-						parentHandle, migAuth.migrationScheme,
-						ulMigTicketLength, rgbMigTicket,
-						storedData.encDataSize, storedData.encData,
-						pParentAuth, &entityAuth, pulRandomLength,
-						prgbRandom, pulMigrationBlobLength,
-						prgbMigrationBlob))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-		free(storedData.sealInfo);
-		free(storedData.encData);
+		return result;
 	}
+	free_key_refs(&tcpaKey);
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
@@ -835,68 +935,82 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	Trspi_LoadBlob_UINT32(&offset, *pulMigrationBlobLength, hashblob);
 	Trspi_LoadBlob(&offset, *pulMigrationBlobLength, hashblob, *prgbMigrationBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
-	if (useAuth) {
+
+	if (parentUsesAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
-			return result;
+			goto error;
 	}
+
 	if ((result = obj_policy_validate_auth_oiap(hMigratePolicy, &digest, &entityAuth)))
-		return result;
+		goto error;
 
-	if (migAuth.migrationScheme == TSS_MS_REWRAP) {
-		if (migratingKey) {
-			if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
-				return result;
+	if (migAuth.migrationScheme == TCPA_MS_REWRAP) {
+		if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
+			goto error;
 
-			memset(&keyContainer, 0, sizeof(TCPA_KEY));
+		memset(&keyContainer, 0, sizeof(TCPA_KEY));
 
-			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(&offset, blob,
-							   &keyContainer)))
-				return result;
+		offset = 0;
+		if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer)))
+			goto error;
 
-			/* keyContainer.encData = calloc_tspi(tspContext, outDataSize); */
-			keyContainer.encSize = *pulMigrationBlobLength;
-			/* XXX */
-			memcpy(keyContainer.encData, *prgbMigrationBlob,
-			       *pulMigrationBlobLength);
+		if (keyContainer.encSize > 0)
+			free(keyContainer.encData);
 
-			offset = 0;
-			Trspi_LoadBlob_KEY(&offset, blob, &keyContainer);
-			free_key_refs(&keyContainer);
+		keyContainer.encSize = *pulMigrationBlobLength;
+		keyContainer.encData = *prgbMigrationBlob;
 
-			if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate,
-							blobSize, blob)))
-				return result;
+		offset = 0;
+		Trspi_LoadBlob_KEY(&offset, hashblob, &keyContainer);
 
-		} else {
-			if ((result = obj_encdata_get_data(hKeyToMigrate,
-							&blobSize, &blob)))
-				return result;
+		/* Free manually here since free_key_refs() would free encData, ugh. */
+		free(keyContainer.algorithmParms.parms);
+		keyContainer.algorithmParms.parms = NULL;
+		keyContainer.algorithmParms.parmSize = 0;
 
-			offset = 0;
-			if ((result = Trspi_UnloadBlob_STORED_DATA(&offset,
-								   blob,
-								   &storedData)))
-				return result;
+		free(keyContainer.pubKey.key);
+		keyContainer.pubKey.key = NULL;
+		keyContainer.pubKey.keyLength = 0;
 
-			/* keyContainer.encData = calloc_tspi(tspContext, outDataSize); */
-			storedData.encDataSize = *pulMigrationBlobLength;
-			memcpy(storedData.encData, *prgbMigrationBlob, *pulMigrationBlobLength);
+		free(keyContainer.PCRInfo);
+		keyContainer.PCRInfo = NULL;
+		keyContainer.PCRInfoSize = 0;
 
-			offset = 0;
-			Trspi_LoadBlob_STORED_DATA(&offset, blob, &storedData);
-			free(storedData.sealInfo);
-			free(storedData.encData);
-
-			if ((result = obj_encdata_set_data(hKeyToMigrate,
-							blobSize, blob)))
-				return result;
-		}
+		if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate, offset, hashblob)))
+			goto error;
 	}
 
 	return result;
+error:
+	if (*pulRandomLength)
+		free_tspi(tspContext, prgbRandom);
+	free_tspi(tspContext, prgbMigrationBlob);
+	return result;
 }
 
+
+TSS_RESULT
+Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
+			     TSS_HKEY hParentKey,	/*  in */
+			     UINT32 ulMigTicketLength,	/*  in */
+			     BYTE * rgbMigTicket,	/*  in */
+			     UINT32 * pulRandomLength,	/*  out */
+			     BYTE ** prgbRandom,	/*  out */
+			     UINT32 * pulMigrationBlobLength,	/*  out */
+			     BYTE ** prgbMigrationBlob	/*  out */
+    )
+{
+	if (pulRandomLength == NULL || prgbRandom == NULL || rgbMigTicket == NULL ||
+	    pulMigrationBlobLength == NULL || prgbMigrationBlob == NULL)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if (obj_is_rsakey(hKeyToMigrate))
+		return create_migration_blob_key(hKeyToMigrate, hParentKey, ulMigTicketLength,
+						 rgbMigTicket, pulRandomLength, prgbRandom,
+						 pulMigrationBlobLength, prgbMigrationBlob);
+
+	return TSPERR(TSS_E_INVALID_HANDLE);
+}
 TSS_RESULT
 Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 			      TSS_HKEY hParentKey,	/*  in */
@@ -970,7 +1084,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	}
 
 	if ((result = TCSP_ConvertMigrationBlob(tcsContext, parentHandle, ulMigrationBlobLength,
-				     rgbMigrationBlob, pParentAuth, ulRandomLength, rgbRandom,
+				     rgbMigrationBlob, ulRandomLength, rgbRandom, pParentAuth,
 				     &outDataSize, &outData)))
 		return result;
 
@@ -982,29 +1096,36 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	Trspi_LoadBlob(&offset, outDataSize, hashblob, outData);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 	if (useAuth) {
-		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth))) {
+			free(outData);
 			return result;
+		}
 	}
 
-	result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob);
-	if (result)
+	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob))) {
+		free(outData);
 		return result;
+	}
 
 	memset(&keyContainer, 0, sizeof(TCPA_KEY));
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer))) {
+		free(outData);
 		return result;
+	}
+	free(blob);
 
-	/* keyContainer.encData =       calloc_tspi( tspContext, outDataSize ); */
+	if (keyContainer.encSize > 0)
+		free(keyContainer.encData);
+
 	keyContainer.encSize = outDataSize;
-	/* XXX */
-	memcpy(keyContainer.encData, outData, outDataSize);
+	keyContainer.encData = outData;
 
 	offset = 0;
-	Trspi_LoadBlob_KEY(&offset, blob, &keyContainer);
+	Trspi_LoadBlob_KEY(&offset, hashblob, &keyContainer);
 
 	free_key_refs(&keyContainer);
 
-	return obj_rsakey_set_tcpakey(hKeyToMigrate, blobSize, blob);
+	return obj_rsakey_set_tcpakey(hKeyToMigrate, offset, hashblob);
 }
