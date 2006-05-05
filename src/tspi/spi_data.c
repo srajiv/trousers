@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -22,11 +22,10 @@
 #include "obj.h"
 
 TSS_RESULT
-Tspi_Data_Bind(TSS_HENCDATA hEncData,	/*  in */
-	       TSS_HKEY hEncKey,	/*  in */
-	       UINT32 ulDataLength,	/*  in */
-	       BYTE *rgbDataToBind	/*  in */
-    )
+Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
+	       TSS_HKEY hEncKey,	/* in */
+	       UINT32 ulDataLength,	/* in */
+	       BYTE *rgbDataToBind)	/* in */
 {
 	UINT32 encDataLength;
 	BYTE encData[256];
@@ -136,11 +135,10 @@ done:
 }
 
 TSS_RESULT
-Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/*  in */
-		 TSS_HKEY hKey,			/*  in */
-		 UINT32 * pulUnboundDataLength,	/*  out */
-		 BYTE ** prgbUnboundData	/*  out */
-    )
+Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
+		 TSS_HKEY hKey,			/* in */
+		 UINT32 * pulUnboundDataLength,	/* out */
+		 BYTE ** prgbUnboundData)	/* out */
 {
 	TCPA_RESULT result;
 	TPM_AUTH privAuth;
@@ -219,12 +217,11 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/*  in */
 }
 
 TSS_RESULT
-Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
-	       TSS_HKEY hEncKey,	/*  in */
-	       UINT32 ulDataLength,	/*  in */
-	       BYTE * rgbDataToSeal,	/*  in */
-	       TSS_HPCRS hPcrComposite	/*  in */
-    )
+Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
+	       TSS_HKEY hEncKey,	/* in */
+	       UINT32 ulDataLength,	/* in */
+	       BYTE * rgbDataToSeal,	/* in */
+	       TSS_HPCRS hPcrComposite)	/* in */
 {
 	UINT16 offset;
 	BYTE hashBlob[0x1000];
@@ -267,7 +264,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 	if (tcsKeyHandle == NULL_HKEY)
 		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-	/* ---  If PCR's are of interest */
+	/* If PCR's are of interest */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
 		if ((result = obj_pcrs_get_composite(hPcrComposite,
@@ -350,11 +347,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/*  in */
 }
 
 TSS_RESULT
-Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/*  in */
-		 TSS_HKEY hKey,			/*  in */
-		 UINT32 * pulUnsealedDataLength,/*  out */
-		 BYTE ** prgbUnsealedData	/*  out */
-    )
+Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
+		 TSS_HKEY hKey,			/* in */
+		 UINT32 * pulUnsealedDataLength,/* out */
+		 BYTE ** prgbUnsealedData)	/* out */
 {
 	TPM_AUTH privAuth, privAuth2;
 	UINT16 offset;

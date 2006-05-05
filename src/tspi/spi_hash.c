@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -25,8 +25,7 @@ TSS_RESULT
 Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 	       TSS_HKEY hKey,			/* in */
 	       UINT32 * pulSignatureLength,	/* out */
-	       BYTE ** prgbSignature		/* out */
-    )
+	       BYTE ** prgbSignature)		/* out */
 {
 	TPM_AUTH privAuth;
 	TPM_AUTH *pPrivAuth = &privAuth;
@@ -103,8 +102,7 @@ TSS_RESULT
 Tspi_Hash_VerifySignature(TSS_HHASH hHash,		/* in */
 			  TSS_HKEY hKey,		/* in */
 			  UINT32 ulSignatureLength,	/* in */
-			  BYTE * rgbSignature		/* in */
-    )
+			  BYTE * rgbSignature)		/* in */
 {
 	TCPA_RESULT result;
 	BYTE *pubKey = NULL;
@@ -143,8 +141,7 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,		/* in */
 TSS_RESULT
 Tspi_Hash_SetHashValue(TSS_HHASH hHash,			/* in */
 		       UINT32 ulHashValueLength,	/* in */
-		       BYTE * rgbHashValue		/* in */
-    )
+		       BYTE * rgbHashValue)		/* in */
 {
 	if (ulHashValueLength == 0 || rgbHashValue == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -155,8 +152,7 @@ Tspi_Hash_SetHashValue(TSS_HHASH hHash,			/* in */
 TSS_RESULT
 Tspi_Hash_GetHashValue(TSS_HHASH hHash,			/* in */
 		       UINT32 * pulHashValueLength,	/* out */
-		       BYTE ** prgbHashValue		/* out */
-    )
+		       BYTE ** prgbHashValue)		/* out */
 {
 	if (pulHashValueLength == NULL || prgbHashValue == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -167,8 +163,7 @@ Tspi_Hash_GetHashValue(TSS_HHASH hHash,			/* in */
 TSS_RESULT
 Tspi_Hash_UpdateHashValue(TSS_HHASH hHash,	/* in */
 			  UINT32 ulDataLength,	/* in */
-			  BYTE *rgbData		/* in */
-    )
+			  BYTE *rgbData)	/* in */
 {
 	if (rgbData == NULL && ulDataLength != 0)
 		return TSPERR(TSS_E_BAD_PARAMETER);

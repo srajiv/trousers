@@ -22,8 +22,7 @@ TSS_RESULT
 Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/* in */
 		      TSS_FLAG secretMode,	/* in */
 		      UINT32 ulSecretLength,	/* in */
-		      BYTE * rgbSecret		/* in */
-    )
+		      BYTE * rgbSecret)		/* in */
 {
 	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
@@ -38,16 +37,14 @@ Tspi_Policy_SetSecret(TSS_HPOLICY hPolicy,	/* in */
 }
 
 TSS_RESULT
-Tspi_Policy_FlushSecret(TSS_HPOLICY hPolicy	/* in */
-    )
+Tspi_Policy_FlushSecret(TSS_HPOLICY hPolicy)	/* in */
 {
 	return obj_policy_flush_secret(hPolicy);
 }
 
 TSS_RESULT
 Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/* in */
-			   TSS_HOBJECT hObject	/* in */
-    )
+			   TSS_HOBJECT hObject)	/* in */
 {
 	TSS_RESULT result;
 	UINT32 type;

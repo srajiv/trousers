@@ -27,8 +27,7 @@
 TSS_RESULT
 Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		TSS_HOBJECT hParentObject,	/* in */
-		TSS_HPOLICY hNewPolicy		/* in */
-    )
+		TSS_HPOLICY hNewPolicy)		/* in */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ENCAUTH encAuthUsage;
@@ -55,8 +54,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	BYTE *newEncData;
 	TSS_HCONTEXT tspContext;
 
-	/* /////////////////////////////////////////////////////////////////
-	 * Perform the initial checks
+	/* Perform the initial checks
 	 * If the parent Object is Null
 	 *      -       Trying to change the TPM Auth
 	 *      -       This requires Owner Authorization
@@ -64,7 +62,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	 *      -       Trying to change the auth of an entity
 	 * If the ObjectToChange is the SRK, then the parent must be the TPM
 	 *  Object
-	 * */
+	 */
 
 	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
 		return result;
@@ -88,7 +86,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		if ((result = obj_tpm_get_policy(hObjectToChange, &hPolicy)))
 			return result;
 
-		/* //////////////////////////////////////////////////////// */
 		/* Now Calculate the authorization */
 		if ((result =
 		    secret_PerformXOR_OSAP(hPolicy, hNewPolicy, hNewPolicy,
@@ -148,7 +145,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 							 &hParentPolicy)))
 				return result;
 
-			/* //////////////////////////////////////////////// */
 			/* Now Calculate the authorization */
 			if ((result =
 			    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
@@ -186,7 +182,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 							  &auth1)))
 				return result;
 
-			/* ---  Validate the Auth's */
+			/* Validate the Auths */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuthOwner,
@@ -287,7 +283,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 						      &newEncData)))
 				return result;
 
-			/* ---  Validate the Auth's */
+			/* Validate the Auths */
 			offset = 0;
 			Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 			Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth,
@@ -330,7 +326,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			//                          keyToChange.encData);
 		}
 	} else if (obj_is_encdata(hObjectToChange)) {
-
 		/*  get the secret for the parent */
 		if ((result = obj_encdata_get_policy(hObjectToChange,
 						   TSS_POLICY_USAGE,
@@ -414,7 +409,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 		}
 
-		/* ---  Validate the Auth's */
+		/* Validate the Auths */
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ChangeAuth, hashBlob);
@@ -469,8 +464,7 @@ TSS_RESULT
 Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		    TSS_HOBJECT hParentObject,		/* in */
 		    TSS_HKEY hIdentKey,			/* in */
-		    TSS_HPOLICY hNewPolicy		/* in */
-    )
+		    TSS_HPOLICY hNewPolicy)		/* in */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TPM_AUTH auth;
@@ -682,7 +676,6 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			if ((result = obj_policy_get_secret(hOldPolicy, &oldSecret)))
 				return result;
 
-			/* //////////////////////////////////////////////// */
 			/* Encrypt the ChangeAuthValidate structure with the
 			 * ephemeral key */
 
@@ -887,8 +880,7 @@ TSS_RESULT
 Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		     TSS_FLAG attribFlag,	/* in */
 		     TSS_FLAG subFlag,		/* in */
-		     UINT32 ulAttrib		/* in */
-    )
+		     UINT32 ulAttrib)		/* in */
 {
 	TSS_RESULT result;
 
@@ -1039,8 +1031,7 @@ TSS_RESULT
 Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		     TSS_FLAG attribFlag,	/* in */
 		     TSS_FLAG subFlag,		/* in */
-		     UINT32 * pulAttrib		/* out */
-    )
+		     UINT32 * pulAttrib)	/* out */
 {
 	UINT32 attrib;
 	TSS_RESULT result = TSS_SUCCESS;
@@ -1202,8 +1193,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 		   TSS_FLAG attribFlag,		/* in */
 		   TSS_FLAG subFlag,		/* in */
 		   UINT32 ulAttribDataSize,	/* in */
-		   BYTE * rgbAttribData		/* in */
-    )
+		   BYTE * rgbAttribData)	/* in */
 {
 	TSS_RESULT result;
 	BYTE *string = NULL;
@@ -1288,8 +1278,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 		   TSS_FLAG attribFlag,		/* in */
 		   TSS_FLAG subFlag,		/* in */
 		   UINT32 * pulAttribDataSize,	/* out */
-		   BYTE ** prgbAttribData	/* out */
-    )
+		   BYTE ** prgbAttribData)	/* out */
 {
 	TSS_RESULT result;
 
@@ -1326,7 +1315,9 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 						pulAttribDataSize,
 						prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_MODULUS) {
-				return TSPERR(TSS_E_NOTIMPL);
+				result = obj_rsakey_get_pub_blob(hObject,
+						pulAttribDataSize,
+						prgbAttribData);
 			} else
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_UUID) {
@@ -1434,8 +1425,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 TSS_RESULT
 Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 		     TSS_FLAG policyType,	/* in */
-		     TSS_HPOLICY * phPolicy	/* out */
-    )
+		     TSS_HPOLICY * phPolicy)	/* out */
 {
 	TSS_RESULT result;
 

@@ -23,8 +23,7 @@
 TSS_RESULT
 Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 			      TSS_HKEY hKey,			/* in */
-			      TSS_VALIDATION * pValidationData	/* in, out */
-    )
+			      TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_NONCE antiReplay;
@@ -135,8 +134,7 @@ TSS_RESULT
 Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			      TSS_BOOL fOwnerAuthorized,	/* in */
 			      TSS_VALIDATION *pValidationData,	/* in, out */
-			      TSS_HKEY *phEndorsementPubKey	/* out */
-    )
+			      TSS_HKEY *phEndorsementPubKey)	/* out */
 {
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
@@ -282,8 +280,7 @@ done:
 TSS_RESULT
 Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 		       TSS_HKEY hKeySRK,		/* in */
-		       TSS_HKEY hEndorsementPubKey	/* in */
-    )
+		       TSS_HKEY hEndorsementPubKey)	/* in */
 {
 	TPM_AUTH privAuth;
 
@@ -305,10 +302,8 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	BYTE oldAuthDataUsage;
 	TSS_HKEY hPubEK;
 
-	/****************************
-	 *	The first step is to get context and to get the SRK Key Blob.
-	 *		If these succeed, then the auth should be init'd.
-	 *******************************/
+	/* The first step is to get context and to get the SRK Key Blob.
+	 * If these succeed, then the auth should be init'd. */
 
 	if (hEndorsementPubKey == NULL_HKEY) {
 		if ((result = Tspi_TPM_GetPubEndorsementKey(hTPM, FALSE, NULL, &hPubEK))) {
@@ -321,20 +316,17 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	/* ---  Get the srkKeyData */
+	/* Get the srkKeyData */
 	if ((result = obj_rsakey_get_blob(hKeySRK, &srkKeyBlobLength, &srkKeyBlob)))
 		return result;
 
-	/* ---  Oh boy...hardcoded blob stuff */
-	/* ---  Need to check for Atmel bug where authDataUsage is changed */
+	/* Need to check for Atmel bug where authDataUsage is changed */
 	oldAuthDataUsage = srkKeyBlob[10];
 	LogDebug("oldAuthDataUsage is %.2X.  Wait to see if it changes", oldAuthDataUsage);
 
-	/****************************
-	 *	Now call the module that will encrypt the secrets.  This
-	 *		will either get the secrets from the policy objects or
-	 *		use the callback function to encrypt the secrets
-	 *******************************/
+	/* Now call the module that will encrypt the secrets.  This
+	 * will either get the secrets from the policy objects or
+	 * use the callback function to encrypt the secrets */
 
 	if ((result = secret_TakeOwnership(hPubEK,
 				      hTPM,
@@ -346,10 +338,8 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 				      encSRKAuth)))
 		return result;
 
-	/****************************
-	 *	Now, take ownership is ready to call.  The auth structure should be complete
-	 *		and the encrypted data structures should be ready
-	 *******************************/
+	/* Now, take ownership is ready to call.  The auth structure should be complete
+	 * and the encrypted data structures should be ready */
 
 	if ((result = TCSP_TakeOwnership(tcsContext,
 				TCPA_PID_OWNER,
@@ -364,9 +354,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 				&newSrkBlob)))
 		return result;
 
-	/****************************
-	 *	The final step is to validate the return Auth
-	 *******************************/
+	/* The final step is to validate the return Auth */
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
@@ -383,8 +371,8 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 		return result;
 	}
 
-	/* ---  Now that it's all happy, stuff the keyBlob into the object */
-	/* ---  If atmel, need to adjust the authDataUsage if it changed */
+	/* Now that it's all happy, stuff the keyBlob into the object
+	 * If atmel, need to adjust the authDataUsage if it changed */
 	if (oldAuthDataUsage != newSrkBlob[10]) {	/* hardcoded blob stuff */
 		LogDebug("auth data usage changed. Atmel bug. Fixing in key object");
 		newSrkBlob[10] = oldAuthDataUsage;	/* this will fix it  */
@@ -411,8 +399,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				TSS_HKEY hIdentityKey,			/* in */
 				TSS_ALGORITHM_ID algID,			/* in */
 				UINT32 * pulTcpaIdentityReqLength,	/* out */
-				BYTE ** prgbTcpaIdentityReq		/* out */
-    )
+				BYTE ** prgbTcpaIdentityReq)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ENCAUTH encAuthUsage;
@@ -733,8 +720,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 			  UINT32 ulSymCAAttestationBlobLength,	/* in */
 			  BYTE * rgbSymCAAttestationBlob,	/* in */
 			  UINT32 * pulCredentialLength,		/* out */
-			  BYTE ** prgbCredential		/* out */
-    )
+			  BYTE ** prgbCredential)		/* out */
 {
 	TPM_AUTH idKeyAuth;
 	TPM_AUTH ownerAuth;
@@ -855,8 +841,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 
 TSS_RESULT
 Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
-		    TSS_BOOL fForcedClear	/* in */
-    )
+		    TSS_BOOL fForcedClear)	/* in */
 {
 	TCPA_RESULT result;
 	TPM_AUTH auth;
@@ -918,8 +903,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 TSS_RESULT
 Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		   TSS_FLAG statusFlag,	/* in */
-		   TSS_BOOL fTpmState	/* in */
-    )
+		   TSS_BOOL fTpmState)	/* in */
 {
 	TPM_AUTH auth;
 	TSS_RESULT result;
@@ -1111,8 +1095,7 @@ InvertMe(UINT32 i)
 TSS_RESULT
 Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 		   TSS_FLAG statusFlag,		/* in */
-		   TSS_BOOL * pfTpmState	/* out */
-    )
+		   TSS_BOOL * pfTpmState)	/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -1181,8 +1164,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 }
 
 TSS_RESULT
-Tspi_TPM_SelfTestFull(TSS_HTPM hTPM	/*  in */
-    )
+Tspi_TPM_SelfTestFull(TSS_HTPM hTPM)	/*  in */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1196,8 +1178,7 @@ Tspi_TPM_SelfTestFull(TSS_HTPM hTPM	/*  in */
 TSS_RESULT
 Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			 TSS_HKEY hKey,				/* in */
-			 TSS_VALIDATION *pValidationData	/* in, out */
-    )
+			 TSS_VALIDATION *pValidationData)	/* in, out */
 {
 
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1361,8 +1342,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 TSS_RESULT
 Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
 		       UINT32 * pulTestResultLength,	/* out */
-		       BYTE ** prgbTestResult		/* out */
-    )
+		       BYTE ** prgbTestResult)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -1382,8 +1362,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		       UINT32 ulSubCapLength,		/* in */
 		       BYTE * rgbSubCap,		/* in */
 		       UINT32 * pulRespDataLength,	/* out */
-		       BYTE ** prgbRespData		/* out */
-    )
+		       BYTE ** prgbRespData)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
@@ -1504,8 +1483,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 			     BYTE * rgbSubCap,			/* in */
 			     TSS_VALIDATION * pValidationData,	/* in, out */
 			     UINT32 * pulRespDataLength,	/* out */
-			     BYTE ** prgbRespData		/* out */
-    )
+			     BYTE ** prgbRespData)		/* out */
 {
 #if 1
 	/*
@@ -1577,10 +1555,8 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
-	/***************************************
-	 *	If we get to this point, then neither getCapOwner nor
-	 *		an internal getCap was called.
-	 ****************************************/
+	/* If we get to this point, then neither getCapOwner nor an internal
+	 * getCap was called. */
 	if (pValidationData == NULL)
 		verifyInternally = 1;
 
@@ -1592,7 +1568,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	} else
 		memcpy(antiReplay.nonce, pValidationData->Data, sizeof(TCPA_NONCE));
 
-	/* Now do some Hash'ing */
+	/* Now do some Hashing */
 	offset = 0;
 	hashBlob = malloc((3 * sizeof(UINT32)) + sizeof(TCPA_NONCE) + ulSubCapLength);
 	if (hashBlob == NULL) {
@@ -1607,8 +1583,8 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	Trspi_LoadBlob(&offset, ulSubCapLength, hashBlob, rgbSubCap);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 	free(hashBlob);
+
 	/* hashDigest now has the hash result */
-	/* HMAC */
 	if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_GetCapabilitySigned,
 					      hPolicy, &hashDigest, &auth)))
 		return result;
@@ -1708,8 +1684,7 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 				  UINT32 * pulRndNumberLength,		/* out */
 				  BYTE ** prgbRndNumber,		/* out */
 				  UINT32 * pulArchiveDataLength,	/* out */
-				  BYTE ** prgbArchiveData		/* out */
-    )
+				  BYTE ** prgbArchiveData)		/* out */
 {
 	if (pulRndNumberLength == NULL || prgbRndNumber == NULL ||
 	    pulArchiveDataLength == NULL || prgbArchiveData == NULL)
@@ -1719,17 +1694,15 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 }
 
 TSS_RESULT
-Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM	/*  in */
-    )
+Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 {
 	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,			/* in */
-			       TSS_HKEY hMaintenanceKey,	/* in */
-			       TSS_VALIDATION * pValidationData	/* in, out */
-    )
+Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
+			       TSS_HKEY hMaintenanceKey,		/* in */
+			       TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	if (pValidationData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1740,8 +1713,7 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,			/* in */
 TSS_RESULT
 Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 				TSS_HKEY hMaintenanceKey,		/* in */
-				TSS_VALIDATION * pValidationData	/* in, out */
-    )
+				TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	if (pValidationData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -1752,8 +1724,7 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 TSS_RESULT
 Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
 		   UINT32 ulRandomDataLength,	/* in */
-		   BYTE ** prgbRandomData	/* out */
-    )
+		   BYTE ** prgbRandomData)	/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -1776,8 +1747,7 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
 TSS_RESULT
 Tspi_TPM_StirRandom(TSS_HTPM hTPM,		/* in */
 		    UINT32 ulEntropyDataLength,	/* in */
-		    BYTE * rgbEntropyData	/* in */
-    )
+		    BYTE * rgbEntropyData)	/* in */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1799,8 +1769,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 				  TSS_HKEY hMigrationKey,		/* in */
 				  TSS_MIGRATION_SCHEME migrationScheme,	/* in */
 				  UINT32 * pulMigTicketLength,		/* out */
-				  BYTE ** prgbMigTicket			/* out */
-    )
+				  BYTE ** prgbMigTicket)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	UINT16 offset;
@@ -1908,8 +1877,7 @@ TSS_RESULT
 Tspi_TPM_GetEvent(TSS_HTPM hTPM,		/* in */
 		  UINT32 ulPcrIndex,		/* in */
 		  UINT32 ulEventNumber,		/* in */
-		  TSS_PCR_EVENT * pPcrEvent	/* out */
-    )
+		  TSS_PCR_EVENT * pPcrEvent)	/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -1935,8 +1903,7 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
 		   UINT32 ulPcrIndex,			/* in */
 		   UINT32 ulStartNumber,		/* in */
 		   UINT32 * pulEventNumber,		/* in, out */
-		   TSS_PCR_EVENT ** prgbPcrEvents	/* out */
-    )
+		   TSS_PCR_EVENT ** prgbPcrEvents)	/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -1970,8 +1937,7 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
 TSS_RESULT
 Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
 		     UINT32 * pulEventNumber,		/* out */
-		     TSS_PCR_EVENT ** prgbPcrEvents	/* out */
-    )
+		     TSS_PCR_EVENT ** prgbPcrEvents)	/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -2005,11 +1971,10 @@ Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
 }
 
 TSS_RESULT
-Tspi_TPM_Quote(TSS_HTPM hTPM,			/* in */
-	       TSS_HKEY hIdentKey,		/* in */
-	       TSS_HPCRS hPcrComposite,		/* in */
-	       TSS_VALIDATION * pValidationData	/* in, out */
-    )
+Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
+	       TSS_HKEY hIdentKey,			/* in */
+	       TSS_HPCRS hPcrComposite,			/* in */
+	       TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	TCPA_RESULT result;
 	TPM_AUTH privAuth;
@@ -2222,8 +2187,7 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,			/* in */
 			BYTE *pbPcrData,		/* in */
 			TSS_PCR_EVENT *pPcrEvent,	/* in */
 			UINT32 * pulPcrValueLength,	/* out */
-			BYTE ** prgbPcrValue		/* out */
-    )
+			BYTE ** prgbPcrValue)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_PCRVALUE outDigest;
@@ -2279,8 +2243,7 @@ TSS_RESULT
 Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 		 UINT32 ulPcrIndex,		/* in */
 		 UINT32 *pulPcrValueLength,	/* out */
-		 BYTE **prgbPcrValue		/* out */
-    )
+		 BYTE **prgbPcrValue)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_PCRVALUE outDigest;
@@ -2314,8 +2277,7 @@ TSS_RESULT
 Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 		  UINT32 ulDirIndex,		/* in */
 		  UINT32 ulDirDataLength,	/* in */
-		  BYTE * rgbDirData		/* in  */
-    )
+		  BYTE * rgbDirData)		/* in  */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
@@ -2370,8 +2332,7 @@ TSS_RESULT
 Tspi_TPM_DirRead(TSS_HTPM hTPM,			/* in */
 		 UINT32 ulDirIndex,		/* in */
 		 UINT32 * pulDirDataLength,	/* out */
-		 BYTE ** prgbDirData		/* out */
-    )
+		 BYTE ** prgbDirData)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_DIRVALUE dirValue;

@@ -65,8 +65,7 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/*  in */
 
 TSS_RESULT
 Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
-		     UNICODE *wszDestination	/* in */
-    )
+		     UNICODE *wszDestination)	/* in */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsHandle;
@@ -125,8 +124,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT
 Tspi_Context_FreeMemory(TSS_HCONTEXT tspContext,	/* in */
-			BYTE * rgbMemory		/* in */
-    )
+			BYTE * rgbMemory)		/* in */
 {
 	if (!obj_is_context(tspContext))
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -136,8 +134,7 @@ Tspi_Context_FreeMemory(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT
 Tspi_Context_GetDefaultPolicy(TSS_HCONTEXT tspContext,	/*  in */
-			      TSS_HPOLICY * phPolicy	/*  out */
-    )
+			      TSS_HPOLICY * phPolicy)	/*  out */
 {
 	if (phPolicy == NULL )
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -152,8 +149,7 @@ TSS_RESULT
 Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 			  TSS_FLAG objectType,		/*  in */
 			  TSS_FLAG initFlags,		/*  in */
-			  TSS_HOBJECT * phObject	/*  out */
-    )
+			  TSS_HOBJECT * phObject)	/*  out */
 {
 	TSS_RESULT result;
 
@@ -281,8 +277,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/*  in */
 
 TSS_RESULT
 Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/*  in */
-			 TSS_HOBJECT hObject		/*  in */
-    )
+			 TSS_HOBJECT hObject)		/*  in */
 {
 	TSS_RESULT result;
 
@@ -308,8 +303,7 @@ Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/*  in */
 
 TSS_RESULT
 Tspi_Context_GetTpmObject(TSS_HCONTEXT tspContext,	/*  in */
-			  TSS_HTPM * phTPM		/*  out */
-    )
+			  TSS_HTPM * phTPM)		/*  out */
 {
 	if (phTPM == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -326,8 +320,7 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/*  in */
 			   UINT32 ulSubCapLength,	/*  in */
 			   BYTE * rgbSubCap,		/*  in */
 			   UINT32 * pulRespDataLength,	/*  out */
-			   BYTE ** prgbRespData		/*  out */
-    )
+			   BYTE ** prgbRespData)	/*  out */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -395,8 +388,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/*  in */
 			   TSS_HKEY hUnwrappingKey,	/*  in */
 			   UINT32 ulBlobLength,		/*  in */
 			   BYTE * rgbBlobData,		/*  in */
-			   TSS_HKEY * phKey		/*  out */
-    )
+			   TSS_HKEY * phKey)		/*  out */
 {
 	TPM_AUTH auth;
 	BYTE blob[1024];
@@ -517,8 +509,7 @@ TSS_RESULT
 Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			   TSS_FLAG persistentStorageType,	/* in */
 			   TSS_UUID uuidData,			/* in */
-			   TSS_HKEY * phKey			/* out */
-    )
+			   TSS_HKEY * phKey)			/* out */
 {
 	TSS_RESULT result;
 	TSS_UUID parentUUID, srk_uuid = TSS_UUID_SRK;
@@ -711,8 +702,7 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 			 TSS_FLAG persistentStorageType,	/* in */
 			 TSS_UUID uuidKey,			/* in */
 			 TSS_FLAG persistentStorageTypeParent,	/* in */
-			 TSS_UUID uuidParentKey			/* in */
-    )
+			 TSS_UUID uuidParentKey)		/* in */
 {
 	BYTE *keyBlob;
 	UINT32 keyBlobSize;
@@ -780,8 +770,7 @@ TSS_RESULT
 Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 			   TSS_FLAG persistentStorageType,	/* in */
 			   TSS_UUID uuidKey,			/* in */
-			   TSS_HKEY *phKey			/* out */
-    )
+			   TSS_HKEY *phKey)			/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
@@ -829,8 +818,7 @@ TSS_RESULT
 Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			  TSS_FLAG persistentStorageType,	/* in */
 			  TSS_UUID uuidData,			/* in */
-			  TSS_HKEY * phKey			/* out */
-    )
+			  TSS_HKEY * phKey)			/* out */
 {
 
 	UINT16 offset;
@@ -906,8 +894,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 				TSS_ALGORITHM_ID algID,		/* in */
 				UINT32 ulPublicInfoLength,	/* in */
 				BYTE * rgbPublicInfo,		/* in */
-				TSS_HKEY * phKey		/* out */
-    )
+				TSS_HKEY * phKey)		/* out */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ALGORITHM_ID tcsAlgID;
@@ -1045,8 +1032,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/*  in */
 				     TSS_FLAG persistentStorageType,	/*  in */
 				     TSS_UUID * pUuidData,		/*  in */
 				     UINT32 * pulKeyHierarchySize,	/*  out */
-				     TSS_KM_KEYINFO ** ppKeyHierarchy	/*  out */
-    )
+				     TSS_KM_KEYINFO ** ppKeyHierarchy)	/*  out */
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;

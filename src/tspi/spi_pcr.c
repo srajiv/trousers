@@ -23,8 +23,7 @@ TSS_RESULT
 Tspi_PcrComposite_SetPcrValue(TSS_HPCRS hPcrComposite,	/* in */
 			      UINT32 ulPcrIndex,	/* in */
 			      UINT32 ulPcrValueLength,	/* in */
-			      BYTE * rgbPcrValue	/* in */
-    )
+			      BYTE * rgbPcrValue)	/* in */
 {
 	if (ulPcrValueLength == 0 || rgbPcrValue == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -39,8 +38,7 @@ TSS_RESULT
 Tspi_PcrComposite_GetPcrValue(TSS_HPCRS hPcrComposite,		/* in */
 			      UINT32 ulPcrIndex,		/* in */
 			      UINT32 * pulPcrValueLength,	/* out */
-			      BYTE ** prgbPcrValue		/* out */
-    )
+			      BYTE ** prgbPcrValue)		/* out */
 {
 	if (pulPcrValueLength == NULL || prgbPcrValue == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -52,8 +50,7 @@ Tspi_PcrComposite_GetPcrValue(TSS_HPCRS hPcrComposite,		/* in */
 
 TSS_RESULT
 Tspi_PcrComposite_SelectPcrIndex(TSS_HPCRS hPcrComposite,	/* in */
-				 UINT32 ulPcrIndex		/* in */
-    )
+				 UINT32 ulPcrIndex)		/* in */
 {
 	return obj_pcrs_select_index(hPcrComposite, ulPcrIndex);
 }

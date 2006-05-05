@@ -40,8 +40,7 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 
 TSS_RESULT
 Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
-		 TSS_HKEY hUnwrappingKey	/* in */
-    )
+		 TSS_HKEY hUnwrappingKey)	/* in */
 {
 
 	TPM_AUTH auth;
@@ -121,8 +120,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 TSS_RESULT
 Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		   UINT32 * pulPubKeyLength,	/* out */
-		   BYTE ** prgbPubKey		/* out */
-    )
+		   BYTE ** prgbPubKey)		/* out */
 {
 
 	TPM_AUTH auth;
@@ -209,8 +207,7 @@ error:
 TSS_RESULT
 Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		    TSS_HKEY hCertifyingKey,		/* in */
-		    TSS_VALIDATION * pValidationData	/* in, out */
-    )
+		    TSS_VALIDATION * pValidationData)	/* in, out */
 {
 
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -276,7 +273,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	if (useAuthCert && !useAuthKey)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	/* ===  now setup the auth's */
+	/* Setup the auths */
 	if (useAuthCert || useAuthKey) {
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifyKey, hashBlob);
@@ -318,8 +315,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		return result;
 	}
 
-	/* =============================== */
-	/*      validate auth */
+	/* Validate auth */
 	if (useAuthCert || useAuthKey) {
 		offset = 0;
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
@@ -421,8 +417,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 TSS_RESULT
 Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		   TSS_HKEY hWrappingKey,	/* in */
-		   TSS_HPCRS hPcrComposite	/* in, may be NULL */
-    )
+		   TSS_HPCRS hPcrComposite)	/* in, may be NULL */
 {
 
 	UINT16 offset;
@@ -486,7 +481,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	 * secret_PerformAuth_OSAP can calculate the HMAC.
 	 ******************************************/
 
-	/* ---  do the first part of the OSAP */
+	/* Do the first part of the OSAP */
 	if ((result =
 	    secret_PerformXOR_OSAP(hWrapPolicy, hUsagePolicy, hMigPolicy,
 				   hWrappingKey, TCPA_ET_KEYHANDLE,
@@ -495,7 +490,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 				   &nonceEvenOSAP)))
 		return result;
 
-	/* ---  Setup the Hash Data for the HMAC */
+	/* Setup the Hash Data for the HMAC */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateWrapKey, hashBlob);
 	Trspi_LoadBlob(&offset, 20, hashBlob, encAuthUsage.authdata);
@@ -503,7 +498,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	Trspi_LoadBlob(&offset, keySize, hashBlob, keyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-	/* ---  Complete the Auth Structure */
+	/* Complete the Auth Structure */
 	if ((result = secret_PerformAuth_OSAP(hWrappingKey,
 					      TPM_ORD_CreateWrapKey,
 					      hWrapPolicy, hUsagePolicy,
@@ -511,7 +506,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 					      digest.digest, &nonceEvenOSAP)))
 		return result;
 
-	/* ---  Now call the function */
+	/* Now call the function */
 	if ((result = TCSP_CreateWrapKey(tcsContext,
 					parentTCSKeyHandle,
 					encAuthUsage,
@@ -521,7 +516,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 					&newKeySize, &newKey, &auth)))
 		return result;
 
-	/* ---  Validate the Authorization before using the new key */
+	/* Validate the Authorization before using the new key */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateWrapKey, hashBlob);
@@ -537,7 +532,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 	}
 
-	/* ---  Push the new key into the existing object */
+	/* Push the new key into the existing object */
 	if ((result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey))) {
 		free(newKey);
 		return result;
@@ -550,8 +545,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 TSS_RESULT
 Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		 TSS_HKEY hWrappingKey,		/* in */
-		 TSS_HPCRS hPcrComposite	/* in, may be NULL */
-    )
+		 TSS_HPCRS hPcrComposite)	/* in, may be NULL */
 {
 	TSS_HPOLICY hPolicy;
 	TCPA_SECRET secret;
@@ -990,15 +984,14 @@ error:
 
 
 TSS_RESULT
-Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
-			     TSS_HKEY hParentKey,	/*  in */
-			     UINT32 ulMigTicketLength,	/*  in */
-			     BYTE * rgbMigTicket,	/*  in */
-			     UINT32 * pulRandomLength,	/*  out */
-			     BYTE ** prgbRandom,	/*  out */
-			     UINT32 * pulMigrationBlobLength,	/*  out */
-			     BYTE ** prgbMigrationBlob	/*  out */
-    )
+Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
+			     TSS_HKEY hParentKey,		/* in */
+			     UINT32 ulMigTicketLength,		/* in */
+			     BYTE * rgbMigTicket,		/* in */
+			     UINT32 * pulRandomLength,		/* out */
+			     BYTE ** prgbRandom,		/* out */
+			     UINT32 * pulMigrationBlobLength,	/* out */
+			     BYTE ** prgbMigrationBlob)		/* out */
 {
 	if (pulRandomLength == NULL || prgbRandom == NULL || rgbMigTicket == NULL ||
 	    pulMigrationBlobLength == NULL || prgbMigrationBlob == NULL)
@@ -1011,14 +1004,14 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 
 	return TSPERR(TSS_E_INVALID_HANDLE);
 }
+
 TSS_RESULT
-Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
-			      TSS_HKEY hParentKey,	/*  in */
-			      UINT32 ulRandomLength,	/*  in */
-			      BYTE * rgbRandom,	/*  in  */
-			      UINT32 ulMigrationBlobLength,	/*  in */
-			      BYTE * rgbMigrationBlob	/*  in */
-    )
+Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
+			      TSS_HKEY hParentKey,		/* in */
+			      UINT32 ulRandomLength,		/* in */
+			      BYTE * rgbRandom,			/* in */
+			      UINT32 ulMigrationBlobLength,	/* in */
+			      BYTE * rgbMigrationBlob)		/* in */
 {
 
 	TCS_CONTEXT_HANDLE tcsContext;
@@ -1047,23 +1040,17 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,	/*  in */
 	if (!obj_is_rsakey(hParentKey))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	/* ///////////////////////////////////////////////////////////////////////////// */
-	/*  Get the parent Key */
-
+	/* Get the parent key handle */
 	parentHandle = getTCSKeyHandle(hParentKey);
 	if (parentHandle == NULL_HKEY)
 		return TSPERR(TSS_E_KEY_NOT_LOADED);
 
-	/* ////////////////////////////////////////////////////////////////////////////// */
-	/*  Get the secret  */
-
+	/* Get the policy */
 	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE,
 					&hParentPolicy, &useAuth)))
 		return result;
 
-	/* ///////////////////////////////////////////////////////////////////////////// */
-	/*   Generate the authorization */
-
+	/* Generate the authorization */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ConvertMigrationBlob, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, ulMigrationBlobLength, hashblob);
