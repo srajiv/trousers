@@ -1,4 +1,7 @@
 
+- Added call to return the modulus of an RSA key on a
+  GetAttribData call.
+- Added implementation of the migration functions.
 - Fix for SF 1477178, random numbers get hosed by the tcsd.
 
 * TROUSERS_0_2_6
