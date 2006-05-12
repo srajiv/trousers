@@ -1279,7 +1279,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	keySlot = mc_get_slot_by_pub(pubKey);
 	if (keySlot != NULL_TPM_HANDLE && isKeyLoaded(keySlot)) {
 		*slotOut = keySlot;
-		return TCPA_SUCCESS;
+		return TSS_SUCCESS;
 	}
 
 	/*
