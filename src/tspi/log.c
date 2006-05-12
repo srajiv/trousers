@@ -18,7 +18,7 @@
 /*
  * LogBlobData()
  *
- *   Log a blob's data to the debugging stream
+ * Log a blob's data to the debugging stream
  *
  * szDescriptor - The APPID tag found in the caller's environment at build time
  * sizeOfBlob - The size of the data to log
