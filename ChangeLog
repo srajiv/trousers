@@ -1,4 +1,9 @@
 
+- Removed some Atmel specific code and commented out code.
+- Added some missing auth_mgr_check calls in tcspbg.c.
+- Fixed some unchecked mallocs in the TSP.
+- Added build variables to automatically update the TSP
+  library version and TCSD version getcap variables.
 - Added call to return the modulus of an RSA key on a
   GetAttribData call.
 - Added implementation of the migration functions.
