@@ -436,12 +436,16 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 	TSS_VERSION version = INTERNAL_CAP_TSP_VERSION;
 
 	if (capArea == TSS_TSPCAP_VERSION) {
-		*respData = calloc_tspi(tspContext, 4);
+		if ((*respData = calloc_tspi(tspContext, sizeof(TSS_VERSION))) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
+
 		Trspi_LoadBlob_TSS_VERSION(&offset, *respData, version);
 		*respSize = offset;
 	} else if (capArea == TSS_TSPCAP_ALG) {
+		if ((*respData = calloc_tspi(tspContext, 1)) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		*respSize = 1;
-		*respData = calloc_tspi(tspContext, 1);
+
 		switch (subCap) {
 			case TSS_ALG_RSA:
 				(*respData)[0] = INTERNAL_CAP_TSP_ALG_RSA;
@@ -466,7 +470,9 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 				return TSPERR(TSS_E_BAD_PARAMETER);
 		}
 	} else if (capArea == TSS_TSPCAP_PERSSTORAGE) {
-		*respData = calloc_tspi(tspContext, 1);
+		if ((*respData = calloc_tspi(tspContext, 1)) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
+
 		*respSize = 1;
 		(*respData)[0] = INTERNAL_CAP_TSP_PERSSTORAGE;
 	} else
