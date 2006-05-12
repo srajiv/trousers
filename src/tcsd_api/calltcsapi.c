@@ -1635,7 +1635,7 @@ TSS_RESULT TCSP_KillMaintenanceFeature(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
+		result = TCSP_KillMaintenanceFeature_TP(entry, hContext, ownerAuth);
 		return result;
 	}
 

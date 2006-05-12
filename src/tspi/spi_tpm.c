@@ -1696,7 +1696,42 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 TSS_RESULT
 Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 {
-	return TSPERR(TSS_E_NOTIMPL);
+	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HPOLICY hOwnerPolicy;
+	TPM_AUTH ownerAuth;
+	TCPA_DIGEST digest;
+	UINT16 offset;
+	BYTE hashBlob[128];
+
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
+
+	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_KillMaintenanceFeature, hashBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+	if ((result = secret_PerformAuth_OIAP(hTPM,
+					      TPM_ORD_KillMaintenanceFeature,
+					      hOwnerPolicy, &digest,
+					      &ownerAuth)))
+		return result;
+
+	if ((result = TCSP_KillMaintenanceFeature(tcsContext, &ownerAuth)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_KillMaintenanceFeature, hashBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
+		return result;
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT

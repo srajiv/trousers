@@ -83,7 +83,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 		goto done;
 
-	/*---	Check on the Atmel Bug Patch */
+	/* Check on the Atmel Bug Patch */
 	offset = 0;
 	UnloadBlob_KEY(&offset, srkInfo, &srkKeyContainer);
 	oldAuthDataUsage = srkKeyContainer.authDataUsage;
@@ -1128,6 +1128,9 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LogDebug("No Auth");
 	}
 
+	if ((result = auth_mgr_check(hContext, dataAuth->AuthHandle)))
+		goto done;
+
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
 		goto done;
 
@@ -1276,10 +1279,8 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 	}
 
-	if (entityAuth != NULL) {
-		if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
-			goto done;
-	}
+	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
+		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
 		goto done;
@@ -2222,6 +2223,9 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		goto done;
+
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
@@ -2694,6 +2698,9 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		goto done;
+
 	offset = 10;
 	if (dataInSize != 0) {
 		LoadBlob_UINT32(&offset, dataInSize, txBlob,
@@ -2752,16 +2759,13 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (privAuth != NULL) {
-		LogDebug("Auth Used");
-		if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot))) {
-			result = TCSERR(TSS_E_FAIL);
+		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
 			goto done;
-		}
-	} else {
-		keySlot = mc_get_slot_by_handle_lock(keyHandle);
-		if (keySlot == NULL_TPM_HANDLE)
-			return TCSERR(TSS_E_FAIL);
-		LogDebug("No Auth");
+	}
+
+	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot))) {
+		result = TCSERR(TSS_E_FAIL);
+		goto done;
 	}
 
 	offset = 10;
@@ -2810,6 +2814,9 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebug("Create Main Archive");
 
 	if ((result = ctx_verify_context(hContext)))
+		goto done;
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 		goto done;
 
 	offset = 10;
@@ -2871,6 +2878,9 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		goto done;
+
 	offset = 10;
 	if (dataInSize != 0) {
 		LoadBlob_UINT32(&offset, dataInSize, txBlob,
@@ -2920,9 +2930,10 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug("Entering Kill Maint Feature");
-
 	if ((result = ctx_verify_context(hContext)))
+		goto done;
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
 		goto done;
 
 	offset = 10;
@@ -2940,7 +2951,6 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
-	LogResult("Kill Maint Feature", result);
 done:
 	auth_mgr_release_auth(ownerAuth, NULL);
 	return result;

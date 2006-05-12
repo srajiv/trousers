@@ -12,18 +12,6 @@
 #define _TRPCTP_H_
 
 	TCPA_RESULT TCS_OpenContext_RPC_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE *);
-	TCPA_RESULT Atmel_TPM_SetState_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE, BYTE,
-					  UINT32, BYTE *);
-
-	TCPA_RESULT Atmel_TPM_OwnerSetState_TP(struct host_table_entry *,
-					       TCS_CONTEXT_HANDLE hContext,
-					       BYTE stateID, UINT32 stateSize,
-					       BYTE * stateValue,
-					       TPM_AUTH * ownerAuth);
-	TCPA_RESULT Atmel_TPM_GetState_TP(struct host_table_entry *,
-					  TCS_CONTEXT_HANDLE hContext,
-					  BYTE stateID, UINT32 * stateSize,
-					  BYTE ** stateValue);
 	TCPA_RESULT TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/* in */
 							 UINT32 ulPublicInfoLength,	/* in */
 							 BYTE * rgbPublicInfo,	/* in */

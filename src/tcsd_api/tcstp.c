@@ -254,121 +254,6 @@ sendTCSDPacket(struct host_table_entry *hte,
 /* ---------------------------------------------- */
 
 TSS_RESULT
-Atmel_TPM_SetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
-		      BYTE stateID, UINT32 stateSize, BYTE * stateValue)
-{
-	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
-
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_ATMEL_SETSTATE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
-
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_BYTE, 1, &stateID, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &stateSize, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, stateValue, stateSize, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	result = sendTCSDPacket(hte, hContext, &data, &hdr);
-
-	if (result == TSS_SUCCESS)
-		result = hdr->result;
-
-	free(hdr);
-	return result;
-}
-
-TSS_RESULT
-Atmel_TPM_OwnerSetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
-			   BYTE stateID, UINT32 stateSize, BYTE * stateValue,
-			   TPM_AUTH * ownerAuth)
-{
-	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
-
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_ATMEL_OWNERSETSTATE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
-
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_BYTE, 1, &stateID, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &stateSize, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, stateValue, stateSize, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 4, ownerAuth, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	result = sendTCSDPacket(hte, hContext, &data, &hdr);
-
-	if (result == TSS_SUCCESS)
-		result = hdr->result;
-
-	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	free(hdr);
-	return result;
-}
-
-TSS_RESULT
-Atmel_TPM_GetState_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
-		      BYTE stateID, UINT32 * stateSize, BYTE ** stateValue)
-{
-	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
-
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_ATMEL_GETSTATE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
-
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_BYTE, 1, &stateID, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if ((result = sendTCSDPacket(hte, hContext, &data, &hdr)))
-		return result;
-
-	if (result == TSS_SUCCESS)
-		result = hdr->result;
-
-	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, stateSize, 0, hdr)) {
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-			goto done;
-		}
-		*stateValue = (unsigned char *) malloc(*stateSize);
-		if (*stateValue == NULL) {
-			LogError("malloc of %u bytes failed.", *stateSize);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *stateValue, *stateSize, hdr)) {
-			free(*stateValue);
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		}
-	}
-
-done:
-	free(hdr);
-	return result;
-}
-
-TSS_RESULT
 TCS_OpenContext_RPC_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE * hContext)
 {
 	TSS_RESULT result;
@@ -3615,7 +3500,32 @@ TSS_RESULT
 TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 					   TPM_AUTH * ownerAuth	/* in , out */
     ) {
-	return TSPERR(TSS_E_NOTIMPL);
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_KILLMAINTENANCEFEATURE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_AUTH, 1, &ownerAuth, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	free(hdr);
+	return result;
 
 }
 
