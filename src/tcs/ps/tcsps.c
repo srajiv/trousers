@@ -635,9 +635,6 @@ psfile_remove_key(int fd, struct key_disk_cache *c)
 	if (rc < 0) {
 		LogError("read: %s", strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	} else if (rc == 0) {
-		/* we read through to the EOF, so set rc correctly */
-		size = stat_buf.st_size - tail_offset;
 	}
 
 	/* set the file pointer to where we want to write */
@@ -647,22 +644,13 @@ psfile_remove_key(int fd, struct key_disk_cache *c)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (size > 0) {
-		/* write the data, length of short read count is in the rc variable */
-		if ((result = write_data(fd, (void *)buf, size))) {
-			LogError("%s", __FUNCTION__);
-			return result;
-		}
-		head_offset += size;
-	}
-
 	/* head_offset now contains a pointer to where we want to truncate the
 	 * file. Zero out the old tail end of the file and truncate it. */
 
 	memset(buf, 0, sizeof(buf));
 
 	/* Zero out the old tail end of the file */
-	if ((result = write_data(fd, (void *)buf, sizeof(buf)))) {
+	if ((result = write_data(fd, (void *)buf, tail_offset - head_offset))) {
 		LogError("%s", __FUNCTION__);
 		return result;
 	}
@@ -682,8 +670,7 @@ psfile_remove_key(int fd, struct key_disk_cache *c)
 
 	rc = read(fd, &num_keys, sizeof(UINT32));
 	if (rc != sizeof(UINT32)) {
-		LogError("read of %zd bytes: %s", sizeof(UINT32),
-						strerror(errno));
+		LogError("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
