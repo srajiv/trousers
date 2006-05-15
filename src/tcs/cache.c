@@ -1035,17 +1035,21 @@ isUUIDRegistered(TSS_UUID *uuid, TSS_BOOL *is_reg)
 void
 disk_cache_shift(struct key_disk_cache *c)
 {
-	UINT32 offset = VENDOR_DATA_OFFSET(c) + c->vendor_data_size
-			- UUID_OFFSET(c);
+	UINT32 key_size, offset;
 	struct key_disk_cache *tmp = key_disk_cache_head;
+
+	/* offset is the end of the key location in the file */
+	offset = VENDOR_DATA_OFFSET(c) + c->vendor_data_size;
+	/* key_size is the size of the key entry on disk */
+	key_size = offset - UUID_OFFSET(c);
 
 	/* for each disk cache entry, if the data for that entry is at an
 	 * offset greater than the key beign removed, then the entry needs to
-	 * be decremented by the size of key's disk footprint (the offset
+	 * be decremented by the size of key's disk footprint (the key_size
 	 * variable) */
 	while (tmp) {
-		if (tmp->offset > offset) {
-			tmp->offset -= offset;
+		if (tmp->offset >= offset) {
+			tmp->offset -= key_size;
 		}
 
 		tmp = tmp->next;
