@@ -50,9 +50,12 @@ extern int foreground;
 	do { \
 			TCPA_KEY tmpkey; \
 			UINT16 offset = 0; \
-			UnloadBlob_KEY(&offset, b, &tmpkey); \
-			LogDebugKey(tmpkey); \
-			destroy_key_refs(&tmpkey); \
+			if (!UnloadBlob_KEY(&offset, b, &tmpkey)) { \
+				LogDebugKey(tmpkey); \
+				destroy_key_refs(&tmpkey); \
+			} else { \
+				LogDebugFn("*** ERROR UNLOADING DEBUGGING KEY BLOB ***"); \
+			} \
 	} while (0)
 #else
 #define LogDebug(fmt, ...)
