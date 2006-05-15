@@ -1,4 +1,6 @@
 
+- Added fix for SF #1487664, Offset in PS cache is not
+  updated correctly.
 - Removed some Atmel specific code and commented out code.
 - Added some missing auth_mgr_check calls in tcspbg.c.
 - Fixed some unchecked mallocs in the TSP.
