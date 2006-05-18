@@ -2863,9 +2863,9 @@ TSS_RESULT
 TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				     UINT32 dataInSize,	/* in */
 				     BYTE * dataIn,	/* in */
+				     TPM_AUTH * ownerAuth,	/* in, out */
 				     UINT32 * dataOutSize,	/* out */
-				     BYTE ** dataOut,	/* out */
-				     TPM_AUTH * ownerAuth	/* in, out */
+				     BYTE ** dataOut	/* out */
     )
 {
 	TSS_RESULT result;
