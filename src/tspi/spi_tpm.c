@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -1074,24 +1074,6 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 	return result;
 }
 
-TSS_BOOL
-MakeMeABOOL(UINT32 i)
-{
-	if (i)
-		return TRUE;
-	else
-		return FALSE;
-}
-
-TSS_BOOL
-InvertMe(UINT32 i)
-{
-	if (i)
-		return FALSE;
-	else
-		return TRUE;
-}
-
 TSS_RESULT
 Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 		   TSS_FLAG statusFlag,		/* in */
@@ -1113,46 +1095,46 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 
 	switch (statusFlag) {
 	case TSS_TPMSTATUS_DISABLEOWNERCLEAR:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_OWNER_CLEARABLE);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_OWNER_CLEARABLE);
 		break;
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
-		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES_CLEARABLE);
+		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_CLEARABLE);
 		break;
 	case TSS_TPMSTATUS_DISABLED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_DISABLED);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_DISABLED);
 		break;
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_DEACTIVATED);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_DEACTIVATED);
 		break;
 	case TSS_TPMSTATUS_SETTEMPDEACTIVATED:
-		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_TEMP_DEACTIVATED);
+		*pfTpmState = BOOL(volFlags & TPM11_VOL_TEMP_DEACTIVATED);
 		break;
 	case TSS_TPMSTATUS_SETOWNERINSTALL:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_OWNABLE);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_OWNABLE);
 		break;
 	case TSS_TPMSTATUS_DISABLEPUBEKREAD:
-		*pfTpmState = InvertMe(MakeMeABOOL(nonVolFlags & TPM11_NONVOL_READABLE_PUBEK));
+		*pfTpmState = INVBOOL(nonVolFlags & TPM11_NONVOL_READABLE_PUBEK);
 		break;
 	case TSS_TPMSTATUS_ALLOWMAINTENANCE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_ALLOW_MAINT);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_ALLOW_MAINT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_LIFETIME_LOCK);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_LIFETIME_LOCK);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_HWENABLE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_HW_PRES);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_HW_PRES);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_CMDENABLE:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_CMD_PRES);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_CMD_PRES);
 		break;
 	case TSS_TPMSTATUS_CEKP_USED:
-		*pfTpmState = MakeMeABOOL(nonVolFlags & TPM11_NONVOL_CEKP_USED);
+		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_CEKP_USED);
 		break;
 	case TSS_TPMSTATUS_PHYSPRESENCE:
-		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES);
+		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
-		*pfTpmState = MakeMeABOOL(volFlags & TPM11_VOL_PRES_LOCK);
+		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_LOCK);
 		break;
 
 	default:
@@ -1686,11 +1668,55 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 				  UINT32 * pulArchiveDataLength,	/* out */
 				  BYTE ** prgbArchiveData)		/* out */
 {
-	if (pulRndNumberLength == NULL || prgbRndNumber == NULL ||
-	    pulArchiveDataLength == NULL || prgbArchiveData == NULL)
+	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HPOLICY hOwnerPolicy;
+	TPM_AUTH ownerAuth;
+	TCPA_DIGEST digest;
+	UINT16 offset;
+	BYTE hashBlob[512];
+
+	if (pulArchiveDataLength == NULL || prgbArchiveData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	return TSPERR(TSS_E_NOTIMPL);
+	if (fGenerateRndNumber &&
+	    (pulRndNumberLength == NULL || prgbRndNumber == NULL))
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
+
+	if ((result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMaintenanceArchive, hashBlob);
+	Trspi_LoadBlob_BYTE(&offset, fGenerateRndNumber, hashBlob);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_CreateMaintenanceArchive,
+					      hOwnerPolicy, &digest,
+					      &ownerAuth)))
+		return result;
+
+	if ((result = TCSP_CreateMaintenanceArchive(tcsContext, fGenerateRndNumber, &ownerAuth,
+						    pulRndNumberLength, prgbRndNumber,
+						    pulArchiveDataLength, prgbArchiveData)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CreateMaintenanceArchive, hashBlob);
+	Trspi_LoadBlob_UINT32(&offset, *pulRndNumberLength, hashBlob);
+	Trspi_LoadBlob(&offset, *pulRndNumberLength, hashBlob, *prgbRndNumber);
+	Trspi_LoadBlob_UINT32(&offset, *pulArchiveDataLength, hashBlob);
+	Trspi_LoadBlob(&offset, *pulArchiveDataLength, hashBlob, *prgbArchiveData);
+	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
+
+	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
+		return result;
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -1739,10 +1765,64 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 			       TSS_HKEY hMaintenanceKey,		/* in */
 			       TSS_VALIDATION * pValidationData)	/* in, out */
 {
-	if (pValidationData == NULL)
-		return TSPERR(TSS_E_BAD_PARAMETER);
+	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
+	TCPA_DIGEST checkSum, digest;
+	TCPA_NONCE nonce;
+	UINT16 offset;
+	UINT32 pubBlobSize;
+	BYTE hashBlob[512], *pubBlob;
 
-	return TSPERR(TSS_E_NOTIMPL);
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	if (pValidationData) {
+		memcpy(&nonce.nonce, &pValidationData->ExternalData.nonce,
+		       TCPA_SHA1_160_HASH_LEN);
+	} else {
+		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
+			return result;
+	}
+
+	if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
+		return result;
+
+	if ((result = TCSP_LoadManuMaintPub(tcsContext, nonce, pubBlobSize, pubBlob, &checkSum)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob(&offset, pubBlobSize, hashBlob, pubBlob);
+	Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashBlob, (BYTE *)&nonce.nonce);
+
+	if (pValidationData) {
+		pValidationData->DataLength = offset;
+		if ((pValidationData->Data = calloc_tspi(tspContext, offset)) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
+
+		memcpy(pValidationData->Data, hashBlob, offset);
+
+		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		if ((pValidationData->ValidationData = calloc_tspi(tspContext,
+								   TCPA_SHA1_160_HASH_LEN))
+		     == NULL) {
+			free_tspi(tspContext, pValidationData->Data);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
+	} else {
+		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest)))
+			return result;
+
+		if (memcmp(&digest.digest, &checkSum.digest, TCPA_SHA1_160_HASH_LEN))
+			result = TSPERR(TSS_E_FAIL);
+	}
+
+	return result;
 }
 
 TSS_RESULT
@@ -1750,10 +1830,62 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 				TSS_HKEY hMaintenanceKey,		/* in */
 				TSS_VALIDATION * pValidationData)	/* in, out */
 {
-	if (pValidationData == NULL)
+	TSS_RESULT result;
+	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
+	TCPA_DIGEST checkSum, digest;
+	TCPA_NONCE nonce;
+	UINT16 offset;
+	UINT32 pubBlobSize;
+	BYTE hashBlob[512], *pubBlob;
+
+	if ((pValidationData && hMaintenanceKey) || (!pValidationData && !hMaintenanceKey))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	return TSPERR(TSS_E_NOTIMPL);
+	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+		return result;
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	if (pValidationData) {
+		memcpy(&nonce.nonce, &pValidationData->ExternalData.nonce,
+		       TCPA_SHA1_160_HASH_LEN);
+	} else {
+		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
+			return result;
+	}
+
+	if ((result = TCSP_ReadManuMaintPub(tcsContext, nonce, &checkSum)))
+		return result;
+
+	if (pValidationData) {
+		/* Ignore Data and DataLength, the application must already have this data.
+		 * Do, however, copy out the checksum so that the application can verify */
+		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		if ((pValidationData->ValidationData = calloc_tspi(tspContext,
+								   TCPA_SHA1_160_HASH_LEN))
+		     == NULL) {
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
+	} else {
+		if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
+			return result;
+
+		offset = 0;
+		Trspi_LoadBlob(&offset, pubBlobSize, hashBlob, pubBlob);
+		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashBlob, (BYTE *)&nonce.nonce);
+
+		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest)))
+			return result;
+
+		if (memcmp(&digest.digest, &checkSum.digest, TCPA_SHA1_160_HASH_LEN))
+			result = TSPERR(TSS_E_FAIL);
+	}
+
+	return result;
 }
 
 TSS_RESULT
