@@ -132,7 +132,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_BOOL bExpired;
-	UINT32 mode, usage;
+	UINT32 mode;
 	TCPA_SECRET secret;
 
 	/* This validates that the secret can be used */
@@ -190,19 +190,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
 			break;
 		case TSS_SECRET_MODE_NONE:
-			/* if this is an RSA key that requires auth, then throw
-			 * an error */
-			if (!(obj_rsakey_get_authdata_usage(hAuthorizedObject,
-							    &usage)) && usage) {
-				result = TSPERR(TSS_E_POLICY_NO_SECRET);
-				break;
-			}
-
-			/* all 0's is TSS_WELL_KNOWN_SECRET, which we'll check
-			 * for in the validation function */
-			memset(&secret.authdata, 0, sizeof(TCPA_SECRET));
-			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
-			break;
+			/* fall through */
 		default:
 			result = TSPERR(TSS_E_POLICY_NO_SECRET);
 			break;
@@ -271,7 +259,9 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
-	if (keyMode != TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode == TSS_SECRET_MODE_NONE) {
+		return TSPERR(TSS_E_POLICY_NO_SECRET);
+	} else if (keyMode != TSS_SECRET_MODE_CALLBACK) {
 		if ((result = obj_policy_get_secret(hPolicy, &keySecret)))
 			return result;
 
