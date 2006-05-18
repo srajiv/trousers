@@ -491,14 +491,16 @@
 						     TPM_AUTH * ownerAuth,	/* in, out */
 						     UINT32 * randomSize,	/* out */
 						     BYTE ** random,	/* out */
-						     UINT32 archiveSize,	/* out */
+						     UINT32 * archiveSize,	/* out */
 						     BYTE ** archive	/* out */
 	    );
 
 	TCPA_RESULT TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
-						   UINT32 * pcDataSize,	/* in, out */
-						   BYTE ** prgbData,	/* in, out */
-						   TPM_AUTH * ownerAuth	/* in, out */
+						   UINT32 dataInSize,	/* in, out */
+						   BYTE * dataIn,	/* in, out */
+						   TPM_AUTH * ownerAuth,	/* in, out */
+						   UINT32 * dataOutSize,	/* out */
+						   BYTE ** dataOut	/* out */
 	    );
 
 	TCPA_RESULT TCSP_KillMaintenanceFeature_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE hContext,	/* in */
