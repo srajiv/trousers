@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -505,7 +505,6 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 	TSS_RESULT TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						      TCS_KEY_HANDLE parentHandle,	/* in */
 						      TCPA_MIGRATE_SCHEME migrationType,	/* in */
-/*TCPA_MIGRATION_SCHEME	migrationType,				// in */
 						      UINT32 MigrationKeyAuthSize,	/* in */
 						      BYTE * MigrationKeyAuth,	/* in */
 						      UINT32 encDataSize,	/* in */
@@ -711,9 +710,9 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 	TSS_RESULT TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 							 UINT32 dataInSize,	/* in */
 							 BYTE * dataIn,	/* in */
+							 TPM_AUTH * ownerAuth,	/* in, out */
 							 UINT32 * dataOutSize,	/* out */
-							 BYTE ** dataOut,	/* out */
-							 TPM_AUTH * ownerAuth	/* in, out */
+							 BYTE ** dataOut	/* out */
 	    );
 
 	TSS_RESULT TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
