@@ -214,9 +214,11 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 				result = TSPERR(TSS_E_POLICY_NO_SECRET);
 				break;
 			}
-			/* fall through */
-		case TSS_SECRET_MODE_NONE:
+
 			memcpy(secret, policy->Secret, sizeof(TCPA_SECRET));
+			break;
+		case TSS_SECRET_MODE_NONE:
+			memcpy(secret, &null_secret, sizeof(TCPA_SECRET));
 			break;
 		default:
 			result = TSPERR(TSS_E_POLICY_NO_SECRET);
