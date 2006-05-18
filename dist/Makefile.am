@@ -1,4 +1,6 @@
-sysconf_DATA = tcsd.conf
+
+install:
+	if test ! -e ${DESTDIR}/@sysconfdir@/tcsd.conf; then cp tcsd.conf ${DESTDIR}/@sysconfdir@; fi
 
 #
 # Make sure that the user and group add utils have run before install-data-hook tries
