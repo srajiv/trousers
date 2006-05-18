@@ -1,4 +1,11 @@
 
+- Added code to return TSS_E_POLICY_NO_SECRET when setting up
+  an OIAP or OSAP session.
+- Added fix for SF #1490745, trousers demands too much from
+  /dev/random. Default random device is now /dev/urandom.
+- Changed severity of the ioctl fallback print stmts to
+  warning and info.
+- Added implementation of the maintenance functions.
 - Added fix for SF #1487664, Offset in PS cache is not
   updated correctly.
 - Removed some Atmel specific code and commented out code.
