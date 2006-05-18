@@ -1183,6 +1183,8 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 	} else {
 		if (obj_is_hash(hObject) || obj_is_pcrs(hObject) || obj_is_encdata(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
 	return result;
