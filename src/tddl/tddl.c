@@ -113,8 +113,8 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 				opened_device->transmit = TDDL_TRANSMIT_IOCTL;
 				break;
 			}
-			LogError("ioctl: (%d) %s", errno, strerror(errno));
-			LogError("Falling back to Read/Write device support.");
+			LogWarn("ioctl: (%d) %s", errno, strerror(errno));
+			LogInfo("Falling back to Read/Write device support.");
 			/* fall through */
 		case TDDL_TRANSMIT_RW:
 			if ((sizeResult = write(opened_device->fd,
