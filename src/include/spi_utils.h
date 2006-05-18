@@ -33,6 +33,9 @@ extern pthread_mutex_t mem_cache_lock;
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
+#define BOOL(x)		((x) == 0) ? FALSE : TRUE
+#define INVBOOL(x)	((x) == 0) ? TRUE : FALSE
+
 UINT32 UnicodeToArray(BYTE *, UNICODE *);
 UINT32 ArrayToUnicode(BYTE *, UINT32, UNICODE *);
 UINT32 StringToUnicodeArray(char *, BYTE *);
@@ -93,7 +96,7 @@ TSS_RESULT ConnectGuts(TSS_HCONTEXT, UNICODE *, TCS_CONTEXT_HANDLE);
 /* For an unconnected context that wants to do PCR operations, assume that
  * the TPM has TSS_DEFAULT_NUM_PCRS pcrs */
 #define TSS_DEFAULT_NUM_PCRS		16
-#define TSS_LOCAL_RANDOM_DEVICE		"/dev/random"
+#define TSS_LOCAL_RANDOM_DEVICE		"/dev/urandom"
 #define TSS_LOCALHOST_STRING		"localhost"
 TSS_RESULT get_local_random(TSS_HCONTEXT, UINT32, BYTE **);
 
@@ -261,6 +264,10 @@ TSS_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE, TCPA_DIRINDEX, TCPA_DIRVALUE, T
 TSS_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE, TCPA_DIRINDEX, TCPA_DIRVALUE *);
 TSS_RESULT TCS_LogPcrEvent(TCS_CONTEXT_HANDLE, TSS_PCR_EVENT, UINT32 *);
 TSS_RESULT TCSP_EvictKey(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
+TSS_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE, TSS_BOOL, TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **);
 TSS_RESULT TCSP_KillMaintenanceFeature(TCS_CONTEXT_HANDLE, TPM_AUTH *);
+TSS_RESULT TCSP_LoadMaintenanceArchive(TCS_CONTEXT_HANDLE, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE, TCPA_NONCE, UINT32, BYTE *, TCPA_DIGEST *);
+TSS_RESULT TCSP_ReadManuMaintPub(TCS_CONTEXT_HANDLE, TCPA_NONCE, TCPA_DIGEST *);
 
 #endif
