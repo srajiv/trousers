@@ -1597,7 +1597,9 @@ TSS_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
+		result = TCSP_CreateMaintenanceArchive_TP(entry, hContext, generateRandom,
+							  ownerAuth, randomSize, random,
+							  archiveSize, archive);
 		return result;
 	}
 
@@ -1618,7 +1620,8 @@ TSS_RESULT TCSP_LoadMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
+		result = TCSP_LoadMaintenanceArchive_TP(entry, hContext, dataInSize, dataIn,
+							ownerAuth, dataOutSize, dataOut);
 		return result;
 	}
 
@@ -1655,7 +1658,8 @@ TSS_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
+		result = TCSP_LoadManuMaintPub_TP(entry, hContext, antiReplay, PubKeySize,
+						  PubKey, checksum);
 		return result;
 	}
 
@@ -1673,7 +1677,7 @@ TSS_RESULT TCSP_ReadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TSPERR(TSS_E_NO_CONNECTION);
 
 	if (entry->type == CONNECTION_TYPE_TCP_PERSISTANT) {
-		result = (UINT32) TSPERR(TSS_E_INTERNAL_ERROR);	/* function call */
+		result = TCSP_ReadManuMaintPub_TP(entry, hContext, antiReplay, checksum);
 		return result;
 	}
 
