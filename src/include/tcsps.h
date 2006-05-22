@@ -32,7 +32,7 @@ TSS_RESULT	   psfile_get_parent_uuid_by_uuid(int, TSS_UUID *, TSS_UUID *);
 TSS_RESULT	   psfile_remove_key_by_uuid(int, TSS_UUID *);
 TSS_RESULT	   psfile_get_key_by_uuid(int, TSS_UUID *, BYTE *, UINT16 *);
 TSS_RESULT	   psfile_get_key_by_cache_entry(int, struct key_disk_cache *, BYTE *, UINT16 *);
-TSS_RESULT	   psfile_get_parent_ps_type_by_uuid(int, TSS_UUID *, UINT32 *);
+TSS_RESULT	   psfile_get_ps_type_by_uuid(int, TSS_UUID *, UINT32 *);
 TSS_RESULT	   psfile_is_pub_registered(int, TCPA_STORE_PUBKEY *, TSS_BOOL *);
 TSS_RESULT	   psfile_get_uuid_by_pub(int, TCPA_STORE_PUBKEY *, TSS_UUID **);
 TSS_RESULT	   psfile_write_key(int, TSS_UUID *, TSS_UUID *, UINT32 *, BYTE *, UINT32, BYTE *, UINT16);
