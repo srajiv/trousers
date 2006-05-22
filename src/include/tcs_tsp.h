@@ -77,4 +77,10 @@ struct key_disk_cache
 
 #define STRUCTURE_PACKING_ATTRIBUTE	__attribute__((packed))
 
+#ifdef TSS_DEBUG
+#define DBG_ASSERT(x)	assert(x)
+#else
+#define DBG_ASSERT(x)
+#endif
+
 #endif
