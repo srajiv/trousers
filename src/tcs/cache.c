@@ -1376,7 +1376,7 @@ ps_write_key(TSS_UUID *uuid, TSS_UUID *parent_uuid, BYTE *vendor_data,
 	if (!memcmp(parent_uuid, &NULL_UUID, sizeof(TSS_UUID))) {
 		parent_ps = TSS_PS_TYPE_SYSTEM;
 	} else {
-		if ((rc = psfile_get_parent_ps_type_by_uuid(fd, parent_uuid, &parent_ps)))
+		if ((rc = psfile_get_ps_type_by_uuid(fd, parent_uuid, &parent_ps)))
 			return rc;
 	}
 
