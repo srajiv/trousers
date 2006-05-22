@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -215,30 +215,31 @@ psfile_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer
 }
 
 TSS_RESULT
-psfile_get_parent_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
+psfile_get_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 {
-        struct key_disk_cache *tmp;
+	struct key_disk_cache *tmp;
 
-        pthread_mutex_lock(&disk_cache_lock);
-        tmp = key_disk_cache_head;
+	pthread_mutex_lock(&disk_cache_lock);
+	tmp = key_disk_cache_head;
 
         while (tmp) {
-                if (memcmp(uuid, &tmp->uuid, sizeof(TSS_UUID)) || !(tmp->flags & CACHE_FLAG_VALID)) {
-                        tmp = tmp->next;
-                        continue;
+		if (memcmp(uuid, &tmp->uuid, sizeof(TSS_UUID)) ||
+		    !(tmp->flags & CACHE_FLAG_VALID)) {
+			tmp = tmp->next;
+			continue;
                 }
 
-		if (tmp->flags & CACHE_FLAG_PARENT_PS_SYSTEM)
+		if (tmp->flags & CACHE_FLAG_PARENT_PS_SYSTEM) {
 			*ret_ps_type = TSS_PS_TYPE_SYSTEM;
-		else
-			*ret_ps_type = TSS_PS_TYPE_USER;
-
-                pthread_mutex_unlock(&disk_cache_lock);
-                return TSS_SUCCESS;
+			goto done;
+		} else
+			break;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
-        /* key not found */
-        return TCSERR(TSS_E_PS_KEY_NOTFOUND);
+
+	*ret_ps_type = TSS_PS_TYPE_USER;
+done:
+	pthread_mutex_unlock(&disk_cache_lock);
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -272,7 +273,7 @@ psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
-		assert(tmp->pub_data_size < 2048);
+		DBG_ASSERT(tmp->pub_data_size < 2048);
 
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
@@ -331,7 +332,7 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
-		assert(tmp->pub_data_size < 2048);
+		DBG_ASSERT(tmp->pub_data_size < 2048);
 
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
@@ -395,7 +396,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
-		assert(tmp->pub_data_size < 2048);
+		DBG_ASSERT(tmp->pub_data_size < 2048);
 
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
@@ -420,7 +421,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
-		assert(tmp->blob_size < 4096);
+		DBG_ASSERT(tmp->blob_size < 4096);
 
 		/* read in the key blob */
                 if ((rc = read_data(fd, tmp_buffer, tmp->blob_size))) {
