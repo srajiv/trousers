@@ -51,12 +51,6 @@ extern struct tpm_properties tpm_metrics;
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
-#ifdef TSS_DEBUG
-#define DBG_ASSERT(x)	assert(x)
-#else
-#define DBG_ASSERT(x)
-#endif
-
 TSS_RESULT get_tpm_metrics(struct tpm_properties *);
 
 TSS_RESULT auth_mgr_init();
