@@ -1,12 +1,6 @@
 
-install:
+install: install-exec-hook
 	if test ! -e ${DESTDIR}/@sysconfdir@/tcsd.conf; then cp tcsd.conf ${DESTDIR}/@sysconfdir@; fi
-
-#
-# Make sure that the user and group add utils have run before install-data-hook tries
-# to use 'tss' in the chown statement.
-#
-install-data-hook: install-exec-hook
 	/bin/chown tss:tss ${DESTDIR}/@sysconfdir@/tcsd.conf
 	/bin/chmod 0600 ${DESTDIR}/@sysconfdir@/tcsd.conf
 
