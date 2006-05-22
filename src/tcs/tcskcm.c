@@ -37,22 +37,10 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	TSS_BOOL is_reg;
 
-	LogDebug("TCS_RegisterKey");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	/*---	Check if parent is registered here */
-	if (isUUIDRegistered(WrappingKeyUUID, &is_reg) != TSS_SUCCESS) {
-		LogDebug("Parent not found");
-		return TCSERR(TSS_E_FAIL);
-	}
-
-	if (is_reg == FALSE) {
-		LogDebug("Wrapping UUID is not registered");
-		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
-	}
-
-	/*---	Check if key is already regisitered */
+	/* Check if key is already regisitered */
 	if (isUUIDRegistered(KeyUUID, &is_reg) != TSS_SUCCESS) {
 		LogError("Failed checking if UUID is registered.");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -65,14 +53,13 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebugUnrollKey(rgbKey);
 
-	/*---	Go ahead and store it in system persistant storage */
+	/* Go ahead and store it in system persistant storage */
 	if ((result = ps_write_key(KeyUUID, WrappingKeyUUID, gbVendorData,
 				   cVendorData, rgbKey, cKeySize))) {
 		LogError("Error writing key to file");
-		return TCSERR(TSS_E_FAIL);
+		return result;
 	}
 
-	LogDebug("Leaving TCS_RegisterKey");
 	return TSS_SUCCESS;
 }
 
