@@ -14,17 +14,6 @@
 /* XXX */
 #include "trousers_types.h"
 
-typedef struct tdTSPKeyHandleContainer {
-	TSS_HKEY tspKeyHandle;
-	struct tdTSPKeyHandleContainer *next;
-} TSPKeyHandleContainer;
-
-typedef struct tdTCSKeyHandleContainer {
-	TCS_KEY_HANDLE tcsKeyHandle;
-	struct tdTSPKeyHandleContainer *tspHandles;
-	struct tdTCSKeyHandleContainer *next;
-} TCSKeyHandleContainer;
-
 // operate on the TPMs non-volatile flags
 #define TPM11_NONVOL_DISABLED		0x00000001
 #define TPM11_NONVOL_OWNABLE		0x00000002
