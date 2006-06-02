@@ -25,8 +25,6 @@
 
 UINT32 nextObjectHandle = 0xC0000000;
 
-TCSKeyHandleContainer *glKeyHandleManager = NULL;
-
 pthread_mutex_t keylist_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t handle_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -37,6 +35,7 @@ struct obj_list pcrs_list;
 struct obj_list policy_list;
 struct obj_list rsakey_list;
 struct obj_list encdata_list;
+struct obj_list regdkey_list;
 
 void
 list_init(struct obj_list *list)
@@ -55,6 +54,7 @@ obj_list_init()
 	list_init(&policy_list);
 	list_init(&rsakey_list);
 	list_init(&encdata_list);
+	list_init(&regdkey_list);
 }
 
 TSS_HOBJECT
@@ -143,13 +143,10 @@ obj_list_put(struct obj_list *list)
 }
 
 TSS_RESULT
-obj_list_add(struct obj_list *list,
-	     UINT32	      tsp_context,
-	     void	     *data,
-	     TSS_HOBJECT     *phObject)
+obj_list_add(struct obj_list *list, UINT32 tsp_context, TSS_FLAG flags, void *data,
+	     TSS_HOBJECT *phObject)
 {
         struct tsp_object *new_obj, *tmp;
-	TSS_RESULT result;
 
         new_obj = calloc(1, sizeof(struct tsp_object));
         if (new_obj == NULL) {
@@ -158,6 +155,7 @@ obj_list_add(struct obj_list *list,
         }
 
         new_obj->handle = obj_get_next_handle();
+	new_obj->flags = flags;
         new_obj->data = data;
 
 	if (list == &context_list) {
@@ -165,11 +163,7 @@ obj_list_add(struct obj_list *list,
 		new_obj->tcsContext = 0;
 	} else {
 		new_obj->tspContext = tsp_context;
-		if ((result = obj_context_get_tcs_context(tsp_context,
-						&new_obj->tcsContext))) {
-			free(new_obj);
-			return TSPERR(TSS_E_INVALID_HANDLE);
-		}
+		obj_context_get_tcs_context(tsp_context, &new_obj->tcsContext);
 	}
 
         pthread_mutex_lock(&list->lock);
@@ -319,141 +313,3 @@ obj_connectContext(TSS_HCONTEXT tspContext, TCS_CONTEXT_HANDLE tcsContext)
 	obj_connectContext_list(&encdata_list, tspContext, tcsContext);
 }
 
-TCSKeyHandleContainer *
-concatTCSKeyHandleContainer(TCSKeyHandleContainer ** first, TCSKeyHandleContainer * second)
-{
-	TCSKeyHandleContainer *index;
-	if (*first == NULL)
-		*first = second;
-	else {
-		for (index = *first; index && index->next; next(index)) ;
-		index->next = second;
-	}
-
-	return *first;
-}
-
-TSPKeyHandleContainer *
-concatTSPKeyHandleContainer(TSPKeyHandleContainer ** first, TSPKeyHandleContainer * second)
-{
-	TSPKeyHandleContainer *index;
-	if (*first == NULL)
-		*first = second;
-	else {
-		for (index = *first; index && index->next; next(index)) ;
-		index->next = second;
-	}
-
-	return *first;
-}
-
-TCSKeyHandleContainer *
-getTCSKeyHandleContainerByTCSHandle(TCS_KEY_HANDLE tcsHandle)
-{
-	TCSKeyHandleContainer *index;
-
-	pthread_mutex_lock(&keylist_lock);
-
-	for (index = glKeyHandleManager; index; next(index)) {
-		if (index->tcsKeyHandle == tcsHandle)
-			break;
-	}
-
-	pthread_mutex_unlock(&keylist_lock);
-
-	return index;
-}
-
-/* ----------------------------------------------------------------------------- */
-
-/*	These can be called by other funcs */
-
-TSS_RESULT
-addKeyHandle(TCS_KEY_HANDLE tcsHandle, TSS_HKEY tspHandle)
-{
-	TCSKeyHandleContainer *newTCS = NULL;
-	TSPKeyHandleContainer *newTSP = NULL;
-
-	if ((newTSP = calloc(1, sizeof(TSPKeyHandleContainer))) == NULL) {
-		LogError("malloc of %zd bytes failed.",
-				sizeof(TSPKeyHandleContainer));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-	newTSP->tspKeyHandle = tspHandle;
-
-	newTCS = getTCSKeyHandleContainerByTCSHandle(tcsHandle);
-
-	pthread_mutex_lock(&keylist_lock);
-
-	if (newTCS == NULL) {
-		if ((newTCS = calloc(1, sizeof(TCSKeyHandleContainer))) == NULL) {
-			LogError("malloc of %zd bytes failed.",
-					sizeof(TCSKeyHandleContainer));
-			free(newTSP);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-		newTCS->tcsKeyHandle = tcsHandle;
-		concatTCSKeyHandleContainer(&glKeyHandleManager, newTCS);
-	}
-	concatTSPKeyHandleContainer(&newTCS->tspHandles, newTSP);
-
-	LogDebugFn("TSP handle 0x%x maps to TCS 0x%x", tspHandle, tcsHandle);
-	pthread_mutex_unlock(&keylist_lock);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-remove_key_handle(TSS_HKEY tsp_handle)
-{
-	TCSKeyHandleContainer *tcs = NULL;
-	TSPKeyHandleContainer *tsp_walker, *tsp_prev;
-
-	pthread_mutex_lock(&keylist_lock);
-
-	for (tcs = glKeyHandleManager; tcs; next(tcs)) {
-		tsp_prev = NULL;
-		for (tsp_walker = tcs->tspHandles; tsp_walker; 
-		     next(tsp_walker)) {
-			if (tsp_walker->tspKeyHandle == tsp_handle) {
-				/* Remove the walker from the list and
-				 * free its memory */
-				if (tsp_prev) {
-					tsp_prev->next = tsp_walker->next;
-				} else {
-					tcs->tspHandles = tsp_walker->next;
-				}
-				free(tsp_walker);
-				break;
-			}
-			tsp_prev = tsp_walker;
-		}
-	}
-
-	pthread_mutex_unlock(&keylist_lock);
-
-	return TSS_SUCCESS;
-}
-
-TCS_KEY_HANDLE
-getTCSKeyHandle(TSS_HKEY tspHandle)
-{
-	TCSKeyHandleContainer *ret = NULL;
-	TSPKeyHandleContainer *tspIndex;
-	TCS_KEY_HANDLE ret_handle = 0;
-
-	pthread_mutex_lock(&keylist_lock);
-
-	for (ret = glKeyHandleManager; ret; next(ret)) {
-		for (tspIndex = ret->tspHandles; tspIndex; next(tspIndex)) {
-			if (tspIndex->tspKeyHandle == tspHandle) {
-				ret_handle = ret->tcsKeyHandle;
-				break;
-			}
-		}
-	}
-
-	pthread_mutex_unlock(&keylist_lock);
-
-	return ret_handle;
-}
