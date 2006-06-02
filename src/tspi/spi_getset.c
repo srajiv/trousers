@@ -134,9 +134,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 
 	} else if (obj_is_rsakey(hObjectToChange)) {
-		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
-		if (keyToChangeHandle == NULL_HKEY)
-			return TSPERR(TSS_E_KEY_NOT_LOADED);
+		if ((result = obj_rsakey_get_tcs_handle(hObjectToChange, &keyToChangeHandle)))
+			return result;
 
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 			LogDebug("SRK Handle");
@@ -222,8 +221,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 			}
 
-			if ((keyHandle = getTCSKeyHandle(hParentObject)) == NULL_HKEY)
-				return TSPERR(TSS_E_KEY_NOT_LOADED);
+			if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
+				return result;
 
 			if ((result =
 			    secret_PerformXOR_OSAP(hParentPolicy,
@@ -348,10 +347,10 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 							   &storedData)))
 			return result;
 
-		if ((keyHandle = getTCSKeyHandle(hParentObject)) == NULL_HKEY) {
+		if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
-			return TSPERR(TSS_E_KEY_NOT_LOADED);
+			return result;
 		}
 
 		if ((result =
@@ -526,9 +525,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		return result;
 
 	/*  grab all of the needed handles */
-	idHandle = getTCSKeyHandle(hIdentKey);
-	if (idHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hIdentKey, &idHandle)))
+		return result;
 
 	/*  get the secret for the parent */
 	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
@@ -544,14 +542,14 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/*  get the keyObject  */
-	keyHandle = getTCSKeyHandle(hParentObject);
-	if (keyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
+		return result;
 
 	if (obj_is_rsakey(hObjectToChange) ||
 	    obj_is_encdata(hObjectToChange)) {
 
-		keyToChangeHandle = getTCSKeyHandle(hObjectToChange);
+		if ((result = obj_rsakey_get_tcs_handle(hObjectToChange, &keyToChangeHandle)))
+			return result;
 
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 			return TSPERR(TSS_E_BAD_PARAMETER);

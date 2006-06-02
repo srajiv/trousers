@@ -42,8 +42,7 @@ obj_tpm_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 		return result;
 	}
 
-	if ((result = obj_list_add(&tpm_list, tspContext, tpm,
-					phObject))) {
+	if ((result = obj_list_add(&tpm_list, tspContext, 0, tpm, phObject))) {
 		free(tpm);
 		return result;
 	}

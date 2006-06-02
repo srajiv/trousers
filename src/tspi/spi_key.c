@@ -32,8 +32,8 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 	if ((result = obj_rsakey_is_connected(hKey, &tcsContext)))
 		return result;
 
-	if ((hTcsKey = getTCSKeyHandle(hKey)) == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &hTcsKey)))
+		return result;
 
 	return TCSP_EvictKey(tcsContext, hTcsKey);
 }
@@ -51,11 +51,10 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 	UINT32 keyslot;
 	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
-	TSS_HKEY phKey;
 	TSS_HPOLICY hPolicy;
 	UINT32 keySize;
 	BYTE *keyBlob;
-	TCS_KEY_HANDLE parentTCSKeyHandle;
+	TCS_KEY_HANDLE parentTCSKeyHandle, tcsKey;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pAuth;
 
@@ -71,9 +70,8 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
 		return result;
 
-	parentTCSKeyHandle = getTCSKeyHandle(hUnwrappingKey);
-	if (parentTCSKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hUnwrappingKey, &parentTCSKeyHandle)))
+		return result;
 
 	if ((result = obj_rsakey_get_policy(hUnwrappingKey, TSS_POLICY_USAGE,
 					    &hPolicy, &usesAuth)))
@@ -99,7 +97,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 					keySize,
 					keyBlob,
 					pAuth,
-					&phKey,
+					&tcsKey,
 					&keyslot)))
 		return result;
 
@@ -114,7 +112,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 			return result;
 	}
 
-	return addKeyHandle(phKey, hKey);
+	return obj_rsakey_set_tcs_handle(hKey, tcsKey);
 }
 
 TSS_RESULT
@@ -145,9 +143,8 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 					    &hPolicy, &usesAuth)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
+		return result;
 
 	if (usesAuth) {
 		offset = 0;
@@ -250,13 +247,11 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 					    &hCertPolicy, &useAuthCert)))
 		return result;
 
-	certifyTCSKeyHandle = getTCSKeyHandle(hCertifyingKey);
-	if (certifyTCSKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hCertifyingKey, &certifyTCSKeyHandle)))
+		return result;
 
-	keyTCSKeyHandle = getTCSKeyHandle(hKey);
-	if (keyTCSKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &keyTCSKeyHandle)))
+		return result;
 
 	if (pValidationData == NULL)
 		verifyInternally = 1;
@@ -469,10 +464,8 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
 		return result;
 
-	parentTCSKeyHandle = getTCSKeyHandle(hWrappingKey);
-	if (parentTCSKeyHandle == NULL_HKEY) {
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
-	}
+	if ((result = obj_rsakey_get_tcs_handle(hWrappingKey, &parentTCSKeyHandle)))
+		return result;
 
 	/*****************************************
 	 * To create the authorization, the first step is to call
@@ -906,10 +899,8 @@ create_migration_blob_key(TSS_HKEY hKeyToMigrate,
 		return result;
 	}
 
-	if ((parentHandle = getTCSKeyHandle(hParentKey)) == NULL_HKEY) {
-		free_key_refs(&tcpaKey);
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
-	}
+	if ((result = obj_rsakey_get_tcs_handle(hParentKey, &parentHandle)))
+		return result;
 
 	if ((result = TCSP_CreateMigrationBlob(tcsContext, parentHandle, migAuth.migrationScheme,
 					       ulMigTicketLength, rgbMigTicket, tcpaKey.encSize,
@@ -1041,9 +1032,8 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/* Get the parent key handle */
-	parentHandle = getTCSKeyHandle(hParentKey);
-	if (parentHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hParentKey, &parentHandle)))
+		return result;
 
 	/* Get the policy */
 	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE,

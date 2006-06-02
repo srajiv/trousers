@@ -48,8 +48,7 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 #endif
 	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
 
-	if ((result = obj_list_add(&policy_list, tsp_context, policy,
-					phObject))) {
+	if ((result = obj_list_add(&policy_list, tsp_context, 0, policy, phObject))) {
 		free(policy);
 		return result;
 	}

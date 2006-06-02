@@ -51,8 +51,11 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer))) {
+		free_tspi(tspContext, keyData);
 		return result;
+	}
+	free_tspi(tspContext, keyData);
 
 	if (keyContainer.keyUsage != TPM_KEY_BIND &&
 	    keyContainer.keyUsage != TPM_KEY_LEGACY) {
@@ -62,12 +65,9 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 
 	if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15 &&
 	    keyContainer.keyUsage == TPM_KEY_LEGACY) {
-		if ((result = Trspi_RSA_PKCS15_Encrypt(rgbDataToBind,
-						ulDataLength,
-						encData,
-						&encDataLength,
-						keyContainer.pubKey.key,
-						keyContainer.pubKey.keyLength)))
+		if ((result = Trspi_RSA_PKCS15_Encrypt(rgbDataToBind, ulDataLength, encData,
+						       &encDataLength, keyContainer.pubKey.key,
+						       keyContainer.pubKey.keyLength)))
 			goto done;
 	} else if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15 &&
 		   keyContainer.keyUsage == TPM_KEY_BIND) {
@@ -85,12 +85,9 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 		offset = 0;
 		Trspi_LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
 
-		if ((result = Trspi_RSA_PKCS15_Encrypt(bdblob,
-						offset,
-						encData,
-						&encDataLength,
-						keyContainer.pubKey.key,
-						keyContainer.pubKey.keyLength))) {
+		if ((result = Trspi_RSA_PKCS15_Encrypt(bdblob, offset, encData,
+						       &encDataLength, keyContainer.pubKey.key,
+						       keyContainer.pubKey.keyLength))) {
 			free(boundData.payloadData);
 			goto done;
 		}
@@ -102,20 +99,18 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 
 		boundData.payloadData = malloc(ulDataLength);
 		if (boundData.payloadData == NULL) {
-			LogError("malloc of %d bytes failed.", ulDataLength);
+			LogError("malloc of %u bytes failed.", ulDataLength);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		memcpy(boundData.payloadData, rgbDataToBind, ulDataLength);
 
 		offset = 0;
-		Trspi_LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength,
-						bdblob);
+		Trspi_LoadBlob_BOUND_DATA(&offset, boundData, ulDataLength, bdblob);
 
-		if ((result = Trspi_RSA_Encrypt(bdblob, offset, encData,
-					    &encDataLength,
-					    keyContainer.pubKey.key,
-					    keyContainer.pubKey.keyLength))) {
+		if ((result = Trspi_RSA_Encrypt(bdblob, offset, encData, &encDataLength,
+						keyContainer.pubKey.key,
+						keyContainer.pubKey.keyLength))) {
 			free(boundData.payloadData);
 			goto done;
 		}
@@ -169,11 +164,8 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == NULL_HKEY) {
-		result = TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		return result;
-	}
 
 	if (usesAuth) {
 		offset = 0;
@@ -202,12 +194,10 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		Trspi_LoadBlob_UINT32(&offset, result, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_UnBind, hashBlob);
 		Trspi_LoadBlob_UINT32(&offset, *pulUnboundDataLength, hashBlob);
-		Trspi_LoadBlob(&offset, *pulUnboundDataLength, hashBlob,
-				*prgbUnboundData);
+		Trspi_LoadBlob(&offset, *pulUnboundDataLength, hashBlob, *prgbUnboundData);
 		Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest);
 
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
-						&privAuth))) {
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
 			free_tspi(tspContext, *prgbUnboundData);
 			return result;
 		}
@@ -260,9 +250,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 					     &hEncPolicy)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hEncKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hEncKey, &tcsKeyHandle)))
+		return result;
 
 	/* If PCR's are of interest */
 	pcrDataSize = 0;
@@ -384,9 +373,8 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 	if ((result = obj_encdata_get_data(hEncData, &ulDataLen, &data)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
+		return result;
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_Unseal, hashblob);

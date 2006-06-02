@@ -586,3 +586,91 @@ free_key_refs(TCPA_KEY *key)
 	key->PCRInfo = NULL;
 	key->PCRInfoSize = 0;
 }
+
+TSS_RESULT
+copy_key(TCPA_KEY *dst, TCPA_KEY *src)
+{
+	memcpy(dst, src, sizeof(TCPA_KEY));
+
+	if (src->algorithmParms.parmSize > 0) {
+		dst->algorithmParms.parms = malloc(src->algorithmParms.parmSize);
+		if (dst->algorithmParms.parms == NULL) {
+			LogError("malloc of %u bytes failed.", src->algorithmParms.parmSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(dst->algorithmParms.parms, src->algorithmParms.parms,
+		       src->algorithmParms.parmSize);
+	}
+
+	if (src->pubKey.keyLength > 0) {
+		dst->pubKey.key = malloc(src->pubKey.keyLength);
+		if (dst->pubKey.key == NULL) {
+			free(dst->algorithmParms.parms);
+			dst->algorithmParms.parms = NULL;
+			dst->algorithmParms.parmSize = 0;
+			LogError("malloc of %u bytes failed.", src->pubKey.keyLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(dst->pubKey.key, src->pubKey.key, src->pubKey.keyLength);
+	}
+
+	if (src->encSize > 0) {
+		dst->encData = malloc(src->encSize);
+		if (dst->encData == NULL) {
+			free(dst->algorithmParms.parms);
+			dst->algorithmParms.parms = NULL;
+			dst->algorithmParms.parmSize = 0;
+			free(dst->pubKey.key);
+			dst->pubKey.key = NULL;
+			dst->pubKey.keyLength = 0;
+			LogError("malloc of %u bytes failed.", src->encSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(dst->encData, src->encData, src->encSize);
+	}
+
+	if (src->PCRInfoSize > 0) {
+		dst->PCRInfo = malloc(src->PCRInfoSize);
+		if (dst->PCRInfo == NULL) {
+			free(dst->algorithmParms.parms);
+			dst->algorithmParms.parms = NULL;
+			dst->algorithmParms.parmSize = 0;
+			free(dst->pubKey.key);
+			dst->pubKey.key = NULL;
+			dst->pubKey.keyLength = 0;
+			free(dst->encData);
+			dst->encData = NULL;
+			dst->encSize = 0;
+			LogError("malloc of %u bytes failed.", src->PCRInfoSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(dst->PCRInfo, src->PCRInfo, src->PCRInfoSize);
+	}
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+merge_key_hierarchies(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO *tsp_hier,
+		      UINT32 tcs_size, TSS_KM_KEYINFO *tcs_hier, UINT32 *merged_size,
+		      TSS_KM_KEYINFO **merged_hier)
+{
+	UINT32 i, j;
+
+	*merged_hier = calloc_tspi(tspContext, (tsp_size + tcs_size) * sizeof(TSS_KM_KEYINFO));
+	if (*merged_hier == NULL) {
+		LogError("malloc of %zu bytes failed.", (tsp_size + tcs_size) *
+			 sizeof(TSS_KM_KEYINFO));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	for (i = 0; i < tsp_size; i++)
+		memcpy(&((*merged_hier)[i]), &tsp_hier[i], sizeof(TSS_KM_KEYINFO));
+
+	for (j = 0; j < tcs_size; j++)
+		memcpy(&((*merged_hier)[i + j]), &tsp_hier[j], sizeof(TSS_KM_KEYINFO));
+
+	*merged_size = i + j;
+
+	return TSS_SUCCESS;
+}

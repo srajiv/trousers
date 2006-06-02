@@ -56,9 +56,8 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 	if ((result = obj_hash_get_value(hHash, &ulDataLen, &data)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
+		return result;
 
 	if (usesAuth) {
 		offset = 0;

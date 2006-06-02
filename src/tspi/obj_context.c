@@ -65,8 +65,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 	context->hashMode = TSS_TSPATTRIB_HASH_MODE_NULL;
 #endif
 
-	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, context,
-					phObject))) {
+	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, 0, context, phObject))) {
 		free(context);
 		return result;
 	}

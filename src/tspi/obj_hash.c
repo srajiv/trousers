@@ -44,8 +44,7 @@ obj_hash_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 		hash->hashSize = 0;
 	}
 
-	if ((result = obj_list_add(&hash_list, tspContext, hash,
-					phObject))) {
+	if ((result = obj_list_add(&hash_list, tspContext, 0, hash, phObject))) {
 		free(hash);
 		return result;
 	}

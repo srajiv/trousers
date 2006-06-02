@@ -384,9 +384,8 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	if (result)
 		return result;
 
-	/* The SRK is loaded at this point, so insert it into the key handle
-	 * list */
-	return addKeyHandle(TPM_KEYHND_SRK, hKeySRK);
+	/* The SRK is loaded at this point, so insert it into the key handle list */
+	return obj_rsakey_set_tcs_handle(hKeySRK, TPM_KEYHND_SRK);
 }
 
 /* XXX needs to be tied into TPM policy object's callbacks */
@@ -746,9 +745,8 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hIdentKey, &tcsKeyHandle)))
+		return result;
 
 	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
 					    &hIDPolicy, &usesAuth)))
@@ -1193,9 +1191,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 					    &hPolicy, &useAuth)))
 		return result;
 
-	keyTCSKeyHandle = getTCSKeyHandle(hKey);
-	if (keyTCSKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &keyTCSKeyHandle)))
+		return result;
 
 	if (pValidationData == NULL)
 		verifyInternally = 1;
@@ -1503,9 +1500,8 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
-	tcsKeyHandle = getTCSKeyHandle(hKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
+		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, NULL)))
 		return result;
@@ -2186,9 +2182,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	/*  get the Identity TCS keyHandle */
-	tcsKeyHandle = getTCSKeyHandle(hIdentKey);
-	if (tcsKeyHandle == NULL_HKEY)
-		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	if ((result = obj_rsakey_get_tcs_handle(hIdentKey, &tcsKeyHandle)))
+		return result;
 
 	if (verifyInternally) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))

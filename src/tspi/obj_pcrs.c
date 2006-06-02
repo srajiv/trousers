@@ -35,8 +35,7 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-	if ((result = obj_list_add(&pcrs_list, tspContext, pcrs,
-					phObject))) {
+	if ((result = obj_list_add(&pcrs_list, tspContext, 0, pcrs, phObject))) {
 		free(pcrs);
 		return result;
 	}

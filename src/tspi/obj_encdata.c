@@ -51,8 +51,7 @@ obj_encdata_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 
 	encdata->type = type;
 
-	if ((result = obj_list_add(&encdata_list, tspContext, encdata,
-					phObject))) {
+	if ((result = obj_list_add(&encdata_list, tspContext, 0, encdata, phObject))) {
 		free(encdata);
 		return result;
 	}
@@ -194,7 +193,7 @@ obj_encdata_get_pcr_atcreation(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	if ((encdata->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
+	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
 		*data = NULL;
 		*size = 0;
 	} else {
@@ -227,7 +226,7 @@ obj_encdata_get_pcr_atrelease(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	if ((encdata->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
+	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
 		*data = NULL;
 		*size = 0;
 	} else {
@@ -260,7 +259,7 @@ obj_encdata_get_pcr_selection(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	if ((encdata->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
+	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
 		*data = NULL;
 		*size = 0;
 	} else {
@@ -305,7 +304,7 @@ obj_encdata_set_pcr_info(TSS_HENCDATA hEncData, BYTE *info_blob)
 
 	offset = 0;
 	result = Trspi_UnloadBlob_PCR_INFO(&offset, info_blob, &encdata->pcrInfo);
-	encdata->flags |= TSS_OBJ_FLAG_PCRS;
+	obj->flags |= TSS_OBJ_FLAG_PCRS;
 
 	obj_list_put(&encdata_list);
 

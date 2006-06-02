@@ -29,6 +29,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	UINT16 offset;
 	TSS_RESULT result;
 	TCPA_RSA_KEY_PARMS rsaKeyParms;
+	TSS_FLAG flags = 0;
 	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
 
 	if (rsakey == NULL) {
@@ -78,9 +79,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 
 	rsakey->tcpaKey.pubKey.keyLength = 0;
 	rsakey->tcpaKey.encSize = 0;
-	rsakey->privateKey.Privlen = 0;
 	rsakey->tcpaKey.PCRInfoSize = 0;
-	rsakey->persStorageType = TSS_PS_TYPE_NO;
 
 	/* End of all the default stuff */
 
@@ -89,9 +88,10 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	if (initFlags & TSS_KEY_MIGRATABLE)
 		rsakey->tcpaKey.keyFlags |= migratable;
 	if (initFlags & TSS_KEY_AUTHORIZATION) {
-		rsakey->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 		rsakey->tcpaKey.authDataUsage = TPM_AUTH_ALWAYS;
+		flags |= TSS_OBJ_FLAG_USAGEAUTH;
 	}
+
 
 	/* set the key length */
 	if ((initFlags & TSS_KEY_SIZE_MASK) == TSS_KEY_SIZE_512) {
@@ -139,18 +139,61 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	 * If the exponent is left NULL, the parmSize variable will change
 	 * here */
 	offset = 0;
-	Trspi_LoadBlob_RSA_KEY_PARMS(&offset,
-			rsakey->tcpaKey.algorithmParms.parms,
-			&rsaKeyParms);
+	Trspi_LoadBlob_RSA_KEY_PARMS(&offset, rsakey->tcpaKey.algorithmParms.parms,
+				     &rsaKeyParms);
 	rsakey->tcpaKey.algorithmParms.parmSize = offset;
 
 add_key:
-	if ((result = obj_list_add(&rsakey_list, tspContext, rsakey,
-					phObject))) {
+	if ((result = obj_list_add(&rsakey_list, tspContext, flags, rsakey, phObject))) {
 		obj_policy_remove(rsakey->usagePolicy, tspContext);
 		obj_policy_remove(rsakey->migPolicy, tspContext);
 		free(rsakey->tcpaKey.algorithmParms.parms);
 		free(rsakey);
+		return result;
+	}
+
+	return TSS_SUCCESS;
+}
+
+/* Add a new rsakey to the list when its pulled from user PS */
+TSS_RESULT
+obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TCPA_KEY *tcpaKey, TSS_HKEY *phKey)
+{
+	TSS_RESULT result;
+	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
+
+	if (rsakey == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(struct tr_rsakey_obj));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	memcpy(&rsakey->uuid, uuid, sizeof(TSS_UUID));
+	if ((result = copy_key(&rsakey->tcpaKey, tcpaKey))) {
+		free(rsakey);
+		return result;
+	}
+
+	/* add usage policy */
+	if ((result = obj_policy_add(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
+		free_key_refs(&rsakey->tcpaKey);
+		free(rsakey);
+		return result;
+	}
+
+	/* add migration policy */
+	if ((result = obj_policy_add(tspContext, TSS_POLICY_MIGRATION, &rsakey->migPolicy))) {
+		free_key_refs(&rsakey->tcpaKey);
+		free(rsakey);
+		obj_policy_remove(rsakey->usagePolicy, tspContext);
+		return result;
+	}
+
+	if ((result = obj_list_add(&rsakey_list, tspContext, TSS_OBJ_FLAG_USER_PS, rsakey,
+				   phKey))) {
+		free_key_refs(&rsakey->tcpaKey);
+		free(rsakey);
+		obj_policy_remove(rsakey->usagePolicy, tspContext);
+		obj_policy_remove(rsakey->migPolicy, tspContext);
 		return result;
 	}
 
@@ -231,13 +274,25 @@ TSS_RESULT
 obj_rsakey_set_pstype(TSS_HKEY hKey, UINT32 type)
 {
 	struct tsp_object *obj;
-	struct tr_rsakey_obj *rsakey;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	rsakey = (struct tr_rsakey_obj *)obj->data;
-	rsakey->persStorageType = type;
+	switch (type) {
+		case TSS_PS_TYPE_USER:
+			obj->flags |= TSS_OBJ_FLAG_USER_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_SYSTEM_PS;
+			break;
+		case TSS_PS_TYPE_SYSTEM:
+			obj->flags |= TSS_OBJ_FLAG_SYSTEM_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_USER_PS;
+			break;
+		case TSS_PS_TYPE_NO:
+		default:
+			obj->flags &= ~TSS_OBJ_FLAG_USER_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_SYSTEM_PS;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
@@ -423,7 +478,10 @@ obj_rsakey_set_authdata_usage(TSS_HKEY hKey, UINT32 usage)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	rsakey->tcpaKey.authDataUsage = (BYTE)usage;
-	rsakey->flags |= usage ? TSS_OBJ_FLAG_USAGEAUTH : 0;
+	if (usage)
+		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
+	else
+		obj->flags &= ~TSS_OBJ_FLAG_USAGEAUTH;
 
 	obj_list_put(&rsakey_list);
 
@@ -681,13 +739,16 @@ TSS_RESULT
 obj_rsakey_get_pstype(TSS_HKEY hKey, UINT32 *type)
 {
 	struct tsp_object *obj;
-	struct tr_rsakey_obj *rsakey;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*type = rsakey->persStorageType;
+	if (obj->flags & TSS_OBJ_FLAG_SYSTEM_PS)
+		*type = TSS_PS_TYPE_SYSTEM;
+	else if (obj->flags & TSS_OBJ_FLAG_USER_PS)
+		*type = TSS_PS_TYPE_USER;
+	else
+		*type = TSS_PS_TYPE_NO;
 
 	obj_list_put(&rsakey_list);
 
@@ -800,7 +861,7 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 	if (policyType == TSS_POLICY_USAGE) {
 		*phPolicy = rsakey->usagePolicy;
 		if (auth != NULL) {
-			if (rsakey->flags & TSS_OBJ_FLAG_USAGEAUTH)
+			if (obj->flags & TSS_OBJ_FLAG_USAGEAUTH)
 				*auth = TRUE;
 			else
 				*auth = FALSE;
@@ -808,7 +869,7 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 	} else {
 		*phPolicy = rsakey->migPolicy;
 		if (auth != NULL) {
-			if (rsakey->flags & TSS_OBJ_FLAG_MIGAUTH)
+			if (obj->flags & TSS_OBJ_FLAG_MIGAUTH)
 				*auth = TRUE;
 			else
 				*auth = FALSE;
@@ -907,7 +968,7 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	 * data here is all 0's, then we shouldn't return it, we
 	 * should return TSS_E_BAD_PARAMETER. This is part of protecting
 	 * the SRK public key. */
-	if (getTCSKeyHandle(hKey) == TPM_KEYHND_SRK) {
+	if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
 		BYTE zeroBlob[2048] = { 0, };
 
 		if (!memcmp(rsakey->tcpaKey.pubKey.key, zeroBlob, offset)) {
@@ -1054,7 +1115,7 @@ done:
 }
 
 TSS_RESULT
-obj_rsakey_set_uuid(TSS_HKEY hKey, TSS_UUID *uuid)
+obj_rsakey_set_uuid(TSS_HKEY hKey, TSS_FLAG ps_type, TSS_UUID *uuid)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
@@ -1064,6 +1125,60 @@ obj_rsakey_set_uuid(TSS_HKEY hKey, TSS_UUID *uuid)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	memcpy(&rsakey->uuid, uuid, sizeof(TSS_UUID));
+
+	switch (ps_type) {
+		case TSS_PS_TYPE_SYSTEM:
+			obj->flags |= TSS_OBJ_FLAG_SYSTEM_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_USER_PS;
+			break;
+		case TSS_PS_TYPE_USER:
+			obj->flags |= TSS_OBJ_FLAG_USER_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_SYSTEM_PS;
+			break;
+		case TSS_PS_TYPE_NO:
+		default:
+			obj->flags &= ~TSS_OBJ_FLAG_USER_PS;
+			obj->flags &= ~TSS_OBJ_FLAG_SYSTEM_PS;
+			break;
+	}
+
+	obj_list_put(&rsakey_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_rsakey_set_tcs_handle(TSS_HKEY hKey, TCS_KEY_HANDLE tcsHandle)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	rsakey->tcsHandle = tcsHandle;
+
+	obj_list_put(&rsakey_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_rsakey_get_tcs_handle(TSS_HKEY hKey, TCS_KEY_HANDLE *tcsHandle)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	if (rsakey->tcsHandle)
+		*tcsHandle = rsakey->tcsHandle;
+	else
+		result = TSPERR(TSS_E_KEY_NOT_LOADED);
 
 	obj_list_put(&rsakey_list);
 
@@ -1088,7 +1203,9 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 		goto done;
 
 	if (rsakey->tcpaKey.authDataUsage)
-		rsakey->flags |= TSS_OBJ_FLAG_USAGEAUTH;
+		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
+	else
+		obj->flags &= ~TSS_OBJ_FLAG_USAGEAUTH;
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1329,7 +1446,6 @@ rsakey_free(struct tr_rsakey_obj *rsakey)
 	free(rsakey->tcpaKey.encData);
 	free(rsakey->tcpaKey.PCRInfo);
 	free(rsakey->tcpaKey.pubKey.key);
-	free(rsakey->privateKey.Privkey);
 	free(rsakey);
 }
 
@@ -1349,8 +1465,6 @@ obj_rsakey_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 			/* validate tspContext */
 			if (obj->tspContext != tspContext)
 				break;
-
-			remove_key_handle(hObject);
 
 			rsakey_free(obj->data);
 			if (prev)
@@ -1401,7 +1515,33 @@ obj_list_rsakey_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
-/* find a key in memory that was loaded by UUID */
+TSS_RESULT
+obj_rsakey_get_by_pub(UINT32 pub_size, BYTE *pub, TSS_HKEY *hKey)
+{
+	struct obj_list *list = &rsakey_list;
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	pthread_mutex_lock(&list->lock);
+
+	for (obj = list->head; obj; obj = obj->next) {
+		rsakey = (struct tr_rsakey_obj *)obj->data;
+
+		if (rsakey->tcpaKey.pubKey.keyLength == pub_size &&
+		    !memcmp(&rsakey->tcpaKey.pubKey.key, pub, pub_size)) {
+			*hKey = obj->handle;
+			goto done;
+		}
+	}
+
+	*hKey = 0;
+done:
+	pthread_mutex_unlock(&list->lock);
+
+	return result;
+}
+
 TSS_RESULT
 obj_rsakey_get_by_uuid(TSS_UUID *uuid, TSS_HKEY *hKey)
 {
@@ -1421,10 +1561,9 @@ obj_rsakey_get_by_uuid(TSS_UUID *uuid, TSS_HKEY *hKey)
 		}
 	}
 
-	result = TSS_E_FAIL;
+	result = TSPERR(TSS_E_PS_KEY_NOTFOUND);
 done:
 	pthread_mutex_unlock(&list->lock);
 
 	return result;
 }
-
