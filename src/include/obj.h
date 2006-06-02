@@ -19,6 +19,10 @@
 #define TSS_OBJ_FLAG_USAGEAUTH	0x00000002
 /* When TRUE, the object has a migration auth secret associated with it */
 #define TSS_OBJ_FLAG_MIGAUTH	0x00000004
+/* When TRUE, the object has previously been registered in USER PS */
+#define TSS_OBJ_FLAG_USER_PS	0x00000008
+/* When TRUE, the object has previously been registered in SYSTEM PS */
+#define TSS_OBJ_FLAG_SYSTEM_PS	0x00000010
 
 /* structures */
 
@@ -26,6 +30,7 @@ struct tsp_object {
 	UINT32 handle;
 	UINT32 tspContext;
 	UINT32 tcsContext;
+	TSS_FLAG flags;
 	void *data;
 	struct tsp_object *next;
 };
@@ -55,7 +60,6 @@ struct tr_encdata_obj {
 	UINT32 encryptedDataLength;
 	BYTE encryptedData[512];
 	TCPA_PCR_INFO pcrInfo;
-	TSS_FLAG flags;
 	UINT32 type;
 };
 
@@ -101,10 +105,14 @@ struct tr_rsakey_obj {
 	TCPA_KEY tcpaKey;
 	TSS_HPOLICY usagePolicy;
 	TSS_HPOLICY migPolicy;
-	TSS_FLAG persStorageType;
 	TSS_UUID uuid;
-	TCPA_PRIVKEY privateKey;
-	TSS_FLAG flags;
+	TCS_KEY_HANDLE tcsHandle;
+};
+
+struct tr_regdkey_obj {
+	TCPA_KEY tcpaKey;
+	TSS_UUID uuid;
+	TSS_UUID parent_uuid;
 };
 
 struct tr_policy_obj {
@@ -179,6 +187,7 @@ extern struct obj_list pcrs_list;
 extern struct obj_list policy_list;
 extern struct obj_list rsakey_list;
 extern struct obj_list encdata_list;
+extern struct obj_list regdkey_list;
 
 /* prototypes */
 TSS_RESULT	   obj_getTpmObject(UINT32, TSS_HOBJECT *);
@@ -189,7 +198,7 @@ void		   obj_list_init();
 TSS_HOBJECT	   obj_get_next_handle();
 void		   obj_close_context(TSS_HCONTEXT);
 TSS_RESULT	   obj_getTpmObject(TSS_HCONTEXT, TSS_HOBJECT *);
-TSS_RESULT	   obj_list_add(struct obj_list *, UINT32, void *, TSS_HOBJECT *);
+TSS_RESULT	   obj_list_add(struct obj_list *, UINT32, TSS_FLAG, void *, TSS_HOBJECT *);
 TSS_RESULT	   obj_list_remove(struct obj_list *, TSS_HOBJECT, TSS_HCONTEXT);
 void		   obj_list_put(struct obj_list *);
 struct tsp_object *obj_list_get_obj(struct obj_list *, UINT32);
@@ -224,6 +233,7 @@ TSS_RESULT obj_hash_update_value(TSS_HHASH, UINT32, BYTE *);
 void       obj_list_rsakey_close(struct obj_list *, TSS_HCONTEXT);
 TSS_BOOL   obj_is_rsakey(TSS_HOBJECT);
 TSS_RESULT obj_rsakey_add(TSS_HCONTEXT, TSS_FLAG, TSS_HOBJECT *);
+TSS_RESULT obj_rsakey_add_by_key(TSS_HCONTEXT, TSS_UUID *, TCPA_KEY *, TSS_HKEY *);
 TSS_RESULT obj_rsakey_set_policy(TSS_HKEY, UINT32, TSS_HPOLICY);
 TSS_RESULT obj_rsakey_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_rsakey_get_tsp_context(TSS_HKEY, TSS_HCONTEXT *);
@@ -256,7 +266,9 @@ TSS_RESULT obj_rsakey_get_pub_blob(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_version(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_exponent(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_uuid(TSS_HKEY, UINT32 *, BYTE **);
-TSS_RESULT obj_rsakey_set_uuid(TSS_HKEY, TSS_UUID *);
+TSS_RESULT obj_rsakey_get_parent_uuid(TSS_HKEY, TSS_FLAG *, TSS_UUID *);
+TSS_RESULT obj_rsakey_set_uuids(TSS_HKEY, TSS_FLAG, TSS_UUID *, TSS_FLAG, TSS_UUID *);
+TSS_RESULT obj_rsakey_set_uuid(TSS_HKEY, TSS_FLAG, TSS_UUID *);
 TSS_RESULT obj_rsakey_set_tcpakey(TSS_HKEY, UINT32 , BYTE *);
 TSS_RESULT obj_rsakey_get_pcr_atcreation(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_pcr_atrelease(TSS_HKEY, UINT32 *, BYTE **);
@@ -267,6 +279,9 @@ TSS_RESULT obj_rsakey_set_pcr_data(TSS_HKEY, TSS_HPOLICY);
 TSS_RESULT obj_rsakey_set_key_parms(TSS_HKEY, TCPA_KEY_PARMS *);
 TSS_RESULT obj_rsakey_is_connected(TSS_HKEY, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_rsakey_get_by_uuid(TSS_UUID *, TSS_HKEY *);
+TSS_RESULT obj_rsakey_get_by_pub(UINT32, BYTE *, TSS_HKEY *);
+TSS_RESULT obj_rsakey_get_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE *);
+TSS_RESULT obj_rsakey_set_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE);
 
 /* obj_tpm.c */
 TSS_BOOL   obj_is_tpm(TSS_HOBJECT);
@@ -355,4 +370,12 @@ TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, B
 TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
 TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
+
+/* obj_regdkey.c */
+TSS_RESULT obj_regdkey_get_by_pub(TSS_HCONTEXT, UINT32, BYTE *, TSS_HKEY *);
+TSS_RESULT obj_regdkey_add(TSS_UUID *, TSS_UUID *, UINT32, BYTE *, TSS_HOBJECT *);
+TSS_RESULT obj_regdkey_get_by_uuid(TSS_HCONTEXT, TSS_UUID *, TSS_HKEY *);
+TSS_RESULT obj_regdkey_get_registered_keys(TSS_UUID *, UINT32 *, TSS_KM_KEYINFO **);
+TSS_RESULT obj_regdkey_remove(TSS_UUID *);
+TSS_RESULT obj_regdkey_get_parent_uuid(TSS_UUID *, TSS_FLAG *, TSS_UUID *);
 #endif

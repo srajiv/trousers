@@ -84,9 +84,13 @@ void   free_key_refs(TCPA_KEY *);
 #define UI_MAX_POPUP_STRING_LENGTH	256
 TSS_RESULT DisplayPINWindow(BYTE *, UINT32 *, BYTE *);
 TSS_RESULT DisplayNewPINWindow(BYTE *, UINT32 *, BYTE *);
+TSS_RESULT merge_key_hierarchies(TSS_HCONTEXT, UINT32, TSS_KM_KEYINFO *, UINT32, TSS_KM_KEYINFO *,
+				 UINT32 *, TSS_KM_KEYINFO **);
 
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
+
+TSS_RESULT copy_key(TCPA_KEY *, TCPA_KEY *);
 
 TSS_RESULT internal_GetMachineName(UNICODE *, int);
 TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
@@ -134,15 +138,6 @@ TSS_RESULT getObject(UINT32, void **, UINT32 *);
 TSS_HOBJECT addObject(UINT32, UINT32);
 
 TSS_BOOL anyPopupPolicies(TSS_HCONTEXT);
-
-/*---	These funcs should be called to handle the TSS_HKEY <--> TCS_KEY_HANDLE issues */
-
-TSS_RESULT addKeyHandle(TCS_KEY_HANDLE, TSS_HKEY);
-TSS_RESULT remove_key_handle(TSS_HKEY);
-void removeTCSKeyHandle(TCS_KEY_HANDLE);
-TCS_KEY_HANDLE getTCSKeyHandle(TSS_HKEY);
-
-/*---------------------------------------------------------------------------------------- */
 
 TSS_RESULT Init_AuthNonce(TCS_CONTEXT_HANDLE, TPM_AUTH *);
 TSS_BOOL validateReturnAuth(BYTE *, BYTE *, TPM_AUTH *);
