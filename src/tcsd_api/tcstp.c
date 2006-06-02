@@ -710,11 +710,10 @@ TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 		}
 
 		if (*pcKeyHierarchySize > 0) {
-			*ppKeyHierarchy = calloc_tspi(tspContext,
-						      (*pcKeyHierarchySize) *
-						      sizeof(TSS_KM_KEYINFO));
+			*ppKeyHierarchy = malloc((*pcKeyHierarchySize) * sizeof(TSS_KM_KEYINFO));
 			if (*ppKeyHierarchy == NULL) {
-				LogError("malloc of %u bytes failed.", *pcKeyHierarchySize);
+				LogError("malloc of %zu bytes failed.", (*pcKeyHierarchySize) *
+					 sizeof(TSS_KM_KEYINFO));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
