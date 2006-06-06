@@ -1,6 +1,6 @@
 
 install: install-exec-hook
-	if test ! -e ${DESTDIR}/@sysconfdir@/tcsd.conf; then cp tcsd.conf ${DESTDIR}/@sysconfdir@; fi
+	if test ! -e ${DESTDIR}/@sysconfdir@/tcsd.conf; then mkdir -p ${DESTDIR}/@sysconfdir@ && cp tcsd.conf ${DESTDIR}/@sysconfdir@; fi
 	/bin/chown tss:tss ${DESTDIR}/@sysconfdir@/tcsd.conf
 	/bin/chmod 0600 ${DESTDIR}/@sysconfdir@/tcsd.conf
 
