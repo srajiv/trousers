@@ -1,0 +1,91 @@
+
+# RPM specfile for the trousers project on Fedora
+
+%define name		@PACKAGE@
+%define version		@VERSION@
+%define release		1
+
+Name:		%{name}
+Summary:	Implementation of the TCG's Software Stack v1.1 Specification
+Version:	%{version}
+Release:	%{release}
+License:	CPL
+Group:		System Environment/Libraries
+Source:		%{name}-%{version}.tar.gz
+Url:		http://www.sf.net/projects/trousers
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires:	libtool, automake16, gtk2-devel, openssl-devel
+Requires:	gtk+ >= 2.0, openssl
+
+%description
+TrouSerS is an implementation of the Trusted Computing Group's Software Stack
+(TSS) specification. You can use TrouSerS to write applications that make use
+of your TPM hardware. TPM hardware can create, store and use RSA keys
+securely (without ever being exposed in memory), verify a platform's software
+state using cryptographic hashes and more.
+
+%package	devel
+Summary:	TrouSerS header files and documentation
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description	devel
+Header files and man pages for use in creating Trusted Computing enabled
+applications.
+
+%prep
+%setup
+
+%build
+./configure --prefix=/usr --libdir=%{_libdir}
+make
+
+%clean
+[ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
+
+%post
+chkconfig --add tcsd
+/sbin/ldconfig
+
+%post		devel -p /sbin/ldconfig
+
+%install
+# This line keeps build machines from being affected
+[ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
+mkdir -p ${RPM_BUILD_ROOT}
+mkdir -p ${RPM_BUILD_ROOT}/%{_initrddir}
+cp dist/fedora/fedora.initrd.tcsd ${RPM_BUILD_ROOT}/%{_initrddir}/tcsd
+make install DESTDIR=${RPM_BUILD_ROOT}
+
+%preun
+%{_initrddir}/tcsd stop
+chkconfig --del tcsd
+
+%postun -p /sbin/ldconfig
+
+%postun		devel -p /sbin/ldconfig
+
+%files
+%doc README AUTHORS LICENSE
+%defattr(755, root, root)
+%attr(755, tss, tss) %{_sbindir}/tcsd
+%{_libdir}/libtspi.so.?
+%{_libdir}/libtspi.so.?.?.?
+%config(noreplace) %attr(600, tss, tss) %{_sysconfdir}/tcsd.conf
+%attr(644, root, root) %{_mandir}/man5/*
+%attr(644, root, root) %{_mandir}/man8/*
+%{_initrddir}/tcsd
+
+# The files to be used by developers, 'trousers-devel'
+%files		devel
+%defattr(755, root, root)
+%{_libdir}/libtspi.la
+%{_libdir}/libtspi.so
+%{_libdir}/libtddl.a
+%attr(644, root, root) %{_includedir}/tss/*.h
+%attr(644, root, root) %{_includedir}/trousers/*.h
+%attr(644, root, root) %{_mandir}/man3/Tspi_*
+
+%changelog
+* Tue Jun 06 2006 Kent Yoder <kyoder@users.sf.net> - 0.2.6-1
+- Initial add of changelog tag for trousers CVS
