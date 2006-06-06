@@ -129,6 +129,7 @@ elif test x"${prefix}" == x"NONE"; then
 fi
 
 AC_OUTPUT(dist/tcsd.conf \
+	  dist/fedora/trousers.spec \
 	  dist/trousers.spec \
 	  Makefile \
 	  src/Makefile \
