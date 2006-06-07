@@ -983,6 +983,10 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	} else {
+		/* make sure we're connected to a TCS */
+		if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+			return result;
+
 		if ((result = TCS_EnumRegisteredKeys(tcsContext, pUuidData, &tcsHierSize,
 						     &tcsHier)))
 			return result;
