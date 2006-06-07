@@ -14,7 +14,7 @@ Group:		System Environment/Libraries
 Source:		%{name}-%{version}.tar.gz
 Url:		http://www.sf.net/projects/trousers
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires:	libtool, automake16, gtk2-devel, openssl-devel
+BuildRequires:	libtool, gtk2-devel, openssl-devel
 Requires:	gtk+ >= 2.0, openssl
 
 %description
@@ -37,8 +37,8 @@ applications.
 %setup
 
 %build
-./configure --prefix=/usr --libdir=%{_libdir}
-make
+%configure
+make %{?_smp_mflags}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
@@ -47,7 +47,7 @@ make
 chkconfig --add tcsd
 /sbin/ldconfig
 
-%post		devel -p /sbin/ldconfig
+%post devel -p /sbin/ldconfig
 
 %install
 # This line keeps build machines from being affected
@@ -56,6 +56,7 @@ mkdir -p ${RPM_BUILD_ROOT}
 mkdir -p ${RPM_BUILD_ROOT}/%{_initrddir}
 cp dist/fedora/fedora.initrd.tcsd ${RPM_BUILD_ROOT}/%{_initrddir}/tcsd
 make install DESTDIR=${RPM_BUILD_ROOT}
+rm -f ${RPM_BUILD_ROOT}/%{_libdir}/libtspi.la
 
 %preun
 %{_initrddir}/tcsd stop
@@ -63,7 +64,7 @@ chkconfig --del tcsd
 
 %postun -p /sbin/ldconfig
 
-%postun		devel -p /sbin/ldconfig
+%postun devel -p /sbin/ldconfig
 
 %files
 %doc README AUTHORS LICENSE
@@ -79,7 +80,6 @@ chkconfig --del tcsd
 # The files to be used by developers, 'trousers-devel'
 %files		devel
 %defattr(755, root, root)
-%{_libdir}/libtspi.la
 %{_libdir}/libtspi.so
 %{_libdir}/libtddl.a
 %attr(644, root, root) %{_includedir}/tss/*.h
@@ -87,5 +87,9 @@ chkconfig --del tcsd
 %attr(644, root, root) %{_mandir}/man3/Tspi_*
 
 %changelog
+* Wed Jun 07 2006 Kent Yoder <kyoder@users.sf.net> - 0.2.6-1
+- Updated %build section to use smp_mflags
+- Removed .la file from installed dest and %files section
+
 * Tue Jun 06 2006 Kent Yoder <kyoder@users.sf.net> - 0.2.6-1
 - Initial add of changelog tag for trousers CVS
