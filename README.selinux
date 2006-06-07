@@ -17,7 +17,7 @@ This howto assumes a Fedora Core 4 install.
  # make modules_install
  # make install
  # reboot
- # modprobe tpm_atmel (or tpm_natl)
+ # modprobe tpm_atmel (or others...)
 
 2. Build and install trousers in the system location. The SELinux policy assumes
    that trousers is installed in the system location. To change these, edit
@@ -35,8 +35,8 @@ This howto assumes a Fedora Core 4 install.
 
 4. Install the trousers te and fc files and load the policy
 
- # cp ./dist/fedora_core_4/selinux/trousers.te /etc/selinux/targeted/src/policy/domains/program
- # cp ./dist/fedora_core_4/selinux/trousers.fc /etc/selinux/targeted/src/policy/file_contexts/program
+ # cp ./dist/fedora/trousers.te /etc/selinux/targeted/src/policy/domains/program
+ # cp ./dist/fedora/trousers.fc /etc/selinux/targeted/src/policy/file_contexts/program
  # cd /etc/selinux/targeted/src/policy
  # make clean
  # make reload
