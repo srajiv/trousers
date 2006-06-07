@@ -668,7 +668,7 @@ merge_key_hierarchies(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO *
 		memcpy(&((*merged_hier)[i]), &tsp_hier[i], sizeof(TSS_KM_KEYINFO));
 
 	for (j = 0; j < tcs_size; j++)
-		memcpy(&((*merged_hier)[i + j]), &tsp_hier[j], sizeof(TSS_KM_KEYINFO));
+		memcpy(&((*merged_hier)[i + j]), &tcs_hier[j], sizeof(TSS_KM_KEYINFO));
 
 	*merged_size = i + j;
 
