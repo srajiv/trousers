@@ -1,4 +1,5 @@
 
+- Lots of updates to the fedora specific RPM specfile.
 - Fix for SF #1490845, 'make install' overwrites old tcsd.conf
 - Added code to return TSS_E_POLICY_NO_SECRET when setting up
   an OIAP or OSAP session.
