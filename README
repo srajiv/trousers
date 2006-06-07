@@ -202,7 +202,7 @@ TSS_DEBUG_OFF to any value.
 BUILDING a TSS RPM
 
  # sh bootstrap.sh
- # ./configure --prefix=/usr
+ # ./configure
  # cd ..
  # mv trousers trousers-${version}
  # tar zcvf /usr/src/packages/SOURCES/trousers-${version}.tar.gz \
