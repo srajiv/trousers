@@ -25,7 +25,7 @@
 struct tpm_device_node tpm_device_nodes[] = {
 	{"/dev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
 	{"/udev/tpm0", TDDL_UNDEF, TDDL_UNDEF},
-	{"/dev/tpm", 1, TDDL_UNDEF},
+	{"/dev/tpm", TDDL_UNDEF, TDDL_UNDEF},
 	{NULL, 0, 0}
 };
 
