@@ -134,6 +134,26 @@ freeEntry(struct memTable *table, void *pointer)
 	return TSPERR(TSS_E_INTERNAL_ERROR);
 }
 
+TSS_RESULT
+add_mem_entry(TSS_HCONTEXT tspContext, void *allocd_mem)
+{
+	struct memEntry *newEntry = calloc(1, sizeof(struct memEntry));
+	if (newEntry == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(struct memEntry));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	newEntry->memPointer = allocd_mem;
+
+	pthread_mutex_lock(&memtable_lock);
+
+	addEntry(tspContext, newEntry);
+
+	pthread_mutex_unlock(&memtable_lock);
+
+	return TSS_SUCCESS;
+}
+
 /*
  * calloc_tspi will be called by functions outside of this file. All locking
  * is done here.

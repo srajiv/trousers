@@ -974,12 +974,33 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 			if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 				return result;
 
-			return TCS_EnumRegisteredKeys(tcsContext, pUuidData,
-						      pulKeyHierarchySize,
-						      ppKeyHierarchy);
+			if ((result = TCS_EnumRegisteredKeys(tcsContext, pUuidData,
+							     pulKeyHierarchySize,
+							     ppKeyHierarchy)))
+				return result;
+
+			if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+				free(*ppKeyHierarchy);
+				*ppKeyHierarchy = NULL;
+				*pulKeyHierarchySize = 0;
+				return result;
+			}
+
+			return TSS_SUCCESS;
 		} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-			return obj_regdkey_get_registered_keys(pUuidData, pulKeyHierarchySize,
-							       ppKeyHierarchy);
+			if ((result = obj_regdkey_get_registered_keys(pUuidData,
+								      pulKeyHierarchySize,
+								      ppKeyHierarchy)))
+				return result;
+
+			if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+				free(*ppKeyHierarchy);
+				*ppKeyHierarchy = NULL;
+				*pulKeyHierarchySize = 0;
+				return result;
+			}
+
+			return TSS_SUCCESS;
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	} else {
@@ -993,18 +1014,15 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 
 		if ((result = obj_regdkey_get_registered_keys(pUuidData, &tspHierSize,
 							      &tspHier))) {
-			if (tcsHier)
-				free_tspi(tspContext, tcsHier);
+			free(tcsHier);
 			return result;
 		}
 
 		if ((result = merge_key_hierarchies(tspContext, tspHierSize, tspHier, tcsHierSize,
 						    tcsHier, pulKeyHierarchySize,
 						    ppKeyHierarchy))) {
-			if (tcsHier)
-				free_tspi(tspContext, tcsHier);
-			if (tspHier)
-				free_tspi(tspContext, tspHier);
+			free(tcsHier);
+			free(tspHier);
 			return result;
 		}
 	}

@@ -44,6 +44,7 @@ TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE, TCPA_NONCE *);
 
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
+TSS_RESULT add_mem_entry(TSS_HCONTEXT, void *);
 
 /* keyreg.c */
 TSS_RESULT ps_is_key_registered(UINT32, BYTE *, TSS_BOOL *);
