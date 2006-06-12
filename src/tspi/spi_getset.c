@@ -943,6 +943,12 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 
 					result = obj_rsakey_set_ss(hObject, ulAttrib);
 					break;
+				case TSS_TSPATTRIB_KEYINFO_KEYFLAGS:
+					result = obj_rsakey_set_flags(hObject, ulAttrib);
+					break;
+				case TSS_TSPATTRIB_KEYINFO_SIZE:
+					result = obj_rsakey_set_size(hObject, ulAttrib);
+					break;
 				default:
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
