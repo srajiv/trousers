@@ -214,6 +214,40 @@ obj_is_rsakey(TSS_HOBJECT hObject)
 }
 
 TSS_RESULT
+obj_rsakey_set_flags(TSS_HKEY hKey, UINT32 flags)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	rsakey->tcpaKey.keyFlags = flags;
+
+	obj_list_put(&rsakey_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_rsakey_set_size(TSS_HKEY hKey, UINT32 len)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	rsakey->tcpaKey.pubKey.keyLength = len/8;
+
+	obj_list_put(&rsakey_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
 obj_rsakey_set_key_parms(TSS_HKEY hKey, TCPA_KEY_PARMS *parms)
 {
 	struct tsp_object *obj;
