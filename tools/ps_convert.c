@@ -224,7 +224,6 @@ version0:
 
 	if ((out = fopen(outfile, "w+")) == NULL) {
 		PRINTERR("fopen(%s, \"w+\"): %s\n", outfile, strerror(errno));
-		fclose(in);
 		return -1;
 	}
 
