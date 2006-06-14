@@ -567,9 +567,11 @@ psfile_write_key(int fd,
 	}
 
 	/* [BYTE[]   vendor_data0    ] no */
-        if ((rc = write_data(fd, (void *)vendor_data, vendor_size))) {
-		LogError("%s", __FUNCTION__);
-		return rc;
+	if (vendor_size > 0) {
+		if ((rc = write_data(fd, (void *)vendor_data, vendor_size))) {
+			LogError("%s", __FUNCTION__);
+			return rc;
+		}
 	}
 
 	if ((rc = cache_key(offset, cache_flags, uuid, parent_uuid, pub_key_size,
