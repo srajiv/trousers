@@ -183,17 +183,17 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TCPA_KEY *tcpaKey
 	/* add migration policy */
 	if ((result = obj_policy_add(tspContext, TSS_POLICY_MIGRATION, &rsakey->migPolicy))) {
 		free_key_refs(&rsakey->tcpaKey);
-		free(rsakey);
 		obj_policy_remove(rsakey->usagePolicy, tspContext);
+		free(rsakey);
 		return result;
 	}
 
 	if ((result = obj_list_add(&rsakey_list, tspContext, TSS_OBJ_FLAG_USER_PS, rsakey,
 				   phKey))) {
 		free_key_refs(&rsakey->tcpaKey);
-		free(rsakey);
 		obj_policy_remove(rsakey->usagePolicy, tspContext);
 		obj_policy_remove(rsakey->migPolicy, tspContext);
+		free(rsakey);
 		return result;
 	}
 
