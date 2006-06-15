@@ -2115,7 +2115,7 @@ Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
 	 * total number of events for all PCRs. */
 	if (prgbPcrEvents == NULL) {
 		UINT16 numPcrs = get_num_pcrs(tcsContext);
-		UINT32 i, numEvents;
+		UINT32 i, numEvents = 0;
 
 		*pulEventNumber = 0;
 		for (i = 0; i < numPcrs; i++) {
