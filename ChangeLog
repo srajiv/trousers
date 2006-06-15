@@ -1,4 +1,6 @@
 
+- Lots of memory leaks found in error paths by Coverity, mostly
+  in tcsd_wrap.c.
 - Fix for SF #1501811, setting some SetAttribUint32 flags not
   supported.
 - Lots of updates to the fedora specific RPM specfile.
