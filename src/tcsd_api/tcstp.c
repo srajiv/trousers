@@ -1913,31 +1913,34 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
+	int i = 0;
 
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_SEAL;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &keyHandle, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &encAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, i++, &encAuth, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &pcrInfoSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pcrInfoSize, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, PcrInfo, pcrInfoSize, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inDataSize, 0, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inData, inDataSize, &data))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	if (pubAuth != NULL) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, pubAuth, 0, &data))
+	if (pcrInfoSize > 0) {
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, PcrInfo, pcrInfoSize, &data))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &inDataSize, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (inDataSize > 0) {
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, inData, inDataSize, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if (setData(TCSD_PACKET_TYPE_AUTH, i, pubAuth, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
 
@@ -1945,11 +1948,9 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 		result = hdr->result;
 
 	if (hdr->result == TSS_SUCCESS) {
-		if (pubAuth != NULL) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, 0, pubAuth, 0, hdr)) {
-				result = TSPERR(TSS_E_INTERNAL_ERROR);
-				goto done;
-			}
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pubAuth, 0, hdr)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
 		}
 
 		if (getData(TCSD_PACKET_TYPE_UINT32, 1, SealedDataSize, 0, hdr)) {
@@ -2560,6 +2561,7 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
 			free_tspi(tspContext, *sig);
