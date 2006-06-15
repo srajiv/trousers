@@ -608,7 +608,7 @@ TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  NULL,
 						  phKeyTCSI, &keyslot))) {
 		LogDebugFn("TCSP_LoadKeyByBlob_Internal returned 0x%x", result);
-		if (result == TCPA_E_AUTHFAIL) {
+		if (result == TCPA_E_AUTHFAIL && pLoadKeyInfo) {
 			BYTE blob[1000];
 
 			/* set up a load key info struct */
@@ -969,6 +969,8 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		UnloadBlob_UINT32(&offset, pcIdentityBindingSize, txBlob, "bind size");
 		*prgbIdentityBinding = getSomeMemory(*pcIdentityBindingSize, hContext);
 		if (*prgbIdentityBinding == NULL) {
+			free(*idKey);
+			*idKeySize = 0;
 			LogError("malloc of %d bytes failed.", *pcIdentityBindingSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
