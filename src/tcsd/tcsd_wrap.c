@@ -444,8 +444,8 @@ tcs_wrap_CreateEndorsementKeyPair(struct tcsd_thread_data *data,
 
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
-		if (hdr == NULL) {
-			LogError("malloc of %zd bytes faile.", size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
+		if (*hdr == NULL) {
+			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + eKSize + sizeof(TCPA_DIGEST));
 			free(eK);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -558,6 +558,7 @@ tcs_wrap_OwnerReadPubek(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + pubEKSize);
 		if (*hdr == NULL) {
+			free(pubEK);
 			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					sizeof(UINT32) + pubEKSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -1657,9 +1658,8 @@ tcs_wrap_LoadKeyByBlob(struct tcsd_thread_data *data,
 	} else
 		pAuth = &auth;
 
-	if ((result = key_mgr_load_by_blob(hContext, hUnwrappingKey,
-					cWrappedKeyBlob, rgbWrappedKeyBlob,
-					pAuth, &phKeyTCSI, &phKeyHMAC)))
+	result = key_mgr_load_by_blob(hContext, hUnwrappingKey, cWrappedKeyBlob, rgbWrappedKeyBlob,
+				      pAuth, &phKeyTCSI, &phKeyHMAC);
 
 	if (!result)
 		result = ctx_mark_key_loaded(hContext, phKeyTCSI);
@@ -2057,14 +2057,14 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 	if (PCRInfoSize > 0) {
 		PCRInfo = calloc(1, PCRInfoSize);
 		if (PCRInfo == NULL) {
-			LogError("malloc of %d bytes failed.", PCRInfoSize);
+			LogError("malloc of %u bytes failed.", PCRInfoSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
-	}
-	/* attempt to pull out PCRInfo even if size is 0 */
-	if (getData(TCSD_PACKET_TYPE_PBYTE, i++, PCRInfo, PCRInfoSize, tsp_data)) {
-		free(PCRInfo);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, PCRInfo, PCRInfoSize, tsp_data)) {
+			free(PCRInfo);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 	}
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, i++, &inDataSize, 0, tsp_data)) {
@@ -2075,29 +2075,18 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 	if (inDataSize > 0) {
 		inData = calloc(1, inDataSize);
 		if (inData == NULL) {
-			LogError("malloc of %d bytes failed.", inDataSize);
+			LogError("malloc of %u bytes failed.", inDataSize);
 			free(PCRInfo);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
-	}
-	/* attempt to pull out InData even if size is 0 */
-	if (getData(TCSD_PACKET_TYPE_PBYTE, i++, inData, inDataSize, tsp_data)) {
-		free(inData);
-		free(PCRInfo);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-#if 0
-	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pubAuth, 0, tsp_data)) {
-		free(inData);
-		free(PCRInfo);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, inData, inDataSize, tsp_data)) {
+			free(inData);
+			free(PCRInfo);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 	}
 
-	if (!memcmp(&emptyAuth, &pubAuth, sizeof(TPM_AUTH)))
-		pAuth = NULL;
-	else
-		pAuth = &pubAuth;
-#else
 	result = getData(TCSD_PACKET_TYPE_AUTH, i++, &pubAuth, 0, tsp_data);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pAuth = NULL;
@@ -2107,7 +2096,7 @@ tcs_wrap_Seal(struct tcsd_thread_data *data,
 		return result;
 	} else
 		pAuth = &pubAuth;
-#endif
+
 	result = TCSP_Seal_Internal(hContext, keyHandle, KeyUsageAuth, PCRInfoSize, PCRInfo,
 			inDataSize, inData, pAuth, &outDataSize, &outData);
 	free(inData);
@@ -2236,30 +2225,36 @@ tcs_wrap_UnSeal(struct tcsd_thread_data *data,
 		if (*hdr == NULL) {
 			LogError("malloc of %zd bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
 					sizeof(UINT32) + outDataSize);
+			free(outData);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (pParentAuth != NULL) {
 			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pParentAuth, 0, *hdr)) {
 				free(*hdr);
+				free(outData);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
 			if (setData(TCSD_PACKET_TYPE_AUTH, 0, &emptyAuth, 0, *hdr)) {
 				free(*hdr);
+				free(outData);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 
 		if (setData(TCSD_PACKET_TYPE_AUTH, 1, &dataAuth, 0, *hdr)) {
 			free(*hdr);
+			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 2, &outDataSize, 0, *hdr)) {
 			free(*hdr);
+			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_PBYTE, 3, outData, outDataSize, *hdr)) {
 			free(*hdr);
+			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(outData);
@@ -2469,16 +2464,19 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + sizeof(UINT32) + keyDataSize + sizeof(TPM_AUTH));
 		if (*hdr == NULL) {
+			free(keyData);
 			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
 				 keyDataSize + sizeof(TPM_AUTH));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &keyDataSize, 0, *hdr)) {
 			free(*hdr);
+			free(keyData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, keyData, keyDataSize, *hdr)) {
 			free(*hdr);
+			free(keyData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(keyData);
@@ -2561,23 +2559,28 @@ tcs_wrap_ChangeAuth(struct tcsd_thread_data *data,
 	if (result == TSS_SUCCESS) {
 		*hdr = calloc(1, size + (2 * sizeof(TPM_AUTH)) + sizeof(UINT32) + outDataSize);
 		if (*hdr == NULL) {
+			free(outData);
 			LogError("malloc of %zd bytes failed.", size + (2 * sizeof(TPM_AUTH)) +
 					sizeof(UINT32) + outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
+			free(outData);
 			free(*hdr);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_AUTH, 1, &entityAuth, 0, *hdr)) {
+			free(outData);
 			free(*hdr);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, 2, &outDataSize, 0, *hdr)) {
+			free(outData);
 			free(*hdr);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_PBYTE, 3, outData, outDataSize, *hdr)) {
+			free(outData);
 			free(*hdr);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -2716,6 +2719,8 @@ tcs_wrap_Quote(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(TPM_AUTH) + (2 * sizeof(UINT32)) +
 				pcrDataSizeOut + sigSize);
 		if (*hdr == NULL) {
+			free(pcrDataOut);
+			free(sig);
 			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
 					(2 * sizeof(UINT32)) + pcrDataSizeOut + sigSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -2963,18 +2968,21 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 		i=0;
 		*hdr = calloc(1, size + sizeof(UINT32) + (cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
 		if (*hdr == NULL) {
+			free(pKeyHierarchy);
 			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
 					(cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &cKeyHierarchySize, 0, *hdr)) {
 			free(*hdr);
+			free(pKeyHierarchy);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		for (j = 0; j < cKeyHierarchySize; j++) {
 			if (setData(TCSD_PACKET_TYPE_KM_KEYINFO, i++, &pKeyHierarchy[j], 0, *hdr)) {
 				free(*hdr);
+				free(pKeyHierarchy);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
@@ -3638,19 +3646,17 @@ tcs_wrap_CertifyKey(struct tcsd_thread_data *data,
 			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
+		free(CertifyInfo);
 		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &outDataSize, 0, *hdr)) {
 			free(*hdr);
-			free(CertifyInfo);
 			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, outData, outDataSize, *hdr)) {
 			free(*hdr);
-			free(CertifyInfo);
 			free(outData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		free(CertifyInfo);
 		free(outData);
 	} else {
 		*hdr = calloc(1, size);
@@ -4340,8 +4346,10 @@ tcs_wrap_LoadMaintenanceArchive(struct tcsd_thread_data *data,
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 3, &ownerAuth, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 3, &ownerAuth, 0, tsp_data)) {
+		free(dataIn);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = TCSP_LoadMaintenanceArchive_Internal(hContext, dataInSize, dataIn, &ownerAuth,
 							&dataOutSize, &dataOut);
