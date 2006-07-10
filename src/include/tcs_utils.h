@@ -131,7 +131,6 @@ void destroy_key_refs(TCPA_KEY *);
 /* cxt.c */
 
 TSS_RESULT freeSomeMemory(TCS_CONTEXT_HANDLE, void *);
-void *getSomeMemory(unsigned long, TCS_CONTEXT_HANDLE);
 TSS_RESULT context_close_auth(TCS_CONTEXT_HANDLE);
 TSS_RESULT checkContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT addContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
@@ -206,7 +205,6 @@ TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 
-struct key_disk_cache;
 TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *,
 				TSS_KM_KEYINFO *);
 char platform_get_runlevel();
@@ -577,21 +575,6 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 						UINT32 * respSize,	/* out */
 						BYTE ** resp	/* out */
 	    );
-
-	TSS_RESULT TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						      TCS_KEY_HANDLE keyHandle,	/* in */
-						      TCPA_NONCE antiReplay,	/* in */
-						      TCPA_CAPABILITY_AREA capArea,	/* in */
-						      UINT32 subCapSize,	/* in */
-						      BYTE * subCap,	/* in */
-						      TPM_AUTH * privAuth,	/* in, out */
-						      TCPA_VERSION * Version,	/* out */
-						      UINT32 * respSize,	/* out */
-						      BYTE ** resp,	/* out */
-						      UINT32 * sigSize,	/* out */
-						      BYTE ** sig	/* out */
-	    );
-
 	TSS_RESULT TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						     TPM_AUTH * pOwnerAuth,	/* out */
 						     TCPA_VERSION * pVersion,	/* out */
@@ -724,4 +707,6 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 						   TCPA_NONCE antiReplay,	/* in */
 						   TCPA_DIGEST * checksum	/* out */
 	    );
+        TSS_RESULT TCSP_Reset_Internal(TCS_CONTEXT_HANDLE hContext
+            );
 #endif /*_TCS_UTILS_H_ */
