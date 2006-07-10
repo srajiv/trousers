@@ -28,9 +28,6 @@ Run-of-the-mill bug reports should use the TrouSerS bug tracker:
 
 BUILD REQUIREMENTS
 
-  Currently this software is BETA quality and will build, however it
-is not fully functional.
-
   Packages needed to build:
 
   automake > 1.4
@@ -55,8 +52,7 @@ RUNNING the TSS, below.
   To build trousers after you have the device driver installed:
 
   $ sh bootstrap.sh
-  $ ./configure [--enable-debug] [--enable-prof] [--enable-efence] \
-                [--enable-gcov]
+  $ ./configure [--enable-debug] [--enable-prof] [--enable-gcov]
   $ make
   # make install
 
@@ -110,7 +106,7 @@ storage file for trousers to use.  Normally trousers would create this file
 itself at the time ownership is taken.  If your SRK has been given an
 authorization password by the non-Linux OS, you will need to move the file
 dist/system.data.auth to /usr/local/var/lib/tpm/system.data.  If you've
-taken ownership of your TPM with issuing a password, move
+taken ownership of your TPM without issuing a password, move
 dist/system.data.noauth to /usr/local/var/lib/tpm/system.data.
 
   Passwords:  When entering passwords for keys you'd like to use in both
@@ -149,22 +145,30 @@ ARCHITECTURE
      shared library that enables applications to talk to TCSD's both
      locally and remotely. The TSP also manages resources used in
      commicating with the application and the TCSD and transparently
-     contacts the TCSD whenever necessary
+     contacts the TCSD whenever necessary.
 
-  C) Persistent storage files - TSS's have 2 different kinds of
-     'persistent' storage. 'User' persistent storage has the lifetime
-     of that of the application using it (not very persistent, IMO)
-     and therefore is destroyed when an application exits.  User PS is
-     controlled by the TSP of the application.  'System' persistent
-     storage is controlled by the TCS and stays valid across
-     application lifetimes, TCSD restarts and system resets. Data
-     registered in system PS stays valid until an application requests
-     that it be removed. User PS files are by default stored as
-     /var/lib/tpm/user.{pid} and the system PS file by default is
-     /var/lib/tpm/system.data. The system PS file is initially created
-     when ownership of the TPM is first taken.
+  C) Persistent Storage (PS) files - TSS's have 2 different kinds of
+     PS for keys.  PS can be thought of as a database for keys, with
+     each key in the database indexed by a UUID.
 
-  D) A config file. By default located in $prefix/etc/tcsd.conf.
+     'User' persistent storage is maintained by the application's TSP
+     library.  Upon writing the first key to User PS, the TSP library
+     creates a new file at ~/.trousers/user.data, using the effective
+     user id of the process executing the call to find ~. An environment
+     variable, TSS_USER_PS_FILE, can also be set to point the TSP library
+     to a different location for the User PS. This environment variable
+     has the lifetime of the TSP context, so to store 2 keys in 2
+     different files, you will need to call Tspi_Context_Close, set the
+     new location, and open the context again.
+
+     'System' persistent storage is controlled by the TCS and stays
+     valid across all application lifetimes, TCSD restarts and system
+     resets. Data registered in system PS stays valid until an application
+     requests that it be removed. The System PS file by default is
+     /usr/local/var/lib/tpm/system.data. The system PS file is initially
+     created when ownership of the TPM is first taken.
+
+  D) A config file. By default located in /usr/local/etc/tcsd.conf.
 
 
 RUNNING the TSS
