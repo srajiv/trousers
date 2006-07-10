@@ -1,4 +1,14 @@
 
+- Changed the number of loops in TCSP_GetRandom_Internal to 50,
+  which should allow TPMs that return few bytes per request to
+  fullfill up to 4K bytes.
+- Removed the TCS's getSomeMemory() function, which was really
+  dumb.
+- Changed the way user PS operates. User PS is now really
+  persistent, its kept in ~/.trousers/users.data, which is
+  created if it doesn't exist. Also, the environment variable
+  TSS_USER_PS_FILE can be set to a path that will override the
+  default location for as long as the TSP context is open.
 - Lots of memory leaks found in error paths by Coverity, mostly
   in tcsd_wrap.c.
 - Fix for SF #1501811, setting some SetAttribUint32 flags not
