@@ -39,9 +39,7 @@ struct tcsd_config
 #define TCSD_DEFAULT_SYSTEM_PS_DIR	VAR_PREFIX "/lib/tpm"
 #define TCSD_DEFAULT_FIRMWARE_LOG_FILE	"/proc/tpm/firmware_events"
 #define TCSD_DEFAULT_KERNEL_LOG_FILE	"/proc/tcg/measurement_events"
-/* PCR's 0-7 */
 #define TCSD_DEFAULT_FIRMWARE_PCRS	0x00000000
-/* PCR 10 only */
 #define TCSD_DEFAULT_KERNEL_PCRS	0x00000000
 /* This will change when a system with more than 32 PCR's exists */
 #define TCSD_MAX_PCRS			32
