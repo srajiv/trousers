@@ -115,7 +115,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (result == 0) {
 		UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer);
 		*srkKeySize = offset - 10;
-		*srkKey = getSomeMemory(*srkKeySize, hContext);	/*this is that memory leak problem */
+		*srkKey = calloc(1, *srkKeySize);
 		if (*srkKey == NULL) {
 			LogError("malloc of %u bytes failed.", *srkKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -301,7 +301,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob,
 				  "out data size");
-		*outData = getSomeMemory(*outDataSize, contextHandle);
+		*outData = calloc(1, *outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -478,7 +478,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (result == 0) {
 		UnloadBlob_CERTIFY_INFO(&offset, txBlob, &certifyInfo);
 		*CertifyInfoSize = offset - 10;
-		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
+		*CertifyInfo = malloc(*CertifyInfoSize);
 		if (*CertifyInfo == NULL) {
 			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -487,7 +487,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		memcpy(*CertifyInfo, &txBlob[offset - *CertifyInfoSize],
 		       *CertifyInfoSize);
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
-		*sig = getSomeMemory(*sigSize, hContext);
+		*sig = malloc(*sigSize);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -498,7 +498,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		tempSize = offset;
 		UnloadBlob_KEY(&offset, txBlob, &tempKey);
 		*KeySizeOut = offset - tempSize;
-		*KeyDataOut = getSomeMemory(*KeySizeOut, hContext);
+		*KeyDataOut = malloc(*KeySizeOut);
 		if (*KeyDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *KeySizeOut);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -589,7 +589,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_UINT32(&offset, encDataSizeOut, txBlob,
 				  "outDataSize");
-		*encDataOut = getSomeMemory(*encDataSizeOut, hContext);
+		*encDataOut = calloc(1, *encDataSizeOut);
 		if (*encDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *encDataSizeOut);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -732,7 +732,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		offset = 14;
 		UnloadBlob_UINT32(&offset, SymmetricKeySize, txBlob, NULL);
-		*SymmetricKey = getSomeMemory(*SymmetricKeySize, hContext);
+		*SymmetricKey = calloc(1, *SymmetricKeySize);
 		if (*SymmetricKey == NULL) {
 			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -898,7 +898,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp);
 		*pcrDataSizeOut = offset - 10;
-		*pcrDataOut = getSomeMemory(*pcrDataSizeOut, hContext);
+		*pcrDataOut = calloc(1, *pcrDataSizeOut);
 		if (*pcrDataOut == NULL) {
 			LogError("malloc of %u bytes failed.", *pcrDataSizeOut);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -906,7 +906,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 		memcpy(*pcrDataOut, &txBlob[10], *pcrDataSizeOut);
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sigsize");
-		*sig = getSomeMemory(*sigSize, hContext);
+		*sig = calloc(1, *sigSize);
 		if (*sig == NULL) {
 			free(*pcrDataOut);
 			LogError("malloc of %u bytes failed.", *sigSize);
@@ -1070,7 +1070,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 
 		*SealedDataSize = offset - 10;
-		*SealedData = getSomeMemory(*SealedDataSize, hContext);
+		*SealedData = calloc(1, *SealedDataSize);
 		if (*SealedData == NULL) {
 			LogError("malloc of %u bytes failed.", *SealedDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1151,7 +1151,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_UINT32(&offset, DataSize, txBlob,
 				  "sealed data size");
-		*Data = getSomeMemory(*DataSize, hContext);
+		*Data = calloc(1, *DataSize);
 		if (*Data == NULL) {
 			LogError("malloc of %u bytes failed.", *DataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1221,7 +1221,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "out data size");
-		*outData = getSomeMemory(*outDataSize, hContext);
+		*outData = calloc(1, *outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1316,7 +1316,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (result == TSS_SUCCESS) {
 		UnloadBlob_UINT32(&offset, randomSize, txBlob, "random size");
-		*random = getSomeMemory(*randomSize, hContext);
+		*random = calloc(1, *randomSize);
 		if (*random == NULL) {
 			LogError("malloc of %u bytes failed.", *randomSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1325,7 +1325,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		UnloadBlob(&offset, *randomSize, txBlob, *random, "random");
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "out data size");
-		*outData = getSomeMemory(*outDataSize, hContext);
+		*outData = calloc(1, *outDataSize);
 		if (*outData == NULL) {
 			free(*random);
 			LogError("malloc of %u bytes failed.", *outDataSize);
@@ -1402,7 +1402,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob,
 				  "out data size");
-		*outData = getSomeMemory(*outDataSize, hContext);
+		*outData = calloc(1, *outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1473,7 +1473,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container);
 		*MigrationKeyAuthSize = offset - 10;
-		*MigrationKeyAuth = getSomeMemory(*MigrationKeyAuthSize, hContext);
+		*MigrationKeyAuth = calloc(1, *MigrationKeyAuthSize);
 		if (*MigrationKeyAuth == NULL) {
 			LogError("malloc of %d bytes failed.", *MigrationKeyAuthSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1565,7 +1565,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
 					&certifyContainer);
 		*CertifyInfoSize = offset - 10;
-		*CertifyInfo = getSomeMemory(*CertifyInfoSize, hContext);
+		*CertifyInfo = calloc(1, *CertifyInfoSize);
 		if (*CertifyInfo == NULL) {
 			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1575,7 +1575,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "out data size");
-		*outData = getSomeMemory(*outDataSize, hContext);
+		*outData = calloc(1, *outDataSize);
 		if (*outData == NULL) {
 			free(*CertifyInfo);
 			LogError("malloc of %u bytes failed.", *outDataSize);
@@ -1652,7 +1652,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
-		*sig = getSomeMemory(*sigSize, hContext);
+		*sig = calloc(1, *sigSize);
 		if (*sig == NULL) {
 			LogError("malloc of %d bytes failed.", *sigSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -1668,6 +1668,14 @@ done:
 	return result;
 }
 
+/*
+ * Get a random number generated by the TPM.  Most (all?) TPMs return a maximum number of random
+ * bytes that's less than the max allowed to be returned at the TSP level, which is 4K bytes.
+ * According to the TPM compliance work posted here: http://www.prosec.rub.de/tpmcompliance.html,
+ * some TPMs return as little as 132 bytes per query, which would require about 30 loops to get 4K.
+ * We'll be extremely conservative here and loop 50 times, since it won't affect performance on
+ * TPMs that return more bytes.
+ */
 TSS_RESULT
 TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UINT32 * bytesRequested,	/* in, out */
@@ -1676,7 +1684,7 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	UINT16 offset;
 	TSS_RESULT result;
-	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 6;
+	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 50;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *rnd_tmp = NULL;
 
 	LogDebugFn("%u bytes", *bytesRequested);
@@ -1766,7 +1774,6 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 	UINT16 offset;
 	TSS_RESULT result;
 	TCPA_VERSION tcsVersion = INTERNAL_CAP_TCS_VERSION;
-	char mfg[4] = INTERNAL_CAP_TCS_MANUFACTURER;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -1777,7 +1784,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		LogDebug("TSS_TCSCAP_ALG");
 		tcsSubCapContainer = Decode_UINT32(subCap);
 		*respSize = 1;
-		*resp = getSomeMemory(1, hContext);
+		*resp = malloc(1);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", 1);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -1802,12 +1809,13 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			(*resp)[0] = INTERNAL_CAP_TCS_ALG_HMAC;
 			break;
 		default:
-			return TCSERR(TSS_E_FAIL);	/*tcs error */
+			free(*resp);
+			return TCSERR(TSS_E_FAIL);
 		}
 		break;
 	case TSS_TCSCAP_VERSION:
 		LogDebug("TSS_TCSCAP_VERSION");
-		*resp = getSomeMemory(4, hContext);
+		*resp = calloc(1, 4);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", 4);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -1819,7 +1827,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 	case TSS_TCSCAP_PERSSTORAGE:
 		LogDebug("TSS_TCSCAP_PERSSTORAGE");
 		*respSize = 1;
-		*resp = getSomeMemory(1, hContext);
+		*resp = malloc(1);
 		if (*resp == NULL) {
 			LogError("malloc of %d byte failed.", 1);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -1828,48 +1836,59 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		break;
 
 	case TSS_TCSCAP_CACHING:
-		LogDebug("TSS_TCSCAP_CACHINE");
+		LogDebug("TSS_TCSCAP_CACHING");
 		tcsSubCapContainer = Decode_UINT32(subCap);
 		if (tcsSubCapContainer == TSS_TCSCAP_PROP_KEYCACHE) {
-			LogDebug("PROP_KEYCACHE");
 			*respSize = 1;
-			*resp = getSomeMemory(1, hContext);
+			*resp = malloc(1);
 			if (*resp == NULL) {
 				LogError("malloc of %d byte failed.", 1);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
 		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_AUTHCACHE) {
-			LogDebug("PROP_AUTHCACHE");
 			*respSize = 1;
-			*resp = getSomeMemory(1, hContext);
+			*resp = malloc(1);
 			if (*resp == NULL) {
 			LogError("malloc of %d byte failed.", 1);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
 		} else {
-			LogDebug("Bad subcap");
+			LogDebugFn("Bad subcap");
 			return TCSERR(TSS_E_FAIL);
 		}
 		break;
 	case TSS_TCSCAP_MANUFACTURER:
-		LogDebug("TSS_TCSCAP_MANUFACTURER");
-		*resp = getSomeMemory(4, hContext);
-		if (*resp == NULL) {
-			LogError("malloc of %d bytes failed.", 4);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+		tcsSubCapContainer = Decode_UINT32(subCap);
+		if (tcsSubCapContainer == TSS_TCSCAP_PROP_MANUFACTURER_ID) {
+			*respSize = sizeof(UINT32);
+			*resp = malloc(sizeof(UINT32));
+			if (*resp == NULL) {
+				LogError("malloc of %zd byte failed.", sizeof(UINT32));
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			*(UINT32 *)resp = INTERNAL_CAP_TCS_MANUFACTURER_ID;
+		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_MANUFACTURER_STR) {
+			BYTE str[] = INTERNAL_CAP_TCS_MANUFACTURER_STR;
+
+			*respSize = INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN;
+			*resp = malloc(INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN);
+			if (*resp == NULL) {
+				LogError("malloc of %d byte failed.", 1);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			memcpy(*resp, str, INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN);
+		} else {
+			LogDebugFn("Bad subcap");
+			return TCSERR(TSS_E_FAIL);
 		}
-		memcpy(*resp, mfg, 4);
-		*respSize = 4;
 		break;
 	default:
-		LogDebug("Bad subcap");
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	LogDebug("Passed internal GetCap");
-	return TCPA_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
@@ -1922,7 +1941,7 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
 		UnloadBlob_UINT32(&offset, respSize, txBlob, "resp size");
-		*resp = getSomeMemory(*respSize, hContext);
+		*resp = malloc(*respSize);
 		if (*resp == NULL) {
 			LogError("malloc of %d bytes failed.", *respSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -1930,101 +1949,6 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
 	}
 	LogResult("Get Cap", result);
-	return result;
-}
-
-TSS_RESULT
-TCSP_GetCapabilitySigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				  TCS_KEY_HANDLE keyHandle,	/* in */
-				  TCPA_NONCE antiReplay,	/* in */
-				  TCPA_CAPABILITY_AREA capArea,	/* in */
-				  UINT32 subCapSize,	/* in */
-				  BYTE * subCap,	/* in */
-				  TPM_AUTH * privAuth,	/* in, out */
-				  TCPA_VERSION * Version,	/* out */
-				  UINT32 * respSize,	/* out */
-				  BYTE ** resp,	/* out */
-				  UINT32 * sigSize,	/* out */
-				  BYTE ** sig	/* out */
-    )
-{
-	UINT16 offset;
-	TSS_RESULT result;
-	UINT32 paramSize;
-	TCPA_KEY_HANDLE keySlot;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
-
-	if ((result = ctx_verify_context(hContext)))
-		goto done;
-
-	if (privAuth != NULL) {
-		LogDebug("Auth Used");
-		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
-			goto done;
-	} else {
-		LogDebug("No Auth");
-	}
-
-	switch (capArea) {
-		case TSS_TCSCAP_ALG:
-		case TSS_TCSCAP_VERSION:
-		case TSS_TCSCAP_PERSSTORAGE:
-		case TSS_TCSCAP_CACHING:
-			result = TCSERR(TSS_E_FAIL);	/*can't sign software cap's */
-			goto done;
-			break;
-	}
-
-	LogDebug("Entering Get Cap Signed");
-	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
-		goto done;
-
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob, "key handle");
-	LoadBlob(&offset, 20, txBlob, antiReplay.nonce, "anti replay");
-	LoadBlob_UINT32(&offset, capArea, txBlob, "cap area");
-	LoadBlob_UINT32(&offset, subCapSize, txBlob, "sub cap size");
-	LoadBlob(&offset, subCapSize, txBlob, subCap, "sub cap");
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset,
-				TPM_ORD_GetCapabilitySigned, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_GetCapabilitySigned, txBlob);
-	}
-
-	if ((result = req_mgr_submit_req(txBlob)))
-		goto done;
-
-	offset = 10;
-	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (!result) {
-		UnloadBlob_VERSION(&offset, txBlob, Version);
-		UnloadBlob_UINT32(&offset, respSize, txBlob, "respSize");
-		*resp = getSomeMemory(*respSize, hContext);
-		if (*resp == NULL) {
-			LogError("malloc of %u bytes failed.", *respSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *respSize, txBlob, *resp, "resp");
-		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
-		*sig = getSomeMemory(*sigSize, hContext);
-		if (*sig == NULL) {
-			LogError("malloc of %u bytes failed.", *sigSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *sigSize, txBlob, *sig, "sig");
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
-	}
-	LogResult("Get Cap signed", result);
-done:
-	auth_mgr_release_auth(privAuth, NULL);
 	return result;
 }
 
@@ -2110,7 +2034,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_PUBKEY(&offset, txBlob, &pubKey);
 		*endorsementKeySize = offset - 10;
-		*endorsementKey = getSomeMemory(*endorsementKeySize, hContext);
+		*endorsementKey = malloc(*endorsementKeySize);
 		if (*endorsementKey == NULL) {
 			LogError("malloc of %u bytes failed.",
 							 *endorsementKeySize);
@@ -2156,7 +2080,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_PUBKEY(&offset, txBlob, &pubkey);
 		*pubEndorsementKeySize = (UINT32) (offset - 10);
-		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
+		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
 		if (*pubEndorsementKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
@@ -2242,7 +2166,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		UnloadBlob_PUBKEY(&offset, txBlob, &container);
 		*pubEndorsementKeySize = offset - 10;
-		*pubEndorsementKey = getSomeMemory(*pubEndorsementKeySize, hContext);
+		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
 		if (*pubEndorsementKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -2333,7 +2257,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		UnloadBlob_UINT32(&offset, sigSize, txBlob, "sig size");
-		*sig = getSomeMemory(*sigSize, hContext);
+		*sig = malloc(*sigSize);
 		if (*sig == NULL) {
 			LogError("malloc of %d bytes failed.", *sigSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -2374,13 +2298,12 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
 		UnloadBlob_UINT32(&offset, outDataSize, txBlob, "data size");
-		*outData = getSomeMemory(*outDataSize, hContext);
+		*outData = malloc(*outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %d bytes failed.", *outDataSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(&offset, *outDataSize, txBlob, *outData, "outdata");
-		LogDebug("outdata");
 		LogBlob(*outDataSize, *outData);
 	}
 	LogResult("Get Test Result", result);
@@ -2722,7 +2645,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		if (dataInSize != 0) {
 			UnloadBlob_UINT32(&offset, dataOutSize, txBlob, "size");
-			*dataOut = getSomeMemory(*dataOutSize, hContext);
+			*dataOut = malloc(*dataOutSize);
 			if (*dataOut == NULL) {
 				LogError("malloc of %u bytes failed.",
 								 *dataOutSize);
@@ -2835,7 +2758,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		offset = 10;
 		UnloadBlob_UINT32(&offset, randomSize, txBlob, "random size");
-		*random = getSomeMemory(*randomSize, hContext);
+		*random = malloc(*randomSize);
 		if (*random == NULL) {
 			LogError("malloc of %d bytes failed.", *randomSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -2845,7 +2768,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 		UnloadBlob_UINT32(&offset, archiveSize, txBlob, "archive size");
-		*archive = getSomeMemory(*archiveSize, hContext);
+		*archive = malloc(*archiveSize);
 		if (*archive == NULL) {
 			free(*random);
 			LogError("malloc of %d bytes failed.", *archiveSize);
@@ -2906,7 +2829,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		offset = 10;
 		if (dataInSize != 0) {
 			UnloadBlob_UINT32(&offset, dataOutSize, txBlob, "vendor data size");
-			*dataOut = getSomeMemory(*dataOutSize, hContext);
+			*dataOut = calloc(1, *dataOutSize);
 			if (*dataOut == NULL) {
 				LogError("malloc of %u bytes failed.",
 								 *dataOutSize);
@@ -3020,5 +2943,25 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, 20, txBlob, checksum->digest, "checksum");
 	}
 	LogResult("Read Manu Maint Pub", result);
+	return result;
+}
+
+TSS_RESULT
+TCSP_Reset_Internal(TCS_CONTEXT_HANDLE hContext)
+{
+	TSS_RESULT result;
+	UINT32 paramSize;
+	UINT16 offset;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	offset = 10;
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Reset, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+
+	LogDebugFn("paramSize: 0x%x", paramSize);
 	return result;
 }
