@@ -36,6 +36,9 @@ extern pthread_mutex_t mem_cache_lock;
 #define BOOL(x)		((x) == 0) ? FALSE : TRUE
 #define INVBOOL(x)	((x) == 0) ? TRUE : FALSE
 
+#define INCREMENT	1
+#define DECREMENT	0
+
 UINT32 UnicodeToArray(BYTE *, UNICODE *);
 UINT32 ArrayToUnicode(BYTE *, UINT32, UNICODE *);
 UINT32 StringToUnicodeArray(char *, BYTE *);
@@ -45,14 +48,6 @@ TSS_RESULT internal_GetRandomNonce(TCS_CONTEXT_HANDLE, TCPA_NONCE *);
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
 TSS_RESULT add_mem_entry(TSS_HCONTEXT, void *);
-
-/* keyreg.c */
-TSS_RESULT ps_is_key_registered(UINT32, BYTE *, TSS_BOOL *);
-TSS_RESULT ps_write_key(TSS_UUID *, TSS_UUID *, UINT32, UINT32, BYTE *);
-TSS_RESULT ps_remove_key(TSS_UUID *);
-TSS_RESULT ps_get_key_by_uuid(TSS_UUID *, UINT32 *, BYTE **);
-TSS_RESULT ps_get_parent_uuid_by_uuid(TSS_UUID *, TSS_UUID *);
-TSS_RESULT ps_get_parent_ps_type_by_uuid(TSS_UUID *, UINT32 *);
 
 /* secrets.c */
 
@@ -115,10 +110,6 @@ short get_port(void);
 
 extern TSS_VERSION VERSION_1_1;
 
-TSS_RESULT Spi_UnloadBlob_KEY(UINT16 *, BYTE *, TCPA_KEY *);
-TSS_RESULT Spi_UnloadBlob_KEY_PARMS(UINT16 *, BYTE *, TCPA_KEY_PARMS *);
-TSS_RESULT Spi_UnloadBlob_STORE_PUBKEY(UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
-
 /* openssl.c */
 #ifdef TSS_DEBUG
 #define DEBUG_print_openssl_errors() \
@@ -130,15 +121,6 @@ TSS_RESULT Spi_UnloadBlob_STORE_PUBKEY(UINT16 *, BYTE *, TCPA_STORE_PUBKEY *);
 #define DEBUG_print_openssl_errors()
 #endif
 
-
-/*===	Object Stuff */
-void removeObject(UINT32);
-UINT32 getObjectTypeByHandle(TSS_HOBJECT);
-TSS_RESULT setObject(UINT32, void *, UINT32);
-TSS_RESULT getObject(UINT32, void **, UINT32 *);
-TSS_HOBJECT addObject(UINT32, UINT32);
-
-TSS_BOOL anyPopupPolicies(TSS_HCONTEXT);
 
 TSS_RESULT Init_AuthNonce(TCS_CONTEXT_HANDLE, TPM_AUTH *);
 TSS_BOOL validateReturnAuth(BYTE *, BYTE *, TPM_AUTH *);
