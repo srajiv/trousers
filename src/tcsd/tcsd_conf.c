@@ -23,6 +23,7 @@
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
+#include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcsps.h"
 #include "tcslog.h"

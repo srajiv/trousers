@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "trousers/tss.h"
+#include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
