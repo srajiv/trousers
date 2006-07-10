@@ -86,7 +86,6 @@ TSS_RESULT merge_key_hierarchies(TSS_HCONTEXT, UINT32, TSS_KM_KEYINFO *, UINT32,
 int pin_mem(void *, size_t);
 int unpin_mem(void *, size_t);
 
-TSS_RESULT copy_key(TCPA_KEY *, TCPA_KEY *);
 
 TSS_RESULT internal_GetMachineName(UNICODE *, int);
 TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
