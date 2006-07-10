@@ -126,7 +126,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 
 		/* malloc a structure for each of them */
 		if (count != 0) {
-			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
+			ret = calloc(count, sizeof(TSS_KM_KEYINFO));
 			if (ret == NULL) {
 				LogError("malloc of %zd bytes failed.",
 						(count * sizeof(TSS_KM_KEYINFO)));
@@ -196,7 +196,7 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 
 		/* malloc a structure for each of them */
 		if (count != 0) {
-			ret = getSomeMemory((count * sizeof(TSS_KM_KEYINFO)), hContext);
+			ret = calloc(count, sizeof(TSS_KM_KEYINFO));
 			if (ret == NULL) {
 				LogError("malloc of %zd bytes failed.",
 						(count * sizeof(TSS_KM_KEYINFO)));
@@ -305,17 +305,17 @@ TCS_GetRegisteredKeyBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
     )
 {
 	UINT16 keySize;
-	BYTE buffer[1024];
+	BYTE buffer[4096];
 	TSS_RESULT result;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	keySize = sizeof (buffer);
+	keySize = sizeof(buffer);
 	if ((result = ps_get_key_by_uuid(KeyUUID, buffer, &keySize)))
 		return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 
-	*prgbKey = getSomeMemory(keySize, hContext);
+	*prgbKey = calloc(1, keySize);
 	if (*prgbKey == NULL) {
 		LogError("malloc of %d bytes failed.", keySize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
@@ -709,7 +709,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		/*===	Here's how big it is */
 		*keyDataSize = offset - 10;
 		/*===	malloc the outBuffer */
-		*keyData = getSomeMemory(*keyDataSize, hContext);
+		*keyData = calloc(1, *keyDataSize);
 		if (*keyData == NULL) {
 			LogError("malloc of %d bytes failed.", *keyDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -784,7 +784,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (!result) {
 		UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer);
 		*pcPubKeySize = offset - 10;
-		*prgbPubKey = getSomeMemory(*pcPubKeySize, hContext);
+		*prgbPubKey = calloc(1, *pcPubKeySize);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %d bytes failed.", *pcPubKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -957,7 +957,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	if (!result) {
 		UnloadBlob_KEY(&offset, txBlob, &idKeyContainer);
 		*idKeySize = offset - 10;
-		*idKey = getSomeMemory(*idKeySize, hContext);
+		*idKey = calloc(1, *idKeySize);
 		if (*idKey == NULL) {
 			LogError("malloc of %d bytes failed.", *idKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
@@ -967,7 +967,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		}
 
 		UnloadBlob_UINT32(&offset, pcIdentityBindingSize, txBlob, "bind size");
-		*prgbIdentityBinding = getSomeMemory(*pcIdentityBindingSize, hContext);
+		*prgbIdentityBinding = calloc(1, *pcIdentityBindingSize);
 		if (*prgbIdentityBinding == NULL) {
 			free(*idKey);
 			*idKeySize = 0;
