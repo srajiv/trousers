@@ -62,8 +62,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 
 	rsakey->tcpaKey.algorithmParms.algorithmID = TCPA_ALG_RSA;
 	rsakey->tcpaKey.algorithmParms.parmSize = sizeof(TCPA_RSA_KEY_PARMS);
-	rsakey->tcpaKey.algorithmParms.parms =
-					calloc(1, sizeof(TCPA_RSA_KEY_PARMS));
+	rsakey->tcpaKey.algorithmParms.parms = calloc(1, sizeof(TCPA_RSA_KEY_PARMS));
 
 	if (rsakey->tcpaKey.algorithmParms.parms == NULL) {
 		LogError("calloc of %d bytes failed.",
@@ -157,9 +156,11 @@ add_key:
 
 /* Add a new rsakey to the list when its pulled from user PS */
 TSS_RESULT
-obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TCPA_KEY *tcpaKey, TSS_HKEY *phKey)
+obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FLAG flags,
+		      TSS_HKEY *phKey)
 {
 	TSS_RESULT result;
+	UINT16 offset;
 	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
 
 	if (rsakey == NULL) {
@@ -168,10 +169,15 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TCPA_KEY *tcpaKey
 	}
 
 	memcpy(&rsakey->uuid, uuid, sizeof(TSS_UUID));
-	if ((result = copy_key(&rsakey->tcpaKey, tcpaKey))) {
+
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_KEY(&offset, key, &rsakey->tcpaKey))) {
 		free(rsakey);
 		return result;
 	}
+
+	if (rsakey->tcpaKey.authDataUsage)
+		flags |= TSS_OBJ_FLAG_USAGEAUTH;
 
 	/* add usage policy */
 	if ((result = obj_policy_add(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
@@ -188,8 +194,7 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TCPA_KEY *tcpaKey
 		return result;
 	}
 
-	if ((result = obj_list_add(&rsakey_list, tspContext, TSS_OBJ_FLAG_USER_PS, rsakey,
-				   phKey))) {
+	if ((result = obj_list_add(&rsakey_list, tspContext, flags, rsakey, phKey))) {
 		free_key_refs(&rsakey->tcpaKey);
 		obj_policy_remove(rsakey->usagePolicy, tspContext);
 		obj_policy_remove(rsakey->migPolicy, tspContext);
@@ -1233,7 +1238,7 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	if ((result = Spi_UnloadBlob_KEY(&offset, data, &rsakey->tcpaKey)))
+	if ((result = Trspi_UnloadBlob_KEY(&offset, data, &rsakey->tcpaKey)))
 		goto done;
 
 	if (rsakey->tcpaKey.authDataUsage)
