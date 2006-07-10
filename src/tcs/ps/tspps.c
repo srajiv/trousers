@@ -366,7 +366,7 @@ psfile_write_key_header(int fd)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	i = PS_VERSION;
+	i = TSSPS_VERSION;
         if ((result = write_data(fd, &i, sizeof(BYTE)))) {
 		LogDebug("%s", __FUNCTION__);
 		return result;
