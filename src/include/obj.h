@@ -109,12 +109,6 @@ struct tr_rsakey_obj {
 	TCS_KEY_HANDLE tcsHandle;
 };
 
-struct tr_regdkey_obj {
-	TCPA_KEY tcpaKey;
-	TSS_UUID uuid;
-	TSS_UUID parent_uuid;
-};
-
 struct tr_policy_obj {
 	BYTE SecretLifetime;    /* 0->Always, 1->Use Counter 2-> Use Timer */
 	TSS_BOOL SecretSet;
@@ -187,7 +181,6 @@ extern struct obj_list pcrs_list;
 extern struct obj_list policy_list;
 extern struct obj_list rsakey_list;
 extern struct obj_list encdata_list;
-extern struct obj_list regdkey_list;
 
 /* prototypes */
 TSS_RESULT	   obj_getTpmObject(UINT32, TSS_HOBJECT *);
@@ -233,7 +226,7 @@ TSS_RESULT obj_hash_update_value(TSS_HHASH, UINT32, BYTE *);
 void       obj_list_rsakey_close(struct obj_list *, TSS_HCONTEXT);
 TSS_BOOL   obj_is_rsakey(TSS_HOBJECT);
 TSS_RESULT obj_rsakey_add(TSS_HCONTEXT, TSS_FLAG, TSS_HOBJECT *);
-TSS_RESULT obj_rsakey_add_by_key(TSS_HCONTEXT, TSS_UUID *, TCPA_KEY *, TSS_HKEY *);
+TSS_RESULT obj_rsakey_add_by_key(TSS_HCONTEXT, TSS_UUID *, BYTE *, TSS_FLAG, TSS_HKEY *);
 TSS_RESULT obj_rsakey_set_policy(TSS_HKEY, UINT32, TSS_HPOLICY);
 TSS_RESULT obj_rsakey_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_rsakey_get_tsp_context(TSS_HKEY, TSS_HCONTEXT *);
@@ -373,11 +366,4 @@ TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *)
 TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
 
-/* obj_regdkey.c */
-TSS_RESULT obj_regdkey_get_by_pub(TSS_HCONTEXT, UINT32, BYTE *, TSS_HKEY *);
-TSS_RESULT obj_regdkey_add(TSS_UUID *, TSS_UUID *, UINT32, BYTE *, TSS_HOBJECT *);
-TSS_RESULT obj_regdkey_get_by_uuid(TSS_HCONTEXT, TSS_UUID *, TSS_HKEY *);
-TSS_RESULT obj_regdkey_get_registered_keys(TSS_UUID *, UINT32 *, TSS_KM_KEYINFO **);
-TSS_RESULT obj_regdkey_remove(TSS_UUID *);
-TSS_RESULT obj_regdkey_get_parent_uuid(TSS_UUID *, TSS_FLAG *, TSS_UUID *);
 #endif
