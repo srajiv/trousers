@@ -59,19 +59,22 @@ struct key_disk_cache
         struct key_disk_cache *next;
 };
 
+/* The current PS version */
+#define TSSPS_VERSION	1
+
 /* offsets into each key on disk. These should be passed a (struct key_disk_cache *) */
-#define VERSION_OFFSET		(0)
-#define NUM_KEYS_OFFSET         (VERSION_OFFSET + sizeof(BYTE))
-#define KEYS_OFFSET             (NUM_KEYS_OFFSET + sizeof(UINT32))
-#define UUID_OFFSET(c)          (c->offset)
-#define PARENT_UUID_OFFSET(c)   (c->offset + sizeof(TSS_UUID))
-#define PUB_DATA_SIZE_OFFSET(c) (c->offset + (2 * sizeof(TSS_UUID)))
-#define BLOB_SIZE_OFFSET(c)     (c->offset + (2 * sizeof(TSS_UUID)) + sizeof(UINT16))
-#define VENDOR_SIZE_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)))
-#define CACHE_FLAGS_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)) + sizeof(UINT32))
-#define PUB_DATA_OFFSET(c)      (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32))
-#define BLOB_DATA_OFFSET(c)     (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + c->pub_data_size)
-#define VENDOR_DATA_OFFSET(c)   (c->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + c->pub_data_size + c->blob_size)
+#define TSSPS_VERSION_OFFSET		(0)
+#define TSSPS_NUM_KEYS_OFFSET         (TSSPS_VERSION_OFFSET + sizeof(BYTE))
+#define TSSPS_KEYS_OFFSET             (TSSPS_NUM_KEYS_OFFSET + sizeof(UINT32))
+#define TSSPS_UUID_OFFSET(c)          ((c)->offset)
+#define TSSPS_PARENT_UUID_OFFSET(c)   ((c)->offset + sizeof(TSS_UUID))
+#define TSSPS_PUB_DATA_SIZE_OFFSET(c) ((c)->offset + (2 * sizeof(TSS_UUID)))
+#define TSSPS_BLOB_SIZE_OFFSET(c)     ((c)->offset + (2 * sizeof(TSS_UUID)) + sizeof(UINT16))
+#define TSSPS_VENDOR_SIZE_OFFSET(c)   ((c)->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)))
+#define TSSPS_CACHE_FLAGS_OFFSET(c)   ((c)->offset + (2 * sizeof(TSS_UUID)) + (2 * sizeof(UINT16)) + sizeof(UINT32))
+#define TSSPS_PUB_DATA_OFFSET(c)      ((c)->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32))
+#define TSSPS_BLOB_DATA_OFFSET(c)     ((c)->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + (c)->pub_data_size)
+#define TSSPS_VENDOR_DATA_OFFSET(c)   ((c)->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + (c)->pub_data_size + (c)->blob_size)
 
 #define MAX_KEY_CHILDREN	10
 
