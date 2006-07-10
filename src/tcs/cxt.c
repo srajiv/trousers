@@ -199,12 +199,6 @@ make_context()
 }
 
 
-void *
-getSomeMemory(unsigned long howMuch, TCS_CONTEXT_HANDLE handle)
-{
-	return calloc(1, howMuch);
-}
-
 TCPA_RESULT
 ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 {
