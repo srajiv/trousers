@@ -25,9 +25,9 @@
 #include "trousers_types.h"
 #include "tcs_int_literals.h"
 #include "tcs_internal_types.h"
-#include "tcs_utils.h"
 #include "tcsps.h"
 #include "tcs_tsp.h"
+#include "tcs_utils.h"
 #include "tcslog.h"
 
 struct key_disk_cache *key_disk_cache_head = NULL;
@@ -231,14 +231,14 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 	int rc, offset;
 
 	/* seek to the PS version */
-	rc = lseek(fd, VERSION_OFFSET, SEEK_SET);
+	rc = lseek(fd, TSSPS_VERSION_OFFSET, SEEK_SET);
 	if (rc == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
 		return -1;
 	}
 
 	/* go to NUM_KEYS */
-	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+	rc = lseek(fd, TSSPS_NUM_KEYS_OFFSET, SEEK_SET);
 	if (rc == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
 		return -1;
@@ -255,7 +255,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 		version = 1;
 
 		/* seek to the PS version */
-		rc = lseek(fd, VERSION_OFFSET, SEEK_SET);
+		rc = lseek(fd, TSSPS_VERSION_OFFSET, SEEK_SET);
 		if (rc == ((off_t) - 1)) {
 			LogError("lseek: %s", strerror(errno));
 			return -1;
@@ -267,7 +267,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 			return rc;
 		}
 
-		rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+		rc = lseek(fd, TSSPS_NUM_KEYS_OFFSET, SEEK_SET);
 		if (rc == ((off_t) - 1)) {
 			LogError("lseek: %s", strerror(errno));
 			return -1;
@@ -279,7 +279,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 		}
 
 		/* return the offset */
-		return (NUM_KEYS_OFFSET + sizeof(UINT32));
+		return (TSSPS_NUM_KEYS_OFFSET + sizeof(UINT32));
 	}
 
 	/* if there is a hole in the file we can write to, find it */
@@ -295,7 +295,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 		num_keys++;
 
 		/* go to the beginning */
-		rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+		rc = lseek(fd, TSSPS_NUM_KEYS_OFFSET, SEEK_SET);
 		if (rc == ((off_t) - 1)) {
 			LogError("lseek: %s", strerror(errno));
 			return -1;
@@ -342,7 +342,7 @@ cache_key(UINT32 offset, UINT16 flags,
 	if (tmp == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(struct key_disk_cache));
 		pthread_mutex_unlock(&disk_cache_lock);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	tmp->next = key_disk_cache_head;
 	key_disk_cache_head = tmp;
@@ -374,7 +374,7 @@ get_num_keys_in_file(int fd)
 	int rc;
 
 	/* go to the number of keys */
-	rc = lseek(fd, NUM_KEYS_OFFSET, SEEK_SET);
+	rc = lseek(fd, TSSPS_NUM_KEYS_OFFSET, SEEK_SET);
 	if (rc == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
 		return 0;
@@ -479,7 +479,7 @@ init_disk_cache(int fd)
 	/* make sure the file pointer is where we expect, just after the number
 	 * of keys on disk at the head of the file
 	 */
-	offset = lseek(fd, KEYS_OFFSET, SEEK_SET);
+	offset = lseek(fd, TSSPS_KEYS_OFFSET, SEEK_SET);
 	if (offset == ((off_t) - 1)) {
 		LogError("lseek: %s", strerror(errno));
 		rc = -1;
