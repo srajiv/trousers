@@ -2453,21 +2453,22 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	if (rgbDirData == NULL && ulDirDataLength != 0)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
+	if (ulDirDataLength > (UINT32)sizeof(TCPA_DIRVALUE))
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
 	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
 		return result;
 
-	/* hash the input data */
-	if ((result = Trspi_Hash(TSS_HASH_SHA1, ulDirDataLength, rgbDirData, dirValue.digest)))
-		return result;
+	memcpy((BYTE *)&dirValue, rgbDirData, ulDirDataLength);
 
 	/* hash to be used for the OIAP calc */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_DirWriteAuth, hashBlob);
 	Trspi_LoadBlob_UINT32(&offset, ulDirIndex, hashBlob);
-	Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), hashBlob, (BYTE *)(&dirValue));
+	Trspi_LoadBlob(&offset, (UINT32)sizeof(TCPA_DIRVALUE), hashBlob, (BYTE *)&dirValue);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, hashDigest.digest);
 
 	/*  hashDigest now has the hash result       */
