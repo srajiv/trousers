@@ -53,9 +53,10 @@ to the DIR prior to using this command.
 .PP
 .SS hTPM
 The \fIhTPM\fR parameter is used to specify the handle of the TPM
-object. The command to get the TPM to test itself will be sent here.
+object.
 .SS ulDirIndex
-The \fIulDirIndex\fR parameter is the index of the DIR to write.
+The \fIulDirIndex\fR parameter is the index of the DIR to write. To query the TPM for the
+number of DIR registers it supports, use \fBTspi_TPM_GetCapability\fR(3).
 .SS ulDirDataLength
 The \fIulDirDataLength\fR parameter is the length in bytes of the \fIrgbDirData\fR parameter.
 .SS rgbDirData
@@ -85,7 +86,6 @@ One or more parameters is bad.
 Specification version 1.1 Golden
 
 .SH "SEE ALSO"
-
 .PP
-\fBTspi_TPM_DirRead\fR(3).
+\fBTspi_TPM_GetCapability\fR(3), \fBTspi_TPM_DirRead\fR(3).
 
