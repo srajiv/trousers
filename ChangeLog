@@ -1,4 +1,6 @@
 
+- Updated the Tspi_TPM_DirWrite manpage with more info, removed
+  a confusing statement.
 - Changed the number of loops in TCSP_GetRandom_Internal to 50,
   which should allow TPMs that return few bytes per request to
   fullfill up to 4K bytes.
