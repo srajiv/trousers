@@ -1871,7 +1871,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 				LogError("malloc of %zd byte failed.", sizeof(UINT32));
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
-			*(UINT32 *)resp = INTERNAL_CAP_TCS_MANUFACTURER_ID;
+			*(UINT32 *)(*resp) = INTERNAL_CAP_TCS_MANUFACTURER_ID;
 		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_MANUFACTURER_STR) {
 			BYTE str[] = INTERNAL_CAP_TCS_MANUFACTURER_STR;
 
@@ -2946,25 +2946,5 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, 20, txBlob, checksum->digest, "checksum");
 	}
 	LogResult("Read Manu Maint Pub", result);
-	return result;
-}
-
-TSS_RESULT
-TCSP_Reset_Internal(TCS_CONTEXT_HANDLE hContext)
-{
-	TSS_RESULT result;
-	UINT32 paramSize;
-	UINT16 offset;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
-
-	offset = 10;
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Reset, txBlob);
-
-	if ((result = req_mgr_submit_req(txBlob)))
-		return result;
-
-	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	LogDebugFn("paramSize: 0x%x", paramSize);
 	return result;
 }
