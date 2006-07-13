@@ -25,6 +25,9 @@ struct tcsd_config
 	char *kernel_log_file;	/* the name of the kernel PCR event file */
 	unsigned int kernel_pcrs;	/* bitmask of PCRs the kernel controls */
 	unsigned int firmware_pcrs;	/* bitmask of PCRs the firmware controls */
+	char *platform_cred;		/* location of the platform credential */
+	char *conformance_cred;		/* location of the conformance credential */
+	char *endorsement_cred;		/* location of the endorsement credential */
 	int remote_ops[TCSD_MAX_NUM_ORDS];	/* array of integer ordinals allow to be used by external hosts */
 	unsigned int unset;	/* bitmask of options which are still unset */
 };
@@ -56,9 +59,12 @@ struct tcsd_config
 #define TCSD_OPTION_SYSTEM_PSFILE	0x0010
 #define TCSD_OPTION_KERNEL_LOGFILE	0x0020
 #define TCSD_OPTION_FIRMWARE_LOGFILE	0x0040
-#define TCSD_OPTION_REMOTE_OPS		0x0080
+#define TCSD_OPTION_PLATFORM_CRED	0x0080
+#define TCSD_OPTION_CONFORMANCE_CRED	0x0100
+#define TCSD_OPTION_ENDORSEMENT_CRED	0x0200
+#define TCSD_OPTION_REMOTE_OPS		0x0400
 
-#define TSS_TCP_RPC_MAX_DATA_LEN	8192
+#define TSS_TCP_RPC_MAX_DATA_LEN	1048576
 #define TSS_TCP_RPC_BAD_PACKET_TYPE	0x10000000
 
 enum tcsd_config_option_code {
@@ -69,6 +75,9 @@ enum tcsd_config_option_code {
 	opt_kernel_log,
 	opt_firmware_pcrs,
 	opt_kernel_pcrs,
+	opt_platform_cred,
+	opt_conformance_cred,
+	opt_endorsement_cred,
 	opt_remote_ops
 };
 
