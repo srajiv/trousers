@@ -201,6 +201,11 @@ void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 
+#define PLATFORM        0
+#define CONFORMANCE     1
+#define ENDORSEMENT     2
+void get_credential(int, UINT32 *, BYTE **);
+
 TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
