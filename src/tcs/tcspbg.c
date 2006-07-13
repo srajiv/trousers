@@ -1720,6 +1720,9 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UnloadBlob(&offset, bytesReturned, txBlob,
 				   &rnd_tmp[totalReturned], "random bytes");
 			totalReturned += bytesReturned;
+		} else {
+			free(rnd_tmp);
+			return result;
 		}
 	} while (totalReturned < *bytesRequested && retries--);
 
