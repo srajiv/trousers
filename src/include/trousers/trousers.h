@@ -12,6 +12,7 @@
 #define _TROUSERS_H_
 
 #include <openssl/rsa.h>
+#include <openssl/evp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,7 +85,7 @@ void Trspi_LoadBlob_IDENTITY_REQ(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_REQ *
 
 /* Hash @BufSize bytes at location @Buf using the algorithm @HashType.  Currently only
  * TSS_HASH_SHA1 is a suported type, so 20 bytes will be written to @Digest */
-TCPA_RESULT Trspi_Hash(UINT32 HashType, UINT32 BufSize, BYTE *Buf, BYTE *Digest);
+TSS_RESULT Trspi_Hash(UINT32 HashType, UINT32 BufSize, BYTE *Buf, BYTE *Digest);
 
 UINT32 Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE*Secret, UINT32 BufSize, BYTE*Buf, BYTE*hmacOut);
 
@@ -99,9 +100,9 @@ int Trspi_RSA_Encrypt(unsigned char *dataToEncrypt,
 		unsigned char *publicKey,
 		unsigned int keysize);
 
-int Trspi_Verify( UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
-		unsigned char *pModulus, int iKeyLength,
-		BYTE *pSignature, UINT32 sig_len);
+TSS_RESULT Trspi_Verify(UINT32 HashType, BYTE *pHash, UINT32 iHashLength,
+			unsigned char *pModulus, int iKeyLength,
+			BYTE *pSignature, UINT32 sig_len);
 
 int Trspi_RSA_Public_Encrypt(unsigned char *in, unsigned int inlen,
 			     unsigned char *out, unsigned int *outlen,
@@ -124,7 +125,6 @@ TSS_RESULT Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
 			     BYTE *out, UINT32 *out_len);
 TSS_RESULT Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
 			     BYTE *out, UINT32 *out_len);
-
 
 /* String Functions */
 
