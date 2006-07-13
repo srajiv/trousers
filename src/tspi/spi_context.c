@@ -355,6 +355,7 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 		case TSS_TCSCAP_VERSION:
 		case TSS_TCSCAP_CACHING:
 		case TSS_TCSCAP_PERSSTORAGE:
+		case TSS_TCSCAP_MANUFACTURER:
 			/* make sure we're connected to a TCS first */
 			if ((result = obj_context_is_connected(tspContext,
 							&tcsContext)))
