@@ -977,10 +977,11 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 			UnloadBlob(&offset, *pcIdentityBindingSize, txBlob,
 					*prgbIdentityBinding, "id bind");
 		}
-		/* RCC */
-		*pcEndorsementCredentialSize = 0;
-		*pcPlatformCredentialSize = 0;
-		*pcConformanceCredentialSize = 0;
+
+		/* If an error occurs, these will return NULL */
+		get_credential(PLATFORM, pcPlatformCredentialSize, prgbPlatformCredential);
+		get_credential(CONFORMANCE, pcConformanceCredentialSize, prgbConformanceCredential);
+		get_credential(ENDORSEMENT, pcEndorsementCredentialSize, prgbEndorsementCredential);
 
 		if (pSrkAuth != NULL)
 			UnloadBlob_Auth(&offset, txBlob, pSrkAuth);
