@@ -39,6 +39,9 @@ struct tcsd_config_options options_list[] = {
 	{"firmware_pcrs", opt_firmware_pcrs},
 	{"kernel_log_file", opt_kernel_log},
 	{"kernel_pcrs", opt_kernel_pcrs},
+	{"platform_cred", opt_platform_cred},
+	{"conformance_cred", opt_conformance_cred},
+	{"endorsement_cred", opt_endorsement_cred},
 	{"remote_ops", opt_remote_ops},
 	{NULL, 0}
 };
@@ -55,6 +58,9 @@ init_tcsd_config(struct tcsd_config *conf)
 	conf->firmware_pcrs = 0;
 	conf->kernel_log_file = NULL;
 	conf->kernel_pcrs = 0;
+	conf->platform_cred = NULL;
+	conf->conformance_cred = NULL;
+	conf->endorsement_cred = NULL;
 	memset(conf->remote_ops, 0, sizeof(conf->remote_ops));
 	conf->unset = 0xffffffff;
 }
@@ -379,6 +385,84 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			conf->unset &= ~TCSD_OPTION_FIRMWARE_LOGFILE;
 		}
 		break;
+	case opt_platform_cred:
+		if (*arg != '/') {
+			LogError("Config option \"platform_cred\" must be an absolute path name. "
+                                 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+		} else {
+			int rc;
+
+			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
+				LogError("Config option \"platform_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			} else if (rc > 0) {
+				LogError("Config option \"platform_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, tmp_ptr);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+			if (tmp_ptr == NULL)
+				return TCSERR(TSS_E_OUTOFMEMORY);
+
+			if (conf->platform_cred)
+				free(conf->platform_cred);
+
+			conf->platform_cred = tmp_ptr;
+			conf->unset &= ~TCSD_OPTION_PLATFORM_CRED;
+		}
+		break;
+	case opt_conformance_cred:
+		if (*arg != '/') {
+			LogError("Config option \"conformance_cred\" must be an absolute path name."
+                                 " %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+		} else {
+			int rc;
+
+			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
+				LogError("Config option \"conformance_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			} else if (rc > 0) {
+				LogError("Config option \"conformance_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, tmp_ptr);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+			if (tmp_ptr == NULL)
+				return TCSERR(TSS_E_OUTOFMEMORY);
+
+			if (conf->conformance_cred)
+				free(conf->conformance_cred);
+
+			conf->conformance_cred = tmp_ptr;
+			conf->unset &= ~TCSD_OPTION_CONFORMANCE_CRED;
+		}
+		break;
+	case opt_endorsement_cred:
+		if (*arg != '/') {
+			LogError("Config option \"endorsement_cred\" must be an absolute path name."
+                                 " %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+		} else {
+			int rc;
+
+			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
+				LogError("Config option \"endorsement_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, arg);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			} else if (rc > 0) {
+				LogError("Config option \"endorsement_cred\" is invalid. %s:%d: "
+                                         "\"%s\"", TCSD_CONFIG_FILE, line_num, tmp_ptr);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+			if (tmp_ptr == NULL)
+				return TCSERR(TSS_E_OUTOFMEMORY);
+
+			if (conf->endorsement_cred)
+				free(conf->endorsement_cred);
+
+			conf->endorsement_cred = tmp_ptr;
+			conf->unset &= ~TCSD_OPTION_ENDORSEMENT_CRED;
+		}
+		break;
 	case opt_remote_ops:
 		conf->unset &= ~TCSD_OPTION_REMOTE_OPS;
 		comma = rindex(arg, '\n');
@@ -437,6 +521,9 @@ conf_file_final(struct tcsd_config *conf)
 	free(conf->system_ps_dir);
 	free(conf->kernel_log_file);
 	free(conf->firmware_log_file);
+	free(conf->platform_cred);
+	free(conf->conformance_cred);
+	free(conf->endorsement_cred);
 }
 
 TSS_RESULT
@@ -528,10 +615,10 @@ ps_dirs_init()
 		if (errno == ENOENT) {
 			/* The dir DNE, create it with mode drwxrwxrwt */
 			if (mkdir(tcsd_options.system_ps_dir, mode) == -1) {
-				LogError("mkdir(%s) failed: %s. If you'd like to use %s to"
+				LogError("mkdir(%s) failed: %s. If you'd like to use %s to "
 						"store your system persistent data, please"
 						" create it. Otherwise, change the location"
-						" in your tcsd.conf file.",
+						" in your tcsd config file.",
 						tcsd_options.system_ps_dir, strerror(errno),
 						tcsd_options.system_ps_dir);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
