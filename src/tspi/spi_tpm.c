@@ -407,7 +407,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	TPM_AUTH srkAuth, ownerAuth;
 	TCPA_RESULT result;
 	UINT16 offset;
-	BYTE hashblob[0x2000], idReqBlob[0x4000], testblob[0x4000];
+	BYTE hashblob[USHRT_MAX], idReqBlob[USHRT_MAX], testblob[USHRT_MAX];
 	TCPA_DIGEST digest;
 	TSS_HPOLICY hSRKPolicy, hIDPolicy, hCAPolicy, hTPMPolicy;
 	UINT32 caKeyBlobSize, idKeySize;
@@ -531,7 +531,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if (offset > CHOSENID_BLOB_SIZE)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	Trspi_Hash(TSS_HASH_SHA1, offset, chosenIDBlob, chosenIDHash.digest);
+	if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, chosenIDBlob, chosenIDHash.digest))) {
+		free_key_refs(&caKey);
+		return result;
+	}
 
 	/* XXX use chosenIDBlob temporarily */
 	offset = 0;
@@ -1375,14 +1378,30 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	case TSS_TPMCAP_FLAG:
 		fOwnerAuth = TRUE;
 		break;
-	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported. */
+	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported by the TPM. */
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
 		tcsCapArea = TCPA_CAP_ALG;
-		tcsSubCap = *(UINT32 *)rgbSubCap;
+		switch (*(UINT32 *)rgbSubCap) {
+			case TSS_ALG_RSA:
+				tcsSubCap = TCPA_ALG_RSA;
+				break;
+			case TSS_ALG_AES:
+				tcsSubCap = TCPA_ALG_AES;
+				break;
+			case TSS_ALG_3DES:
+				tcsSubCap = TCPA_ALG_3DES;
+				break;
+			case TSS_ALG_DES:
+				tcsSubCap = TCPA_ALG_DES;
+				break;
+			default:
+				tcsSubCap = *(UINT32 *)rgbSubCap;
+				break;
+		}
 		break;
-	case TSS_TPMCAP_PROPERTY:	/*     Determines a physical property of the TPM. */
+	case TSS_TPMCAP_PROPERTY:	/* Determines a physical property of the TPM. */
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
@@ -1403,7 +1422,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
-	case TSS_TPMCAP_VERSION:	/*      Queries the current TPM version. */
+	case TSS_TPMCAP_VERSION:	/* Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
 		break;
 	default:
@@ -1432,8 +1451,8 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	} else {
 		tcsSubCap = endian32(tcsSubCap);
 
-		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
-				&respLen, &respData);
+		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength,
+					    (BYTE *)&tcsSubCap, &respLen, &respData);
 
 		*prgbRespData = calloc_tspi(tspContext, respLen);
 		if (*prgbRespData == NULL) {
