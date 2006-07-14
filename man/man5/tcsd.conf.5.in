@@ -18,7 +18,7 @@
 .el .ne 3
 .IP "\\$1" \\$2
 ..
-.TH "tcsd.conf" 5 "2005-07-18" "TSS 1.1"
+.TH "tcsd.conf" 5 "2006-07-14" "TSS 1.1"
 .ce 1
 TCG Software Stack
 .SH NAME
@@ -66,6 +66,27 @@ A list of PCR indices that are manipulated only by the kernel and therefore
 are not extended or logged by the TCSD. Applications that call Tcsi_PcrExtend
 on PCRs listed here will receive an error.
 
+.BI platform_cred
+Path to the platform credential for your TPM.  Your TPM manufacturer may have
+provided you with a set of credentials (certificates) that should be used when
+creating identities using your TPM. When a user of your TPM makes an identity,
+this credential will be encrypted as part of that process. See the 1.1b TPM Main
+specification section 9.3 for information on this process.
+
+.BI conformance_cred
+Path to the conformance credential for your TPM.  Your TPM manufacturer may have
+provided you with a set of credentials (certificates) that should be used when
+creating identities using your TPM. When a user of your TPM makes an identity,
+this credential will be encrypted as part of that process. See the 1.1b TPM Main
+specification section 9.3 for information on this process.
+
+.BI endorsement_cred
+Path to the endorsement credential for your TPM.  Your TPM manufacturer may have
+provided you with a set of credentials (certificates) that should be used when
+creating identities using your TPM. When a user of your TPM makes an identity,
+this credential will be encrypted as part of that process. See the 1.1b TPM Main
+specification section 9.3 for information on this process.
+
 .BI remote_ops
 A list of TCS commands which will be allowed to be executed on this machine's
 TCSD by TSP's on non-local hosts (over the internet). By default, access to all
@@ -81,6 +102,9 @@ firmware_log_file = /proc/tpm/firmware_events
 kernel_log_file = /proc/tcg/measurement_events
 firmware_pcrs = 0,1,2,3,4,5,6,7
 kernel_pcrs = 10,11
+platform_cred = /usr/local/var/lib/tpm/platform.cert
+conformance_cred = /usr/local/var/lib/tpm/conformance.cert
+endorsement_cred = /usr/local/var/lib/tpm/endorsement.cert
 remote_ops = create_key,random
 .fi
 .SH "SEE ALSO"
