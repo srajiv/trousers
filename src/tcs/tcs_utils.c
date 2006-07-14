@@ -1141,7 +1141,7 @@ void
 get_credential(int type, UINT32 *size, BYTE **cred)
 {
 	int rc, fd;
-	char *path;
+	char *path = NULL;
 	void *file = NULL;
 	struct stat stat_buf;
 	size_t file_size;
