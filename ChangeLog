@@ -1,4 +1,6 @@
 
+* TROUSERS_0_2_7
+
 - Added 3 new TCSD config options to allow admins to set paths
   to the 3 types of credentials returned on Make Identity calls.
 - Added an implementation for returning the MANUFACTURER TCS
