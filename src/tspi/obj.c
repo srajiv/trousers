@@ -35,7 +35,6 @@ struct obj_list pcrs_list;
 struct obj_list policy_list;
 struct obj_list rsakey_list;
 struct obj_list encdata_list;
-struct obj_list regdkey_list;
 
 void
 list_init(struct obj_list *list)
@@ -54,7 +53,6 @@ obj_list_init()
 	list_init(&policy_list);
 	list_init(&rsakey_list);
 	list_init(&encdata_list);
-	list_init(&regdkey_list);
 }
 
 TSS_HOBJECT
