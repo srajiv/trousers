@@ -1,4 +1,6 @@
 
+- Removed obj_regdkey list references.
+
 * TROUSERS_0_2_7
 
 - Added 3 new TCSD config options to allow admins to set paths
