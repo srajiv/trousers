@@ -28,7 +28,7 @@
 
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
-TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
+TSS_VERSION VERSION_1_1 = INTERNAL_CAP_TSP_VERSION;
 
 int
 pin_mem(void *addr, size_t len)
@@ -433,13 +433,12 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 		UINT32 * respSize, BYTE ** respData)
 {
 	UINT16 offset = 0;
-	TSS_VERSION version = INTERNAL_CAP_TSP_VERSION;
 
 	if (capArea == TSS_TSPCAP_VERSION) {
 		if ((*respData = calloc_tspi(tspContext, sizeof(TSS_VERSION))) == NULL)
 			return TSPERR(TSS_E_OUTOFMEMORY);
 
-		Trspi_LoadBlob_TSS_VERSION(&offset, *respData, version);
+		Trspi_LoadBlob_TSS_VERSION(&offset, *respData, VERSION_1_1);
 		*respSize = offset;
 	} else if (capArea == TSS_TSPCAP_ALG) {
 		if ((*respData = calloc_tspi(tspContext, 1)) == NULL)
