@@ -50,8 +50,9 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 	/* Have the TCS do its thing */
 	TCS_CloseContext(tcsContext);
 
-	/* free all context related memory */
-	free_tspi(tspContext, NULL);
+	/* Note: Memory that was returned to the app that was alloc'd by this
+	 * context isn't free'd here.  Any memory that the app doesn't explicitly
+	 * free is left for it to free itself. */
 
 	/* Destroy all objects */
 	obj_close_context(tspContext);
