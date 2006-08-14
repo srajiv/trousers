@@ -526,8 +526,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
-	memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
-
 	/* This key is in the System Persistant storage */
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
 		memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
@@ -545,9 +543,13 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			 * which doesn't yet exist at the TCS level. However, the
 			 * auth may already be set in policies at the TSP level.
 			 * To find out, get the key handle of the key requiring
-			 * auth */
-			if (ps_get_key_by_uuid(tspContext, &info.parentKeyUUID, &keyHandle))
-				return result;
+			 * auth. First, look at the list of keys in memory. */
+			if ((obj_rsakey_get_by_uuid(&info.parentKeyUUID, &keyHandle))) {
+				/* If that failed, look on disk, in User PS. */
+				if (ps_get_key_by_uuid(tspContext, &info.parentKeyUUID,
+						       &keyHandle))
+					return result;
+			}
 
 			if (obj_rsakey_get_policy(keyHandle, TSS_POLICY_USAGE,
 						  &hPolicy, NULL))
