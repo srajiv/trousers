@@ -808,7 +808,7 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	memset(&data, 0, sizeof(struct tsp_packet));
 
 	data.ordinal = TCSD_ORD_LOADKEYBYBLOB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("IN: TCS Context: 0x%x", hContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -840,8 +840,8 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyHMAC, 0, hdr))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
-		LogDebugFn("TCS key handle: 0x%x, TPM key slot: 0x%x",
-			   *phKeyTCSI, *phKeyHMAC);
+		LogDebugFn("OUT: TCS key handle: 0x%x, TPM key slot: 0x%x", *phKeyTCSI,
+			   *phKeyHMAC);
 	}
 
 	free(hdr);
