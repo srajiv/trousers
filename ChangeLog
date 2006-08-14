@@ -1,4 +1,9 @@
 
+- Removed the free of all context related memory when the context
+  closes. Allows an app more flexibility in choosing what to free.
+- Removed check for secret mode None in establishing an OSAP
+  session. Now, a secret of all 0's is used if no secret exists.
+- Added checks for 2 return codes in secret_TakeOwnership.
 - Fixed TSS_VERSION problem. There are no specific getcaps for
   software version vs. TSS spec version. Instead, every version
   structure contains spec version and software major/minor.
