@@ -150,7 +150,7 @@ TSS_RESULT canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *);
 TSS_RESULT internal_EvictByKeySlot(TCPA_KEY_HANDLE slot);
 
 TSS_RESULT clearKeysFromChip(TCS_CONTEXT_HANDLE hContext);
-TSS_RESULT clearUnknownKeys(TCS_CONTEXT_HANDLE);
+TSS_RESULT clearUnknownKeys(TCS_CONTEXT_HANDLE, UINT32 *);
 
 UINT16 Decode_UINT16(BYTE * in);
 void UINT32ToArray(UINT32 i, BYTE * out);
