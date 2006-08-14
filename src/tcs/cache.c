@@ -961,10 +961,16 @@ evictFirstKey(TCS_KEY_HANDLE parent_tcs_handle)
 	TCS_KEY_HANDLE tpm_handle_to_evict = NULL_TPM_HANDLE;
 	UINT32 smallestTimeStamp = ~(0U);	/* largest */
 	TSS_RESULT result;
+	UINT32 count;
 
 	/* First, see if there are any known keys worth evicting */
-	if ((result = clearUnknownKeys(InternalContext)))
+	if ((result = clearUnknownKeys(InternalContext, &count)))
 		return result;
+
+	if (count > 0) {
+		LogDebugFn("Evicted %u unknown keys", count);
+		return TSS_SUCCESS;
+	}
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		if (tmp->tpm_handle != NULL_TPM_HANDLE &&	/* not already evicted */
