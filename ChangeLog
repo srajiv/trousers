@@ -1,4 +1,6 @@
 
+- Updated Tspi_Context_LoadKeyByUUID to check in-memory keys by
+  UUID when the TCS returns a filled-out loadkey info struct.
 - Removed the free of all context related memory when the context
   closes. Allows an app more flexibility in choosing what to free.
 - Removed check for secret mode None in establishing an OSAP
