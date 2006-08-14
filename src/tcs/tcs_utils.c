@@ -334,13 +334,13 @@ internal_EvictByKeySlot(TCPA_KEY_HANDLE slot)
 }
 
 TSS_RESULT
-clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
+clearUnknownKeys(TCS_CONTEXT_HANDLE hContext, UINT32 *cleared)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	TCPA_KEY_HANDLE_LIST keyList;
 	int i;
 	BYTE *respData = 0;
-	UINT32 respDataSize = 0;
+	UINT32 respDataSize = 0, count = 0;
 	TCPA_CAPABILITY_AREA capArea = -1;
 	UINT16 offset = 0;
 	TSS_BOOL found = FALSE;
@@ -383,11 +383,17 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext)
 		else {
 			if ((result = internal_EvictByKeySlot(keyList.handle[i])))
 				return result;
+			else
+				count++;
 		}
 	}
-	return result;
+
+	*cleared = count;
+
+	return TSS_SUCCESS;
 }
 
+#if 0
 TCPA_RESULT
 clearKeysFromChip(TCS_CONTEXT_HANDLE hContext)
 {
@@ -416,6 +422,7 @@ clearKeysFromChip(TCS_CONTEXT_HANDLE hContext)
 	}
 	return TSS_SUCCESS;
 }
+#endif
 
 UINT16
 Decode_UINT16(BYTE * in)
