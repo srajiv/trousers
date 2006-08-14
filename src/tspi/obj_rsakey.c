@@ -31,6 +31,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	TCPA_RSA_KEY_PARMS rsaKeyParms;
 	TSS_FLAG flags = 0;
 	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
+	TCPA_VERSION ver = { 1, 1, 0, 0 };  // Must be 1.1.0.0 for 1.2 TPMs
 
 	if (rsakey == NULL) {
 		LogError("malloc of %zd bytes failed.",
@@ -58,7 +59,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	if (initFlags & TSS_KEY_EMPTY_KEY)
 		goto add_key;
 
-	memcpy(&rsakey->tcpaKey.ver, &VERSION_1_1, sizeof(TCPA_VERSION));
+	memcpy(&rsakey->tcpaKey.ver, &ver, sizeof(TCPA_VERSION));
 
 	rsakey->tcpaKey.algorithmParms.algorithmID = TCPA_ALG_RSA;
 	rsakey->tcpaKey.algorithmParms.parmSize = sizeof(TCPA_RSA_KEY_PARMS);
