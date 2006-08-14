@@ -259,9 +259,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
-	if (keyMode == TSS_SECRET_MODE_NONE) {
-		return TSPERR(TSS_E_POLICY_NO_SECRET);
-	} else if (keyMode != TSS_SECRET_MODE_CALLBACK) {
+	if (keyMode != TSS_SECRET_MODE_CALLBACK) {
 		if ((result = obj_policy_get_secret(hPolicy, &keySecret)))
 			return result;
 
@@ -277,6 +275,10 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 					encAuthMig, sharedSecret, auth)))
 			return result;
 	} else {
+		/* If the secret mode is NONE here, we don't return an error. This is
+		 * because there are commands such as CreateKey, which require an auth
+		 * session even when creating no-auth keys. A secret of all 0's will be
+		 * used in this case. */
 		if ((result = TCSP_OSAP(tcsContext, osapType, osapData,
 					auth->NonceOdd,	&auth->AuthHandle,
 					&auth->NonceEven, nonceEvenOSAP)))
@@ -493,21 +495,22 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 			return result;
 		}
 
-		/* Encrypt the Owner Authorization */
-		Trspi_RSA_Encrypt(ownerSecret.authdata,
-				       20,
-				       encOwnerAuth,
-				       encOwnerAuthLength,
-				       dummyKey.pubKey.key,
-				       dummyKey.pubKey.keyLength);
+		/* Encrypt the Owner, SRK Authorizations */
+		if ((result = Trspi_RSA_Encrypt(ownerSecret.authdata, 20, encOwnerAuth,
+						encOwnerAuthLength, dummyKey.pubKey.key,
+						dummyKey.pubKey.keyLength))) {
+			free(dummyKey.pubKey.key);
+			free(dummyKey.algorithmParms.parms);
+			return result;
+		}
 
-		/* Encrypt the SRK Authorization */
-		Trspi_RSA_Encrypt(srkSecret.authdata,
-				       20,
-				       encSRKAuth,
-				       encSRKAuthLength,
-				       dummyKey.pubKey.key,
-				       dummyKey.pubKey.keyLength);
+		if ((result = Trspi_RSA_Encrypt(srkSecret.authdata, 20, encSRKAuth,
+						encSRKAuthLength, dummyKey.pubKey.key,
+						dummyKey.pubKey.keyLength))) {
+			free(dummyKey.pubKey.key);
+			free(dummyKey.algorithmParms.parms);
+			return result;
+		}
 
 		free(dummyKey.pubKey.key);
 		free(dummyKey.algorithmParms.parms);
