@@ -109,30 +109,39 @@ Tspi_Hash_VerifySignature(TSS_HHASH hHash,		/* in */
 	BYTE *hashData = NULL;
 	UINT32 hashDataSize;
 	UINT32 sigScheme;
+	TSS_HCONTEXT tspContext;
 
 	if (ulSignatureLength > 0 && rgbSignature == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_rsakey_get_pub_blob(hKey, &pubKeySize, &pubKey)))
+	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
-	if ((result = obj_rsakey_get_ss(hKey, &sigScheme)))
+	if ((result = obj_rsakey_get_modulus(hKey, &pubKeySize, &pubKey)))
 		return result;
 
-	if ((result = obj_hash_get_value(hHash, &hashDataSize, &hashData)))
+	if ((result = obj_rsakey_get_ss(hKey, &sigScheme))) {
+		free_tspi(tspContext, pubKey);
 		return result;
+	}
+
+	if ((result = obj_hash_get_value(hHash, &hashDataSize, &hashData))) {
+		free_tspi(tspContext, pubKey);
+		return result;
+	}
 
 	if (sigScheme == TSS_SS_RSASSAPKCS1V15_SHA1) {
-		result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize,
-				pubKey, pubKeySize,
-				rgbSignature, ulSignatureLength);
+		result = Trspi_Verify(TSS_HASH_SHA1, hashData, hashDataSize, pubKey, pubKeySize,
+				      rgbSignature, ulSignatureLength);
 	} else if (sigScheme == TSS_SS_RSASSAPKCS1V15_DER) {
-		result = Trspi_Verify(TSS_HASH_OTHER, hashData, hashDataSize,
-				pubKey, pubKeySize,
-				rgbSignature, ulSignatureLength);
+		result = Trspi_Verify(TSS_HASH_OTHER, hashData, hashDataSize, pubKey, pubKeySize,
+				      rgbSignature, ulSignatureLength);
 	} else {
 		result = TSPERR(TSS_E_INVALID_SIGSCHEME);
 	}
+
+	free_tspi(tspContext, pubKey);
+	free_tspi(tspContext, hashData);
 
 	return result;
 }

@@ -111,23 +111,14 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 				TCPA_SHA1_160_HASH_LEN);
 	}
 
-	/* unload the blob into our local objects, then store inside hKey */
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, newEK, &pubEK)))
-		return result;
+	if ((result = obj_rsakey_set_pubkey(hKey, newEK)) && !verifyInternally) {
+		free_tspi(tspContext, pValidationData->ValidationData);
+		free_tspi(tspContext, pValidationData->Data);
+	}
 
-	if ((result = obj_rsakey_set_key_parms(hKey, &pubEK.algorithmParms)))
-		goto done;
-
-	if ((result = obj_rsakey_set_pubkey(hKey, pubEK.pubKey.keyLength, pubEK.pubKey.key)))
-		goto done;
-
-done:
-	free(pubEK.pubKey.key);
-	free(pubEK.algorithmParms.parms);
 	free(newEK);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -257,23 +248,13 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				     &retKey)))
 		return result;
 
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubEK, &pubKey)))
-		goto done;
-
-	if ((result = obj_rsakey_set_key_parms(retKey, &pubKey.algorithmParms)))
-		goto done;
-
-	if ((result = obj_rsakey_set_pubkey(retKey, pubKey.pubKey.keyLength, pubKey.pubKey.key)))
+	if ((result = obj_rsakey_set_pubkey(retKey, pubEK)))
 		goto done;
 
 	*phEndorsementPubKey = retKey;
 
 done:
 	free(pubEK);
-	free(pubKey.pubKey.key);
-	free(pubKey.algorithmParms.parms);
-
 	return result;
 }
 
@@ -1893,11 +1874,15 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		Trspi_LoadBlob(&offset, pubBlobSize, hashBlob, pubBlob);
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashBlob, (BYTE *)&nonce.nonce);
 
-		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest)))
+		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest))) {
+			free_tspi(tspContext, pubBlob);
 			return result;
+		}
 
 		if (memcmp(&digest.digest, &checkSum.digest, TCPA_SHA1_160_HASH_LEN))
 			result = TSPERR(TSS_E_FAIL);
+
+		free_tspi(tspContext, pubBlob);
 	}
 
 	return result;

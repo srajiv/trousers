@@ -1209,10 +1209,13 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 
 		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
+			/* A TCPA_KEY structure, in blob form */
 			result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize, rgbAttribData);
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-			result = obj_rsakey_set_pubkey(hObject, ulAttribDataSize, rgbAttribData);
+			/* A TCPA_PUBKEY structure, in blob form */
+			result = obj_rsakey_set_pubkey(hObject, rgbAttribData);
 		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
+			/* A blob, either encrypted or unencrypted */
 			result = obj_rsakey_set_privkey(hObject, ulAttribDataSize, rgbAttribData);
 		} else {
 			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
@@ -1294,17 +1297,17 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 	if (obj_is_rsakey(hObject)) {
 		if (attribFlag == TSS_TSPATTRIB_KEY_BLOB) {
 			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-				result = obj_rsakey_get_blob(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+				/* A TCPA_KEY structure, in blob form */
+				result = obj_rsakey_get_blob(hObject, pulAttribDataSize,
+							     prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-				result = obj_rsakey_get_priv_blob(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+				/* A blob, either encrypted or unencrypted */
+				result = obj_rsakey_get_priv_blob(hObject, pulAttribDataSize,
+								  prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-				result = obj_rsakey_get_pub_blob(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+				/* A TCPA_PUBKEY structure, in blob form */
+				result = obj_rsakey_get_pub_blob(hObject, pulAttribDataSize,
+								 prgbAttribData);
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
@@ -1312,18 +1315,15 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			if (subFlag != TSS_TSPATTRIB_KEYINFO_VERSION)
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			result = obj_rsakey_get_version(hObject,
-					pulAttribDataSize,
-					prgbAttribData);
+			result = obj_rsakey_get_version(hObject, pulAttribDataSize,
+							prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
-				result = obj_rsakey_get_exponent(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+				result = obj_rsakey_get_exponent(hObject, pulAttribDataSize,
+								 prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_MODULUS) {
-				result = obj_rsakey_get_pub_blob(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+				result = obj_rsakey_get_modulus(hObject, pulAttribDataSize,
+								prgbAttribData);
 			} else
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_UUID) {

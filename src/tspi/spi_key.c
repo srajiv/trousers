@@ -181,22 +181,13 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 			goto error;
 	}
 
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, *prgbPubKey, &pubKey)))
-		goto error;
-
-	if ((result = obj_rsakey_set_key_parms(hKey, &pubKey.algorithmParms)))
-		goto error;
-
-	if ((result = obj_rsakey_set_pubkey(hKey, pubKey.pubKey.keyLength,
-					    pubKey.pubKey.key)))
+	if ((result = obj_rsakey_set_pubkey(hKey, *prgbPubKey)))
 		goto error;
 
 	return TSS_SUCCESS;
 error:
-	free(pubKey.pubKey.key);
-	free(pubKey.algorithmParms.parms);
 	free(*prgbPubKey);
+	*prgbPubKey = NULL;
 	*pulPubKeyLength = 0;
 	return result;
 }
@@ -540,8 +531,8 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		 TSS_HKEY hWrappingKey,		/* in */
 		 TSS_HPCRS hPcrComposite)	/* in, may be NULL */
 {
-	TSS_HPOLICY hPolicy;
-	TCPA_SECRET secret;
+	TSS_HPOLICY hUsePolicy, hMigPolicy;
+	TCPA_SECRET usage, migration;
 	TSS_RESULT result;
 	BYTE *keyPrivBlob = NULL, *wrappingPubKey = NULL, *keyBlob = NULL;
 	UINT32 keyPrivBlobLen, wrappingPubKeyLen, keyBlobLen;
@@ -571,15 +562,20 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		goto done;
 
 	/* get the wrapping key's public key */
-	if ((result = obj_rsakey_get_pub_blob(hWrappingKey,
-					&wrappingPubKeyLen, &wrappingPubKey)))
+	if ((result = obj_rsakey_get_modulus(hWrappingKey, &wrappingPubKeyLen, &wrappingPubKey)))
 		goto done;
 
 	/* get the key to be wrapped's usage policy */
-	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, NULL)))
+	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hUsePolicy, NULL)))
 		goto done;
 
-	if ((result = obj_policy_get_secret(hPolicy, &secret)))
+	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_MIGRATION, &hMigPolicy, NULL)))
+		goto done;
+
+	if ((result = obj_policy_get_secret(hUsePolicy, &usage)))
+		goto done;
+
+	if ((result = obj_policy_get_secret(hMigPolicy, &migration)))
 		goto done;
 
 	memset(&keyContainer, 0, sizeof(TCPA_KEY));
@@ -599,8 +595,8 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	/* create the plaintext private key blob */
 	offset = 0;
 	Trspi_LoadBlob_BYTE(&offset, TCPA_PT_ASYM, newPrivKey);
-	Trspi_LoadBlob(&offset, 20, newPrivKey, secret.authdata);
-	Trspi_LoadBlob(&offset, 20, newPrivKey, secret.authdata);
+	Trspi_LoadBlob(&offset, 20, newPrivKey, usage.authdata);
+	Trspi_LoadBlob(&offset, 20, newPrivKey, migration.authdata);
 	Trspi_LoadBlob(&offset, 20, newPrivKey, digest.digest);
 	Trspi_LoadBlob_UINT32(&offset, keyPrivBlobLen, newPrivKey);
 	Trspi_LoadBlob(&offset, keyPrivBlobLen, newPrivKey, keyPrivBlob);

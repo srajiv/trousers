@@ -990,7 +990,7 @@ done:
 }
 
 TSS_RESULT
-obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
+obj_rsakey_get_modulus(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
@@ -1019,12 +1019,60 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 
 	*data = calloc_tspi(obj->tspContext, offset);
 	if (*data == NULL) {
-		LogError("malloc of %d bytes failed.", offset);
+		LogError("malloc of %hu bytes failed.", offset);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
 	*size = offset;
 	memcpy(*data, rsakey->tcpaKey.pubKey.key, offset);
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+	BYTE blob[1024];
+	UINT16 offset;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	offset = rsakey->tcpaKey.pubKey.keyLength;
+
+	/* if this key object represents the SRK and the public key
+	 * data here is all 0's, then we shouldn't return it, we
+	 * should return TSS_E_BAD_PARAMETER. This is part of protecting
+	 * the SRK public key. */
+	if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
+		BYTE zeroBlob[2048] = { 0, };
+
+		if (!memcmp(rsakey->tcpaKey.pubKey.key, zeroBlob, offset)) {
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+			goto done;
+		}
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_KEY_PARMS(&offset, blob, &rsakey->tcpaKey.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, blob, &rsakey->tcpaKey.pubKey);
+
+	*data = calloc_tspi(obj->tspContext, offset);
+	if (*data == NULL) {
+		LogError("malloc of %hu bytes failed.", offset);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	*size = offset;
+	memcpy(*data, blob, offset);
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1364,33 +1412,30 @@ done:
 }
 
 
+/* Expect a TPM_PUBKEY as is explained in the portable data section of the spec */
 TSS_RESULT
-obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
+obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSS_SUCCESS;
-	void *to_free;
+	TSS_RESULT result;
+	UINT16 offset = 0;
+	TCPA_PUBKEY pub;
+
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, data, &pub)))
+		return result;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	to_free = rsakey->tcpaKey.pubKey.key;
+	free(rsakey->tcpaKey.pubKey.key);
+	free(rsakey->tcpaKey.algorithmParms.parms);
 
-	rsakey->tcpaKey.pubKey.key = calloc(1, size);
-	if (rsakey->tcpaKey.pubKey.key == NULL) {
-		rsakey->tcpaKey.pubKey.key = to_free; // restore
-		LogError("malloc of %d bytes failed.", size);
-		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
+	memcpy(&rsakey->tcpaKey.pubKey, &pub.pubKey, sizeof(TCPA_STORE_PUBKEY));
+	memcpy(&rsakey->tcpaKey.algorithmParms, &pub.algorithmParms, sizeof(TCPA_KEY_PARMS));
 
-	free(to_free);
-	rsakey->tcpaKey.pubKey.keyLength = size;
-	memcpy(rsakey->tcpaKey.pubKey.key, data, size);
-done:
 	obj_list_put(&rsakey_list);
 
 	return result;
