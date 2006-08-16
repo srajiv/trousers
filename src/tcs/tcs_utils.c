@@ -201,7 +201,7 @@ get_max_auths(UINT32 *auths)
 	}
 
 	if (*auths < 2) {
-		LogError("%s reported only %d auth available!", __FUNCTION__, *auths);
+		LogError("%s reported only %u auth available!", __FUNCTION__, *auths);
 		LogError("Your TPM must be reset before the TCSD can be started.");
 	} else {
 		LogDebug("get_max_auths reports %u auth contexts found", *auths);
