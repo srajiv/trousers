@@ -2017,7 +2017,6 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_PUBKEY pubKey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug("\nEntering TCSI_CreateEKPair:");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
