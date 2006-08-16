@@ -425,14 +425,10 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 		goto error;
 
-	while (canLoad == FALSE) {
+	if (canLoad == FALSE) {
 		LogDebugFn("calling evictFirstKey");
 		/* Evict a key that isn't the parent */
 		if ((result = evictFirstKey(hUnwrappingKey)))
-			goto error;
-
-		LogDebugFn("calling canILoadThisKey");
-		if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
 			goto error;
 	}
 
@@ -461,7 +457,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (needToSendPacket == TRUE) {
 		LogDebugFn("calling UnloadBlob_Header");
 		if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
-			LogDebugFn("UnloadBlob_Header failed: rc=%u", result);
+			LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
 			goto error;
 		}
 
