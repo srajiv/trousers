@@ -61,8 +61,6 @@ AC_CHECK_LIB([crypto], [EVP_DigestUpdate],
 		[AC_MSG_ERROR([openssl is currently the only supported crypto library for trousers. Please install openssl from http://www.openssl.org or the -devel package from your distro])])
 AC_SUBST([CRYPTO_PACKAGE])
 
-NO_GTK=0
-
 AC_ARG_ENABLE(gcov,
 		[AC_HELP_STRING([--enable-gcov], [turn on gcov code coverage flags [default=off]])],
 		[CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
@@ -74,21 +72,41 @@ AC_ARG_ENABLE(gprof,
 		[CFLAGS="$CFLAGS -pg"
 		 AC_MSG_RESULT([*** Enabling profiling at user request ***])],)
 
+SPEC_COMP=0
 # strict spec compliance
 AC_ARG_ENABLE(strict-spec-compliance,
 		[AC_HELP_STRING([--enable-strict-spec-compliance], [build TrouSerS as strictly spec compliant [default=off]])],
 		[CFLAGS="$CFLAGS -DTSS_SPEC_COMPLIANCE"
+		 SPEC_COMP=1
 		 AC_MSG_RESULT([*** Enabling spec compliance at user request ***])],)
 
-# section imported from Glade compile
-pkg_modules="gtk+-2.0 >= 2.0.0"
-PKG_CHECK_MODULES(GTK,
-		  [$pkg_modules],
-		  AM_CONDITIONAL(HAVE_GTK, true),
-		  [AM_CONDITIONAL(HAVE_GTK, false)
-		   AC_MSG_ERROR([GTK libs are currently the only supported GUI library for trousers. Please install the gtk2-devel package for your distro.])])
-AC_SUBST(GTK_CFLAGS)
-AC_SUBST(GTK_LIBS)
+GUI=gtk
+AC_ARG_WITH(gui,
+	    [AC_HELP_STRING([--with-gui], [type of gui popup (gtk/none) [default=gtk]])],
+	    [GUI=$withval],
+	    [])
+
+if test "x$GUI" == "xgtk"; then
+	# section imported from Glade compile
+	pkg_modules="gtk+-2.0 >= 2.0.0"
+	PKG_CHECK_MODULES(GTK,
+			  [$pkg_modules],
+			  AM_CONDITIONAL(HAVE_GTK, true),
+			  [AM_CONDITIONAL(HAVE_GTK, false)
+			  AC_MSG_ERROR([GTK libs are currently the only supported GUI library for trousers. Please install the gtk2-devel package for your distro.]) ])
+	AC_SUBST(GTK_CFLAGS)
+	AC_SUBST(GTK_LIBS)
+elif test "x$GUI" == "xnone"; then
+	if test $SPEC_COMP -eq 1; then
+		AC_MSG_ERROR([Popups must be enabled in strict spec compliance mode])
+	fi
+	AC_MSG_RESULT([*** Disabling GUI popups at user request ***])
+	AC_MSG_RESULT([*** WARNING: This may break apps! ***])
+	CFLAGS="$CFLAGS -DTSS_NO_GUI"
+	AM_CONDITIONAL(HAVE_GTK, false)
+else
+	AC_MSG_ERROR(["gtk" and "none" are the only supported gui options for trousers])
+fi
 
 #GETTEXT_PACKAGE=trousers
 #AC_SUBST(GETTEXT_PACKAGE)
