@@ -1,4 +1,9 @@
 
+- Added configure option --with-gui=gtk/none to enable building
+  with no popup support for embedded apps. The default secret
+  mode becomes TSS_SECRET_MODE_NONE for all policies and the
+  default context mode becomes TSS_TSPATTRIB_CONTEXT_SILENT to
+  supress all popups.
 - Changed the Tspi_GetAttribData function to return a TCPA_PUBKEY
   blob as is specified in the portable data section.
 - Added a debugging #define in req_mgr.c to print all data passed
