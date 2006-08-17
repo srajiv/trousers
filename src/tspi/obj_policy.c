@@ -194,15 +194,14 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 		case TSS_SECRET_MODE_POPUP:
 			/* if the secret is still NULL, grab it using the GUI */
 			if (policy->SecretSet == FALSE) {
-#ifndef TSS_SPEC_COMPLIANCE
-				if ((result = popup_GetSecret2(TRUE, policy->hashMode,
-							      policy->popupString,
-							      policy->Secret)))
-#else
 				if ((result = popup_GetSecret(TRUE,
+#ifndef TSS_SPEC_COMPLIANCE
+							      policy->hashMode,
+#else
+							      0,
+#endif
 							      policy->popupString,
 							      policy->Secret)))
-#endif
 					break;
 			}
 			policy->SecretSet = TRUE;

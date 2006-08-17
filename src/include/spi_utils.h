@@ -78,8 +78,21 @@ void   free_key_refs(TCPA_KEY *);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
+
+#ifdef TSS_NO_GUI
+#define DisplayPINWindow(a,b,c)			\
+	do {					\
+		*(b) = 0;			\
+	} while (0)
+#define DisplayNewPINWindow(a,b,c)			\
+	do {					\
+		*(b) = 0;			\
+	} while (0)
+#else
 TSS_RESULT DisplayPINWindow(BYTE *, UINT32 *, BYTE *);
 TSS_RESULT DisplayNewPINWindow(BYTE *, UINT32 *, BYTE *);
+#endif
+
 TSS_RESULT merge_key_hierarchies(TSS_HCONTEXT, UINT32, TSS_KM_KEYINFO *, UINT32, TSS_KM_KEYINFO *,
 				 UINT32 *, TSS_KM_KEYINFO **);
 
@@ -132,11 +145,7 @@ void UINT32ToArray(UINT32, BYTE *);
 void UINT16ToArray(UINT16, BYTE *);
 UINT32 Decode_UINT32(BYTE *);
 
-#ifndef TSS_SPEC_COMPLIANCE
-TSS_RESULT popup_GetSecret2(UINT32, UINT32, BYTE *, void *);
-#else
-TSS_RESULT popup_GetSecret(UINT32, BYTE *, void *);
-#endif
+TSS_RESULT popup_GetSecret(UINT32, UINT32, BYTE *, void *);
 
 TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);

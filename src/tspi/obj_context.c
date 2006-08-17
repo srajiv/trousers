@@ -52,7 +52,11 @@ obj_context_add(TSS_HOBJECT *phObject)
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
+#ifndef TSS_NO_GUI
 	context->silentMode = TSS_TSPATTRIB_CONTEXT_NOT_SILENT;
+#else
+	context->silentMode = TSS_TSPATTRIB_CONTEXT_SILENT;
+#endif
 	if ((context->machineName = calloc(1, len)) == NULL) {
 		LogError("malloc of %d bytes failed", len);
 		free(context);
