@@ -4662,6 +4662,13 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 	UnloadBlob_UINT32(&offset, &totalSize, data->buf, NULL);
 	UnloadBlob_UINT16(&offset, &tsp_data.numParms, data->buf, NULL);
 
+	/* Invalid packet check */
+	if ((int)totalSize != data->buf_size) {
+		LogDebug("Corrupt packet received. Actual size: %u, reported size: %u",
+			 data->buf_size, totalSize);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
 	if (tsp_data.numParms > 0) {
 		UnloadBlob(&offset, tsp_data.numParms, data->buf,
 							tsp_data.types, NULL);
