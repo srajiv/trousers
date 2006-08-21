@@ -1,4 +1,5 @@
 
+- Added checks to ensure corrupt packets don't crash the tcsd.
 - Added configure option --with-gui=gtk/none to enable building
   with no popup support for embedded apps. The default secret
   mode becomes TSS_SECRET_MODE_NONE for all policies and the
