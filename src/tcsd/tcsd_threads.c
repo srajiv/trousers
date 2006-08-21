@@ -180,7 +180,7 @@ tcsd_thread_run(void *v)
 	BYTE buffer[TCSD_TXBUF_SIZE];
 	struct tcsd_packet_hdr *ret_buf = NULL;
 	TSS_RESULT result;
-	int sizeToSend, thread_buf_size, sent_total, sent;
+	int sizeToSend, sent_total, sent;
 	UINT16 offset;
 #ifndef TCSD_SINGLE_THREAD_DEBUG
 	int rc;
@@ -194,22 +194,20 @@ tcsd_thread_run(void *v)
 	}
 	LogDebug("Rx'd packet");
 
-	/* we've just received the initial blob from a TSP */
-
-	if (data->buf_size > TCSD_TXBUF_SIZE) {
-		LogError("Packet received from socket %d was too large (%u bytes)",
-				data->sock, data->buf_size);
-		goto done;
-	} else if (data->buf_size < (int)((2 * sizeof(UINT32)) + sizeof(UINT16))) {
-		LogError("Packet received from socket %d was too small (%u bytes)",
-				data->sock, data->buf_size);
-		goto done;
-	}
-
 	data->buf = buffer;
 
 	while (1) {
 		sent_total = 0;
+		if (data->buf_size > TCSD_TXBUF_SIZE) {
+			LogError("Packet received from socket %d was too large (%u bytes)",
+				 data->sock, data->buf_size);
+			goto done;
+		} else if (data->buf_size < (int)((2 * sizeof(UINT32)) + sizeof(UINT16))) {
+			LogError("Packet received from socket %d was too small (%u bytes)",
+				 data->sock, data->buf_size);
+			goto done;
+		}
+
 		if ((result = getTCSDPacket(data, &ret_buf)) != TSS_SUCCESS) {
 			/* something internal to the TCSD went wrong in preparing the packet
 			 * to return to the TSP.  Use our already allocated buffer to return a
@@ -264,10 +262,10 @@ tcsd_thread_run(void *v)
 		}
 
 		/* receive the next packet */
-		if ((thread_buf_size = recv(data->sock, buffer, TCSD_TXBUF_SIZE, 0)) < 0) {
+		if ((data->buf_size = recv(data->sock, buffer, TCSD_TXBUF_SIZE, 0)) < 0) {
 			LogError("TSP has closed its connection: %s. Thread exiting.", strerror(errno));
 			break;
-		} else if (thread_buf_size == 0) {
+		} else if (data->buf_size == 0) {
 			LogDebug("The TSP has closed the socket's connection. Thread exiting.");
 			break;
 		}
