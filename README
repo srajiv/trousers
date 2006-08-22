@@ -52,7 +52,7 @@ RUNNING the TSS, below.
   To build trousers after you have the device driver installed:
 
   $ sh bootstrap.sh
-  $ ./configure [--enable-debug] [--enable-prof] [--enable-gcov]
+  $ ./configure [--enable-debug] [--enable-gprof] [--enable-gcov]
   $ make
   # make install
 
