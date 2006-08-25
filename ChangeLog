@@ -1,4 +1,7 @@
 
+- Fixed SF1545614: deadlock due to auth_mgr_osap taking the
+  auth_mgr_lock before calling ensureKeyIsLoaded, which took the
+  mem_cache_lock.
 - Added checks to ensure corrupt packets don't crash the tcsd.
 - Added configure option --with-gui=gtk/none to enable building
   with no popup support for embedded apps. The default secret
