@@ -177,18 +177,21 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 }
 
 void
-auth_mgr_release_auth(TPM_AUTH *auth0, TPM_AUTH *auth1)
+auth_mgr_release_auth(TPM_AUTH *auth0, TPM_AUTH *auth1, TCS_CONTEXT_HANDLE tcs_handle)
 {
 	if (auth0)
-		auth_mgr_release_auth_handle(auth0->AuthHandle);
+		auth_mgr_release_auth_handle(auth0->AuthHandle, tcs_handle,
+					     auth0->fContinueAuthSession);
 
 	if (auth1)
-		auth_mgr_release_auth_handle(auth1->AuthHandle);
+		auth_mgr_release_auth_handle(auth1->AuthHandle, tcs_handle,
+					     auth1->fContinueAuthSession);
 }
 
 /* unload the auth ctx associated with this auth handle */
 TSS_RESULT
-auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle)
+auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE tcs_handle,
+			     TSS_BOOL cont)
 {
 	int i;
 	TSS_RESULT result = TSS_SUCCESS;
@@ -197,13 +200,17 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle)
 
 	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
-		    auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
-			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
-			if (result == TCPA_E_INVALID_AUTHHANDLE) {
-				LogDebug("Tried to close an invalid auth handle: %x",
-					 auth_mgr.auth_mapper[i].auth);
-			} else if (result != TCPA_SUCCESS) {
-				LogDebug("TPM_TerminateHandle returned %d", result);
+		    auth_mgr.auth_mapper[i].auth == tpm_auth_handle &&
+		    auth_mgr.auth_mapper[i].ctx == tcs_handle) {
+			if (cont) {
+				/* Only termininate when still in use */
+				result = internal_TerminateHandle(auth_mgr.auth_mapper[i].auth);
+				if (result == TCPA_E_INVALID_AUTHHANDLE) {
+					LogDebug("Tried to close an invalid auth handle: %x",
+						 auth_mgr.auth_mapper[i].auth);
+				} else if (result != TCPA_SUCCESS) {
+					LogDebug("TPM_TerminateHandle returned %d", result);
+				}
 			}
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
@@ -237,7 +244,7 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 
 	pthread_mutex_unlock(&auth_mgr_lock);
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
-		LogError("no auth in table for TCS handle 0x%x", tcsContext);
+		LogDebug("no auth in table for TCS handle 0x%x", tcsContext);
 	return result;
 }
 
@@ -256,17 +263,24 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			auth_mgr.open_auth_sessions++;
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
-		} else {
+		}
+#if 0
+		/* I believe this code introduces a "race" to free the resources another thread
+		 * should free in auth_mgr_release_auth_handle anyway, so I'm commenting this
+		 * code out. Nothing would break by leaving this code in, but its probably
+		 * redundant. - KEY */
+		else {
 			/* sanity check */
 			if (auth_mgr.auth_mapper[i].auth == tpm_auth_handle) {
 				LogDebug("***************************** "
-					  "UNCLEAN AUTH MAPPER TABLE");
+					 "UNCLEAN AUTH MAPPER TABLE");
 				auth_mgr.auth_mapper[i].full = FALSE;
 				auth_mgr.open_auth_sessions--;
 				i--;
 				LogDebug("CLEANED TABLE");
 			}
 		}
+#endif
 	}
 
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR))

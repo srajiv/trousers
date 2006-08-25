@@ -29,7 +29,7 @@
 
 static struct tpm_req_mgr *trm;
 
-#undef TSS_TPM_DEBUG
+#define TSS_TPM_DEBUG
 
 TSS_RESULT
 req_mgr_submit_req(BYTE *blob)

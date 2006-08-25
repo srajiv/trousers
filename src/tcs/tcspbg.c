@@ -156,7 +156,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("TakeOwnership", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -338,7 +338,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	}
 	LogResult("ChangeAuth", result);
 done:
-	auth_mgr_release_auth(ownerAuth, entityAuth);
+	auth_mgr_release_auth(ownerAuth, entityAuth, contextHandle);
 	return result;
 }
 
@@ -379,7 +379,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogResult("ChangeAuthOwner", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -502,7 +502,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogResult("ChangeAuthAsymStart", result);
 done:
-	auth_mgr_release_auth(pAuth, NULL);
+	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 #else
 	return TSPERR(TSS_E_NOTIMPL);
@@ -623,7 +623,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogResult("ChangeAuthAsymFinish", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -660,7 +660,7 @@ TCSP_TerminateHandle_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, handle)))
 		return result;
 
-	result = auth_mgr_release_auth_handle(handle);
+	result = auth_mgr_release_auth_handle(handle, hContext, 1);
 
 	LogResult("Terminate Handle", result);
 	return result;
@@ -739,7 +739,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 done:
-	auth_mgr_release_auth(idKeyAuth, ownerAuth);
+	auth_mgr_release_auth(idKeyAuth, ownerAuth, hContext);
 	return result;
 }
 
@@ -910,7 +910,7 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Quote", result);
 done:
-	auth_mgr_release_auth(privAuth, NULL);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -957,7 +957,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("DirWriteAuth", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -1072,7 +1072,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Seal", result);
 done:
-	auth_mgr_release_auth(pubAuth, NULL);
+	auth_mgr_release_auth(pubAuth, NULL, hContext);
 	return result;
 }
 
@@ -1155,7 +1155,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Unseal", result);
 done:
-	auth_mgr_release_auth(parentAuth, dataAuth);
+	auth_mgr_release_auth(parentAuth, dataAuth, hContext);
 	return result;
 }
 
@@ -1224,7 +1224,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 done:
-	auth_mgr_release_auth(privAuth, NULL);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -1332,7 +1332,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogResult("TPM_CreateMigrationBlob", result);
 
 done:
-	auth_mgr_release_auth(entityAuth, parentAuth);
+	auth_mgr_release_auth(entityAuth, parentAuth, hContext);
 	return result;
 }
 
@@ -1406,7 +1406,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("***Leaving ConvertMigrationBlob with result ", result);
 done:
-	auth_mgr_release_auth(parentAuth, NULL);
+	auth_mgr_release_auth(parentAuth, NULL, hContext);
 	return result;
 }
 
@@ -1476,7 +1476,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogDebugFn("TPM_AuthorizeMigrationKey result: 0x%x", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 
 }
@@ -1585,7 +1585,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Certify Key", result);
 done:
-	auth_mgr_release_auth(certAuth, keyAuth);
+	auth_mgr_release_auth(certAuth, keyAuth, hContext);
 	return result;
 }
 
@@ -1655,7 +1655,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("sign", result);
 done:
-	auth_mgr_release_auth(privAuth, NULL);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -1988,7 +1988,7 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogResult("GetCapowner", result);
 done:
-	auth_mgr_release_auth(pOwnerAuth, NULL);
+	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2119,7 +2119,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2170,7 +2170,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Owner Read Pubek", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2262,7 +2262,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Certify Self Test", result);
 done:
-	auth_mgr_release_auth(privAuth, NULL);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -2337,7 +2337,7 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2375,7 +2375,7 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Ownerclear", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2413,7 +2413,7 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("DisableOwnerClear", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2652,7 +2652,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Field Upgrade", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2709,7 +2709,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Set Redirection", result);
 done:
-	auth_mgr_release_auth(privAuth, NULL);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -2775,7 +2775,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Create Main Archive", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2836,7 +2836,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Load Maint Archive", result);
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
@@ -2872,7 +2872,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 	}
 done:
-	auth_mgr_release_auth(ownerAuth, NULL);
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
 }
 
