@@ -208,24 +208,15 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT16 offset;
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT32 newEntValue = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering OSAP");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	/* if ET is not KEYHANDLE or KEY, newEntValue is a don't care */
-	if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
-		if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
-			return TCSERR(TSS_E_FAIL);	/*tcs error */
-	} else {
-		newEntValue = entityValue;
-	}
-
 	offset = 10;
 	LoadBlob_UINT16(&offset, entityType, txBlob, "entity type");
-	LoadBlob_UINT32(&offset, newEntValue, txBlob, "entity value");
+	LoadBlob_UINT32(&offset, entityValue, txBlob, "entity value");
 	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceOddOSAP.nonce, "nonce osap");
 	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OSAP, txBlob);
 
