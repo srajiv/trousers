@@ -1,4 +1,7 @@
 
+- Fixed SF1546344: Track the release of auth handles by TCS
+  context and take the fContinueAuthSession variable into account
+  when calling the TPM to release a handle.
 - Fixed SF1545614: deadlock due to auth_mgr_osap taking the
   auth_mgr_lock before calling ensureKeyIsLoaded, which took the
   mem_cache_lock.
