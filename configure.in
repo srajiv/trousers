@@ -40,7 +40,7 @@ esac
 # Non-standard OpenSSL (for 64bit platforms)
 AC_MSG_CHECKING([Non-standard OpenSSL])
 AC_ARG_WITH(openssl,
-	[--with-openssl=PATH      Location of openssl libs/includes],
+	AC_HELP_STRING([--with-openssl=PATH], [Location of openssl libs/includes]),
 	[OPENSSL_INCLUDE_DIR="$withval/include"
 	 OPENSSL_LIB_DIR="$withval/lib"
 	 if [[ ! -d $OPENSSL_INCLUDE_DIR -o ! -d $OPENSSL_LIB_DIR ]]; then
