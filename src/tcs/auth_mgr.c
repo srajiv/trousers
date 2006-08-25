@@ -26,6 +26,10 @@
 #include "auth_mgr.h"
 
 
+/* Note: The after taking the auth_mgr_lock in any of the functions below, the
+ * mem_cache_lock cannot be taken without risking a deadlock. So, the auth_mgr
+ * functions must be "self-contained" wrt locking */
+
 /* no locking done in init since its called by only a single thread */
 TSS_RESULT
 auth_mgr_init()
@@ -340,6 +344,15 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 	      TCPA_NONCE *nonceEvenOSAP)	/* out */
 {
 	TSS_RESULT result;
+	UINT32 newEntValue = 0;
+
+	/* if ET is not KEYHANDLE or KEY, newEntValue is a don't care */
+	if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
+		if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
+			return TCSERR(TSS_E_FAIL);
+	} else {
+		newEntValue = entityValue;
+	}
 
 	pthread_mutex_lock(&auth_mgr_lock);
 
@@ -349,7 +362,7 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 	}
 
-	if ((result = TCSP_OSAP_Internal(hContext, entityType, entityValue,nonceOddOSAP,
+	if ((result = TCSP_OSAP_Internal(hContext, entityType, newEntValue, nonceOddOSAP,
 					 authHandle, nonceEven, nonceEvenOSAP)))
 		goto done;
 
