@@ -522,7 +522,7 @@ add_cache_entry:
 		 myKeySlot, myTcsKeyHandle);
 error:
 	destroy_key_refs(&key);
-	auth_mgr_release_auth(pAuth, NULL);
+	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 }
 
@@ -725,7 +725,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogResult("Create Wrap Key", result);
 
 done:
-	auth_mgr_release_auth(pAuth, NULL);
+	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 }
 
@@ -883,7 +883,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LogResult("Get Public Key", result);
 done:
-	auth_mgr_release_auth(pAuth, NULL);
+	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 }
 
@@ -985,7 +985,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	}
 	LogResult("Make Identity", result);
 done:
-	auth_mgr_release_auth(pSrkAuth, pOwnerAuth);
+	auth_mgr_release_auth(pSrkAuth, pOwnerAuth, hContext);
 	return result;
 }
 
