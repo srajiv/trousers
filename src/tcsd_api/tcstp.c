@@ -3669,7 +3669,7 @@ TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &PubKeySize, 0, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, &PubKey, PubKeySize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, PubKey, PubKeySize, &data))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte, 0, &data, &hdr);
