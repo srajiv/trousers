@@ -1,4 +1,9 @@
 
+- Bug fix: In LoadManuMaintPub's wrapping function in the TSP,
+  we incorrectly passed a reference to the pubkey in loading the
+  blob.
+- Fixed bugs in the maintenance commands, owner auth'd commands
+  were using no auth tags in their commands sent to the TPM.
 - Fixed SF1546344: Track the release of auth handles by TCS
   context and take the fContinueAuthSession variable into account
   when calling the TPM to release a handle.
