@@ -76,7 +76,7 @@ typedef struct tdTSS_KM_KEYINFO
 	BYTE*   rgbVendorData;   // may be NULL
 } TSS_KM_KEYINFO;
 
-
+#if 0 // TSS 1.1 Header file Errata 1 removed this struct
 typedef struct tdTSS_VALIDATION
 {
 	TCPA_NONCE    ExternalData;
@@ -91,6 +91,27 @@ typedef struct tdTSS_VALIDATION
 #endif
 	BYTE*     ValidationData;
 } TSS_VALIDATION;
+#else
+typedef struct tdTSS_VALIDATION
+{
+	TSS_VERSION  versionInfo;
+	UINT32       ulExternalDataLength;
+#ifdef __midl
+	[size_is(ulExternalDataLength)]
+#endif
+	BYTE*        rgbExternalData;
+	UINT32       ulDataLength;
+#ifdef __midl
+	[size_is(ulDataLength)]
+#endif
+	BYTE*     rgbData;
+	UINT32    ulValidationDataLength;
+#ifdef __midl
+	[size_is(ulValidationDataLength)]
+#endif
+	BYTE*     rgbValidationData;
+} TSS_VALIDATION;
+#endif
 
 /* TSS_CALLBACK has been imported from the TSS 1.2 header files in order to
  * support TSS 1.2 style callbacks in Trousers 0.2.X.  This will enable 64bit
