@@ -213,7 +213,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	TSS_HPOLICY hPolicy;
 	TSS_HPOLICY hCertPolicy;
 	TCS_KEY_HANDLE certifyTCSKeyHandle, keyTCSKeyHandle;
-	BYTE verifyInternally = 0;
 	BYTE *keyData = NULL;
 	UINT32 keyDataSize;
 	TCPA_KEY keyContainer;
@@ -244,16 +243,17 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &keyTCSKeyHandle)))
 		return result;
 
-	if (pValidationData == NULL)
-		verifyInternally = 1;
-
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		LogDebug("Internal Verify");
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
 			return result;
 	} else {
 		LogDebug("External Verify");
-		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
 	}
 
 	if (useAuthCert && !useAuthKey)
@@ -328,7 +328,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		}
 	}
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = obj_rsakey_get_blob(hCertifyingKey,
 							&keyDataSize, &keyData))) {
 			if (useAuthKey)
@@ -362,9 +362,9 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		}
 		free_key_refs(&keyContainer);
 	} else {
-		pValidationData->DataLength = CertifyInfoSize;
-		pValidationData->Data = calloc_tspi(tspContext, CertifyInfoSize);
-		if (pValidationData->Data == NULL) {
+		pValidationData->ulDataLength = CertifyInfoSize;
+		pValidationData->rgbData = calloc_tspi(tspContext, CertifyInfoSize);
+		if (pValidationData->rgbData == NULL) {
 			LogError("malloc of %d bytes failed.", CertifyInfoSize);
 			if (useAuthKey)
 				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
@@ -373,10 +373,10 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->Data, CertifyInfo, CertifyInfoSize);
-		pValidationData->ValidationDataLength = outDataSize;
-		pValidationData->ValidationData = calloc_tspi(tspContext, outDataSize);
-		if (pValidationData->ValidationData == NULL) {
+		memcpy(pValidationData->rgbData, CertifyInfo, CertifyInfoSize);
+		pValidationData->ulValidationDataLength = outDataSize;
+		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
+		if (pValidationData->rgbValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", outDataSize);
 			if (useAuthKey)
 				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
@@ -385,7 +385,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->ValidationData, outData, outDataSize);
+		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
 #if 0
 		memcpy(&pValidationData->versionInfo,
 		       getCurrentVersion(tspContext), sizeof (TCPA_VERSION));

@@ -31,7 +31,6 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	TSS_RESULT result;
 	UINT32 ekSize;
 	BYTE *ek;
-	BYTE verifyInternally = 0;
 	TCPA_KEY dummyKey;
 	UINT16 offset;
 	TCPA_DIGEST hash;
@@ -62,22 +61,24 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	free_key_refs(&dummyKey);
 	ekSize = offset;
 
-	if (pValidationData == NULL)
-		verifyInternally = 1;
-
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError("Failed to create random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else
-		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
+	}
 
 	if ((result = TCSP_CreateEndorsementKeyPair(tcsContext, antiReplay,
 						   ekSize, ek, &newEKSize, &newEK, &digest)))
 		return result;
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		offset = 0;
 		Trspi_LoadBlob(&offset, newEKSize, hashBlob, newEK);
 		Trspi_LoadBlob(&offset, 20, hashBlob, antiReplay.nonce);
@@ -89,31 +90,36 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
-		pValidationData->DataLength = newEKSize;
-		pValidationData->Data = calloc_tspi(tspContext, newEKSize);
-		if (pValidationData->Data == NULL) {
-			LogError("malloc of %d bytes failed.", newEKSize);
+		pValidationData->rgbData = calloc_tspi(tspContext, newEKSize);
+		if (pValidationData->rgbData == NULL) {
+			LogError("malloc of %u bytes failed.", newEKSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->Data, newEK, newEKSize);
-		memcpy(&pValidationData->Data[ekSize], antiReplay.nonce,
-				TCPA_SHA1_160_HASH_LEN);
+		pValidationData->ulDataLength = newEKSize;
+		memcpy(pValidationData->rgbData, newEK, newEKSize);
+		memcpy(&pValidationData->rgbData[ekSize], antiReplay.nonce,
+		       sizeof(antiReplay.nonce));
 
-		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
-		pValidationData->ValidationData = calloc_tspi(tspContext,
-							TCPA_SHA1_160_HASH_LEN);
-		if (pValidationData == NULL) {
-			LogError("malloc of %d bytes failed.",
-					TCPA_SHA1_160_HASH_LEN);
+		pValidationData->rgbValidationData = calloc_tspi(tspContext,
+								 TCPA_SHA1_160_HASH_LEN);
+		if (pValidationData->rgbValidationData == NULL) {
+			LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
+			free_tspi(tspContext, pValidationData->rgbData);
+			pValidationData->rgbData = NULL;
+			pValidationData->ulDataLength = 0;
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->ValidationData, digest.digest,
-				TCPA_SHA1_160_HASH_LEN);
+		pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		memcpy(pValidationData->rgbValidationData, digest.digest, TCPA_SHA1_160_HASH_LEN);
 	}
 
-	if ((result = obj_rsakey_set_pubkey(hKey, newEK)) && !verifyInternally) {
-		free_tspi(tspContext, pValidationData->ValidationData);
-		free_tspi(tspContext, pValidationData->Data);
+	if ((result = obj_rsakey_set_pubkey(hKey, newEK)) && pValidationData) {
+		free_tspi(tspContext, pValidationData->rgbValidationData);
+		free_tspi(tspContext, pValidationData->rgbData);
+		pValidationData->rgbData = NULL;
+		pValidationData->ulDataLength = 0;
+		pValidationData->rgbValidationData = NULL;
+		pValidationData->ulValidationDataLength = 0;
 	}
 
 	free(newEK);
@@ -183,8 +189,13 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				LogDebug("Failed to generate random nonce");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
-		} else
-			memcpy(antiReplay.nonce, &pValidationData->ExternalData, TCPA_SHA1_160_HASH_LEN);
+		} else {
+			if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+				return TSPERR(TSS_E_BAD_PARAMETER);
+
+			memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+			       sizeof(antiReplay.nonce));
+		}
 
 		/* call down to the TPM */
 		if ((result = TCSP_ReadPubek(tcsContext, antiReplay, &pubEKSize, &pubEK, &checkSum)))
@@ -220,26 +231,34 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			}
 		} else {
 			/* validate the entire TCPA_PUBKEY structure */
-			pValidationData->DataLength = pubEKSize + TCPA_SHA1_160_HASH_LEN;
-			pValidationData->Data = calloc_tspi(tspContext, pValidationData->DataLength);
-			if (pValidationData->Data == NULL) {
-				LogError("malloc of %d bytes failed.", pValidationData->DataLength);
+			pValidationData->ulDataLength = pubEKSize + TCPA_SHA1_160_HASH_LEN;
+			pValidationData->rgbData = calloc_tspi(tspContext,
+							       pValidationData->ulDataLength);
+			if (pValidationData->rgbData == NULL) {
+				LogError("malloc of %u bytes failed.",
+					 pValidationData->ulDataLength);
+				pValidationData->ulDataLength = 0;
 				return TSPERR(TSS_E_OUTOFMEMORY);
 			}
 
-			memcpy(pValidationData->Data, pubEK, pubEKSize);
-			memcpy(&(pValidationData->Data[pubEKSize]), antiReplay.nonce,
+			memcpy(pValidationData->rgbData, pubEK, pubEKSize);
+			memcpy(&pValidationData->rgbData[pubEKSize], antiReplay.nonce,
 			       TCPA_SHA1_160_HASH_LEN);
 
-			pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
-			pValidationData->ValidationData = calloc_tspi(tspContext, TCPA_SHA1_160_HASH_LEN);
-			if (pValidationData->ValidationData == NULL) {
+			pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+			pValidationData->rgbValidationData = calloc_tspi(tspContext,
+									 TCPA_SHA1_160_HASH_LEN);
+			if (pValidationData->rgbValidationData == NULL) {
 				LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
+				pValidationData->ulValidationDataLength = 0;
+				pValidationData->ulDataLength = 0;
+				free_tspi(tspContext,pValidationData->rgbData);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 
-			memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
+			memcpy(pValidationData->rgbValidationData, checkSum.digest,
+			       TCPA_SHA1_160_HASH_LEN);
 		}
 	}
 
@@ -454,7 +473,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		case TSS_ALG_AES:
 			symParms.algorithmID = TCPA_ALG_AES;
 			symKey.algId = TCPA_ALG_AES;
-			symKey.size = 256/8;
+			symKey.size = 128/8;
 			break;
 		case TSS_ALG_DES:
 			/* fall through */
@@ -659,9 +678,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* encrypt the proof */
 	rgbTcpaIdentityReq.symSize = sizeof(testblob);
-	if ((result = Trspi_Encrypt_ECB(TSS_ALG_AES, symKey.data, hashblob,
-					offset, testblob,
-					&rgbTcpaIdentityReq.symSize)))
+	if ((result = Trspi_Encrypt_ECB(TSS_ALG_AES,symKey.data, hashblob, offset,
+				       testblob, &rgbTcpaIdentityReq.symSize)))
 		goto error;
 
 	rgbTcpaIdentityReq.asymSize = encSymKeySize;
@@ -1156,7 +1174,6 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 	BYTE *outData;
 	TSS_HPOLICY hPolicy;
 	TCS_KEY_HANDLE keyTCSKeyHandle;
-	BYTE verifyInternally = 0;
 	BYTE *keyData = NULL;
 	UINT32 keyDataSize;
 	TCPA_KEY keyContainer;
@@ -1178,16 +1195,18 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &keyTCSKeyHandle)))
 		return result;
 
-	if (pValidationData == NULL)
-		verifyInternally = 1;
-
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else
-		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
+	}
 
 	if (useAuth) {
 		LogDebug("Uses Auth");
@@ -1242,7 +1261,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			return result;
 	}
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 			LogError("Failed call to GetAttribData to get key blob");
@@ -1278,24 +1297,32 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		}
 
 	} else {
-		pValidationData->DataLength = sizeof(TCPA_NONCE) + sizeof(UINT32) + strlen("Test Passed");
-		pValidationData->Data = calloc_tspi(tspContext, pValidationData->DataLength);
-		if (pValidationData->Data == NULL) {
-			LogError("malloc of %d bytes failed.", pValidationData->DataLength);
+		pValidationData->ulDataLength = sizeof(TCPA_NONCE) + sizeof(UINT32) +
+						strlen("Test Passed");
+		pValidationData->rgbData = calloc_tspi(tspContext, pValidationData->ulDataLength);
+		if (pValidationData->rgbData == NULL) {
+			LogError("malloc of %u bytes failed.", pValidationData->ulDataLength);
+			pValidationData->ulDataLength = 0;
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
-		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->Data,
+		Trspi_LoadBlob(&offset, strlen("Test Passed"), pValidationData->rgbData,
 			       (BYTE *)"Test Passed");
-		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->Data, antiReplay.nonce);
-		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->Data);
-		pValidationData->ValidationDataLength = outDataSize;
-		pValidationData->ValidationData = calloc_tspi(tspContext, outDataSize);
-		if (pValidationData->ValidationData == NULL) {
-			LogError("malloc of %d bytes failed.", pValidationData->ValidationDataLength);
+		Trspi_LoadBlob(&offset, sizeof(TCPA_NONCE), pValidationData->rgbData,
+			       antiReplay.nonce);
+		Trspi_LoadBlob_UINT32(&offset, TPM_ORD_CertifySelfTest, pValidationData->rgbData);
+		pValidationData->ulValidationDataLength = outDataSize;
+		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
+		if (pValidationData->rgbValidationData == NULL) {
+			free_tspi(tspContext, pValidationData->rgbData);
+			pValidationData->rgbData = NULL;
+			pValidationData->ulDataLength = 0;
+			LogError("malloc of %u bytes failed.",
+				 pValidationData->ulValidationDataLength);
+			pValidationData->ulValidationDataLength = 0;
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->ValidationData, outData, outDataSize);
+		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
 		free(outData);
 	}
 
@@ -1484,7 +1511,6 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 	TCPA_CAPABILITY_AREA tcsCapArea;
 	UINT32 tcsSubCapContainer;
 	BYTE tcsSubCap[4];
-	BYTE verifyInternally = 0;
 	UINT32 sigSize;
 	BYTE *sig = NULL;
 	UINT32 keyDataSize;
@@ -1535,16 +1561,18 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 
 	/* If we get to this point, then neither getCapOwner nor an internal
 	 * getCap was called. */
-	if (pValidationData == NULL)
-		verifyInternally = 1;
-
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
 			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else
-		memcpy(antiReplay.nonce, pValidationData->Data, sizeof(TCPA_NONCE));
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
+	}
 
 	/* Now do some Hashing */
 	offset = 0;
@@ -1601,7 +1629,7 @@ Tspi_TPM_GetCapabilitySigned(TSS_HTPM hTPM,			/* in */
 		return result;
 	}
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = Tspi_GetAttribData(hKey, TSS_TSPATTRIB_KEY_BLOB,
 				       TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 			free(sig);
@@ -1776,12 +1804,14 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if (pValidationData) {
-		memcpy(&nonce.nonce, &pValidationData->ExternalData.nonce,
-		       TCPA_SHA1_160_HASH_LEN);
-	} else {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
 			return result;
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(&nonce.nonce, pValidationData->rgbExternalData, sizeof(nonce.nonce));
 	}
 
 	if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
@@ -1794,28 +1824,30 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	Trspi_LoadBlob(&offset, pubBlobSize, hashBlob, pubBlob);
 	Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, hashBlob, (BYTE *)&nonce.nonce);
 
-	if (pValidationData) {
-		pValidationData->DataLength = offset;
-		if ((pValidationData->Data = calloc_tspi(tspContext, offset)) == NULL)
-			return TSPERR(TSS_E_OUTOFMEMORY);
-
-		memcpy(pValidationData->Data, hashBlob, offset);
-
-		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
-		if ((pValidationData->ValidationData = calloc_tspi(tspContext,
-								   TCPA_SHA1_160_HASH_LEN))
-		     == NULL) {
-			free_tspi(tspContext, pValidationData->Data);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-
-		memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
-	} else {
+	if (pValidationData == NULL) {
 		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digest.digest)))
 			return result;
 
 		if (memcmp(&digest.digest, &checkSum.digest, TCPA_SHA1_160_HASH_LEN))
 			result = TSPERR(TSS_E_FAIL);
+	} else {
+		if ((pValidationData->rgbData = calloc_tspi(tspContext, offset)) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
+
+		pValidationData->ulDataLength = offset;
+		memcpy(pValidationData->rgbData, hashBlob, offset);
+
+		if ((pValidationData->rgbValidationData = calloc_tspi(tspContext,
+								      TCPA_SHA1_160_HASH_LEN))
+		     == NULL) {
+			free_tspi(tspContext, pValidationData->rgbData);
+			pValidationData->rgbData = NULL;
+			pValidationData->ulDataLength = 0;
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+
+		memcpy(pValidationData->rgbValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
 	}
 
 	return result;
@@ -1844,29 +1876,20 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if (pValidationData) {
-		memcpy(&nonce.nonce, &pValidationData->ExternalData.nonce,
-		       TCPA_SHA1_160_HASH_LEN);
-	} else {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
 			return result;
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(&nonce.nonce, pValidationData->rgbExternalData, sizeof(nonce.nonce));
 	}
 
 	if ((result = TCSP_ReadManuMaintPub(tcsContext, nonce, &checkSum)))
 		return result;
 
-	if (pValidationData) {
-		/* Ignore Data and DataLength, the application must already have this data.
-		 * Do, however, copy out the checksum so that the application can verify */
-		pValidationData->ValidationDataLength = TCPA_SHA1_160_HASH_LEN;
-		if ((pValidationData->ValidationData = calloc_tspi(tspContext,
-								   TCPA_SHA1_160_HASH_LEN))
-		     == NULL) {
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-
-		memcpy(pValidationData->ValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
-	} else {
+	if (pValidationData == NULL) {
 		if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
 			return result;
 
@@ -1883,6 +1906,18 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 			result = TSPERR(TSS_E_FAIL);
 
 		free_tspi(tspContext, pubBlob);
+	} else {
+		/* Ignore Data and DataLength, the application must already have this data.
+		 * Do, however, copy out the checksum so that the application can verify */
+		if ((pValidationData->rgbValidationData = calloc_tspi(tspContext,
+								      TCPA_SHA1_160_HASH_LEN))
+		     == NULL) {
+			free_tspi(tspContext, pubBlob);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		memcpy(pValidationData->rgbValidationData, checkSum.digest, TCPA_SHA1_160_HASH_LEN);
 	}
 
 	return result;
@@ -2156,7 +2191,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	UINT32 pcrDataSize;
 	BYTE pcrData[128];
 	TCPA_PCR_SELECTION pcrSelect;
-	TSS_BOOL verifyInternally = 0;
 	UINT32 validationLength = 0;
 	BYTE *validationData = NULL;
 	UINT32 pcrDataOutSize;
@@ -2177,9 +2211,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	if (hPcrComposite && !obj_is_pcrs(hPcrComposite))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	if (pValidationData == NULL)
-		verifyInternally = TRUE;
-
 	/*  get the identKey Policy */
 	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
 					    &hPolicy, &usesAuth)))
@@ -2189,11 +2220,15 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hIdentKey, &tcsKeyHandle)))
 		return result;
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
 			return result;
 	} else {
-		memcpy(antiReplay.nonce, &pValidationData->ExternalData, 20);
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
 	}
 
 	pcrDataSize = 0;
@@ -2307,7 +2342,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, quoteinfo,
 		       antiReplay.nonce);
 
-	if (verifyInternally) {
+	if (pValidationData == NULL) {
 		/* validate the data here */
 		Trspi_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest);
 
@@ -2324,23 +2359,25 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	} else {
 		free_key_refs(&keyContainer);
 
-		pValidationData->ValidationDataLength = validationLength;
-		pValidationData->ValidationData = calloc_tspi(tspContext, validationLength);
-		if (pValidationData->ValidationData == NULL) {
-			LogError("malloc of %d bytes failed.", validationLength);
+		pValidationData->rgbValidationData = calloc_tspi(tspContext, validationLength);
+		if (pValidationData->rgbValidationData == NULL) {
+			LogError("malloc of %u bytes failed.", validationLength);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->ValidationData, validationData,
-		       pValidationData->ValidationDataLength);
+		pValidationData->ulValidationDataLength = validationLength;
+		memcpy(pValidationData->rgbValidationData, validationData, validationLength);
 		free(validationData);
 
-		pValidationData->DataLength = offset;
-		pValidationData->Data = calloc_tspi(tspContext, offset);
-		if (pValidationData->Data == NULL) {
-			LogError("malloc of %d bytes failed.", offset);
+		pValidationData->rgbData = calloc_tspi(tspContext, offset);
+		if (pValidationData->rgbData == NULL) {
+			LogError("malloc of %hu bytes failed.", offset);
+			free_tspi(tspContext, pValidationData->rgbValidationData);
+			pValidationData->rgbValidationData = NULL;
+			pValidationData->ulValidationDataLength = 0;
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(pValidationData->Data, quoteinfo, offset);
+		pValidationData->ulDataLength = (UINT32)offset;
+		memcpy(pValidationData->rgbData, quoteinfo, offset);
 	}
 
 	return TSS_SUCCESS;
