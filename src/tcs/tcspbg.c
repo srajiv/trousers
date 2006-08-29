@@ -2626,7 +2626,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_FieldUpgrade, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -2740,7 +2740,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob_BOOL(&offset, generateRandom, txBlob, "gen rand");
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_CreateMaintenanceArchive, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -2810,7 +2810,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_LoadMaintenanceArchive, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -2859,7 +2859,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	LoadBlob_Auth(&offset, txBlob, ownerAuth);
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
 			TPM_ORD_KillMaintenanceFeature, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
