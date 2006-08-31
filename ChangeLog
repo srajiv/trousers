@@ -1,4 +1,7 @@
 
+- Bind/Seal functions now return more descriptive errors codes
+  and won't do the encryption if the data to use is larger than
+  the RSA pubkey.
 - Made updates to the code/headers for the TSS_VALIDATION struct
   change to be issued as TSS 1.1 header file errata 1.
 - Bug fix: In LoadManuMaintPub's wrapping function in the TSP,
