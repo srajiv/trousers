@@ -1081,7 +1081,7 @@ hacky_strlen(char *codeset, BYTE *string)
 		}
 	} else if (strcmp("UTF-32", codeset) == 0) {
 		while (!(ptr[0] == '\0' && ptr[1] == '\0' &&
-					ptr[2] == '\0' && ptr[3] == '\0')) {
+			 ptr[2] == '\0' && ptr[3] == '\0')) {
 			len += 4;
 			ptr += 4;
 		}
@@ -1120,7 +1120,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 	if (string == NULL)
 		goto alloc_string;
 
-	if ((cd = iconv_open("UTF-16", nl_langinfo(CODESET))) == (iconv_t)-1) {
+	if ((cd = iconv_open("UTF-16LE", nl_langinfo(CODESET))) == (iconv_t)-1) {
 		LogDebug("iconv_open: %s", strerror(errno));
 		return NULL;
 	}
@@ -1151,7 +1151,7 @@ alloc_string:
 	/* add terminating bytes of the correct width */
 	len += char_width("UTF-16");
 	if ((ret = calloc(1, len)) == NULL) {
-		LogDebug("malloc of %d bytes failed.", len);
+		LogDebug("malloc of %u bytes failed.", len);
 		iconv_close(cd);
 		return NULL;
 	}
@@ -1181,7 +1181,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		return NULL;
 	}
 
-	if ((cd = iconv_open(nl_langinfo(CODESET), "UTF-16")) == (iconv_t)-1) {
+	if ((cd = iconv_open(nl_langinfo(CODESET), "UTF-16LE")) == (iconv_t)-1) {
 		LogDebug("iconv_open: %s", strerror(errno));
 		return NULL;
 	}
