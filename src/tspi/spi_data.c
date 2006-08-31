@@ -63,6 +63,11 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 		goto done;
 	}
 
+	if (keyContainer.pubKey.keyLength < ulDataLength) {
+		result = TSPERR(TSS_E_ENC_INVALID_LENGTH);
+		goto done;
+	}
+
 	if (keyContainer.algorithmParms.encScheme == TCPA_ES_RSAESPKCSv15 &&
 	    keyContainer.keyUsage == TPM_KEY_LEGACY) {
 		if ((result = Trspi_RSA_PKCS15_Encrypt(rgbDataToBind, ulDataLength, encData,
@@ -162,7 +167,9 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
-		return result;
+		return result == TSPERR(TSS_E_INVALID_OBJ_ACCESS) ?
+		       TSPERR(TSS_E_ENC_NO_DATA) :
+		       result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		return result;
@@ -371,7 +378,9 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &ulDataLen, &data)))
-		return result;
+		return result == TSPERR(TSS_E_INVALID_OBJ_ACCESS) ?
+		       TSPERR(TSS_E_ENC_NO_DATA) :
+		       result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		return result;
