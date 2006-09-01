@@ -243,8 +243,9 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 	}
 
 	pthread_mutex_unlock(&auth_mgr_lock);
-	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
+	if (result == TCSERR(TSS_E_INTERNAL_ERROR)) {
 		LogDebug("no auth in table for TCS handle 0x%x", tcsContext);
+	}
 	return result;
 }
 
