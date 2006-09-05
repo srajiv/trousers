@@ -1205,20 +1205,35 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 	BYTE *string = NULL;
 
 	if (obj_is_rsakey(hObject)) {
-		if (attribFlag != TSS_TSPATTRIB_KEY_BLOB)
-			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
-
-		if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-			/* A TCPA_KEY structure, in blob form */
-			result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize, rgbAttribData);
-		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
-			/* A TCPA_PUBKEY structure, in blob form */
-			result = obj_rsakey_set_pubkey(hObject, rgbAttribData);
-		} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
-			/* A blob, either encrypted or unencrypted */
-			result = obj_rsakey_set_privkey(hObject, ulAttribDataSize, rgbAttribData);
+		if (attribFlag == TSS_TSPATTRIB_KEY_BLOB) {
+			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
+				/* A TCPA_KEY structure, in blob form */
+				result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize,
+								rgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
+				/* A TCPA_PUBKEY structure, in blob form */
+				result = obj_rsakey_set_pubkey(hObject, rgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
+				/* A blob, either encrypted or unencrypted */
+				result = obj_rsakey_set_privkey(hObject, ulAttribDataSize,
+								rgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+#ifndef TSS_SPEC_COMPLIANCE
+		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
+			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
+				result = obj_rsakey_set_exponent(hObject, ulAttribDataSize,
+								 rgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_MODULUS) {
+				result = obj_rsakey_set_modulus(hObject, ulAttribDataSize,
+								rgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+#endif
 		} else {
-			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		}
 	} else if (obj_is_encdata(hObject)) {
 		if (attribFlag != TSS_TSPATTRIB_ENCDATA_BLOB)
