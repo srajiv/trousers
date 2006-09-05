@@ -1013,9 +1013,6 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	TCPA_DIGEST digest;
 	TSS_BOOL useAuth;
 	TPM_AUTH *pParentAuth;
-	UINT32 blobSize;
-	BYTE *blob;
-	TCPA_KEY keyContainer;
 	TSS_HCONTEXT tspContext;
 
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
@@ -1075,30 +1072,8 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		}
 	}
 
-	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob))) {
-		free(outData);
-		return result;
-	}
+	result = obj_rsakey_set_privkey(hKeyToMigrate, outDataSize, outData);
+	free(outData);
 
-	memset(&keyContainer, 0, sizeof(TCPA_KEY));
-
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer))) {
-		free(outData);
-		return result;
-	}
-	free(blob);
-
-	if (keyContainer.encSize > 0)
-		free(keyContainer.encData);
-
-	keyContainer.encSize = outDataSize;
-	keyContainer.encData = outData;
-
-	offset = 0;
-	Trspi_LoadBlob_KEY(&offset, hashblob, &keyContainer);
-
-	free_key_refs(&keyContainer);
-
-	return obj_rsakey_set_tcpakey(hKeyToMigrate, offset, hashblob);
+	return result;
 }
