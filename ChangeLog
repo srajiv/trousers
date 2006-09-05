@@ -1,4 +1,9 @@
 
+- In Tspi_Hash_Sign, fixed memory leak.
+- Added SetAttribData functions for RSA modulus/exponent per
+  the upcoming additions to the TSS 1.2 errata 1 spec.
+- Fixed bug in TCS key cache where if 2 keys had the same public
+  modulus, they could confuse the key cache manager.
 - Bind/Seal functions now return more descriptive errors codes
   and won't do the encryption if the data to use is larger than
   the RSA pubkey.
