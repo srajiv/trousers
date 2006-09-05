@@ -1033,6 +1033,37 @@ done:
 }
 
 TSS_RESULT
+obj_rsakey_set_modulus(TSS_HKEY hKey, UINT32 size, BYTE *data)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+	BYTE *free_ptr;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	free_ptr = rsakey->tcpaKey.pubKey.key;
+
+	rsakey->tcpaKey.pubKey.key = malloc(size);
+	if (rsakey->tcpaKey.pubKey.key == NULL) {
+		rsakey->tcpaKey.pubKey.key = free_ptr; // restore
+		LogError("malloc of %u bytes failed.", size);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	rsakey->tcpaKey.pubKey.keyLength = size;
+	memcpy(rsakey->tcpaKey.pubKey.key, data, size);
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
 obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 {
 	struct tsp_object *obj;
@@ -1126,7 +1157,7 @@ obj_rsakey_get_exponent(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	TSS_RESULT result = TSS_SUCCESS;
 	TCPA_RSA_KEY_PARMS *parms;
 	BYTE default_exp[3] = { 0x1, 0x0, 0x1 };
-	UINT16 offset;
+	UINT32 offset;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -1158,6 +1189,38 @@ obj_rsakey_get_exponent(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 		memcpy(*data, parms->exponent, offset);
 	}
 
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_set_exponent(TSS_HKEY hKey, UINT32 size, BYTE *data)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+	TCPA_RSA_KEY_PARMS *parms;
+	BYTE *free_ptr;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	parms = (TCPA_RSA_KEY_PARMS *)rsakey->tcpaKey.algorithmParms.parms;
+
+	free_ptr = parms->exponent;
+
+	parms->exponent = malloc(size);
+	if (parms->exponent == NULL) {
+		parms->exponent = free_ptr; // restore
+		LogError("malloc of %u bytes failed.", size);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	parms->exponentSize = size;
+	memcpy(parms->exponent, data, size);
 done:
 	obj_list_put(&rsakey_list);
 
@@ -1459,7 +1522,7 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	rsakey->tcpaKey.encData = calloc(1, size);
 	if (rsakey->tcpaKey.encData == NULL) {
 		rsakey->tcpaKey.encData = to_free; // restore
-		LogError("malloc of %d bytes failed.", size);
+		LogError("malloc of %u bytes failed.", size);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
