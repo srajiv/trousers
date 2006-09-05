@@ -473,7 +473,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		case TSS_ALG_AES:
 			symParms.algorithmID = TCPA_ALG_AES;
 			symKey.algId = TCPA_ALG_AES;
-			symKey.size = 128/8;
+			symKey.size = 256/8;
 			break;
 		case TSS_ALG_DES:
 			/* fall through */
