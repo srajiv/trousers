@@ -108,7 +108,7 @@ TSS_RESULT mc_set_slot_by_handle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
 TCPA_KEY_HANDLE mc_get_slot_by_handle(TCS_KEY_HANDLE);
 TCPA_KEY_HANDLE mc_get_slot_by_handle_lock(TCS_KEY_HANDLE);
 TCPA_KEY_HANDLE mc_get_slot_by_pub(TCPA_STORE_PUBKEY *);
-TCS_KEY_HANDLE mc_get_handle_by_pub(TCPA_STORE_PUBKEY *);
+TCS_KEY_HANDLE mc_get_handle_by_pub(TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE);
 TCPA_STORE_PUBKEY *mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *);
 TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT mc_get_blob_by_pub(TCPA_STORE_PUBKEY *, TCPA_KEY **);

@@ -403,7 +403,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		LogDebugFn("Checking if LoadKeyByBlob can be avoided by using"
 			    " existing key");
 
-		myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey);
+		myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey, hUnwrappingKey);
 		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
 			LogDebugFn("tcs key handle exists");
 
@@ -479,7 +479,8 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebugFn("calling mc_get_handle_by_pub");
 add_cache_entry:
-	if ((myTcsKeyHandle = mc_get_handle_by_pub(&(key.pubKey))) == NULL_TCS_HANDLE) {
+	if ((myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey, hUnwrappingKey))
+	     == NULL_TCS_HANDLE) {
 		LogDebugFn("No existing key handle for this key, need to create a new one");
 		/* Get a new TCS Key Handle */
 		myTcsKeyHandle = getNextTcsKeyHandle();
