@@ -824,18 +824,26 @@ mc_get_slot_by_pub(TCPA_STORE_PUBKEY *pub)
 	return NULL_TPM_HANDLE;
 }
 
+/* Check the mem cache for a key with public key pub. If a parent TCS key handle
+ * is passed in, make sure the parent of the key find matches it, else return
+ * key not found */
 /* only called from load key paths, so no locking */
 TCS_KEY_HANDLE
-mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub)
+mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub, TCS_KEY_HANDLE parent)
 {
 	struct key_mem_cache *tmp;
-	TCS_KEY_HANDLE ret;
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
-			ret = tmp->tcs_handle;
-			return ret;
+		if (pub->keyLength == tmp->blob->pubKey.keyLength &&
+		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
+			if (parent) {
+				if (!tmp->parent)
+					continue;
+				if (parent == tmp->parent->tcs_handle)
+					return tmp->tcs_handle;
+			} else
+				return tmp->tcs_handle;
 		}
 	}
 
@@ -915,7 +923,7 @@ mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 	LogDebugFn("returning TSS_E_FAIL");
 	return TCSERR(TSS_E_FAIL);
 }
-#if 0
+
 /* only called from load key paths, so no locking */
 TCS_KEY_HANDLE
 mc_get_handle_by_slot(TCPA_KEY_HANDLE tpm_handle)
@@ -933,7 +941,7 @@ mc_get_handle_by_slot(TCPA_KEY_HANDLE tpm_handle)
 
 	return NULL_TCS_HANDLE;
 }
-#endif
+
 /* only called from load key paths, so no locking */
 TSS_RESULT
 mc_update_time_stamp(TCPA_KEY_HANDLE tpm_handle)
@@ -1328,10 +1336,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 
 	/* check the mem cache */
 	if (mc_get_blob_by_pub(pubKey, &myKey) == 0) {
-		parentPub = mc_get_pub_by_slot(parentSlot);
-		if (parentPub == NULL)
-			return TCSERR(TCS_E_KM_LOADFAILED);
-		parentHandle = mc_get_handle_by_pub(parentPub);
+		parentHandle = mc_get_handle_by_slot(parentSlot);
 		if (parentHandle == 0)
 			return TCSERR(TCS_E_KM_LOADFAILED);
 
