@@ -57,7 +57,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		return result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
-		return result;
+		goto done;
 
 	if (usesAuth) {
 		offset = 0;
@@ -70,7 +70,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_Sign,
 						      hPolicy, &digest,
 						      &privAuth)))
-			return result;
+			goto done;
 	} else {
 		pPrivAuth = NULL;
 	}
@@ -78,7 +78,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 	if ((result = TCSP_Sign(tcsContext, tcsKeyHandle,
 			       ulDataLen, data,
 			       pPrivAuth, pulSignatureLength, prgbSignature)))
-		return result;
+		goto done;
 
 	if (usesAuth) {
 		offset = 0;
@@ -90,11 +90,13 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
 			free_tspi(tspContext, *prgbSignature);
-			return result;
+			goto done;
 		}
 	}
 
-	return TSS_SUCCESS;
+done:
+	free_tspi(tspContext, data);
+	return result;
 }
 
 TSS_RESULT
