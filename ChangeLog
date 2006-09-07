@@ -38,8 +38,8 @@
   session. Now, a secret of all 0's is used if no secret exists.
 - Added checks for 2 return codes in secret_TakeOwnership.
 - Fixed TSS_VERSION problem. There are no specific getcaps for
-  software version vs. TSS spec version. Instead, every version
-  structure contains spec version and software major/minor.
+  software version vs. TSS spec version. Instead, the TSP's
+  version structure contains spec version and software major/minor.
 - Removed obj_regdkey list references.
 
 * TROUSERS_0_2_7
