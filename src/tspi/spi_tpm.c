@@ -466,24 +466,32 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					   &hIDMigPolicy, NULL)))
 		return result;
 
-	/* setup the symmetric key's parms. For now, AES is all we support.
-	 * TODO: 3DES, DES */
+	/* setup the symmetric key's parms. */
 	memset(&symParms, 0, sizeof(TCPA_KEY_PARMS));
 	switch (algID) {
 		case TSS_ALG_AES:
 			symParms.algorithmID = TCPA_ALG_AES;
 			symKey.algId = TCPA_ALG_AES;
-			symKey.size = 256/8;
+			symKey.size = 128/8;
 			break;
 		case TSS_ALG_DES:
-			/* fall through */
+			symParms.algorithmID = TCPA_ALG_DES;
+			symKey.algId = TCPA_ALG_DES;
+			symKey.size = 64/8;
+			break;
 		case TSS_ALG_3DES:
-			/* fall through */
+			symParms.algorithmID = TCPA_ALG_3DES;
+			symKey.algId = TCPA_ALG_3DES;
+			symKey.size = 192/8;
+			break;
 		default:
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 			goto error;
 			break;
 	}
+
+	/* XXX No symmetric key encryption schemes existed in the 1.1 time frame */
+	symParms.encScheme = TCPA_ES_NONE;
 
 	/* get the CA Pubkey's encryption scheme */
 	if ((result = obj_rsakey_get_es(hCAPubKey, &tmp)))
@@ -639,9 +647,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result = get_local_random(tspContext, symKey.size, &symKey.data)))
 		goto error;
 
-	/* No encryption schemes exist in the TPM 1.1 spec for symmetric
-	 * algorithms, so just set this to 0. */
-	symKey.encScheme = 0;
+	/* XXX No symmetric key encryption schemes existed in the 1.1 time frame */
+	symKey.encScheme = TCPA_ES_NONE;
 
 	/* XXX This should be DER encoded first. TPM1.1b section 9.4 */
 	offset = 0;
@@ -678,7 +685,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* encrypt the proof */
 	rgbTcpaIdentityReq.symSize = sizeof(testblob);
-	if ((result = Trspi_Encrypt_ECB(TSS_ALG_AES,symKey.data, hashblob, offset,
+	if ((result = Trspi_SymEncrypt(algID, TR_SYM_MODE_CBC, symKey.data, NULL, hashblob, offset,
 				       testblob, &rgbTcpaIdentityReq.symSize)))
 		goto error;
 
@@ -735,8 +742,9 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pIDKeyAuth;
-	BYTE *symKey;
-	UINT32 symKeyLen, credLen;
+	BYTE *symKeyBlob;
+	UINT32 symKeyBlobLen, credLen;
+	TCPA_SYMMETRIC_KEY symKey;
 
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -787,15 +795,15 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 					      rgbAsymCAContentsBlob,
 					      pIDKeyAuth,
 					      &ownerAuth,
-					      &symKeyLen,
-					      &symKey)))
+					      &symKeyBlobLen,
+					      &symKeyBlob)))
 		return result;
 
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
-	Trspi_LoadBlob_UINT32(&offset, symKeyLen, hashblob);
-	Trspi_LoadBlob(&offset, symKeyLen, hashblob, symKey);
+	Trspi_LoadBlob_UINT32(&offset, symKeyBlobLen, hashblob);
+	Trspi_LoadBlob(&offset, symKeyBlobLen, hashblob, symKeyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (usesAuth) {
@@ -815,24 +823,28 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	}
 
 	/* decrypt the symmetric blob using the recovered symmetric key */
-	if (symKeyLen != 32 ) { // XXX
-		free(symKey);
-		return TSPERR(TSS_E_BAD_PARAMETER);
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(&offset, symKeyBlob, &symKey))) {
+		free(symKeyBlob);
+		return result;
 	}
 
-	if ((result = Trspi_Decrypt_ECB(TSS_ALG_AES, symKey,
-					rgbSymCAAttestationBlob,
-					ulSymCAAttestationBlobLength,
-					credBlob, &credLen))) {
-		free(symKey);
+	if ((result = Trspi_SymDecrypt(symKey.algId, symKey.encScheme, symKey.data, NULL,
+				       rgbSymCAAttestationBlob, ulSymCAAttestationBlobLength,
+				       credBlob, &credLen))) {
+		free(symKey.data);
+		free(symKeyBlob);
 		return result;
 	}
 
 	if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL) {
-		free(symKey);
+		free(symKey.data);
+		free(symKeyBlob);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
+	free(symKey.data);
+	free(symKeyBlob);
 	memcpy(*prgbCredential, credBlob, credLen);
 	*pulCredentialLength = credLen;
 
