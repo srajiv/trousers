@@ -1,4 +1,7 @@
 
+- Updated the identity creation code in the TSP/TCS to support
+  AES, DES, 3DES during identity creation.
+- Added symmetric encryption interfaces for openssl, Trspi.
 - In Tspi_Hash_Sign, fixed memory leak.
 - Added SetAttribData functions for RSA modulus/exponent per
   the upcoming additions to the TSS 1.2 errata 1 spec.
