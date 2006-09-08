@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -25,8 +25,10 @@
 #include <openssl/sha.h>
 
 #include "trousers/tss.h"
+#include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
+#include "tsplog.h"
 
 
 /*
@@ -408,3 +410,124 @@ done:
 	return result;
 }
 
+TSS_RESULT
+Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
+		 UINT32 *out_len)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER *cipher;
+	UINT32 tmp;
+
+	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
+	if (mode != TR_SYM_MODE_CBC && mode != TCPA_ES_NONE) {
+		LogDebug("Invalid mode in doing symmetric encryption");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	switch (alg) {
+		case TSS_ALG_AES:
+		case TCPA_ALG_AES:
+			cipher = (EVP_CIPHER *)EVP_aes_128_cbc();
+			break;
+		case TSS_ALG_DES:
+		case TCPA_ALG_DES:
+			cipher = (EVP_CIPHER *)EVP_des_cbc();
+			break;
+		case TSS_ALG_3DES:
+		case TCPA_ALG_3DES:
+			cipher = (EVP_CIPHER *)EVP_des_ede3();
+			break;
+		default:
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	EVP_CIPHER_CTX_init(&ctx);
+
+	if (!EVP_EncryptInit(&ctx, (const EVP_CIPHER *)cipher, key, iv)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (*out_len < in_len + EVP_CIPHER_CTX_block_size(&ctx) - 1) {
+		LogDebug("No enough space to do symmetric encryption");
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto done;
+	}
+
+	if (!EVP_EncryptUpdate(&ctx, out, (int *)out_len, in, in_len)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (!EVP_EncryptFinal(&ctx, out + *out_len, (int *)&tmp)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+	*out_len += tmp;
+done:
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return result;
+}
+
+TSS_RESULT
+Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
+		 UINT32 *out_len)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER *cipher;
+	UINT32 tmp;
+
+	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
+	if (mode != TR_SYM_MODE_CBC && mode != TCPA_ES_NONE) {
+		LogDebug("Invalid mode in doing symmetric decryption");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	switch (alg) {
+		case TSS_ALG_AES:
+		case TCPA_ALG_AES:
+			cipher = (EVP_CIPHER *)EVP_aes_128_cbc();
+			break;
+		case TSS_ALG_DES:
+		case TCPA_ALG_DES:
+			cipher = (EVP_CIPHER *)EVP_des_cbc();
+			break;
+		case TSS_ALG_3DES:
+		case TCPA_ALG_3DES:
+			cipher = (EVP_CIPHER *)EVP_des_ede3();
+			break;
+		default:
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	EVP_CIPHER_CTX_init(&ctx);
+
+	if (!EVP_DecryptInit(&ctx, cipher, key, iv)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (!EVP_DecryptUpdate(&ctx, out, (int *)out_len, in, in_len)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+
+	if (!EVP_DecryptFinal(&ctx, out + *out_len, (int *)&tmp)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		DEBUG_print_openssl_errors();
+		goto done;
+	}
+	*out_len += tmp;
+done:
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return result;
+}
