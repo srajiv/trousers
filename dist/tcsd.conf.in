@@ -35,16 +35,18 @@
 #  log data. The interface to this log is usually provided by the TPM
 #  device driver.
 #
-# firmware_log_file = /proc/tpm/firmware_events
+# firmware_log_file = /sys/kernel/security/tpm0/binary_bios_measurements
 #
 
 # Option: kernel_log_file
 # Values: Any absolute directory path
 # Description: Path to the file containing the current kernel PCR event
 #  log data. By default, this data will be parsed in the format provided
-#  by the Integrity Measurement Architecture LSM.
+#  by the Integrity Measurement Architecture LSM. See
+#  http://sf.net/projects/linux-ima for more info on getting IMA.
 #
-# kernel_log_file = /proc/tcg/measurement_events
+#
+# kernel_log_file = /sys/kernel/security/ima/binary_runtime_measurements
 #
 
 # Option: firmware_pcrs
