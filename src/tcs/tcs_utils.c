@@ -810,7 +810,7 @@ UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob,
 
 	return rc;
 }
-#if 0
+
 void
 LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 {
@@ -845,7 +845,7 @@ UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 
 	return TSS_SUCCESS;
 }
-#endif
+
 TSS_RESULT
 UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob,
 			 TCPA_PCR_SELECTION * pcr)
