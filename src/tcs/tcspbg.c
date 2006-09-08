@@ -677,7 +677,8 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  BYTE ** SymmetricKey	/* out */
     )
 {
-	UINT16 offset;
+	UINT16 offset, authOffset;
+	TCPA_SYMMETRIC_KEY symKey;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT32 keySlot;
@@ -721,21 +722,33 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 14;
-		UnloadBlob_UINT32(&offset, SymmetricKeySize, txBlob, NULL);
-		*SymmetricKey = calloc(1, *SymmetricKeySize);
+		/* We don't know what kind of key the symmetric key is, or how big it is.
+		 * So, call UnloadBlob_SYMMETRIC_KEY to parse through the returned data
+		 * and create the expanded TCPA_SYMMETRIC_KEY structure.  Then, serialize
+		 * that data to pass back to the TSP. */
+		offset = 10;
+		if ((result = UnloadBlob_SYMMETRIC_KEY(&offset, txBlob, &symKey)))
+			goto done;
+
+		/* After parsing through the symmetric key, offset will point to the auth
+		 * structure(s) */
+		authOffset = offset;
+
+		*SymmetricKey = calloc(1, offset - 10);
 		if (*SymmetricKey == NULL) {
-			LogError("malloc of %u bytes failed.", *SymmetricKeySize);
+			LogError("malloc of %hu bytes failed.", offset - 10);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		UnloadBlob(&offset, *SymmetricKeySize, txBlob, *SymmetricKey,
-			   NULL);
+		*SymmetricKeySize = offset - 10;
+		offset = 0;
+		LoadBlob_SYMMETRIC_KEY(&offset, *SymmetricKey, &symKey);
+		free(symKey.data);
 
 		if (idKeyAuth != NULL) {
-			UnloadBlob_Auth(&offset, txBlob, idKeyAuth);
+			UnloadBlob_Auth(&authOffset, txBlob, idKeyAuth);
 		}
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		UnloadBlob_Auth(&authOffset, txBlob, ownerAuth);
 	}
 
 done:
