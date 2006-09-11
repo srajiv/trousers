@@ -442,7 +442,7 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 			break;
 		case TSS_ALG_3DES:
 		case TCPA_ALG_3DES:
-			cipher = (EVP_CIPHER *)EVP_des_ede3();
+			cipher = (EVP_CIPHER *)EVP_des_ede3_cbc();
 			break;
 		default:
 			return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -524,7 +524,7 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 			break;
 		case TSS_ALG_3DES:
 		case TCPA_ALG_3DES:
-			cipher = (EVP_CIPHER *)EVP_des_ede3();
+			cipher = (EVP_CIPHER *)EVP_des_ede3_cbc();
 			break;
 		default:
 			return TSPERR(TSS_E_INTERNAL_ERROR);
