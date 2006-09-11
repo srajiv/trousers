@@ -417,12 +417,18 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER *cipher;
+	BYTE *def_iv = NULL;
 	UINT32 tmp;
 
 	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
-	if (mode != TR_SYM_MODE_CBC && mode != TCPA_ES_NONE) {
-		LogDebug("Invalid mode in doing symmetric encryption");
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	switch (mode) {
+		case TR_SYM_MODE_CBC:
+		case TCPA_ES_NONE:
+		case TSS_ES_NONE:
+			break;
+		default:
+			LogDebug("Invalid mode in doing symmetric decryption");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	switch (alg) {
@@ -445,14 +451,23 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	EVP_CIPHER_CTX_init(&ctx);
 
-	if (!EVP_EncryptInit(&ctx, (const EVP_CIPHER *)cipher, key, iv)) {
+	if (iv == NULL) {
+		def_iv = calloc(1, EVP_CIPHER_iv_length(cipher));
+		if (def_iv == NULL) {
+			LogError("malloc of %d bytes failed.", EVP_CIPHER_iv_length(cipher));
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+	} else
+		def_iv = iv;
+
+	if (!EVP_EncryptInit(&ctx, (const EVP_CIPHER *)cipher, key, def_iv)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
 	}
 
 	if (*out_len < in_len + EVP_CIPHER_CTX_block_size(&ctx) - 1) {
-		LogDebug("No enough space to do symmetric encryption");
+		LogDebug("Not enough space to do symmetric encryption");
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
@@ -468,8 +483,11 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 		DEBUG_print_openssl_errors();
 		goto done;
 	}
+
 	*out_len += tmp;
 done:
+	if (def_iv != iv)
+		free(def_iv);
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	return result;
 }
@@ -481,12 +499,18 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER *cipher;
+	BYTE *def_iv = NULL;
 	UINT32 tmp;
 
 	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
-	if (mode != TR_SYM_MODE_CBC && mode != TCPA_ES_NONE) {
-		LogDebug("Invalid mode in doing symmetric decryption");
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	switch (mode) {
+		case TR_SYM_MODE_CBC:
+		case TCPA_ES_NONE:
+		case TSS_ES_NONE:
+			break;
+		default:
+			LogDebug("Invalid mode in doing symmetric decryption");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	switch (alg) {
@@ -509,7 +533,16 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	EVP_CIPHER_CTX_init(&ctx);
 
-	if (!EVP_DecryptInit(&ctx, cipher, key, iv)) {
+	if (iv == NULL) {
+		def_iv = calloc(1, EVP_CIPHER_iv_length(cipher));
+		if (def_iv == NULL) {
+			LogError("malloc of %d bytes failed.", EVP_CIPHER_iv_length(cipher));
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+	} else
+		def_iv = iv;
+
+	if (!EVP_DecryptInit(&ctx, cipher, key, def_iv)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
@@ -526,8 +559,11 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 		DEBUG_print_openssl_errors();
 		goto done;
 	}
+
 	*out_len += tmp;
 done:
+	if (def_iv != iv)
+		free(def_iv);
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	return result;
 }
