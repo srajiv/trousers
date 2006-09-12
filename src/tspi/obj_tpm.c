@@ -250,15 +250,15 @@ obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
 	switch (flag) {
 		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
 			tpm->Tspicb_CollateIdentity = (TSS_RESULT (*)(PVOID,
-				UINT32, BYTE *, TSS_ALGORITHM_ID, UINT32,
-				BYTE *, UINT32 *, BYTE *))cb->callback;
+				UINT32, BYTE *, TSS_ALGORITHM_ID, UINT32 *,
+				BYTE **, UINT32 *, BYTE **))cb->callback;
 			tpm->collateAppData = cb->appData;
 			tpm->collateAlg = cb->alg;
 			break;
 		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
 			tpm->Tspicb_ActivateIdentity = (TSS_RESULT (*)(PVOID,
 				UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
-				BYTE *))cb->callback;
+				BYTE **))cb->callback;
 			tpm->activateAppData = cb->appData;
 			tpm->activateAlg = cb->alg;
 			break;
