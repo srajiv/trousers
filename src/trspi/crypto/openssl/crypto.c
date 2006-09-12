@@ -417,7 +417,6 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER *cipher;
-	BYTE *def_iv = NULL;
 	UINT32 tmp;
 
 	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
@@ -451,16 +450,7 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	EVP_CIPHER_CTX_init(&ctx);
 
-	if (iv == NULL) {
-		def_iv = calloc(1, EVP_CIPHER_iv_length(cipher));
-		if (def_iv == NULL) {
-			LogError("malloc of %d bytes failed.", EVP_CIPHER_iv_length(cipher));
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-	} else
-		def_iv = iv;
-
-	if (!EVP_EncryptInit(&ctx, (const EVP_CIPHER *)cipher, key, def_iv)) {
+	if (!EVP_EncryptInit(&ctx, (const EVP_CIPHER *)cipher, key, iv)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
@@ -486,8 +476,6 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	*out_len += tmp;
 done:
-	if (def_iv != iv)
-		free(def_iv);
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	return result;
 }
@@ -499,7 +487,6 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	TSS_RESULT result = TSS_SUCCESS;
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER *cipher;
-	BYTE *def_iv = NULL;
 	UINT32 tmp;
 
 	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
@@ -533,16 +520,7 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	EVP_CIPHER_CTX_init(&ctx);
 
-	if (iv == NULL) {
-		def_iv = calloc(1, EVP_CIPHER_iv_length(cipher));
-		if (def_iv == NULL) {
-			LogError("malloc of %d bytes failed.", EVP_CIPHER_iv_length(cipher));
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-	} else
-		def_iv = iv;
-
-	if (!EVP_DecryptInit(&ctx, cipher, key, def_iv)) {
+	if (!EVP_DecryptInit(&ctx, cipher, key, iv)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
@@ -562,8 +540,6 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 
 	*out_len += tmp;
 done:
-	if (def_iv != iv)
-		free(def_iv);
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	return result;
 }
