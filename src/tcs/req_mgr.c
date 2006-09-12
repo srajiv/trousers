@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -29,7 +29,9 @@
 
 static struct tpm_req_mgr *trm;
 
+#ifdef TSS_DEBUG
 #define TSS_TPM_DEBUG
+#endif
 
 TSS_RESULT
 req_mgr_submit_req(BYTE *blob)
