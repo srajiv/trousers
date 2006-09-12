@@ -458,8 +458,8 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	EVP_CIPHER_CTX_init(&ctx);
 
 	/* If the iv passed in is NULL, create a new random iv and prepend it to the ciphertext */
+	iv_len = EVP_CIPHER_iv_length(cipher);
 	if (iv == NULL) {
-		iv_len = EVP_CIPHER_iv_length(cipher);
 		def_iv = malloc(iv_len);
 		if (def_iv == NULL) {
 			LogError("malloc of %d bytes failed.", iv_len);
@@ -521,6 +521,9 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	UINT32 tmp;
 	int iv_len, iniv_len;
 
+	if (in_len > INT_MAX)
+		return TSS_E_BAD_PARAMETER;
+
 	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
 	switch (mode) {
 		case TR_SYM_MODE_CBC:
@@ -560,7 +563,6 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 			LogError("malloc of %d bytes failed.", iv_len);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
-		RAND_bytes(def_iv, iv_len);
 
 		memcpy(def_iv, in, iv_len);
 		iniv_ptr = &in[iv_len];
@@ -568,6 +570,7 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	} else {
 		def_iv = iv;
 		iniv_ptr = in;
+		iniv_len = in_len;
 	}
 
 	if (!EVP_DecryptInit(&ctx, cipher, key, def_iv)) {
