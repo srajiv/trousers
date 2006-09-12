@@ -388,7 +388,6 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	return obj_rsakey_set_tcs_handle(hKeySRK, TPM_KEYHND_SRK);
 }
 
-/* XXX needs to be tied into TPM policy object's callbacks */
 TSS_RESULT
 Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				TSS_HKEY hKeySRK,			/* in */
@@ -410,10 +409,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	BYTE hashblob[USHRT_MAX], idReqBlob[USHRT_MAX], testblob[USHRT_MAX];
 	TCPA_DIGEST digest;
 	TSS_HPOLICY hSRKPolicy, hIDPolicy, hCAPolicy, hTPMPolicy;
-	UINT32 caKeyBlobSize, idKeySize;
-	BYTE *caKeyBlob, *idKey;
+	UINT32 caKeyBlobSize, idKeySize, idPubSize;
+	BYTE *caKeyBlob, *idKey, *newIdKey, *idPub;
 	TCPA_NONCE nonceEvenOSAP;
-	TCPA_KEY keyContainer, caKey;
+	TCPA_KEY caKey;
 	TCPA_CHOSENID_HASH chosenIDHash = { { 0, } };
 	UINT32 pcIdentityBindingSize;
 	BYTE *prgbIdentityBinding = NULL;
@@ -435,12 +434,22 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	TCPA_KEY_PARMS symParms, asymParms;
 	TCPA_SYMMETRIC_KEY symKey;
 	int padding;
+	TSS_CALLBACK *cb;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
+
+	if ((result = obj_tpm_get_cb12(hTPM, TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY, &tmp,
+				       (BYTE **)&cb)))
+		return result;
+
+	if (cb->callback == NULL) {
+		free_tspi(tspContext, cb);
+		cb = NULL;
+	}
 
 	/* Get and verify the context */
 	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
@@ -490,7 +499,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 			break;
 	}
 
-	/* XXX No symmetric key encryption schemes existed in the 1.1 time frame */
+	/* No symmetric key encryption schemes existed in the 1.1 time frame */
 	symParms.encScheme = TCPA_ES_NONE;
 
 	/* get the CA Pubkey's encryption scheme */
@@ -512,16 +521,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	}
 
 	/* Get Key blobs */
-	if ((result = Tspi_GetAttribData(hIdentityKey,
-					 TSS_TSPATTRIB_KEY_BLOB,
-					 TSS_TSPATTRIB_KEYBLOB_BLOB, &idKeySize,
-					 &idKey)))
+	if ((result = obj_rsakey_get_blob(hIdentityKey, &idKeySize, &idKey)))
 		return result;
 
-	if ((result = Tspi_GetAttribData(hCAPubKey,
-					 TSS_TSPATTRIB_KEY_BLOB,
-					 TSS_TSPATTRIB_KEYBLOB_BLOB,
-					 &caKeyBlobSize, &caKeyBlob)))
+	if ((result = obj_rsakey_get_blob(hCAPubKey, &caKeyBlobSize, &caKeyBlob)))
 		return result;
 
 	offset = 0;
@@ -531,8 +534,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* ChosenID hash =  SHA1(label || TCPA_PUBKEY(CApub)) */
 	offset = 0;
-	Trspi_LoadBlob(&offset, ulIdentityLabelLength, chosenIDBlob,
-		       rgbIdentityLabelData);
+	Trspi_LoadBlob(&offset, ulIdentityLabelLength, chosenIDBlob, rgbIdentityLabelData);
 	Trspi_LoadBlob_KEY_PARMS(&offset, chosenIDBlob, &caKey.algorithmParms);
 	Trspi_LoadBlob_STORE_PUBKEY(&offset, chosenIDBlob, &caKey.pubKey);
 
@@ -544,14 +546,12 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		return result;
 	}
 
-	/* XXX use chosenIDBlob temporarily */
+	/* use chosenIDBlob temporarily */
 	offset = 0;
 	Trspi_LoadBlob_KEY_PARMS(&offset, chosenIDBlob, &caKey.algorithmParms);
-	Trspi_LoadBlob_STORE_PUBKEY(&offset, chosenIDBlob, &caKey.pubKey);
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(&offset, chosenIDBlob,
-						 &asymParms)))
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(&offset, chosenIDBlob, &asymParms)))
 		return result;
 
 	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy,
@@ -596,7 +596,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				       pSrkAuth,
 				       &ownerAuth,
 				       &idKeySize,
-				       &idKey,
+				       &newIdKey,
 				       &pcIdentityBindingSize,
 				       &prgbIdentityBinding,
 				       &pcEndorsementCredentialSize,
@@ -610,7 +610,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_MakeIdentity, hashblob);
-	Trspi_LoadBlob(&offset, idKeySize, hashblob, idKey);
+	Trspi_LoadBlob(&offset, idKeySize, hashblob, newIdKey);
 	Trspi_LoadBlob_UINT32(&offset, pcIdentityBindingSize, hashblob);
 	Trspi_LoadBlob(&offset, pcIdentityBindingSize, hashblob,
 		       prgbIdentityBinding);
@@ -631,34 +631,13 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 			goto error;
 	}
 
-	offset = 0;
-	memset(&keyContainer, 0, sizeof(TCPA_KEY));
-	if ((result = Trspi_UnloadBlob_KEY(&offset, idKey, &keyContainer)))
+	if ((result = obj_rsakey_set_tcpakey(hIdentityKey, idKeySize, newIdKey))) {
+		free(newIdKey);
 		goto error;
+	}
+	free(newIdKey);
 
-	/* Push the new key into the existing object */
-	if ((result = Tspi_SetAttribData(hIdentityKey,
-					 TSS_TSPATTRIB_KEY_BLOB,
-					 TSS_TSPATTRIB_KEYBLOB_BLOB, idKeySize,
-					 idKey)))
-		goto error;
-
-	/* generate the symmetric key. */
-	if ((result = get_local_random(tspContext, symKey.size, &symKey.data)))
-		goto error;
-
-	/* XXX No symmetric key encryption schemes existed in the 1.1 time frame */
-	symKey.encScheme = TCPA_ES_NONE;
-
-	/* XXX This should be DER encoded first. TPM1.1b section 9.4 */
-	offset = 0;
-	Trspi_LoadBlob_SYMMETRIC_KEY(&offset, hashblob, &symKey);
-
-	if ((result = Trspi_RSA_Public_Encrypt(hashblob, offset, encSymKey,
-					       &encSymKeySize,
-					       caKey.pubKey.key,
-					       caKey.pubKey.keyLength,
-					       65537, padding)))
+	if ((result = obj_rsakey_get_pub_blob(hIdentityKey, &idPubSize, &idPub)))
 		goto error;
 
 	/* set up the TCPA_IDENTITY_PROOF structure */
@@ -670,34 +649,67 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	Trspi_LoadBlob_UINT32(&offset, pcEndorsementCredentialSize, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, pcPlatformCredentialSize, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, pcConformanceCredentialSize, hashblob);
-	Trspi_LoadBlob_KEY_PARMS(&offset, hashblob, &keyContainer.algorithmParms);
-	Trspi_LoadBlob_STORE_PUBKEY(&offset, hashblob, &keyContainer.pubKey);
-	Trspi_LoadBlob(&offset, ulIdentityLabelLength, hashblob,
-		       rgbIdentityLabelData);
-	Trspi_LoadBlob(&offset, pcIdentityBindingSize, hashblob,
-		       prgbIdentityBinding);
-	Trspi_LoadBlob(&offset, pcEndorsementCredentialSize, hashblob,
-		       prgbEndorsementCredential);
-	Trspi_LoadBlob(&offset, pcPlatformCredentialSize, hashblob,
-		       prgbPlatformCredential);
-	Trspi_LoadBlob(&offset, pcConformanceCredentialSize, hashblob,
-		       prgbConformanceCredential);
+	Trspi_LoadBlob(&offset, idPubSize, hashblob, idPub);
+	free_tspi(tspContext, idPub);
+	Trspi_LoadBlob(&offset, ulIdentityLabelLength, hashblob, rgbIdentityLabelData);
+	Trspi_LoadBlob(&offset, pcIdentityBindingSize, hashblob, prgbIdentityBinding);
+	Trspi_LoadBlob(&offset, pcEndorsementCredentialSize, hashblob, prgbEndorsementCredential);
+	Trspi_LoadBlob(&offset, pcPlatformCredentialSize, hashblob, prgbPlatformCredential);
+	Trspi_LoadBlob(&offset, pcConformanceCredentialSize, hashblob, prgbConformanceCredential);
 
-	/* encrypt the proof */
-	rgbTcpaIdentityReq.symSize = sizeof(testblob);
-	if ((result = Trspi_SymEncrypt(algID, TR_SYM_MODE_CBC, symKey.data, NULL, hashblob, offset,
-				       testblob, &rgbTcpaIdentityReq.symSize)))
-		goto error;
+	if (cb && cb->callback) {
+		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, UINT32 *, BYTE **,
+			       UINT32 *, BYTE **))cb->callback)(cb->appData, (UINT32)offset,
+								hashblob, algID,
+								&rgbTcpaIdentityReq.asymSize,
+								&rgbTcpaIdentityReq.asymBlob,
+								&rgbTcpaIdentityReq.symSize,
+								&rgbTcpaIdentityReq.symBlob))) {
+			LogDebug("CollateIdentityRequest callback returned error 0x%x", result);
+			free_tspi(tspContext, cb);
+			goto error;
+		}
+	} else {
+		/* generate the symmetric key. */
+		if ((result = get_local_random(tspContext, symKey.size, &symKey.data)))
+			goto error;
 
-	rgbTcpaIdentityReq.asymSize = encSymKeySize;
+		/* No symmetric key encryption schemes existed in the 1.1 time frame */
+		symKey.encScheme = TCPA_ES_NONE;
+
+		/* encrypt the proof */
+		rgbTcpaIdentityReq.symSize = sizeof(testblob);
+		if ((result = Trspi_SymEncrypt(algID, TR_SYM_MODE_CBC, symKey.data, NULL, hashblob,
+					       offset, testblob, &rgbTcpaIdentityReq.symSize)))
+			goto error;
+
+		rgbTcpaIdentityReq.symBlob = testblob;
+
+		/* XXX This should be DER encoded first. TPM1.1b section 9.4 */
+		offset = 0;
+		Trspi_LoadBlob_SYMMETRIC_KEY(&offset, hashblob, &symKey);
+
+		if ((result = Trspi_RSA_Public_Encrypt(hashblob, offset, encSymKey, &encSymKeySize,
+						       caKey.pubKey.key, caKey.pubKey.keyLength,
+						       65537, padding)))
+			goto error;
+
+		rgbTcpaIdentityReq.asymSize = encSymKeySize;
+		rgbTcpaIdentityReq.asymBlob = encSymKey;
+	}
+
 	rgbTcpaIdentityReq.asymAlgorithm = asymParms;
 	rgbTcpaIdentityReq.symAlgorithm = symParms;
-	rgbTcpaIdentityReq.asymBlob = encSymKey;
-	rgbTcpaIdentityReq.symBlob = testblob;
 
 	/* XXX This should be DER encoded first. TPM1.1b section 9.4 */
 	offset = 0;
 	Trspi_LoadBlob_IDENTITY_REQ(&offset, idReqBlob, &rgbTcpaIdentityReq);
+
+	if (cb && cb->callback) {
+		free(rgbTcpaIdentityReq.symBlob);
+		free(rgbTcpaIdentityReq.asymBlob);
+		free_tspi(tspContext, cb);
+	}
 
 	if ((*prgbTcpaIdentityReq = calloc_tspi(tspContext, offset)) == NULL) {
 		result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -707,10 +719,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	memcpy(*prgbTcpaIdentityReq, idReqBlob, offset);
 	*pulTcpaIdentityReqLength = offset;
 error:
-	free_key_refs(&keyContainer);
 	free_key_refs(&caKey);
-	free_tspi(tspContext, symKey.data);
-	free(idKey);
 	free(prgbIdentityBinding);
 	free(prgbEndorsementCredential);
 	free(prgbPlatformCredential);
@@ -719,7 +728,6 @@ error:
 	return result;
 }
 
-/* XXX needs to be tied into TPM policy object's callbacks */
 TSS_RESULT
 Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 			  TSS_HKEY hIdentKey,			/* in */
@@ -742,9 +750,10 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pIDKeyAuth;
-	BYTE *symKeyBlob;
-	UINT32 symKeyBlobLen, credLen;
+	BYTE *symKeyBlob, *credCallback;
+	UINT32 symKeyBlobLen, credLen, tmp;
 	TCPA_SYMMETRIC_KEY symKey;
+	TSS_CALLBACK *cb;
 
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -754,6 +763,15 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
+
+	if ((result = obj_tpm_get_cb12(hTPM, TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY, &tmp,
+				       (BYTE **)&cb)))
+		return result;
+
+	if (cb->callback == NULL) {
+		free_tspi(tspContext, cb);
+		cb = NULL;
+	}
 
 	if ((result = obj_rsakey_get_tcs_handle(hIdentKey, &tcsKeyHandle)))
 		return result;
@@ -822,29 +840,50 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 			    "failed.");
 	}
 
+	if (cb && cb->callback) {
+		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
+			       BYTE **))cb->callback)(cb->appData, symKeyBlobLen, symKeyBlob,
+						      ulSymCAAttestationBlobLength,
+						      rgbSymCAAttestationBlob,
+						      &credLen, &credCallback))) {
+			LogDebug("ActivateIdentity callback returned error 0x%x", result);
+			free(symKeyBlob);
+			free_tspi(tspContext, cb);
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+		free_tspi(tspContext, cb);
+		free(symKeyBlob);
+
+		if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL)
+			return TSPERR(TSS_E_OUTOFMEMORY);
+
+		memcpy(*prgbCredential, credCallback, credLen);
+		*pulCredentialLength = credLen;
+
+		return TSS_SUCCESS;
+	}
+
 	/* decrypt the symmetric blob using the recovered symmetric key */
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(&offset, symKeyBlob, &symKey))) {
 		free(symKeyBlob);
 		return result;
 	}
+	free(symKeyBlob);
 
 	if ((result = Trspi_SymDecrypt(symKey.algId, symKey.encScheme, symKey.data, NULL,
 				       rgbSymCAAttestationBlob, ulSymCAAttestationBlobLength,
 				       credBlob, &credLen))) {
 		free(symKey.data);
-		free(symKeyBlob);
 		return result;
 	}
 
 	if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL) {
 		free(symKey.data);
-		free(symKeyBlob);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	free(symKey.data);
-	free(symKeyBlob);
 	memcpy(*prgbCredential, credBlob, credLen);
 	*pulCredentialLength = credLen;
 
