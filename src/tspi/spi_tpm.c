@@ -426,7 +426,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	BYTE chosenIDBlob[CHOSENID_BLOB_SIZE];
 	TSS_HCONTEXT tspContext;
 	UINT32 encSymKeySize = 256, tmp;
-	BYTE encSymKey[256];
+	BYTE encSymKey[256], *cb_var;
 	TSS_HPOLICY hIDMigPolicy;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
@@ -443,9 +443,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if ((result = obj_tpm_get_cb12(hTPM, TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY, &tmp,
-				       (BYTE **)&cb)))
+				       &cb_var)))
 		return result;
 
+	cb = (TSS_CALLBACK *)cb_var;
 	if (cb->callback == NULL) {
 		free_tspi(tspContext, cb);
 		cb = NULL;
@@ -750,7 +751,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pIDKeyAuth;
-	BYTE *symKeyBlob, *credCallback;
+	BYTE *symKeyBlob, *credCallback, *cb_var;
 	UINT32 symKeyBlobLen, credLen, tmp;
 	TCPA_SYMMETRIC_KEY symKey;
 	TSS_CALLBACK *cb;
@@ -765,9 +766,10 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	if ((result = obj_tpm_get_cb12(hTPM, TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY, &tmp,
-				       (BYTE **)&cb)))
+				       &cb_var)))
 		return result;
 
+	cb = (TSS_CALLBACK *)cb_var;
 	if (cb->callback == NULL) {
 		free_tspi(tspContext, cb);
 		cb = NULL;
