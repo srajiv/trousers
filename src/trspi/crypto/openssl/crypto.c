@@ -579,7 +579,7 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 		goto done;
 	}
 
-	if (!EVP_DecryptUpdate(&ctx, out, out_len, iniv_ptr, iniv_len)) {
+	if (!EVP_DecryptUpdate(&ctx, out, (int *)out_len, iniv_ptr, iniv_len)) {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		DEBUG_print_openssl_errors();
 		goto done;
