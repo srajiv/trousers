@@ -4,13 +4,14 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -34,6 +35,7 @@ setData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_pac
 		packet->numParms = 0;
 		memset(packet->types, 0, sizeof(packet->types));
 	}
+	DBG_ASSERT(packet->dataSize + theDataSize < USHRT_MAX);
 	offset = packet->dataSize;
 	if ((unsigned int)index >= sizeof(packet->types))
 		return -1;
