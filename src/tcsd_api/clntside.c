@@ -113,7 +113,7 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 				goto err_exit;
 			}
 
-			memcpy(hdr_p, &loc_hdr, hdr_size - 1);
+			memcpy(hdr_p, &loc_hdr, returnSize);
 
 			if (returnSize > hdr_size) {
 				if ((returnSize = recv(sd, &hdr_p->data, returnSize - (hdr_size-1), 0)) < 0) {
