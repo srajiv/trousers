@@ -18,15 +18,18 @@ int ima_close(int);
 
 extern struct ext_log_source ima_source;
 
-/* this should be large if we're reading out of /proc */
-#define IMA_READ_SIZE	4096
-
-/*  4 bytes binary         [PCR  value]
- * 20 bytes binary         [SHA1 value]
- * 40 bytes of ascii (MAX) [event name]
- * 1  byte -> '\n'         [separator ]
+/*  4  bytes binary         [PCR  value]
+ * 20  bytes binary         [SHA1 value]
+ *  4  bytes binary         [event type]
+ * 255 bytes of ascii (MAX) [event name]
+ * 1   byte -> '\0'         [separator ]
  */
-#define IMA_MIN_EVENT_SIZE 26
-#define IMA_MAX_EVENT_SIZE 65
+#define IMA_MIN_EVENT_SIZE 29
+#define IMA_MAX_EVENT_SIZE 284
+
+/* this should be large if we're reading out of /proc */
+#define IMA_READ_SIZE	(4096 + IMA_MAX_EVENT_SIZE)
+
+#define EVLOG_SOURCE_IMA	1
 
 #endif
