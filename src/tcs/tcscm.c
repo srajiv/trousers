@@ -29,9 +29,6 @@ TCS_OpenContext_Internal(TCS_CONTEXT_HANDLE * hContext)	/* out  */
 	if (*hContext == 0)
 		return TCSERR(TSS_E_FAIL);
 
-#if 0
-	initKeyFile(*hContext);
-#endif
 	return TSS_SUCCESS;
 }
 
