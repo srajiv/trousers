@@ -50,108 +50,6 @@ UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
 	out->revMinor = blob[(*offset)++];
 }
 
-TSS_RESULT
-UnloadBlob_KEY_PARMS_PS(UINT16 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
-{
-	UnloadBlob_UINT32(offset, &keyParms->algorithmID, blob, NULL);
-	UnloadBlob_UINT16(offset, &keyParms->encScheme, blob, NULL);
-	UnloadBlob_UINT16(offset, &keyParms->sigScheme, blob, NULL);
-	UnloadBlob_UINT32(offset, &keyParms->parmSize, blob, NULL);
-
-	if (keyParms->parmSize == 0)
-		keyParms->parms = NULL;
-	else {
-		keyParms->parms = malloc(keyParms->parmSize);
-		if (keyParms->parms == NULL) {
-			LogError("malloc of %u bytes failed.", keyParms->parmSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms, NULL);
-	}
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-UnloadBlob_STORE_PUBKEY_PS(UINT16 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
-{
-	UnloadBlob_UINT32(offset, &store->keyLength, blob, NULL);
-
-	if (store->keyLength == 0) {
-		LogWarn("Unloading public key of size 0!");
-		store->key = NULL;
-	} else {
-		store->key = malloc(store->keyLength);
-		if (store->key == NULL) {
-			LogError("malloc of %u bytes failed.", store->keyLength);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(offset, store->keyLength, blob, store->key, NULL);
-	}
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-UnloadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
-{
-	TSS_RESULT rc = TSS_SUCCESS;
-
-	memset(key, 0, sizeof(TCPA_KEY));
-	UnloadBlob_TCPA_VERSION(offset, blob, &key->ver);
-	UnloadBlob_UINT16(offset, &key->keyUsage, blob, NULL);
-	UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	UnloadBlob_BOOL(offset, (TSS_BOOL *)&key->authDataUsage, blob, NULL);
-	if (UnloadBlob_KEY_PARMS_PS(offset, blob, &key->algorithmParms))
-		return rc;
-
-	UnloadBlob_UINT32(offset, &key->PCRInfoSize, blob, NULL);
-
-	if (key->PCRInfoSize == 0)
-		key->PCRInfo = NULL;
-	else {
-		key->PCRInfo = malloc(key->PCRInfoSize);
-		if (key->PCRInfo == NULL) {
-			LogError("malloc of %u bytes failed.", key->PCRInfoSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, NULL);
-	}
-
-	if ((rc = UnloadBlob_STORE_PUBKEY_PS(offset, blob, &key->pubKey)))
-		return rc;
-
-	UnloadBlob_UINT32(offset, &key->encSize, blob, NULL);
-
-	if (key->encSize == 0)
-		key->encData = NULL;
-	else {
-		key->encData = malloc(key->encSize);
-		if (key->encData == NULL) {
-			LogError("malloc of %u bytes failed.", key->encSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(offset, key->encSize, blob, key->encData, NULL);
-	}
-
-	return TSS_SUCCESS;
-}
-
-void
-LoadBlob_KEY_PS(UINT16 *offset, BYTE *blob, TCPA_KEY *key)
-{
-	LoadBlob_TCPA_VERSION(offset, blob, key->ver);
-	LoadBlob_UINT16(offset, key->keyUsage, blob, NULL);
-	LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	LoadBlob_BOOL(offset, key->authDataUsage, blob, NULL);
-	LoadBlob_KEY_PARMS(offset, blob, &key->algorithmParms);
-	LoadBlob_UINT32(offset, key->PCRInfoSize, blob, NULL);
-	LoadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, NULL);
-	LoadBlob_STORE_PUBKEY(offset, blob, &key->pubKey);
-	LoadBlob_UINT32(offset, key->encSize, blob, NULL);
-	LoadBlob(offset, key->encSize, blob, key->encData, NULL);
-}
-
 inline TSS_RESULT
 read_data(int fd, void *data, UINT32 size)
 {
@@ -560,7 +458,7 @@ init_disk_cache(int fd)
 			}
 
 			tmp_offset = 0;
-			if ((rc = UnloadBlob_KEY_PS(&tmp_offset, srk_blob, &srk_key)))
+			if ((rc = UnloadBlob_KEY(&tmp_offset, srk_blob, &srk_key)))
 				goto err_exit;
 			/* add to the mem cache */
 			if ((rc = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE,
