@@ -113,6 +113,7 @@ tcsd_thread_create(int socket, char *hostname)
 			LogError("max number of connections reached (%d), new connection"
 				 " refused.", tm->max_threads);
 		}
+		free(hostname);
 		pthread_mutex_unlock(&(tm->lock));
 		return TCSERR(TSS_E_CONNECTION_FAILED);
 	}
@@ -128,7 +129,7 @@ tcsd_thread_create(int socket, char *hostname)
 	tm->thread_data[thread_num].sock = socket;
 	tm->thread_data[thread_num].context = NULL_TCS_HANDLE;
 	if (hostname != NULL)
-		memcpy(tm->thread_data[thread_num].hostname, hostname, strlen(hostname));
+		tm->thread_data[thread_num].hostname = hostname;
 
 #ifdef TCSD_SINGLE_THREAD_DEBUG
 	(void)tcsd_thread_run((void *)(&(tm->thread_data[thread_num])));
@@ -294,7 +295,8 @@ done:
 				 " Resources may not be properly released.", rc);
 		}
 	}
-	data->hostname[0] = '\0';
+	free(data->hostname);
+	data->hostname = NULL;
 	data->thread_id = (pthread_t)0;
 	pthread_mutex_unlock(&(tm->lock));
 	pthread_exit(NULL);
