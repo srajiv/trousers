@@ -32,8 +32,8 @@ enum TCSP_PACKET_TYPE {
 	TCSD_PACKET_TYPE_PCR_EVENT
 };
 
-#define TCSD_DATABUF_SIZE		1024
-#define TCSD_MAX_NUM_PARMS		64
+#define TCSD_DATABUF_SIZE		65536
+#define TCSD_MAX_NUM_PARMS		1024
 
 /* these are the formats of the two packet types.
  */
