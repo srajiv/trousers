@@ -61,10 +61,12 @@ fill_key_info(struct key_disk_cache *d,
 
 		offset = 0;
 		/* XXX add a real context handle here */
-		UnloadBlob_KEY(&offset, tmp_blob, &tmp_key);
+		if ((result = UnloadBlob_KEY(&offset, tmp_blob, &tmp_key)))
+			return result;
 
 		memcpy(&key_info->versionInfo, &tmp_key.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &tmp_key.authDataUsage, sizeof(TCPA_AUTH_DATA_USAGE));
+		free_key_refs(&tmp_key);
 	} else {
 		if (m->tpm_handle == NULL_TPM_HANDLE)
 			key_info->fIsLoaded = FALSE;
@@ -337,9 +339,9 @@ TSS_RESULT
 clearUnknownKeys(TCS_CONTEXT_HANDLE hContext, UINT32 *cleared)
 {
 	TSS_RESULT result = TSS_SUCCESS;
-	TCPA_KEY_HANDLE_LIST keyList;
+	TCPA_KEY_HANDLE_LIST keyList = { 0, NULL };
 	int i;
-	BYTE *respData = 0;
+	BYTE *respData = NULL;
 	UINT32 respDataSize = 0, count = 0;
 	TCPA_CAPABILITY_AREA capArea = -1;
 	UINT16 offset = 0;
@@ -353,7 +355,7 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext, UINT32 *cleared)
 		return result;
 
 	if ((result = UnloadBlob_KEY_HANDLE_LIST(&offset, respData, &keyList)))
-		return result;
+		goto done;
 
 #ifdef TSS_DEBUG
 	LogDebug("Loaded TPM key handles:");
@@ -382,13 +384,16 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext, UINT32 *cleared)
 			found = FALSE;
 		else {
 			if ((result = internal_EvictByKeySlot(keyList.handle[i])))
-				return result;
+				goto done;
 			else
 				count++;
 		}
 	}
 
 	*cleared = count;
+done:
+	free(keyList.handle);
+	free(respData);
 
 	return TSS_SUCCESS;
 }
@@ -603,14 +608,20 @@ LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
 	LoadBlob(offset, 20, blob, mkAuth->digest.digest, "mkauth digest");
 }
 
-void
+TSS_RESULT
 UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset,
 			    BYTE * blob, TCPA_MIGRATIONKEYAUTH * mkAuth)
 {
-	UnloadBlob_PUBKEY(offset, blob, &mkAuth->migrationKey);
+	TSS_RESULT result;
+
+	if ((result = UnloadBlob_PUBKEY(offset, blob, &mkAuth->migrationKey)))
+		return result;
+
 	UnloadBlob_UINT16(offset, &mkAuth->migrationScheme, blob,
 			  "mkauth migScheme");
 	UnloadBlob(offset, 20, blob, mkAuth->digest.digest, "mkauth digest");
+
+	return result;
 }
 
 void
@@ -1208,3 +1219,50 @@ done:
 	*cred = NULL;
 	*size = 0;
 }
+
+void
+free_key_refs(TCPA_KEY *key)
+{
+	free(key->algorithmParms.parms);
+	key->algorithmParms.parms = NULL;
+	key->algorithmParms.parmSize = 0;
+
+	free(key->pubKey.key);
+	key->pubKey.key = NULL;
+	key->pubKey.keyLength = 0;
+
+	free(key->encData);
+	key->encData = NULL;
+	key->encSize = 0;
+
+	free(key->PCRInfo);
+	key->PCRInfo = NULL;
+	key->PCRInfoSize = 0;
+}
+
+void
+free_external_events(UINT32 eventCount, TSS_PCR_EVENT *ppEvents)
+{
+	UINT32 j;
+
+	if (!ppEvents)
+		return;
+
+	for (j = 0; j < eventCount; j++) {
+		/* This is a fairly heinous hack, but PCR event logs can get really large
+		 * and without it, there is a real potential to exhaust memory by leaks.
+		 * The PCR event logs that we pull out of securityfs have had their
+		 * rgbPcrValue and rgbEvent pointers malloc'd dynamically as the
+		 * securityfs log was parsed. The other event log lists that are
+		 * maintained by the TCSD don't need to have this data free'd, since that
+		 * will happen at shutdown time only. So, for each PCR index that's
+		 * read from securityfs, we need to free its pointers after that data has
+		 * been set in the packet to send back to the TSP. */
+		if ((tcsd_options.kernel_pcrs & (1 << ppEvents[j].ulPcrIndex)) ||
+		    (tcsd_options.firmware_pcrs & (1 << ppEvents[j].ulPcrIndex))) {
+			free(ppEvents[j].rgbPcrValue);
+			free(ppEvents[j].rgbEvent);
+		}
+	}
+}
+
