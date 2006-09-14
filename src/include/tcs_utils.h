@@ -85,7 +85,6 @@ TSS_RESULT key_mgr_evict(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 
 extern TCS_CONTEXT_HANDLE InternalContext;
 
-void initKeyFile(TCS_CONTEXT_HANDLE hContext);
 TSS_RESULT mc_update_time_stamp(TCPA_KEY_HANDLE);
 TCS_KEY_HANDLE getNextTcsKeyHandle();
 TCPA_STORE_PUBKEY *getParentPubBySlot(TCPA_KEY_HANDLE slot);
@@ -97,7 +96,6 @@ TCS_KEY_HANDLE mc_get_handle_by_encdata(BYTE *);
 TSS_RESULT mc_update_encdata(BYTE *, BYTE *);
 
 TSS_RESULT initDiskCache(void);
-void closeDiskCache(void);
 void replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
 
 TSS_RESULT mc_add_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
@@ -114,18 +112,14 @@ TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT mc_get_blob_by_pub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
 TSS_RESULT evictFirstKey(TCS_KEY_HANDLE);
 TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
-TSS_RESULT removeRegisteredKeyFromFile(TSS_UUID *);
 TSS_RESULT getRegisteredKeyByUUID(TSS_UUID *, BYTE *, UINT16 *);
 TSS_RESULT isPubRegistered(TCPA_STORE_PUBKEY *);
 TSS_RESULT getRegisteredUuidByPub(TCPA_STORE_PUBKEY *, TSS_UUID **);
 TSS_RESULT getRegisteredKeyByPub(TCPA_STORE_PUBKEY *, UINT32 *, BYTE **);
 TSS_BOOL isKeyLoaded(TCPA_KEY_HANDLE);
 TSS_RESULT LoadKeyShim(TCS_CONTEXT_HANDLE, TCPA_STORE_PUBKEY *, TSS_UUID *,TCPA_KEY_HANDLE *);
-TSS_RESULT writeRegisteredKeyToFile(TSS_UUID *, TSS_UUID *, BYTE *, UINT32, BYTE *, UINT32);
-TSS_BOOL isKeyInMemCache(TCS_KEY_HANDLE);
 TSS_RESULT mc_set_parent_by_handle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
 TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
-TSS_RESULT destroyKeyFile(void);
 void destroy_key_refs(TCPA_KEY *);
 
 /* cxt.c */
@@ -201,7 +195,6 @@ void LoadBlob_UUID(UINT16 * offset, BYTE * outBlob, TSS_UUID uuid);
 void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
-void free_key_refs(TCPA_KEY *);
 void free_external_events(UINT32 eventCount, TSS_PCR_EVENT * ppEvents);
 
 #define PLATFORM        0
