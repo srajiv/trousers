@@ -900,7 +900,11 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp);
+		if ((result = UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp)))
+			goto done;
+		free(pcrComp.select.pcrSelect);
+		free(pcrComp.pcrValue);
+
 		*pcrDataSizeOut = offset - 10;
 		*pcrDataOut = calloc(1, *pcrDataSizeOut);
 		if (*pcrDataOut == NULL) {
@@ -1069,9 +1073,10 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		TSS_RESULT tmp_result;
-		if ((tmp_result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
+		if ((result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
 			goto done;
+		free(storedData.sealInfo);
+		free(storedData.encData);
 
 		*SealedDataSize = offset - 10;
 		*SealedData = calloc(1, *SealedDataSize);
@@ -1475,7 +1480,11 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container);
+		if ((result = UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container)))
+			goto done;
+		free(container.migrationKey.pubKey.key);
+		free(container.migrationKey.algorithmParms.parms);
+
 		*MigrationKeyAuthSize = offset - 10;
 		*MigrationKeyAuth = calloc(1, *MigrationKeyAuthSize);
 		if (*MigrationKeyAuth == NULL) {
@@ -2084,7 +2093,11 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_PUBKEY(&offset, txBlob, &pubkey);
+		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubkey)))
+			goto done;
+		free(pubkey.pubKey.key);
+		free(pubkey.algorithmParms.parms);
+
 		*pubEndorsementKeySize = (UINT32) (offset - 10);
 		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
 		if (*pubEndorsementKey == NULL) {
@@ -2095,6 +2108,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   checksum->digest, "digest");
 	}
+done:
 	LogDebugFn("result: 0x%x", result);
 	return result;
 }
@@ -2170,7 +2184,13 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		offset = 10;
-		UnloadBlob_PUBKEY(&offset, txBlob, &container);
+		/* Call UnloadBlob to parse the data and set its size in &offset */
+		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &container)))
+			goto done;
+
+		free(container.pubKey.key);
+		free(container.algorithmParms.parms);
+
 		*pubEndorsementKeySize = offset - 10;
 		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
 		if (*pubEndorsementKey == NULL) {
