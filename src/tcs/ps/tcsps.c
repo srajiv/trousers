@@ -499,13 +499,13 @@ psfile_write_key(int fd,
 
 	/* Unload the blob to get the public key */
 	offset = 0;
-	if ((rc = UnloadBlob_KEY_PS(&offset, key_blob, &key)))
+	if ((rc = UnloadBlob_KEY(&offset, key_blob, &key)))
 		return rc;
 
 	pub_key_size = key.pubKey.keyLength;
 
         if ((rc = write_key_init(fd, pub_key_size, key_blob_size, vendor_size)) < 0)
-                return rc;
+                goto done;
 
 	/* offset now holds the number of bytes from the beginning of the file
 	 * the key will be stored at
@@ -520,65 +520,66 @@ psfile_write_key(int fd,
 	/* [TSS_UUID uuid0           ] yes */
         if ((rc = write_data(fd, (void *)uuid, sizeof(TSS_UUID)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [TSS_UUID uuid_parent0    ] yes */
         if ((rc = write_data(fd, (void *)parent_uuid, sizeof(TSS_UUID)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [UINT16   pub_data_size0  ] yes */
         if ((rc = write_data(fd, &pub_key_size, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [UINT16   blob_size0      ] yes */
         if ((rc = write_data(fd, &key_blob_size, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [UINT32   vendor_data_size0 ] yes */
         if ((rc = write_data(fd, &vendor_size, sizeof(UINT32)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [UINT16   cache_flags0    ] yes */
         if ((rc = write_data(fd, &cache_flags, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [BYTE[]   pub_data0       ] no */
-        //if ((rc = write_data(fd, (void *)pub_key, pub_key_size))) {
         if ((rc = write_data(fd, (void *)key.pubKey.key, pub_key_size))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [BYTE[]   blob0           ] no */
         if ((rc = write_data(fd, (void *)key_blob, key_blob_size))) {
 		LogError("%s", __FUNCTION__);
-		return rc;
+                goto done;
 	}
 
 	/* [BYTE[]   vendor_data0    ] no */
 	if (vendor_size > 0) {
 		if ((rc = write_data(fd, (void *)vendor_data, vendor_size))) {
 			LogError("%s", __FUNCTION__);
-			return rc;
+			goto done;
 		}
 	}
 
 	if ((rc = cache_key(offset, cache_flags, uuid, parent_uuid, pub_key_size,
 					key_blob_size, vendor_size)))
-		return rc;
+                goto done;
+done:
+	free_key_refs(&key);
 
-        return TSS_SUCCESS;
+        return rc;
 }
 
 TSS_RESULT
