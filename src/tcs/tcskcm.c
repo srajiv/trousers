@@ -952,28 +952,30 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_KEY(&offset, txBlob, &idKeyContainer);
+		/* Call UnloadBlob_KEY to set the size of the key in &offset */
+		if ((result = UnloadBlob_KEY(&offset, txBlob, &idKeyContainer)))
+			goto done;
+
+		free_key_refs(&idKeyContainer);
 		*idKeySize = offset - 10;
 		*idKey = calloc(1, *idKeySize);
 		if (*idKey == NULL) {
 			LogError("malloc of %d bytes failed.", *idKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			/*LogResult( "idKey size",*idKeySize); */
-			memcpy(*idKey, &txBlob[10], *idKeySize);
+			goto done;
 		}
+		memcpy(*idKey, &txBlob[10], *idKeySize);
 
-		UnloadBlob_UINT32(&offset, pcIdentityBindingSize, txBlob, "bind size");
+		UnloadBlob_UINT32(&offset, pcIdentityBindingSize, txBlob, NULL);
 		*prgbIdentityBinding = calloc(1, *pcIdentityBindingSize);
 		if (*prgbIdentityBinding == NULL) {
 			free(*idKey);
 			*idKeySize = 0;
 			LogError("malloc of %d bytes failed.", *pcIdentityBindingSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			UnloadBlob(&offset, *pcIdentityBindingSize, txBlob,
-					*prgbIdentityBinding, "id bind");
+			goto done;
 		}
+		UnloadBlob(&offset, *pcIdentityBindingSize, txBlob, *prgbIdentityBinding, NULL);
 
 		/* If an error occurs, these will return NULL */
 		get_credential(PLATFORM, pcPlatformCredentialSize, prgbPlatformCredential);
@@ -1011,15 +1013,17 @@ TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext,	/* in 
 		if (pubKey.key == NULL) {
 			LogError("malloc of %d bytes failed.", pubKey.keyLength);
 			return TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			memcpy(pubKey.key, rgbPublicInfo, pubKey.keyLength);
 		}
+
+		memcpy(pubKey.key, rgbPublicInfo, pubKey.keyLength);
 
 		if ((result = ps_get_key_by_pub(&pubKey, keySize, keyBlob))) {
 			LogDebug("Public key data not found in PS");
+			free(pubKey.key);
 			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 		}
 	}
+	free(pubKey.key);
 
 	return result;
 }
