@@ -66,7 +66,7 @@ fill_key_info(struct key_disk_cache *d,
 
 		memcpy(&key_info->versionInfo, &tmp_key.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &tmp_key.authDataUsage, sizeof(TCPA_AUTH_DATA_USAGE));
-		free_key_refs(&tmp_key);
+		destroy_key_refs(&tmp_key);
 	} else {
 		if (m->tpm_handle == NULL_TPM_HANDLE)
 			key_info->fIsLoaded = FALSE;
@@ -1218,26 +1218,6 @@ get_credential(int type, UINT32 *size, BYTE **cred)
 done:
 	*cred = NULL;
 	*size = 0;
-}
-
-void
-free_key_refs(TCPA_KEY *key)
-{
-	free(key->algorithmParms.parms);
-	key->algorithmParms.parms = NULL;
-	key->algorithmParms.parmSize = 0;
-
-	free(key->pubKey.key);
-	key->pubKey.key = NULL;
-	key->pubKey.keyLength = 0;
-
-	free(key->encData);
-	key->encData = NULL;
-	key->encSize = 0;
-
-	free(key->PCRInfo);
-	key->PCRInfo = NULL;
-	key->PCRInfoSize = 0;
 }
 
 void
