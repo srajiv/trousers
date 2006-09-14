@@ -701,23 +701,21 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		/*===	First get the data from the packet */
-		UnloadBlob_KEY(&offset, txBlob, &keyContainer);
-		/*===	Here's how big it is */
+		/* First get the data from the packet */
+		if ((result = UnloadBlob_KEY(&offset, txBlob, &keyContainer)))
+			goto done;
+
+		/* Here's how big it is */
 		*keyDataSize = offset - 10;
-		/*===	malloc the outBuffer */
+		/* malloc the outBuffer */
 		*keyData = calloc(1, *keyDataSize);
 		if (*keyData == NULL) {
 			LogError("malloc of %d bytes failed.", *keyDataSize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 		} else {
-			/*===	Reset the offset and load it into the outbuf */
+			/* Reset the offset and load it into the outbuf */
 			memcpy(*keyData, &txBlob[10], *keyDataSize);
 		}
-/*		offset = 10; */
-/*		LoadBlob_KEY( &offset, *prgbKey, &keyContainer ); */
-		/*===	offset is now restored...continue */
-/*		if( pAuth != NULL ) */
 
 		UnloadBlob_Auth(&offset, txBlob, pAuth);
 
@@ -779,108 +777,23 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer);
+		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer)))
+			goto done;
+		free(pubContainer.pubKey.key);
+		free(pubContainer.algorithmParms.parms);
+
 		*pcPubKeySize = offset - 10;
 		*prgbPubKey = calloc(1, *pcPubKeySize);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %d bytes failed.", *pcPubKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			memcpy(*prgbPubKey, &txBlob[10], *pcPubKeySize);
+			goto done;
 		}
+		memcpy(*prgbPubKey, &txBlob[10], *pcPubKeySize);
 
 		if (pAuth != NULL) {
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
 		}
-#if 0
-		if (keySlot == SRK_TPM_HANDLE) {
-			/*---	If it's the SRK, make sure the key storage isn't stale */
-			LogDebug("Checking SRK in storage");
-			srkKeySize = sizeof (srkKeyBlob);
-			rc = ps_get_key_by_uuid(&SRK_UUID, srkKeyBlob, &srkKeySize);
-			if (rc) {
-				LogDebug("SRK isn't in storage, setting it.  Have to guess at some parms");
-				memset(&srkKey, 0x00, sizeof (TCPA_KEY));
-
-				srkKey.pubKey.keyLength = 0x100;
-				srkKey.pubKey.key = malloc(0x100);
-				if (srkKey.pubKey.key == NULL) {
-					LogError("Malloc Failure.");
-					return TCSERR(TSS_E_OUTOFMEMORY);
-				}
-				memcpy(srkKey.pubKey.key, pubContainer.pubKey.key, 0x100);
-
-				srkKey.algorithmParms.algorithmID = pubContainer.algorithmParms.algorithmID;
-				srkKey.algorithmParms.parmSize = pubContainer.algorithmParms.parmSize;
-				srkKey.algorithmParms.parms = malloc(pubContainer.algorithmParms.parmSize);
-				if (srkKey.algorithmParms.parms == NULL) {
-					LogError("Malloc Failure.");
-					return TCSERR(TSS_E_OUTOFMEMORY);
-				}
-				memcpy(srkKey.algorithmParms.parms,
-				       pubContainer.algorithmParms.parms,
-				       pubContainer.algorithmParms.parmSize);
-				srkKey.algorithmParms.encScheme = pubContainer.algorithmParms.encScheme;
-				srkKey.algorithmParms.sigScheme = pubContainer.algorithmParms.sigScheme;
-
-				srkKey.authDataUsage = 0x00;
-
-				srkKey.keyUsage = 0x11;
-
-				version = getCurrentVersion();
-				if (version == NULL)
-					return TCSERR(TSS_E_FAIL);
-
-				memcpy(&srkKey.ver, version, sizeof (TCPA_VERSION));
-				offset = 0;
-				LoadBlob_KEY(&offset, srkKeyBlob, &srkKey);
-				srkKeySize = offset;
-
-				free(srkKey.algorithmParms.parms);
-
-				if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
-					LogError("Error writing SRK to disk");
-					return result;
-				}
-			} else {
-				offset = 0;
-				UnloadBlob_KEY(&offset, srkKeyBlob, &srkKey);
-				if (srkKey.pubKey.keyLength == pubContainer.pubKey.keyLength
-				    && srkKey.pubKey.key != NULL
-				    && pubContainer.pubKey.key != NULL
-				    && !memcmp(srkKey.pubKey.key, pubContainer.pubKey.key, 20)) {
-					/*this is good */
-					LogDebug("SRK in storage is the same");
-				} else {
-					LogDebug("SRK in storage is different.  Resetting storage");
-					removeRegisteredKeyFromFile(NULL);
-
-					if (srkKey.pubKey.key == NULL) {
-						srkKey.pubKey.key = malloc(0x100);
-						if (srkKey.pubKey.key == NULL) {
-							LogError("Malloc Failure.");
-							return TCSERR(TSS_E_OUTOFMEMORY);
-						}
-					}
-
-					memcpy(srkKey.pubKey.key, *prgbPubKey, 0x100);
-					offset = 0;
-					LoadBlob_KEY(&offset, srkKeyBlob, &srkKey);
-					srkKeySize = offset;
-
-					if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, srkKeyBlob, srkKeySize))) {
-						LogError("Error writing SRK to disk");
-						return result;
-					}
-#if 0
-					/*---	Need to update the cache as well */
-					CacheInit = 0;
-					result = initCache();
-#endif
-				}
-			}
-		}
-#endif
 	}
 	LogResult("Get Public Key", result);
 done:
@@ -956,7 +869,7 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		if ((result = UnloadBlob_KEY(&offset, txBlob, &idKeyContainer)))
 			goto done;
 
-		free_key_refs(&idKeyContainer);
+		destroy_key_refs(&idKeyContainer);
 		*idKeySize = offset - 10;
 		*idKey = calloc(1, *idKeySize);
 		if (*idKey == NULL) {

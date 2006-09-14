@@ -113,10 +113,13 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	offset = 10;
 	if (result == 0) {
-		UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer);
+		if ((result = UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer)))
+			goto done;
+
 		*srkKeySize = offset - 10;
 		*srkKey = calloc(1, *srkKeySize);
 		if (*srkKey == NULL) {
+			destroy_key_refs(&srkKeyContainer);
 			LogError("malloc of %u bytes failed.", *srkKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 			goto done;
@@ -138,21 +141,24 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		 */
 		result = ps_remove_key(&SRK_UUID);
 		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
+			destroy_key_refs(&srkKeyContainer);
 			LogError("Error removing SRK from key file.");
 			goto done;
 		}
 
-		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0,newSRK,
-					   bugOffset))) {
+		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, newSRK, bugOffset))) {
+			destroy_key_refs(&srkKeyContainer);
 			LogError("Error writing SRK to disk");
 			goto done;
 		}
 		result = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
 		if (result != TSS_SUCCESS) {
+			destroy_key_refs(&srkKeyContainer);
 			LogError("Error creating SRK mem cache entry");
 			*srkKeySize = 0;
 			free(*srkKey);
 		}
+		destroy_key_refs(&srkKeyContainer);
 	}
 	LogResult("TakeOwnership", result);
 done:
@@ -736,6 +742,7 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 		*SymmetricKey = calloc(1, offset - 10);
 		if (*SymmetricKey == NULL) {
+			free(symKey.data);
 			LogError("malloc of %hu bytes failed.", offset - 10);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 			goto done;
@@ -1575,8 +1582,11 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_CERTIFY_INFO(&offset, txBlob,
-					&certifyContainer);
+		if ((result = UnloadBlob_CERTIFY_INFO(&offset, txBlob, &certifyContainer)))
+			goto done;
+		free(certifyContainer.algorithmParms.parms);
+		free(certifyContainer.PCRInfo);
+
 		*CertifyInfoSize = offset - 10;
 		*CertifyInfo = calloc(1, *CertifyInfoSize);
 		if (*CertifyInfo == NULL) {
@@ -2047,7 +2057,11 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob_PUBKEY(&offset, txBlob, &pubKey);
+		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubKey)))
+			goto done;
+		free(pubKey.pubKey.key);
+		free(pubKey.algorithmParms.parms);
+
 		*endorsementKeySize = offset - 10;
 		*endorsementKey = malloc(*endorsementKeySize);
 		if (*endorsementKey == NULL) {
@@ -2060,6 +2074,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob,
 			   checksum->digest, "digest");
 	}
+done:
 	LogData("Leaving CreateEKPair with result:", result);
 	return result;
 }
