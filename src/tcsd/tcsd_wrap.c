@@ -2987,6 +2987,7 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
+		free(pKeyHierarchy);
 	} else {
 		*hdr = calloc(1, size);
 		if (*hdr == NULL) {
@@ -3046,7 +3047,6 @@ tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data,
 	return TSS_SUCCESS;
 }
 
-
 TSS_RESULT
 tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 		     struct tsp_packet *tsp_data,
@@ -3087,12 +3087,16 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
 			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
+			if (lengthOnly == FALSE)
+				free_external_events(1, pEvent);
 			free(pEvent);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &number, 0, *hdr)) {
 			free(*hdr);
+			if (lengthOnly == FALSE)
+				free_external_events(1, pEvent);
 			free(pEvent);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -3100,24 +3104,11 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 		if (lengthOnly == FALSE) {
 			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, pEvent, 0, *hdr)) {
 				free(*hdr);
+				free_external_events(1, pEvent);
 				free(pEvent);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
-
-			/* This is a fairly heinous hack, but PCR event logs can get really large
-			 * and without it, there is a real potential to exhaust memory by leaks.
-			 * The PCR event logs that we pull out of securityfs have had their
-			 * rgbPcrValue and rgbEvent pointers malloc'd dynamically as the
-			 * securityfs log was parsed. The other event log lists that are
-			 * maintained by the TCSD don't need to have this data free'd, since that
-			 * will happen at shutdown time only. So, for each PCR index that's
-			 * read from securityfs, we need to free its pointers after that data has
-			 * been set in the packet to send back to the TSP. */
-			if ((tcsd_options.kernel_pcrs & (1 << pEvent->ulPcrIndex)) ||
-			    (tcsd_options.firmware_pcrs & (1 << pEvent->ulPcrIndex))) {
-				free(pEvent->rgbPcrValue);
-				free(pEvent->rgbEvent);
-			}
+			free_external_events(1, pEvent);
 			free(pEvent);
 		}
 	} else {
@@ -3168,12 +3159,14 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
 			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
+			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, *hdr)) {
 			free(*hdr);
+			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -3182,26 +3175,13 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
 		for (j = 0; j < eventCount; j++) {
 			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, *hdr)) {
 				free(*hdr);
+				free_external_events(eventCount, ppEvents);
 				free(ppEvents);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
-
-			/* This is a fairly heinous hack, but PCR event logs can get really large
-			 * and without it, there is a real potential to exhaust memory by leaks.
-			 * The PCR event logs that we pull out of securityfs have had their
-			 * rgbPcrValue and rgbEvent pointers malloc'd dynamically as the
-			 * securityfs log was parsed. The other event log lists that are
-			 * maintained by the TCSD don't need to have this data free'd, since that
-			 * will happen at shutdown time only. So, for each PCR index that's
-			 * read from securityfs, we need to free its pointers after that data has
-			 * been set in the packet to send back to the TSP. */
-			if ((tcsd_options.kernel_pcrs & (1 << ppEvents[j].ulPcrIndex)) ||
-			    (tcsd_options.firmware_pcrs & (1 << ppEvents[j].ulPcrIndex))) {
-				free(ppEvents[j].rgbPcrValue);
-				free(ppEvents[j].rgbEvent);
-			}
 		}
 
+		free_external_events(eventCount, ppEvents);
 		free(ppEvents);
 	} else {
 		*hdr = calloc(1, size);
@@ -3241,12 +3221,14 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
 		if (*hdr == NULL) {
 			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
+			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, *hdr)) {
 			free(*hdr);
+			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -3255,26 +3237,13 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 		for (j = 0; j < eventCount; j++) {
 			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, *hdr)) {
 				free(*hdr);
+				free_external_events(eventCount, ppEvents);
 				free(ppEvents);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
-
-			/* This is a fairly heinous hack, but PCR event logs can get really large
-			 * and without it, there is a real potential to exhaust memory by leaks.
-			 * The PCR event logs that we pull out of securityfs have had their
-			 * rgbPcrValue and rgbEvent pointers malloc'd dynamically as the
-			 * securityfs log was parsed. The other event log lists that are
-			 * maintained by the TCSD don't need to have this data free'd, since that
-			 * will happen at shutdown time only. So, for each PCR index that's
-			 * read from securityfs, we need to free its pointers after that data has
-			 * been set in the packet to send back to the TSP. */
-			if ((tcsd_options.kernel_pcrs & (1 << ppEvents[j].ulPcrIndex)) ||
-			    (tcsd_options.firmware_pcrs & (1 << ppEvents[j].ulPcrIndex))) {
-				free(ppEvents[j].rgbPcrValue);
-				free(ppEvents[j].rgbEvent);
-			}
 		}
 
+		free_external_events(eventCount, ppEvents);
 		free(ppEvents);
 	} else {
 		*hdr = calloc(1, size);
