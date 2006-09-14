@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <limits.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
@@ -25,10 +26,6 @@
 #include "tcsd.h"
 #include "tcslog.h"
 #include "tcsem.h"
-
-#ifdef EVLOG_SOURCE_IMA
-#include "imaem.h"
-#endif
 
 
 TCS_CONTEXT_HANDLE InternalContext = 0x30000000;
@@ -59,12 +56,9 @@ event_log_init()
 	}
 
 	/* assign external event log sources here */
-	tcs_event_log->firmware_source = NULL;
-#ifdef EVLOG_SOURCE_IMA
-	tcs_event_log->kernel_source = &ima_source;
-#else
-	tcs_event_log->kernel_source = NULL;
-#endif
+	//tcs_event_log->firmware_source = EVLOG_BIOS_SOURCE;
+	tcs_event_log->firmware_source = EVLOG_IMA_SOURCE;
+	tcs_event_log->kernel_source = EVLOG_IMA_SOURCE;
 
 	return TSS_SUCCESS;
 }
@@ -465,54 +459,96 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	return TSS_SUCCESS;
 }
 
-/* XXX needs modification for external event sources */
+TSS_PCR_EVENT *
+concat_pcr_events(TSS_PCR_EVENT **list_so_far, UINT32 list_size, TSS_PCR_EVENT *addition,
+		  UINT32 addition_size)
+{
+	TSS_PCR_EVENT *ret;
+
+	ret = realloc(*list_so_far, (list_size + addition_size) * sizeof(TSS_PCR_EVENT));
+	if (ret == NULL) {
+		LogError("malloc of %zd bytes failed",
+			 (list_size + addition_size) * sizeof(TSS_PCR_EVENT));
+		return ret;
+	}
+
+	memcpy(&ret[list_size], addition, addition_size * sizeof(TSS_PCR_EVENT));
+	return ret;
+}
+
 TSS_RESULT
 TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 			    UINT32 *pEventCount,	/* out */
 			    TSS_PCR_EVENT **ppEvents)	/* out */
 {
 	TSS_RESULT result;
-	UINT32 numEvents, pcrEvents, i, j;
+	UINT32 i, j, event_count, aggregate_count = 0;
 	struct event_wrapper *tmp;
+	TSS_PCR_EVENT *event_list = NULL, *aggregate_list = NULL;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
 	pthread_mutex_lock(&(tcs_event_log->lock));
 
-	/* add up the total number of events in the log */
-	for (numEvents = 0, i = 0; i < tpm_metrics.num_pcrs; i++)
-		numEvents += get_num_events(i);
-
-	if (numEvents == 0) {
-		*pEventCount = 0;
-		*ppEvents = NULL;
-		pthread_mutex_unlock(&(tcs_event_log->lock));
-		return TSS_SUCCESS;
-	}
-
-	*ppEvents = calloc(numEvents, sizeof(TSS_PCR_EVENT));
-	if (*ppEvents == NULL) {
-		LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * numEvents);
-		pthread_mutex_unlock(&(tcs_event_log->lock));
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-
-	numEvents = 0;
+	/* for each PCR index, if its externally controlled, get the total number of events
+	 * externally, else copy the events from the TCSD list. Then tack that list onto a
+	 * master list to returned. */
 	for (i = 0; i < tpm_metrics.num_pcrs; i++) {
-		pcrEvents = get_num_events(i);
+		if ((tcsd_options.kernel_pcrs & (1 << i)) ||
+		    (tcsd_options.firmware_pcrs & (1 << i))) {
+			/* A kernel or firmware controlled PCR event list */
+			event_count = UINT_MAX;
+			if ((result = TCS_GetExternalPcrEventsByPcr(i, 0, &event_count,
+								    &event_list))) {
+				LogDebug("Getting External event list for PCR %u failed", i);
+				free(aggregate_list);
+				goto error;
+			}
+			LogDebug("Retrieved %u events from PCR %u (external)", event_count, i);
+		} else {
+			/* A TCSD controlled PCR event list */
+			event_count = get_num_events(i);
 
-		tmp = tcs_event_log->lists[i];
-		for (j = 0; j < pcrEvents; j++) {
-			copy_pcr_event(&((*ppEvents)[numEvents++]), &(tmp->event));
-			tmp = tmp->next;
+			if (event_count == 0)
+				continue;
+
+			if ((event_list = calloc(event_count, sizeof(TSS_PCR_EVENT))) == NULL) {
+				LogError("malloc of %zd bytes failed",
+					 event_count * sizeof(TSS_PCR_EVENT));
+				result = TCSERR(TSS_E_OUTOFMEMORY);
+				free(aggregate_list);
+				goto error;
+			}
+
+			tmp = tcs_event_log->lists[i];
+			for (j = 0; j < event_count; j++) {
+				copy_pcr_event(&event_list[j], &(tmp->event));
+				tmp = tmp->next;
+			}
 		}
+
+		if (event_count == 0)
+			continue;
+
+		/* Tack the list onto the aggregate_list */
+		aggregate_list = concat_pcr_events(&aggregate_list, aggregate_count, event_list,
+						   event_count);
+		if (aggregate_list == NULL) {
+			free(event_list);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		aggregate_count += event_count;
+		free(event_list);
 	}
 
+	*ppEvents = aggregate_list;
+	*pEventCount = aggregate_count;
+	result = TSS_SUCCESS;
+error:
 	pthread_mutex_unlock(&(tcs_event_log->lock));
 
-	*pEventCount = numEvents;
-
-	return TSS_SUCCESS;
+	return result;
 }
 
