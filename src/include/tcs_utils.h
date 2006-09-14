@@ -169,8 +169,8 @@ void UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, c
 void LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal, BYTE * blob);
 TSS_RESULT UnloadBlob_Header(BYTE * blob, UINT32 * size);
 void LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob, TCPA_MIGRATIONKEYAUTH * mkAuth);
-void UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
-				 TCPA_MIGRATIONKEYAUTH * mkAuth);
+TSS_RESULT UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
+				       TCPA_MIGRATIONKEYAUTH * mkAuth);
 void LoadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
 void UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
 void LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo);
@@ -201,6 +201,8 @@ void LoadBlob_UUID(UINT16 * offset, BYTE * outBlob, TSS_UUID uuid);
 void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
+void free_key_refs(TCPA_KEY *);
+void free_external_events(UINT32 eventCount, TSS_PCR_EVENT * ppEvents);
 
 #define PLATFORM        0
 #define CONFORMANCE     1
