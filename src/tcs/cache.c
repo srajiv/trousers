@@ -475,7 +475,7 @@ mc_remove_entry(TCS_KEY_HANDLE tcs_handle)
 
 	for (cur = key_mem_cache_head; cur; cur = cur->next) {
 		if (cur->tcs_handle == tcs_handle) {
-			free_key_refs(cur->blob);
+			destroy_key_refs(cur->blob);
 			free(cur->blob);
 
 			if (cur->prev != NULL)
@@ -742,7 +742,7 @@ key_mgr_ref_count()
 	for (cur = key_mem_cache_head; cur;) {
 		if (cur->ref_cnt == 0) {
 			LogDebugFn("Key 0x%x being freed", cur->tcs_handle);
-			free_key_refs(cur->blob);
+			destroy_key_refs(cur->blob);
 			free(cur->blob);
 			if (cur->prev != NULL)
 				cur->prev->next = cur->next;

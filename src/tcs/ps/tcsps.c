@@ -577,7 +577,7 @@ psfile_write_key(int fd,
 					key_blob_size, vendor_size)))
                 goto done;
 done:
-	free_key_refs(&key);
+	destroy_key_refs(&key);
 
         return rc;
 }
