@@ -40,8 +40,8 @@ struct tcsd_config
 #define TCSD_DEFAULT_MAX_THREADS	10
 #define TCSD_DEFAULT_SYSTEM_PS_FILE	VAR_PREFIX "/lib/tpm/system.data"
 #define TCSD_DEFAULT_SYSTEM_PS_DIR	VAR_PREFIX "/lib/tpm"
-#define TCSD_DEFAULT_FIRMWARE_LOG_FILE	"/proc/tpm/firmware_events"
-#define TCSD_DEFAULT_KERNEL_LOG_FILE	"/proc/tcg/measurement_events"
+#define TCSD_DEFAULT_FIRMWARE_LOG_FILE	"/sys/kernel/security/tpm0/binary_bios_measurements"
+#define TCSD_DEFAULT_KERNEL_LOG_FILE	"/sys/kernel/security/ima/binary_runtime_measurements"
 #define TCSD_DEFAULT_FIRMWARE_PCRS	0x00000000
 #define TCSD_DEFAULT_KERNEL_PCRS	0x00000000
 /* This will change when a system with more than 32 PCR's exists */
@@ -101,7 +101,7 @@ struct tcsd_thread_data
 	int sock;
 	UINT32 context;
 	pthread_t thread_id;
-	char hostname[80];
+	char *hostname;
 };
 
 struct tcsd_thread_mgr
