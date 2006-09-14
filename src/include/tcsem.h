@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -30,7 +30,20 @@ struct event_log {
 	struct event_wrapper **lists;
 };
 
-/* define the compiled-in log sources here */
-#define EVLOG_SOURCE_IMA	1
+/* include the compiled-in log sources and struct references here */
+#include "imaem.h"
+#include "biosem.h"
+
+#ifdef EVLOG_SOURCE_IMA
+#define EVLOG_IMA_SOURCE	&ima_source
+#else
+#define EVLOG_IMA_SOURCE	NULL
+#endif
+
+#ifdef EVLOG_SOURCE_BIOS
+#define EVLOG_BIOS_SOURCE	&bios_source
+#else
+#define EVLOG_BIOS_SOURCE	NULL
+#endif
 
 #endif
