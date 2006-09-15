@@ -1,4 +1,8 @@
 
+- Made the popup string appear as a label on the popup, not the
+  title. Also, got rid of annoying mouse-over texts.
+- Added a flag to pass to the get_secret function internally to
+  indicate whether a popup should contain the confirm box.
 - Added support for callbacks in the identity creation code.
 - Updated the identity creation code in the TSP/TCS to support
   AES, DES, 3DES during identity creation.
