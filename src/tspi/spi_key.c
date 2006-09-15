@@ -572,10 +572,10 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_MIGRATION, &hMigPolicy, NULL)))
 		goto done;
 
-	if ((result = obj_policy_get_secret(hUsePolicy, &usage)))
+	if ((result = obj_policy_get_secret(hUsePolicy, TR_SECRET_CTX_NEW, &usage)))
 		goto done;
 
-	if ((result = obj_policy_get_secret(hMigPolicy, &migration)))
+	if ((result = obj_policy_get_secret(hMigPolicy, TR_SECRET_CTX_NEW, &migration)))
 		goto done;
 
 	memset(&keyContainer, 0, sizeof(TCPA_KEY));

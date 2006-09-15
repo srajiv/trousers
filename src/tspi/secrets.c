@@ -63,13 +63,12 @@ popup_GetSecret(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_ha
 
 #ifndef TSS_SPEC_COMPLIANCE
 	if (hash_mode == TSS_TSPATTRIB_HASH_MODE_NOT_NULL)
-		Trspi_Hash(TSS_HASH_SHA1, secret_len - 2, secret, auth_hash);
-	else
+		secret_len -= sizeof(UNICODE); // Take off the NULL terminator
 #endif
-		Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, auth_hash);
-
-	LogDebug("Secret's UNICODE data:");
+	LogDebug("Hashing these %u bytes as the secret:", secret_len);
 	LogDebugData(secret_len, secret);
+	Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, auth_hash);
+
 	/* zero, then unpin the memory */
 	memset(secret, 0, secret_len);
 	unpin_mem(&secret, UI_MAX_SECRET_STRING_LENGTH);
@@ -137,7 +136,8 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 		case TSS_SECRET_MODE_SHA1:
 		case TSS_SECRET_MODE_PLAIN:
 		case TSS_SECRET_MODE_POPUP:
-			if ((result = obj_policy_get_secret(hPolicy, &secret)))
+			if ((result = obj_policy_get_secret(hPolicy, TR_SECRET_CTX_NOT_NEW,
+							    &secret)))
 				break;
 
 			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
@@ -213,13 +213,14 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	}
 
 	if (keyMode != TSS_SECRET_MODE_CALLBACK) {
-		if ((result = obj_policy_get_secret(hPolicy, &keySecret)))
+		if ((result = obj_policy_get_secret(hPolicy, TR_SECRET_CTX_NOT_NEW, &keySecret)))
 			return result;
 
-		if ((result = obj_policy_get_secret(hUsagePolicy, &usageSecret)))
+		if ((result = obj_policy_get_secret(hUsagePolicy, TR_SECRET_CTX_NEW, &usageSecret)))
 			return result;
 
-		if ((result = obj_policy_get_secret(hMigrationPolicy, &migSecret)))
+		if ((result = obj_policy_get_secret(hMigrationPolicy, TR_SECRET_CTX_NEW,
+						    &migSecret)))
 			return result;
 
 		if ((result = OSAP_Calc(tcsContext, osapType, osapData,
@@ -436,13 +437,14 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		if ((result = Trspi_UnloadBlob_KEY(&offset, endorsementKey, &dummyKey)))
 			return result;
 
-		if ((result = obj_policy_get_secret(hOwnerPolicy, &ownerSecret))) {
+		if ((result = obj_policy_get_secret(hOwnerPolicy, TR_SECRET_CTX_NEW,
+						    &ownerSecret))) {
 			free(dummyKey.pubKey.key);
 			free(dummyKey.algorithmParms.parms);
 			return result;
 		}
 
-		if ((result = obj_policy_get_secret(hSrkPolicy, &srkSecret))) {
+		if ((result = obj_policy_get_secret(hSrkPolicy, TR_SECRET_CTX_NEW, &srkSecret))) {
 			free(dummyKey.pubKey.key);
 			free(dummyKey.algorithmParms.parms);
 			return result;

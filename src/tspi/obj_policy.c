@@ -176,7 +176,7 @@ obj_policy_do_hmac(TSS_HPOLICY hPolicy, TSS_HOBJECT hAuthorizedObject,
 }
 
 TSS_RESULT
-obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
+obj_policy_get_secret(TSS_HPOLICY hPolicy, TSS_BOOL ctx, TCPA_SECRET *secret)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -194,7 +194,7 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 		case TSS_SECRET_MODE_POPUP:
 			/* if the secret is still NULL, grab it using the GUI */
 			if (policy->SecretSet == FALSE) {
-				if ((result = popup_GetSecret(TRUE,
+				if ((result = popup_GetSecret(ctx,
 #ifndef TSS_SPEC_COMPLIANCE
 							      policy->hashMode,
 #else
@@ -222,7 +222,12 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TCPA_SECRET *secret)
 			result = TSPERR(TSS_E_POLICY_NO_SECRET);
 			break;
 	}
-
+#ifdef TSS_DEBUG
+	if (!result) {
+		LogDebug("Got a secret:");
+		LogDebugData(20, (BYTE *)secret);
+	}
+#endif
 	obj_list_put(&policy_list);
 
 	return result;

@@ -669,9 +669,11 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 							  &hOldPolicy)))
 				return result;
 
-			if ((result = obj_policy_get_secret(hNewPolicy, &newSecret)))
+			if ((result = obj_policy_get_secret(hNewPolicy, TR_SECRET_CTX_NEW,
+							    &newSecret)))
 				return result;
-			if ((result = obj_policy_get_secret(hOldPolicy, &oldSecret)))
+			if ((result = obj_policy_get_secret(hOldPolicy, TR_SECRET_CTX_NOT_NEW,
+							    &oldSecret)))
 				return result;
 
 			/* Encrypt the ChangeAuthValidate structure with the

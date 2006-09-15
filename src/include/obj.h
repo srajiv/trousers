@@ -332,7 +332,12 @@ TSS_RESULT obj_context_set_hash_mode(TSS_HCONTEXT, UINT32);
 TSS_BOOL   anyPopupPolicies(TSS_HCONTEXT);
 TSS_BOOL   obj_is_policy(TSS_HOBJECT);
 TSS_RESULT obj_policy_get_tsp_context(TSS_HPOLICY, TSS_HCONTEXT *);
-TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TCPA_SECRET *);
+/* One of these 2 flags should be passed to obj_policy_get_secret so that if a popup must
+ * be executed to get the secret, we know whether or not the new dialog should be displayed,
+ * which will ask for confirmation */
+#define TR_SECRET_CTX_NEW	TRUE
+#define TR_SECRET_CTX_NOT_NEW	FALSE
+TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TSS_BOOL, TCPA_SECRET *);
 TSS_RESULT obj_policy_flush_secret(TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret_object(TSS_HPOLICY, TSS_FLAG, UINT32,
 					TCPA_DIGEST *, TSS_BOOL);
@@ -341,7 +346,6 @@ TSS_RESULT obj_policy_set_secret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
 TSS_RESULT obj_policy_get_type(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_policy_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
-TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TCPA_SECRET *);
 TSS_RESULT obj_policy_set_type(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_tcs_context(TSS_HPOLICY, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_policy_set_cb12(TSS_HPOLICY, TSS_FLAG, BYTE *);
