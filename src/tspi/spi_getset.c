@@ -983,7 +983,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				break;
 #ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
-					result = obj_policy_set_hash_mode(hObject, subFlag);
+					result = obj_policy_set_hash_mode(hObject, ulAttrib);
 				break;
 #endif
 			default:
@@ -1004,7 +1004,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				break;
 #ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
-				result = obj_context_set_hash_mode(hObject, subFlag);
+				result = obj_context_set_hash_mode(hObject, ulAttrib);
 				break;
 #endif
 			default:
