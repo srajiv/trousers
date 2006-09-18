@@ -84,8 +84,11 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
-
+retry1:
+	errno = 0;
 	if ((returnSize = recv(sd, &loc_hdr, hdr_size - 1, 0)) < 0) {
+		if (errno == EINTR)
+			goto retry1;
 		LogError("recv: %s", strerror(errno));
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
@@ -116,7 +119,12 @@ send_init(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_
 			memcpy(hdr_p, &loc_hdr, returnSize);
 
 			if (returnSize > hdr_size) {
-				if ((returnSize = recv(sd, &hdr_p->data, returnSize - (hdr_size-1), 0)) < 0) {
+retry2:
+				errno = 0;
+				if ((returnSize = recv(sd, &hdr_p->data, returnSize - (hdr_size-1),
+						       0)) < 0) {
+					if (errno == EINTR)
+						goto retry2;
 					LogError("recv: %s", strerror(errno));
 					free(hdr_p);
 					result = TSPERR(TSS_E_COMM_FAILURE);
@@ -172,8 +180,12 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 
 	/* keep calling receive until at least 1 header struct has been read in */
 	while (recd_total < (hdr_size - 1)) {
+retry1:
+		errno = 0;
 		if ((recd = recv(hte->socket, &(((BYTE *)&loc_hdr)[recd_total]),
 						(hdr_size - 1) - recd_total, 0)) < 0) {
+			if (errno == EINTR)
+				goto retry1;
 			LogError("Socket connection error: %s", strerror(errno));
 			result = TSPERR(TSS_E_COMM_FAILURE);
 			goto err_exit;
@@ -218,10 +230,14 @@ sendit(struct host_table_entry *hte, BYTE *data, int dataLength, struct tcsd_pac
 			 */
 			int offset = 0;
 			while (recd_total < returnSize) {
+retry2:
+				errno = 0;
 				if ((recd = recv(hte->socket,
 						 &(((BYTE *)&hdr_p->data)[offset]),
 						 returnSize - (hdr_size-1+offset),
 						 0)) < 0) {
+					if (errno == EINTR)
+						goto retry2;
 					LogError("Socket connection error: %s", strerror(errno));
 					free(hdr_p);
 					result = TSPERR(TSS_E_COMM_FAILURE);
