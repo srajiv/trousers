@@ -1,4 +1,9 @@
 
+- Fixed 2 bugs in spi_getset.c where setting the secret hash mode
+  was passing subFlag to the internal set function instead of
+  ulAttrib.
+- Added patch to retry the libtspi's recv() call to the TCSD
+  if the call was interrupted before completion.
 - Made the popup string appear as a label on the popup, not the
   title. Also, got rid of annoying mouse-over texts.
 - Added a flag to pass to the get_secret function internally to
