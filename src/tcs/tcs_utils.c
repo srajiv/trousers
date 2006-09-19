@@ -674,6 +674,7 @@ UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob,
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
 			LogError("malloc of %u bytes failed.", keyParms->parmSize);
+			keyParms->parmSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -697,7 +698,8 @@ UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob,
 	} else {
 		store->key = (BYTE *)malloc(store->keyLength);
 		if (store->key == NULL) {
-			LogError("malloc of %d bytes failed.", store->keyLength);
+			LogError("malloc of %u bytes failed.", store->keyLength);
+			store->keyLength = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -754,8 +756,11 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 	else {
 		key->PCRInfo = malloc(key->PCRInfoSize);
 		if (key->PCRInfo == NULL) {
-			LogError("malloc of %d bytes failed.", key->PCRInfoSize);
+			LogError("malloc of %u bytes failed.", key->PCRInfoSize);
+			key->PCRInfoSize = 0;
 			free(key->algorithmParms.parms);
+			key->algorithmParms.parms = NULL;
+			key->algorithmParms.parmSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo, "KEY PCRInfo");
@@ -763,7 +768,11 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 
 	if ((rc = UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey))) {
 		free(key->PCRInfo);
+		key->PCRInfo = NULL;
+		key->PCRInfoSize = 0;
 		free(key->algorithmParms.parms);
+		key->algorithmParms.parms = NULL;
+		key->algorithmParms.parmSize = 0;
 		return rc;
 	}
 	UnloadBlob_UINT32(offset, &key->encSize, blob, "KEY encSize");
@@ -774,9 +783,16 @@ UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 		key->encData = (BYTE *)malloc(key->encSize);
 		if (key->encData == NULL) {
 			LogError("malloc of %d bytes failed.", key->encSize);
+			key->encSize = 0;
 			free(key->algorithmParms.parms);
+			key->algorithmParms.parms = NULL;
+			key->algorithmParms.parmSize = 0;
 			free(key->PCRInfo);
+			key->PCRInfo = NULL;
+			key->PCRInfoSize = 0;
 			free(key->pubKey.key);
+			key->pubKey.key = NULL;
+			key->pubKey.keyLength = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->encSize, blob, key->encData, "KEY encData");
@@ -817,6 +833,8 @@ UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob,
 		return rc;
 	if ((rc = UnloadBlob_STORE_PUBKEY(offset, blob, &key->pubKey))) {
 		free(key->algorithmParms.parms);
+		key->algorithmParms.parms = NULL;
+		key->algorithmParms.parmSize = 0;
 	}
 
 	return rc;
@@ -847,6 +865,7 @@ UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 		key->data = (BYTE *)malloc(key->size);
 		if (key->data == NULL) {
 			LogError("malloc of %hu bytes failed.", key->size);
+			key->size = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, key->size, blob, key->data, "SYM KEY data");
@@ -858,18 +877,16 @@ UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 }
 
 TSS_RESULT
-UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob,
-			 TCPA_PCR_SELECTION * pcr)
+UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION * pcr)
 {
-	UnloadBlob_UINT16(offset, &pcr->sizeOfSelect, blob,
-			  "PCR SEL sizeOfSel");
+	UnloadBlob_UINT16(offset, &pcr->sizeOfSelect, blob, NULL);
 	pcr->pcrSelect = malloc(pcr->sizeOfSelect);
         if (pcr->pcrSelect == NULL) {
-		LogError("malloc of %d bytes failed.", pcr->sizeOfSelect);
+		LogError("malloc of %hu bytes failed.", pcr->sizeOfSelect);
+		pcr->sizeOfSelect = 0;
                 return TCSERR(TSS_E_OUTOFMEMORY);
         }
-	UnloadBlob(offset, pcr->sizeOfSelect, blob, pcr->pcrSelect,
-		   "PCR SEL pcrSel");
+	UnloadBlob(offset, pcr->sizeOfSelect, blob, pcr->pcrSelect, NULL);
 	return TSS_SUCCESS;
 }
 
@@ -894,7 +911,8 @@ UnloadBlob_PCR_COMPOSITE(UINT16 *offset, BYTE *blob,
 	UnloadBlob_UINT32(offset, &out->valueSize, blob, "PCR COMP valueSize");
 	out->pcrValue = malloc(out->valueSize);
         if (out->pcrValue == NULL) {
-		LogError("malloc of %d bytes failed.", out->valueSize);
+		LogError("malloc of %u bytes failed.", out->valueSize);
+		out->valueSize = 0;
                 return TCSERR(TSS_E_OUTOFMEMORY);
         }
 	UnloadBlob(offset, out->valueSize, blob, (BYTE *) out->pcrValue,
@@ -937,7 +955,8 @@ UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob,
 	if (data->sealInfoSize > 0) {
 		data->sealInfo = (BYTE *)calloc(1, data->sealInfoSize);
 		if (data->sealInfo == NULL) {
-			LogError("malloc of %d bytes failed.", data->sealInfoSize);
+			LogError("malloc of %u bytes failed.", data->sealInfoSize);
+			data->sealInfoSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, data->sealInfoSize, blob, data->sealInfo, "seal info");
@@ -950,7 +969,11 @@ UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob,
 	if (data->encDataSize > 0) {
 		data->encData = (BYTE *)calloc(1, data->encDataSize);
 		if (data->encData == NULL) {
-			LogError("malloc of %d bytes failed.", data->encDataSize);
+			LogError("malloc of %u bytes failed.", data->encDataSize);
+			data->encDataSize = 0;
+			free(data->sealInfo);
+			data->sealInfo = NULL;
+			data->sealInfoSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, data->encDataSize, blob, data->encData, "encdata");
@@ -1026,7 +1049,11 @@ UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob,
 	if (certify->PCRInfoSize > 0) {
 		certify->PCRInfo = (BYTE *)malloc(certify->PCRInfoSize);
 		if (certify->PCRInfo == NULL) {
-			LogError("malloc of %d bytes failed.", certify->PCRInfoSize);
+			LogError("malloc of %u bytes failed.", certify->PCRInfoSize);
+			certify->PCRInfoSize = 0;
+			free(certify->algorithmParms.parms);
+			certify->algorithmParms.parms = NULL;
+			certify->algorithmParms.parmSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		UnloadBlob(offset, certify->PCRInfoSize, blob, certify->PCRInfo, "pcr info");
@@ -1050,6 +1077,7 @@ UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset,
 	list->handle = malloc(list->loaded * sizeof (UINT32));
         if (list->handle == NULL) {
 		LogError("malloc of %zd bytes failed.", list->loaded * sizeof (UINT32));
+		list->loaded = 0;
                 return TCSERR(TSS_E_OUTOFMEMORY);
         }
 
