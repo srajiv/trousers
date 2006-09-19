@@ -57,9 +57,9 @@ create_password_dialog (struct userdata *ud, char *message)
 
   dialog1 = gtk_dialog_new ();
   gtk_widget_set_size_request (dialog1, 300, 150);
-  gtk_tooltips_set_tip (tooltips, dialog1, _("This is a box for entering dialogue"), NULL);
-  /*gtk_window_set_title (GTK_WINDOW (dialog1), _("TSS Authorization Data"));*/
-  gtk_window_set_title (GTK_WINDOW (dialog1), message);
+  //gtk_tooltips_set_tip (tooltips, dialog1, _("This is a box for entering dialogue"), NULL);
+  gtk_window_set_title (GTK_WINDOW (dialog1), _("TSS Password"));
+  //gtk_window_set_title (GTK_WINDOW (dialog1), message);
   gtk_window_set_position (GTK_WINDOW (dialog1), GTK_WIN_POS_CENTER);
   gtk_window_set_default_size (GTK_WINDOW (dialog1), 300, 150);
 
@@ -78,7 +78,8 @@ create_password_dialog (struct userdata *ud, char *message)
   gtk_widget_show (table2);
   gtk_container_add (GTK_CONTAINER (alignment1), table2);
 
-  label1 = gtk_label_new (_("Please enter a password, or not."));
+  //label1 = gtk_label_new (_("Please enter a password, or not."));
+  label1 = gtk_label_new (message);
   gtk_widget_show (label1);
   gtk_table_attach (GTK_TABLE (table2), label1, 1, 2, 1, 2,
                     (GtkAttachOptions) (GTK_FILL),
@@ -99,7 +100,7 @@ create_password_dialog (struct userdata *ud, char *message)
   gtk_table_attach (GTK_TABLE (table1), entry, 1, 2, 0, 1,
                     (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_tooltips_set_tip (tooltips, entry, _("This is where you enter the characters of your password, using the computer input device of your choice."), NULL);
+  //gtk_tooltips_set_tip (tooltips, entry, _("This is where you enter the characters of your password, using the computer input device of your choice."), NULL);
   gtk_entry_set_max_length (GTK_ENTRY (entry), 255);
   gtk_entry_set_visibility (GTK_ENTRY (entry), FALSE);
 
@@ -111,13 +112,13 @@ create_password_dialog (struct userdata *ud, char *message)
   gtk_widget_show (cancelbutton1);
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog1), cancelbutton1, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (cancelbutton1, GTK_CAN_DEFAULT);
-  gtk_tooltips_set_tip (tooltips, cancelbutton1, _("Depress this button in order to indicate that you would like to cancel the submitting of authorization data at this time."), NULL);
+  //gtk_tooltips_set_tip (tooltips, cancelbutton1, _("Depress this button in order to indicate that you would like to cancel the submitting of authorization data at this time."), NULL);
 
   okbutton1 = gtk_button_new_from_stock ("gtk-ok");
   gtk_widget_show (okbutton1);
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog1), okbutton1, GTK_RESPONSE_OK);
   GTK_WIDGET_SET_FLAGS (okbutton1, GTK_CAN_DEFAULT);
-  gtk_tooltips_set_tip (tooltips, okbutton1, _("Depress this button in order to indicate that you have completed the entry of your authorization data."), NULL);
+  //gtk_tooltips_set_tip (tooltips, okbutton1, _("Depress this button in order to indicate that you have completed the entry of your authorization data."), NULL);
 
   /* We need to pass the window in to destroy it */
   ud->window = dialog1;
@@ -181,8 +182,8 @@ create_new_password_dialog (struct userdata *ud, char *message)
 
   dialog1 = gtk_dialog_new ();
   gtk_widget_set_size_request (dialog1, 300, 150);
-  /*gtk_window_set_title (GTK_WINDOW (dialog1), _("dialog1"));*/
-  gtk_window_set_title (GTK_WINDOW (dialog1), message);
+  gtk_window_set_title (GTK_WINDOW (dialog1), "TSS Password");
+  //gtk_window_set_title (GTK_WINDOW (dialog1), message);
 
   dialog_vbox1 = GTK_DIALOG (dialog1)->vbox;
   gtk_widget_show (dialog_vbox1);
@@ -195,7 +196,8 @@ create_new_password_dialog (struct userdata *ud, char *message)
   gtk_widget_show (table2);
   gtk_box_pack_start (GTK_BOX (vbox1), table2, TRUE, TRUE, 0);
 
-  label7 = gtk_label_new (_("Please enter a new password below."));
+  //label7 = gtk_label_new (_("Please enter a new password below."));
+  label7 = gtk_label_new (message);
   gtk_widget_show (label7);
   gtk_table_attach (GTK_TABLE (table2), label7, 1, 2, 1, 2,
                     (GtkAttachOptions) (GTK_FILL),
