@@ -400,7 +400,7 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 	entry->tpm_handle = tpm_handle;
 
 	/* allocate space for the blob */
-	entry->blob = malloc(sizeof(TCPA_KEY));
+	entry->blob = calloc(1, sizeof(TCPA_KEY));
 	if (entry->blob == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(TCPA_KEY));
 		free(entry);
@@ -420,23 +420,43 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 		memcpy(tmp_parms, key_blob->algorithmParms.parms, key_blob->algorithmParms.parmSize);
 		entry->blob->algorithmParms.parms = tmp_parms;
 	}
+	entry->blob->algorithmParms.parmSize = key_blob->algorithmParms.parmSize;
 
 	/* allocate space for the public key */
-	entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
-	if (entry->blob->pubKey.key == NULL) {
-		LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
-		free(entry->blob->algorithmParms.parms);
-		free(entry->blob);
-		free(entry);
-		return TCSERR(TSS_E_OUTOFMEMORY);
+	if (key_blob->pubKey.keyLength > 0) {
+		entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
+		if (entry->blob->pubKey.key == NULL) {
+			LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
+			free(entry->blob->algorithmParms.parms);
+			free(entry->blob);
+			free(entry);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
 	}
-	memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
+	entry->blob->pubKey.keyLength = key_blob->pubKey.keyLength;
+
+	/* allocate space for the PCR info */
+	if (key_blob->PCRInfoSize > 0) {
+		entry->blob->PCRInfo = (BYTE *)malloc(key_blob->PCRInfoSize);
+		if (entry->blob->PCRInfo == NULL) {
+			LogError("malloc of %u bytes failed.", key_blob->PCRInfoSize);
+			free(entry->blob->pubKey.key);
+			free(entry->blob->algorithmParms.parms);
+			free(entry->blob);
+			free(entry);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		memcpy(entry->blob->PCRInfo, key_blob->PCRInfo, key_blob->PCRInfoSize);
+	}
+	entry->blob->PCRInfoSize = key_blob->PCRInfoSize;
 
 	/* allocate space for the encData if necessary */
-	if (key_blob->encSize != 0) {
+	if (key_blob->encSize > 0) {
 		entry->blob->encData = (BYTE *)malloc(key_blob->encSize);
 		if (entry->blob->encData == NULL) {
 			LogError("malloc of %u bytes failed.", key_blob->encSize);
+			free(entry->blob->PCRInfo);
 			free(entry->blob->pubKey.key);
 			free(entry->blob->algorithmParms.parms);
 			free(entry->blob);
@@ -459,7 +479,7 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 		key_mem_cache_head->prev = entry;
 	} else {
 		/* if we are the SRK, initially set the reference count to 1, so that it is
-		 * never unregistered. */
+		 * always seen as loaded in the TPM. */
 		entry->ref_cnt = 1;
 	}
 	key_mem_cache_head = entry;
