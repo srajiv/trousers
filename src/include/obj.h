@@ -77,9 +77,9 @@ struct tr_tpm_obj {
 			BYTE *rgbTCPAPlainIdentityProof,
 			TSS_ALGORITHM_ID algID,
 			UINT32* ulSessionKeyLength,
-			BYTE **rgbSessionKey,
+			BYTE *rgbSessionKey,
 			UINT32 *pulTCPAIdentityProofLength,
-			BYTE **rgbTCPAIdentityProof);
+			BYTE *rgbTCPAIdentityProof);
 	TSS_RESULT (*Tspicb_ActivateIdentity)(
 			PVOID lpAppData,
 			UINT32 ulSessionKeyLength,
@@ -87,7 +87,7 @@ struct tr_tpm_obj {
 			UINT32 ulSymCAAttestationBlobLength,
 			BYTE *rgbSymCAAttestationBlob,
 			UINT32 *pulCredentialLength,
-			BYTE **rgbCredential);
+			BYTE *rgbCredential);
 };
 
 struct tr_context_obj {
