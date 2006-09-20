@@ -659,13 +659,29 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	Trspi_LoadBlob(&offset, pcConformanceCredentialSize, hashblob, prgbConformanceCredential);
 
 	if (cb && cb->callback) {
-		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, UINT32 *, BYTE **,
-			       UINT32 *, BYTE **))cb->callback)(cb->appData, (UINT32)offset,
-								hashblob, algID,
-								&rgbTcpaIdentityReq.asymSize,
-								&rgbTcpaIdentityReq.asymBlob,
-								&rgbTcpaIdentityReq.symSize,
-								&rgbTcpaIdentityReq.symBlob))) {
+		/* Alloc the space for the callback to copy into. The additional 32 bytes will
+		 * attempt to account for padding that the symmetric encryption will do. */
+		rgbTcpaIdentityReq.asymBlob = calloc(1, (int)offset + 32);
+		rgbTcpaIdentityReq.symBlob = calloc(1, (int)offset + 32);
+		if (rgbTcpaIdentityReq.asymBlob == NULL ||
+		    rgbTcpaIdentityReq.symBlob == NULL) {
+			free(rgbTcpaIdentityReq.asymBlob);
+			free(rgbTcpaIdentityReq.symBlob);
+			LogError("malloc of %hu bytes failed", offset);
+			free_tspi(tspContext, cb);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto error;
+		}
+		rgbTcpaIdentityReq.asymSize = (UINT32)offset + 32;
+		rgbTcpaIdentityReq.symSize = (UINT32)offset + 32;
+
+		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, UINT32 *, BYTE *,
+			       UINT32 *, BYTE *))cb->callback)(cb->appData, (UINT32)offset,
+							       hashblob, algID,
+							       &rgbTcpaIdentityReq.asymSize,
+							       rgbTcpaIdentityReq.asymBlob,
+							       &rgbTcpaIdentityReq.symSize,
+							       rgbTcpaIdentityReq.symBlob))) {
 			LogDebug("CollateIdentityRequest callback returned error 0x%x", result);
 			free_tspi(tspContext, cb);
 			goto error;
@@ -843,11 +859,21 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	}
 
 	if (cb && cb->callback) {
+		/* alloc the space for the callback to copy into */
+		credCallback = calloc(1, ulSymCAAttestationBlobLength);
+		if (credCallback == NULL) {
+			LogDebug("malloc of %u bytes failed", ulSymCAAttestationBlobLength);
+			free(symKeyBlob);
+			free_tspi(tspContext, cb);
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+		credLen = ulSymCAAttestationBlobLength;
+
 		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
-			       BYTE **))cb->callback)(cb->appData, symKeyBlobLen, symKeyBlob,
-						      ulSymCAAttestationBlobLength,
-						      rgbSymCAAttestationBlob,
-						      &credLen, &credCallback))) {
+			       BYTE *))cb->callback)(cb->appData, symKeyBlobLen, symKeyBlob,
+						     ulSymCAAttestationBlobLength,
+						     rgbSymCAAttestationBlob,
+						     &credLen, credCallback))) {
 			LogDebug("ActivateIdentity callback returned error 0x%x", result);
 			free(symKeyBlob);
 			free_tspi(tspContext, cb);
@@ -856,11 +882,14 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		free_tspi(tspContext, cb);
 		free(symKeyBlob);
 
-		if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL)
+		if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL) {
+			free(credCallback);
 			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
 
 		memcpy(*prgbCredential, credCallback, credLen);
 		*pulCredentialLength = credLen;
+		free(credCallback);
 
 		return TSS_SUCCESS;
 	}
