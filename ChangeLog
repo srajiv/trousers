@@ -1,4 +1,6 @@
 
+- Fixed bug in mc_add_entry, where the PCRInfo data was not being
+  copied into the mem cache with the other fields of the key.
 - Fixed 2 bugs in spi_getset.c where setting the secret hash mode
   was passing subFlag to the internal set function instead of
   ulAttrib.
