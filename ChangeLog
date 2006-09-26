@@ -1,4 +1,6 @@
 
+* Fix for SF1565208: User PS load key by UUID failed.
+
 * TROUSERS_0_2_8
 
 - Fixed bug in mc_add_entry, where the PCRInfo data was not being
