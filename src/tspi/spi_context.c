@@ -516,7 +516,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	BYTE *keyBlob = NULL;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HKEY parentTspHandle;
-	TCS_KEY_HANDLE parentTCSKeyHandle;
 	TCS_LOADKEY_INFO info;
 
 	if (phKey == NULL)
@@ -586,47 +585,21 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		if ((result = ps_get_parent_uuid_by_uuid(&uuidData, &parentUUID)))
 			return result;
 
-		if ((result = ps_get_parent_ps_type_by_uuid(&uuidData, &parentPSType)))
-			return result;
-
-		/******************************************
-		 * If the parent is system persistant, then just call
-		 *  the TCS's LoadKeyByUUID function.
-		 * If the parent is in user storage, then we need to
-		 *  call Tspi_LoadKeyByUUID and get a parentKeyObject.
-		 *  This object can then be translated into a
-		 *  TCS_KEY_HANDLE.
-		 ******************************************/
-
-		if (parentPSType == TSS_PS_TYPE_SYSTEM) {
-			if ((result = TCSP_LoadKeyByUUID(tcsContext, parentUUID, NULL,
-							 &parentTCSKeyHandle)))
+		/* If the parent is not in memory, recursively call ourselves on it */
+		if (obj_rsakey_get_by_uuid(&parentUUID, &parentTspHandle) != TSS_SUCCESS) {
+			if ((result = ps_get_parent_ps_type_by_uuid(&uuidData, &parentPSType)))
 				return result;
-		} else if (parentPSType == TSS_PS_TYPE_USER) {
+
 			if ((result = Tspi_Context_LoadKeyByUUID(tspContext, parentPSType,
 								 parentUUID, &parentTspHandle)))
 				return result;
-
-			/* Get the parentTCS Key Handle from our table */
-			if ((result = obj_rsakey_get_tcs_handle(parentTspHandle,
-								&parentTCSKeyHandle)))
-				return result;
-
-			/* Close the object since it's not needed
-			 * anymore */
-			obj_rsakey_remove(parentTspHandle, tspContext);
-		} else {
-			return TSPERR(TSS_E_BAD_PARAMETER);
 		}
 
-		/* Get my KeyBlob */
 		if ((result = ps_get_key_by_uuid(tspContext, &uuidData, phKey)))
 			return result;
 
-		/*******************************
-		 * Now the parent is loaded and we have the parent key
-		 * handle call the TCS to actually load the key now.
-		 ******************************/
+		/* The parent is loaded and we have the parent key handle, so call the TCS to
+		 * actually load the child. */
 		return Tspi_Key_LoadKey(*phKey, parentTspHandle);
 	} else {
 		return TSPERR(TSS_E_BAD_PARAMETER);
