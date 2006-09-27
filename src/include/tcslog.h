@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -23,17 +23,17 @@ extern int foreground;
 #define LogMessage(dest, priority, layer, fmt, ...) \
         do { \
 		if (foreground) { \
-			fprintf(dest, "%s %s:%d " fmt "\n", layer, __FILE__, __LINE__, ## __VA_ARGS__); \
+			fprintf(dest, "%s " fmt "\n", layer, ## __VA_ARGS__); \
 		} else { \
 			openlog(layer, LOG_NDELAY|LOG_PID, TSS_SYSLOG_LVL); \
-			syslog(priority, "%s:%d " fmt, __FILE__, __LINE__, ## __VA_ARGS__); \
+			syslog(priority, "TrouSerS " fmt "\n", ## __VA_ARGS__); \
 		} \
         } while (0)
 
 /* Debug logging */
 #ifdef TSS_DEBUG
-#define LogDebug(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, fmt, ##__VA_ARGS__)
-#define LogDebugFn(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define LogDebug(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, "%s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LogDebugFn(fmt, ...)	LogMessage(stdout, LOG_DEBUG, APPID, "%s:%d %s: " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
 #define LogDebugKey(k) \
 	do { \
@@ -57,22 +57,26 @@ extern int foreground;
 				LogDebugFn("*** ERROR UNLOADING DEBUGGING KEY BLOB ***"); \
 			} \
 	} while (0)
+
+#define LogError(fmt, ...)	LogMessage(stderr, LOG_ERR, APPID, "ERROR: %s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LogWarn(fmt, ...)	LogMessage(stdout, LOG_WARNING, APPID, "%s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LogInfo(fmt, ...)	LogMessage(stdout, LOG_INFO, APPID, "%s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #else
 #define LogDebug(fmt, ...)
 #define LogDebugFn(fmt, ...)
 #define LogBlob(sz,blb)
 #define LogDebugKey(s)
 #define LogDebugUnrollKey(b)
-#endif
 
 /* Error logging */
 #define LogError(fmt, ...)	LogMessage(stderr, LOG_ERR, APPID, "ERROR: " fmt, ##__VA_ARGS__)
 
 /* Warn logging */
-#define LogWarn(fmt, ...)	LogMessage(stdout, LOG_WARNING, APPID, "WARNING: " fmt, ##__VA_ARGS__)
+#define LogWarn(fmt, ...)	LogMessage(stdout, LOG_WARNING, APPID, fmt, ##__VA_ARGS__)
 
 /* Info Logging */
 #define LogInfo(fmt, ...)	LogMessage(stdout, LOG_INFO, APPID, fmt, ##__VA_ARGS__)
+#endif
 
 void LogBlobData(char *appid, unsigned long sizeOfBlob, unsigned char *blob);
 
