@@ -1,5 +1,10 @@
 
-* Fix for SF1565208: User PS load key by UUID failed.
+- Changed logging in the TCSD so that FILE:LINE isn't printed
+  unless debugging is on.
+- Changed build/code so that the system PS dir is mode 0700, not
+  1777.  It used to be 1777 when user PS was not in ~/.trousers.
+- Fix for SF1565726: Segfault when connecting from remote host.
+- Fix for SF1565208: User PS load key by UUID failed.
 
 * TROUSERS_0_2_8
 
