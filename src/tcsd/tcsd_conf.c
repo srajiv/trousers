@@ -608,7 +608,7 @@ TSS_RESULT
 ps_dirs_init()
 {
 	struct stat stat_buf;
-	mode_t mode = (S_IRWXU|S_IRWXG|S_IRWXO|S_ISVTX); /* 0777 plus sticky bit */
+	mode_t mode = S_IRWXU; /* 0700 */
 
 	/* query the key storage directory to make sure it exists and is of the right mode */
 	if (stat(tcsd_options.system_ps_dir, &stat_buf) == -1) {
@@ -639,14 +639,17 @@ ps_dirs_init()
 	if (!S_ISDIR(stat_buf.st_mode)) {
 		LogError("PS dir %s is not a directory! Exiting.", tcsd_options.system_ps_dir);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	} else if ((stat_buf.st_mode ^ mode) != 0) {
+	} else if (((stat_buf.st_mode & 0777) ^ mode) != 0) {
 		/* This path is likely to be hit since open &'s mode with ~umask */
-		LogInfo("resetting mode of %s to: 01777", tcsd_options.system_ps_dir);
+		LogInfo("resetting mode of %s from %o to: %o", tcsd_options.system_ps_dir,
+			stat_buf.st_mode, mode);
 		if (chmod(tcsd_options.system_ps_dir, mode) == -1) {
-			LogError("chmod(%s) failed: %s", tcsd_options.system_ps_dir, strerror(errno));
+			LogError("chmod(%s) failed: %s", tcsd_options.system_ps_dir,
+				 strerror(errno));
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
+
 	return TSS_SUCCESS;
 }
 
