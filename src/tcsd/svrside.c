@@ -272,9 +272,17 @@ main(int argc, char **argv)
 		}
 
 		if ((client_hostent = gethostbyaddr((char *) &client_addr.sin_addr,
-						sizeof(client_addr.sin_addr),
-						AF_INET)) == NULL) {
-			LogError("Connecting hostname could not be resolved");
+						    sizeof(client_addr.sin_addr),
+						    AF_INET)) == NULL) {
+			char buf[16];
+                        uint32_t addr = htonl(client_addr.sin_addr.s_addr);
+
+                        snprintf(buf, 16, "%d.%d.%d.%d", (addr & 0xff000000) >> 24,
+                                 (addr & 0x00ff0000) >> 16, (addr & 0x0000ff00) >> 8,
+                                 addr & 0x000000ff);
+
+			LogWarn("Host name for connecting IP %s could not be resolved", buf);
+			hostname = strdup(buf);
 		} else {
 			hostname = strdup(client_hostent->h_name);
 		}
@@ -283,5 +291,6 @@ main(int argc, char **argv)
 		hostname = NULL;
 	} while (1);
 
+	/* To close correctly, we must recieve a SIGHUP */
 	return -1;
 }
