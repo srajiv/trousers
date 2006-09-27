@@ -4523,83 +4523,84 @@ typedef struct tdDispatchTable {
 	TSS_RESULT (*Func) (struct tcsd_thread_data *,
 			    struct tsp_packet *,
 			    struct tcsd_packet_hdr **);
+	const char *name;
 } DispatchTable;
 
-DispatchTable table[TCSD_MAX_NUM_ORDS] = {
-	{tcs_wrap_Error},   /* 0 */
-	{tcs_wrap_OpenContext},
-	{tcs_wrap_CloseContext},
-	{tcs_wrap_Error},
-	{tcs_wrap_TCSGetCapability},
-	{tcs_wrap_RegisterKey}, /* 5 */
-	{tcs_wrap_UnregisterKey},
-	{tcs_wrap_EnumRegisteredKeys},
-	{tcs_wrap_Error},
-	{tcs_wrap_GetRegisteredKeyBlob},
-	{tcs_wrap_GetRegisteredKeyByPublicInfo}, /* 10 */
-	{tcs_wrap_LoadKeyByBlob},
-	{tcs_wrap_LoadKeyByUUID},
-	{tcs_wrap_EvictKey},
-	{tcs_wrap_CreateWrapKey},
-	{tcs_wrap_GetPubkey}, /* 15 */
-	{tcs_wrap_MakeIdentity},
-	{tcs_wrap_LogPcrEvent},
-	{tcs_wrap_GetPcrEvent},
-	{tcs_wrap_GetPcrEventsByPcr},
-	{tcs_wrap_GetPcrEventLog}, /* 20 */
-	{tcs_wrap_SetOwnerInstall},
-	{tcs_wrap_TakeOwnership},
-	{tcs_wrap_OIAP},
-	{tcs_wrap_OSAP},
-	{tcs_wrap_ChangeAuth}, /* 25 */
-	{tcs_wrap_ChangeAuthOwner},
-	{tcs_wrap_Error},
-	{tcs_wrap_Error},
-	{tcs_wrap_TerminateHandle},
-	{tcs_wrap_ActivateIdentity}, /* 30 */
-	{tcs_wrap_Extend},
-	{tcs_wrap_PcrRead},
-	{tcs_wrap_Quote},
-	{tcs_wrap_DirWriteAuth},
-	{tcs_wrap_DirRead}, /* 35 */
-	{tcs_wrap_Seal},
-	{tcs_wrap_UnSeal},
-	{tcs_wrap_UnBind},
-	{tcs_wrap_CreateMigrationBlob},
-	{tcs_wrap_ConvertMigrationBlob}, /* 40 */
-	{tcs_wrap_AuthorizeMigrationKey},
-	{tcs_wrap_CertifyKey},
-	{tcs_wrap_Sign},
-	{tcs_wrap_GetRandom},
-	{tcs_wrap_StirRandom}, /* 45 */
-	{tcs_wrap_GetCapability},
-	{tcs_wrap_Error},
-	{tcs_wrap_GetCapabilityOwner},
-	{tcs_wrap_CreateEndorsementKeyPair},
-	{tcs_wrap_ReadPubek}, /* 50 */
-	{tcs_wrap_DisablePubekRead},
-	{tcs_wrap_OwnerReadPubek},
-	{tcs_wrap_SelfTestFull},
-	{tcs_wrap_CertifySelfTest},
-	{tcs_wrap_Error}, /* 55 */
-	{tcs_wrap_GetTestResult},
-	{tcs_wrap_OwnerSetDisable},
-	{tcs_wrap_OwnerClear},
-	{tcs_wrap_DisableOwnerClear},
-	{tcs_wrap_ForceClear}, /* 60 */
-	{tcs_wrap_DisableForceClear},
-	{tcs_wrap_PhysicalDisable},
-	{tcs_wrap_PhysicalEnable},
-	{tcs_wrap_PhysicalSetDeactivated},
-	{tcs_wrap_SetTempDeactivated}, /* 65 */
-	{tcs_wrap_PhysicalPresence},
-	{tcs_wrap_Error},
-	{tcs_wrap_Error},
-	{tcs_wrap_CreateMaintenanceArchive},
-	{tcs_wrap_LoadMaintenanceArchive}, /* 70 */
-	{tcs_wrap_KillMaintenanceFeature},
-	{tcs_wrap_LoadManuMaintPub},
-	{tcs_wrap_ReadManuMaintPub}
+DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
+	{tcs_wrap_Error,"Error"},   /* 0 */
+	{tcs_wrap_OpenContext,"OpenContext"},
+	{tcs_wrap_CloseContext,"CloseContext"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_TCSGetCapability,"TCSGetCapability"},
+	{tcs_wrap_RegisterKey,"RegisterKey"}, /* 5 */
+	{tcs_wrap_UnregisterKey,"UnregisterKey"},
+	{tcs_wrap_EnumRegisteredKeys,"EnumRegisteredKeys"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_GetRegisteredKeyBlob,"GetRegisteredKeyBlob"},
+	{tcs_wrap_GetRegisteredKeyByPublicInfo,"GetRegisteredKeyByPublicInfo"}, /* 10 */
+	{tcs_wrap_LoadKeyByBlob,"LoadKeyByBlob"},
+	{tcs_wrap_LoadKeyByUUID,"LoadKeyByUUID"},
+	{tcs_wrap_EvictKey,"EvictKey"},
+	{tcs_wrap_CreateWrapKey,"CreateWrapKey"},
+	{tcs_wrap_GetPubkey,"GetPubkey"}, /* 15 */
+	{tcs_wrap_MakeIdentity,"MakeIdentity"},
+	{tcs_wrap_LogPcrEvent,"LogPcrEvent"},
+	{tcs_wrap_GetPcrEvent,"GetPcrEvent"},
+	{tcs_wrap_GetPcrEventsByPcr,"GetPcrEventsByPcr"},
+	{tcs_wrap_GetPcrEventLog,"GetPcrEventLog"}, /* 20 */
+	{tcs_wrap_SetOwnerInstall,"SetOwnerInstall"},
+	{tcs_wrap_TakeOwnership,"TakeOwnership"},
+	{tcs_wrap_OIAP,"OIAP"},
+	{tcs_wrap_OSAP,"OSAP"},
+	{tcs_wrap_ChangeAuth,"ChangeAuth"}, /* 25 */
+	{tcs_wrap_ChangeAuthOwner,"ChangeAuthOwner"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_TerminateHandle,"TerminateHandle"},
+	{tcs_wrap_ActivateIdentity,"ActivateIdentity"}, /* 30 */
+	{tcs_wrap_Extend,"Extend"},
+	{tcs_wrap_PcrRead,"PcrRead"},
+	{tcs_wrap_Quote,"Quote"},
+	{tcs_wrap_DirWriteAuth,"DirWriteAuth"},
+	{tcs_wrap_DirRead,"DirRead"}, /* 35 */
+	{tcs_wrap_Seal,"Seal"},
+	{tcs_wrap_UnSeal,"UnSeal"},
+	{tcs_wrap_UnBind,"UnBind"},
+	{tcs_wrap_CreateMigrationBlob,"CreateMigrationBlob"},
+	{tcs_wrap_ConvertMigrationBlob,"ConvertMigrationBlob"}, /* 40 */
+	{tcs_wrap_AuthorizeMigrationKey,"AuthorizeMigrationKey"},
+	{tcs_wrap_CertifyKey,"CertifyKey"},
+	{tcs_wrap_Sign,"Sign"},
+	{tcs_wrap_GetRandom,"GetRandom"},
+	{tcs_wrap_StirRandom,"StirRandom"}, /* 45 */
+	{tcs_wrap_GetCapability,"GetCapability"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_GetCapabilityOwner,"GetCapabilityOwner"},
+	{tcs_wrap_CreateEndorsementKeyPair,"CreateEndorsementKeyPair"},
+	{tcs_wrap_ReadPubek,"ReadPubek"}, /* 50 */
+	{tcs_wrap_DisablePubekRead,"DisablePubekRead"},
+	{tcs_wrap_OwnerReadPubek,"OwnerReadPubek"},
+	{tcs_wrap_SelfTestFull,"SelfTestFull"},
+	{tcs_wrap_CertifySelfTest,"CertifySelfTest"},
+	{tcs_wrap_Error,"Error"}, /* 55 */
+	{tcs_wrap_GetTestResult,"GetTestResult"},
+	{tcs_wrap_OwnerSetDisable,"OwnerSetDisable"},
+	{tcs_wrap_OwnerClear,"OwnerClear"},
+	{tcs_wrap_DisableOwnerClear,"DisableOwnerClear"},
+	{tcs_wrap_ForceClear,"ForceClear"}, /* 60 */
+	{tcs_wrap_DisableForceClear,"DisableForceClear"},
+	{tcs_wrap_PhysicalDisable,"PhysicalDisable"},
+	{tcs_wrap_PhysicalEnable,"PhysicalEnable"},
+	{tcs_wrap_PhysicalSetDeactivated,"PhysicalSetDeactivated"},
+	{tcs_wrap_SetTempDeactivated,"SetTempDeactivated"}, /* 65 */
+	{tcs_wrap_PhysicalPresence,"PhysicalPresence"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_Error,"Error"},
+	{tcs_wrap_CreateMaintenanceArchive,"CreateMaintenanceArchive"},
+	{tcs_wrap_LoadMaintenanceArchive,"LoadMaintenanceArchive"}, /* 70 */
+	{tcs_wrap_KillMaintenanceFeature,"KillMaintenanceFeature"},
+	{tcs_wrap_LoadManuMaintPub,"LoadManuMaintPub"},
+	{tcs_wrap_ReadManuMaintPub,"ReadManuMaintPub"}
 };
 
 int
@@ -4615,13 +4616,15 @@ access_control(struct tcsd_thread_data *thread_data, struct tsp_packet *tsp_data
 
 	/* if the request comes from localhost, or is in the accepted ops list,
 	 * approve it */
-	if (!strncmp(thread_data->hostname, local_hostent->h_name, local_hostent->h_length)) {
+	if (!strncmp(thread_data->hostname, local_hostent->h_name,
+		     MIN((size_t)local_hostent->h_length, strlen(thread_data->hostname)))) {
 		return 0;
 	} else {
 		while (tcsd_options.remote_ops[i]) {
 			if ((UINT32)tcsd_options.remote_ops[i] == tsp_data->ordinal) {
-				LogInfo("Remote connection accepted from %s",
-						thread_data->hostname);
+				LogInfo("Accepted %s operation from %s",
+					tcs_func_table[tsp_data->ordinal].name,
+					thread_data->hostname);
 				return 0;
 			}
 			i++;
@@ -4650,17 +4653,17 @@ dispatchCommand(struct tcsd_thread_data *data,
 					sizeof(struct tcsd_packet_hdr));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
-		(*hdr)->result = TCSERR(TSS_E_CONNECTION_FAILED);
+		(*hdr)->result = TCSERR(TSS_E_FAIL);
 		(*hdr)->packet_size = sizeof(struct tcsd_packet_hdr);
 
-		LogInfo("Access to ordinal %d from host %s denied.",
-				tsp_data->ordinal, data->hostname);
+		LogWarn("Denied %s operation from %s", tcs_func_table[tsp_data->ordinal].name,
+			data->hostname);
 
 		return TSS_SUCCESS;
 	}
 
 	/* Now, dispatch */
-	return table[tsp_data->ordinal].Func(data, tsp_data, hdr);
+	return tcs_func_table[tsp_data->ordinal].Func(data, tsp_data, hdr);
 }
 
 TSS_RESULT
