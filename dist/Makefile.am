@@ -10,7 +10,7 @@ install-exec-hook:
 	/bin/chown tss:tss ${DESTDIR}/@sbindir@/tcsd
 	/bin/sh -c 'if [ ! -e ${DESTDIR}/@localstatedir@/lib/tpm ];then mkdir -p ${DESTDIR}/@localstatedir@/lib/tpm; fi'
 	/bin/chown tss:tss ${DESTDIR}/@localstatedir@/lib/tpm
-	/bin/chmod 1777 ${DESTDIR}/@localstatedir@/lib/tpm
+	/bin/chmod 0700 ${DESTDIR}/@localstatedir@/lib/tpm
 
 uninstall-hook:
 	/usr/sbin/userdel tss
