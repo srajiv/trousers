@@ -779,7 +779,8 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if (pcrNum > tpm_metrics.num_pcrs)
+	/* PCRs are numbered 0 - (NUM_PCRS - 1), thus the >= */
+	if (pcrNum >= tpm_metrics.num_pcrs)
 		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	if (tcsd_options.kernel_pcrs & (1 << pcrNum)) {
@@ -831,7 +832,8 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if (pcrNum > tpm_metrics.num_pcrs)
+	/* PCRs are numbered 0 - (NUM_PCRS - 1), thus the >= */
+	if (pcrNum >= tpm_metrics.num_pcrs)
 		return TCSERR(TSS_E_BAD_PARAMETER);
 
 	offset = 10;
