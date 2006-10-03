@@ -1,4 +1,5 @@
 
+- Corrected off by 1 errors in PCR index bounds checking.
 - Changed logging in the TCSD so that FILE:LINE isn't printed
   unless debugging is on.
 - Changed build/code so that the system PS dir is mode 0700, not
