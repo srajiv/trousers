@@ -1,4 +1,5 @@
 
+- Fix for SF1570380: Algorithm ID not compliant with TSS spec.
 - Corrected off by 1 errors in PCR index bounds checking.
 - Changed logging in the TCSD so that FILE:LINE isn't printed
   unless debugging is on.
