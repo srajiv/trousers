@@ -538,7 +538,15 @@ obj_rsakey_get_alg(TSS_HKEY hKey, UINT32 *alg)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*alg = rsakey->tcpaKey.algorithmParms.algorithmID;
+
+	switch (rsakey->tcpaKey.algorithmParms.algorithmID) {
+		case TCPA_ALG_RSA:
+			*alg = TSS_ALG_RSA;
+			break;
+		default:
+			*alg = rsakey->tcpaKey.algorithmParms.algorithmID;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
@@ -555,7 +563,14 @@ obj_rsakey_set_alg(TSS_HKEY hKey, UINT32 alg)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	rsakey->tcpaKey.algorithmParms.algorithmID = alg;
+	switch (alg) {
+		case TSS_ALG_RSA:
+			rsakey->tcpaKey.algorithmParms.algorithmID = TCPA_ALG_RSA;
+			break;
+		default:
+			rsakey->tcpaKey.algorithmParms.algorithmID = alg;
+			break;
+	}
 
 	obj_list_put(&rsakey_list);
 
