@@ -499,7 +499,7 @@ obj_rsakey_get_authdata_usage(TSS_HKEY hKey, UINT32 *usage)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	*usage = (UINT32)rsakey->tcpaKey.authDataUsage;
+	*usage = (UINT32)rsakey->tcpaKey.authDataUsage ? TRUE : FALSE;
 
 	obj_list_put(&rsakey_list);
 
