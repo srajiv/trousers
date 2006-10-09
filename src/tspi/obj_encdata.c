@@ -276,8 +276,7 @@ obj_encdata_get_pcr_selection(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
 				goto done;
 			}
 			*size = encdata->pcrInfo.pcrSelection.sizeOfSelect;
-			memcpy(*data, &encdata->pcrInfo.pcrSelection.pcrSelect,
-					*size);
+			memcpy(*data, encdata->pcrInfo.pcrSelection.pcrSelect, *size);
 		}
 	}
 
