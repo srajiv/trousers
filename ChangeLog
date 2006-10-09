@@ -1,4 +1,6 @@
 
+- obj_encdata.c: fixed reference of pcrSelect, which caused
+  bad data to be returned as the PCR selection.
 - added TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE, which was
   type-o'd in the 1.1 header files.
 - Fix for SF1570380: Algorithm ID not compliant with TSS spec.
