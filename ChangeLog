@@ -1,4 +1,6 @@
 
+- added TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE, which was
+  type-o'd in the 1.1 header files.
 - Fix for SF1570380: Algorithm ID not compliant with TSS spec.
 - Corrected off by 1 errors in PCR index bounds checking.
 - Changed logging in the TCSD so that FILE:LINE isn't printed
