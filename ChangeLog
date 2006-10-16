@@ -1,4 +1,6 @@
 
+- Fix in Tspi_TPM_ActivateIdentity: Only validate over the out
+  parameters from the TPM, not the TCS (size of data).
 - obj_encdata.c: fixed reference of pcrSelect, which caused
   bad data to be returned as the PCR selection.
 - added TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE, which was
