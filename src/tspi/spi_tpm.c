@@ -838,24 +838,21 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, result, hashblob);
 	Trspi_LoadBlob_UINT32(&offset, TPM_ORD_ActivateTPMIdentity, hashblob);
-	Trspi_LoadBlob_UINT32(&offset, symKeyBlobLen, hashblob);
 	Trspi_LoadBlob(&offset, symKeyBlobLen, hashblob, symKeyBlob);
 	Trspi_Hash(TSS_HASH_SHA1, offset, hashblob, digest.digest);
 
 	if (usesAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hIDPolicy, &digest,
 							    &idKeyAuth))) {
-			/* XXX For some reason, this always fails. */
-			LogDebugFn("Identity key auth validation of the "
-				    "symmetric key failed.");
+			LogDebugFn("Identity key auth validation of the symmetric key failed.");
+			return result;
 		}
 	}
 
 	if ((result = obj_policy_validate_auth_oiap(hTPMPolicy, &digest,
 						    &ownerAuth))) {
-		/* XXX For some reason, this always fails. */
-		LogDebugFn("Owner auth validation of the symmetric key "
-			    "failed.");
+		LogDebugFn("Owner auth validation of the symmetric key failed.");
+		return result;
 	}
 
 	if (cb && cb->callback) {
