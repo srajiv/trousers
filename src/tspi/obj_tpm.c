@@ -239,9 +239,6 @@ obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
 	TSS_RESULT result = TSS_SUCCESS;
 	TSS_CALLBACK *cb = (TSS_CALLBACK *)in;
 
-	if (!cb)
-		return TSPERR(TSS_E_BAD_PARAMETER);
-
 	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
@@ -249,6 +246,11 @@ obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
 
 	switch (flag) {
 		case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
+			if (!cb) {
+				tpm->Tspicb_CollateIdentity = NULL;
+				break;
+			}
+
 			tpm->Tspicb_CollateIdentity = (TSS_RESULT (*)(PVOID,
 				UINT32, BYTE *, TSS_ALGORITHM_ID, UINT32 *,
 				BYTE *, UINT32 *, BYTE *))cb->callback;
@@ -256,6 +258,11 @@ obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
 			tpm->collateAlg = cb->alg;
 			break;
 		case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
+			if (!cb) {
+				tpm->Tspicb_ActivateIdentity = NULL;
+				break;
+			}
+
 			tpm->Tspicb_ActivateIdentity = (TSS_RESULT (*)(PVOID,
 				UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
 				BYTE *))cb->callback;

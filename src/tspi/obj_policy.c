@@ -434,9 +434,6 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 	TSS_RESULT result = TSS_SUCCESS;
 	TSS_CALLBACK *cb = (TSS_CALLBACK *)in;
 
-	if (!cb)
-		return TSPERR(TSS_E_BAD_PARAMETER);
-
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
@@ -444,6 +441,11 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 
 	switch (flag) {
 		case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
+			if (!cb) {
+				policy->Tspicb_CallbackHMACAuth = NULL;
+				break;
+			}
+
 			policy->Tspicb_CallbackHMACAuth =
 				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
 				UINT32, TSS_BOOL, UINT32, BYTE *, BYTE *,
@@ -453,6 +455,11 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 			policy->hmacAlg = cb->alg;
 			break;
 		case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
+			if (!cb) {
+				policy->Tspicb_CallbackXorEnc = NULL;
+				break;
+			}
+
 			policy->Tspicb_CallbackXorEnc =
 				(TSS_RESULT (*)(PVOID, TSS_HOBJECT,
 				TSS_HOBJECT, TSS_FLAG, UINT32, BYTE *, BYTE *,
@@ -462,6 +469,11 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 			policy->xorAlg = cb->alg;
 			break;
 		case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
+			if (!cb) {
+				policy->Tspicb_CallbackTakeOwnership = NULL;
+				break;
+			}
+
 			policy->Tspicb_CallbackTakeOwnership =
 				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HKEY,
 				UINT32, BYTE *))cb->callback;
@@ -469,6 +481,11 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 			policy->takeownerAlg = cb->alg;
 			break;
 		case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+			if (!cb) {
+				policy->Tspicb_CallbackChangeAuthAsym = NULL;
+				break;
+			}
+
 			policy->Tspicb_CallbackChangeAuthAsym =
 				(TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HKEY,
 				UINT32, UINT32, BYTE *, BYTE *))cb->callback;
