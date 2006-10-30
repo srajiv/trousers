@@ -166,7 +166,7 @@ obj_hash_update_value(TSS_HHASH hHash, UINT32 size, BYTE *data)
 	if (hash->hashUpdateBuffer == NULL) {
 		hash->hashUpdateBuffer = calloc(1, size);
 		if (hash->hashUpdateBuffer == NULL) {
-			LogError("malloc of %x bytes failed.", size);
+			LogError("malloc of %u bytes failed.", size);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -175,7 +175,7 @@ obj_hash_update_value(TSS_HHASH hHash, UINT32 size, BYTE *data)
 				size + hash->hashUpdateSize);
 
 		if (hash->hashUpdateBuffer == NULL) {
-			LogError("malloc of %x bytes failed.", size + hash->hashUpdateSize);
+			LogError("malloc of %u bytes failed.", size + hash->hashUpdateSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
@@ -192,8 +192,9 @@ obj_hash_update_value(TSS_HHASH hHash, UINT32 size, BYTE *data)
 			goto done;
 		}
 	}
-	Trspi_Hash(TSS_HASH_SHA1, hash->hashUpdateSize,
-			hash->hashUpdateBuffer, hash->hashData);
+
+	result = Trspi_Hash(TSS_HASH_SHA1, hash->hashUpdateSize, hash->hashUpdateBuffer,
+			    hash->hashData);
 
 done:
 	obj_list_put(&hash_list);

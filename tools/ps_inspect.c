@@ -227,9 +227,6 @@ version_1_print(FILE *f)
 	PRINT("version:        1\n");
 	PRINT("number of keys: %u\n", u32);
 
-	if (u32 == 0)
-		return 0;
-
 	/* align the beginning of the buffer with the beginning of the key */
 	memcpy(buf, &buf[5], sizeof(TSS_UUID));
 
@@ -272,7 +269,7 @@ bad_file_size(UINT32 num_keys, off_t file_size)
 	if ((num_keys * 600) > (unsigned long)file_size)
 		return 1;
 
-	if ((num_keys * 1000) < (unsigned long) (file_size - (sizeof(UINT32) + 1)))
+	if ((num_keys * 1000) < (unsigned long)file_size)
 		return 1;
 
 	return 0;
@@ -284,24 +281,18 @@ inspect(FILE *f, off_t file_size)
 	int members = 0;
 	UINT32 *num_keys;
 
-	if (!file_size) {
-		printf("File is empty.\n");
-		return 0;
-	}
-
 	/* do the initial read, which should include sizeof(TSS_UUID)
 	 * + sizeof(UINT32) + 1 bytes */
 	if ((members = fread(buf,
-			sizeof(TSS_UUID) + sizeof(UINT32) + 1, 1, f)) != 1) {
-		if (ferror(f)) {
-			fprintf(stderr, "Error during read.\n");
-			return -1;
-		}
+			sizeof(TSS_UUID) + sizeof(UINT32) + 1,
+			1, f)) != 1) {
+		printf("File is empty.\n");
+		return -1;
 	}
 
 	if (buf[0] == '\1') {
 		num_keys = (UINT32 *)&buf[1];
-		if (bad_file_size(*num_keys, file_size))
+		if (*num_keys == 0 || bad_file_size(*num_keys, file_size))
 			goto version0;
 
 		return version_1_print(f);

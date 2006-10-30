@@ -19,22 +19,21 @@
 #include "trousers/trousers.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
-#include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
 
 UINT32 nextObjectHandle = 0xC0000000;
 
-pthread_mutex_t keylist_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t handle_lock = PTHREAD_MUTEX_INITIALIZER;
 
-struct obj_list tpm_list;
-struct obj_list context_list;
-struct obj_list hash_list;
-struct obj_list pcrs_list;
-struct obj_list policy_list;
-struct obj_list rsakey_list;
-struct obj_list encdata_list;
+TPM_LIST_DECLARE;
+CONTEXT_LIST_DECLARE;
+HASH_LIST_DECLARE;
+PCRS_LIST_DECLARE;
+POLICY_LIST_DECLARE;
+RSAKEY_LIST_DECLARE;
+ENCDATA_LIST_DECLARE;
+DAA_LIST_DECLARE;
 
 void
 list_init(struct obj_list *list)
@@ -46,13 +45,14 @@ list_init(struct obj_list *list)
 void
 obj_list_init()
 {
-	list_init(&tpm_list);
-	list_init(&context_list);
-	list_init(&hash_list);
-	list_init(&pcrs_list);
-	list_init(&policy_list);
-	list_init(&rsakey_list);
-	list_init(&encdata_list);
+	TPM_LIST_INIT();
+	CONTEXT_LIST_INIT();
+	HASH_LIST_INIT();
+	PCRS_LIST_INIT();
+	POLICY_LIST_INIT();
+	RSAKEY_LIST_INIT();
+	ENCDATA_LIST_INIT();
+	DAA_LIST_INIT();
 }
 
 TSS_HOBJECT
@@ -249,16 +249,14 @@ obj_list_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 void
 obj_close_context(TSS_HCONTEXT tspContext)
 {
-	obj_list_close(&tpm_list, tspContext);
-	obj_list_close(&context_list, tspContext);
-	obj_list_close(&pcrs_list, tspContext);
-	obj_list_close(&policy_list, tspContext);
-
-	/* these three must be custom due to the need to free members of their
-	 * private data areas. */
-	obj_list_hash_close(&hash_list, tspContext);
-	obj_list_rsakey_close(&rsakey_list, tspContext);
-	obj_list_encdata_close(&encdata_list, tspContext);
+	TPM_LIST_CLOSE(tspContext);
+	CONTEXT_LIST_CLOSE(tspContext);
+	HASH_LIST_CLOSE(tspContext);
+	PCRS_LIST_CLOSE(tspContext);
+	POLICY_LIST_CLOSE(tspContext);
+	RSAKEY_LIST_CLOSE(tspContext);
+	ENCDATA_LIST_CLOSE(tspContext);
+	DAA_LIST_CLOSE(tspContext);
 }
 
 /* Some TSP context object will have a reference to this TCS context handle
@@ -302,12 +300,13 @@ obj_connectContext_list(struct obj_list *list, TSS_HCONTEXT tspContext,
 void
 obj_connectContext(TSS_HCONTEXT tspContext, TCS_CONTEXT_HANDLE tcsContext)
 {
-	obj_connectContext_list(&tpm_list, tspContext, tcsContext);
-	obj_connectContext_list(&context_list, tspContext, tcsContext);
-	obj_connectContext_list(&hash_list, tspContext, tcsContext);
-	obj_connectContext_list(&pcrs_list, tspContext, tcsContext);
-	obj_connectContext_list(&policy_list, tspContext, tcsContext);
-	obj_connectContext_list(&rsakey_list, tspContext, tcsContext);
-	obj_connectContext_list(&encdata_list, tspContext, tcsContext);
+        TPM_LIST_CONNECT(tspContext, tcsContext);
+        CONTEXT_LIST_CONNECT(tspContext, tcsContext);
+        HASH_LIST_CONNECT(tspContext, tcsContext);
+        PCRS_LIST_CONNECT(tspContext, tcsContext);
+        POLICY_LIST_CONNECT(tspContext, tcsContext);
+        RSAKEY_LIST_CONNECT(tspContext, tcsContext);
+        ENCDATA_LIST_CONNECT(tspContext, tcsContext);
+        DAA_LIST_CONNECT(tspContext, tcsContext);
 }
 

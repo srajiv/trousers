@@ -395,14 +395,15 @@ done:
 }
 
 TSS_RESULT
-calc_composite_from_object(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPcrs, TCPA_DIGEST * digestOut)
+calc_composite_from_object(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE *arrayOfPcrs,
+			   TCPA_DIGEST *digestOut)
 {
 	UINT32 size, index;
 	BYTE mask;
 	BYTE hashBlob[1024];
 	UINT32 numPCRs = 0;
-	UINT16 offset = 0;
-	UINT16 sizeOffset = 0;
+	UINT64 offset = 0;
+	UINT64 sizeOffset = 0;
 
 	if (select->sizeOfSelect > 0) {
 		sizeOffset = 0;
@@ -424,9 +425,7 @@ calc_composite_from_object(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE * arrayOfPc
 			offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
 			UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &hashBlob[sizeOffset]);
 
-			Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digestOut->digest);
-
-			return TSS_SUCCESS;
+			return Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digestOut->digest);
 		}
 	}
 

@@ -17,16 +17,161 @@ libtspi_la_LIBADD=../trspi/libtrousers.la
 # 5. If any interfaces have been added since the last public release, then increment age.
 # 6. If any interfaces have been removed since the last public release, then set age to 0.
 
-libtspi_la_LDFLAGS=-version-info 1:0:0 -lcrypto -lpthread
+libtspi_la_LDFLAGS=-version-info 2:0:1 -lpthread @CRYPTOLIB@
 
 libtspi_la_CFLAGS=-I../include -DAPPID=\"TSPI\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
-libtspi_la_SOURCES=obj.c spi_context.c spi_getset.c spi_key.c spi_policy.c spi_utils.c memmgr.c secrets.c spi_data.c spi_hash.c spi_pcr.c spi_tpm.c ../tcsd_api/calltcsapi.c ../tcsd_api/tcstp.c ../tcsd_api/hosttable.c ../tcsd_api/clntside.c log.c obj_rsakey.c obj_policy.c obj_tpm.c obj_hash.c obj_pcrs.c obj_encdata.c obj_context.c keyreg.c ps/tspps.c ps/ps_utils.c
+
+libtspi_la_SOURCES=log.c \
+                   spi_utils.c \
+                   obj.c \
+                   obj_policy.c \
+                   tsp_policy.c \
+                   obj_tpm.c \
+                   obj_context.c \
+                   tsp_context_mem.c \
+                   tspi_context.c \
+                   rpc/@RPC@/rpc_context.c \
+                   rpc/tcs_api.c \
+                   rpc/hosttable.c \
+                   rpc/@RPC@/rpc.c
+
+if TSS_BUILD_AUTH
+libtspi_la_SOURCES+=tsp_auth.c rpc/@RPC@/rpc_auth.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_AUTH
+endif
+if TSS_BUILD_GETSET
+libtspi_la_SOURCES+=tspi_getset.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_GETSET
+endif
+if TSS_BUILD_RANDOM
+libtspi_la_SOURCES+=tspi_random.c rpc/@RPC@/rpc_random.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_RANDOM
+endif
+if TSS_BUILD_CAPS
+libtspi_la_SOURCES+=tspi_caps.c tsp_caps.c rpc/@RPC@/rpc_caps.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_CAPS
+endif
+if TSS_BUILD_CAPS_TPM
+libtspi_la_SOURCES+=tspi_caps_tpm.c rpc/@RPC@/rpc_caps_tpm.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_CAPS_TPM
+endif
+if TSS_BUILD_POLICY
+libtspi_la_SOURCES+=tspi_policy.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_POLICY
+endif
+if TSS_BUILD_DIR
+libtspi_la_SOURCES+=tspi_dir.c rpc/@RPC@/rpc_dir.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_DIR
+endif
+if TSS_BUILD_PCR_EVENTS
+libtspi_la_SOURCES+=tspi_pcr_events.c rpc/@RPC@/rpc_evlog.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_PCR_EVENTS
+endif
+if TSS_BUILD_HASH
+libtspi_la_SOURCES+=tspi_hash.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_HASH
+endif
+if TSS_BUILD_SIGN
+libtspi_la_SOURCES+=tspi_sign.c rpc/@RPC@/rpc_sign.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_SIGN
+endif
+if TSS_BUILD_QUOTE
+libtspi_la_SOURCES+=tspi_quote.c tsp_quote.c rpc/@RPC@/rpc_quote.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_QUOTE
+endif
+if TSS_BUILD_PCR_COMP
+libtspi_la_SOURCES+=tspi_pcr_comp.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_PCR_COMP
+endif
+if TSS_BUILD_SEAL
+libtspi_la_SOURCES+=tspi_seal.c rpc/@RPC@/rpc_seal.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_SEAL
+endif
+if TSS_BUILD_CHANGEAUTH
+libtspi_la_SOURCES+=tspi_changeauth.c tsp_changeauth.c rpc/@RPC@/rpc_changeauth.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_CHANGEAUTH
+endif
+if TSS_BUILD_BIND
+libtspi_la_SOURCES+=tspi_bind.c rpc/@RPC@/rpc_bind.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_BIND
+endif
+if TSS_BUILD_OWN
+libtspi_la_SOURCES+=tsp_own.c tspi_own.c rpc/@RPC@/rpc_own.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_OWN
+endif
+if TSS_BUILD_PS
+libtspi_la_SOURCES+=ps/ps_utils.c ps/tspps.c tspi_ps.c rpc/@RPC@/rpc_ps.c tsp_ps.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_PS
+endif
+if TSS_BUILD_ADMIN
+libtspi_la_SOURCES+=tspi_admin.c rpc/@RPC@/rpc_admin.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_ADMIN
+endif
+if TSS_BUILD_AIK
+libtspi_la_SOURCES+=tspi_aik.c rpc/@RPC@/rpc_aik.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_AIK
+endif
+if TSS_BUILD_EK
+libtspi_la_SOURCES+=tspi_ek.c rpc/@RPC@/rpc_ek.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_EK
+endif
+if TSS_BUILD_CERTIFY
+libtspi_la_SOURCES+=tspi_certify.c rpc/@RPC@/rpc_certify.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_CERTIFY
+endif
+if TSS_BUILD_KEY
+libtspi_la_SOURCES+=tspi_key.c rpc/@RPC@/rpc_key.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_KEY
+endif
+if TSS_BUILD_MAINT
+libtspi_la_SOURCES+=tspi_maint.c rpc/@RPC@/rpc_maint.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_MAINT
+endif
+if TSS_BUILD_MIGRATION
+libtspi_la_SOURCES+=tspi_migration.c tsp_migration.c rpc/@RPC@/rpc_migration.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_MIGRATION
+endif
+if TSS_BUILD_PCR_EXTEND
+libtspi_la_SOURCES+=tspi_pcr_extend.c rpc/@RPC@/rpc_pcr_extend.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_PCR_EXTEND
+endif
+if TSS_BUILD_SELFTEST
+libtspi_la_SOURCES+=tspi_selftest.c rpc/@RPC@/rpc_selftest.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_SELFTEST
+endif
+if TSS_BUILD_DAA
+libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c obj_daa.c rpc/@RPC@/rpc_daa.c \
+		    daa/daa_issuer/keypair_generator.c daa/daa_issuer/prime_gen.c \
+		    daa/daa_issuer/key_correctness_proof.c daa/daa_platform/platform.c \
+		    daa/daa_issuer/issuer_init.c daa/daa_issuer/issue_credential.c \
+		    daa/daa_verifier/verifier_transaction.c daa/daa_verifier/verifier.c \
+		    daa/daa_structs.c daa/daa_parameter.c daa/big_integer/bi_gmp.c \
+		    daa/big_integer/bi_openssl.c daa/daa_anonymityrevocation/csencryption_result.c \
+		    daa/daa_anonymityrevocation/authority.c daa/big_integer/bi.c daa/utils/list.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_DAA
+endif
+if TSS_BUILD_GET_FLAGS
+libtspi_la_SOURCES+=tsp_get_flags.c
+endif
+if TSS_BUILD_PCRS_LIST
+libtspi_la_SOURCES+=obj_pcrs.c tsp_pcr.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_PCRS_LIST
+endif
+if TSS_BUILD_HASH_LIST
+libtspi_la_SOURCES+=obj_hash.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_HASH_LIST
+endif
+if TSS_BUILD_ENCDATA_LIST
+libtspi_la_SOURCES+=obj_encdata.c tsp_encdata.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_ENCDATA_LIST
+endif
+if TSS_BUILD_RSAKEY_LIST
+libtspi_la_SOURCES+=obj_rsakey.c tsp_key.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_RSAKEY_LIST
+endif
 
 if HAVE_GTK
-
 libtspi_la_CFLAGS+=@GTK_CFLAGS@
 libtspi_la_LDFLAGS+=@GTK_LIBS@
-
 libtspi_la_SOURCES+=gtk/main.c gtk/support.c gtk/interface.c gtk/callbacks.c
-
 endif

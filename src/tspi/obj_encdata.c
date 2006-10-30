@@ -292,7 +292,7 @@ obj_encdata_set_pcr_info(TSS_HENCDATA hEncData, BYTE *info_blob)
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
 	TSS_RESULT result;
-	UINT16 offset;
+	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);

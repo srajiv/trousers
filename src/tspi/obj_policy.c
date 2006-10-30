@@ -315,12 +315,15 @@ obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *dat
 	TCPA_DIGEST digest;
 	UINT32 secret_size = 0;
 	TSS_BOOL secret_set = TRUE;
+	TSS_RESULT result;
 
 	memset(&digest.digest, 0, sizeof(TCPA_DIGEST));
 
 	switch (mode) {
 		case TSS_SECRET_MODE_PLAIN:
-			Trspi_Hash(TSS_HASH_SHA1, size, data, (BYTE *)&digest.digest);
+			if ((result = Trspi_Hash(TSS_HASH_SHA1, size, data,
+						 (BYTE *)&digest.digest)))
+				return result;
 			secret_size = TCPA_SHA1_160_HASH_LEN;
 			break;
 		case TSS_SECRET_MODE_SHA1:
@@ -855,54 +858,6 @@ obj_policy_has_expired(TSS_HPOLICY hPolicy, TSS_BOOL *answer)
 	}
 
 done:
-	obj_list_put(&policy_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_AUTH *auth)
-{
-	TSS_RESULT result = TSS_SUCCESS;
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-	BYTE wellKnown[TCPA_SHA1_160_HASH_LEN] = TSS_WELL_KNOWN_SECRET;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-
-	switch (policy->SecretMode) {
-		case TSS_SECRET_MODE_CALLBACK:
-			result = policy->Tspicb_CallbackHMACAuth(
-					policy->hmacAppData,
-					hPolicy,
-					0,
-					auth->fContinueAuthSession,
-					FALSE,
-					20,
-					auth->NonceEven.nonce,
-					auth->NonceOdd.nonce,
-					NULL, NULL, 20,
-					hashDigest->digest,
-					(BYTE *)&auth->HMAC);
-			break;
-		case TSS_SECRET_MODE_SHA1:
-		case TSS_SECRET_MODE_PLAIN:
-		case TSS_SECRET_MODE_POPUP:
-			if (validateReturnAuth(policy->Secret, hashDigest->digest, auth))
-				result = TSPERR(TSS_E_TSP_AUTHFAIL);
-			break;
-		case TSS_SECRET_MODE_NONE:
-			if (validateReturnAuth(wellKnown, hashDigest->digest, auth))
-				result = TSPERR(TSS_E_TSP_AUTHFAIL);
-			break;
-		default:
-			result = TSPERR(TSS_E_POLICY_NO_SECRET);
-			break;
-	}
-
 	obj_list_put(&policy_list);
 
 	return result;
