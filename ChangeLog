@@ -1,4 +1,12 @@
 
+- Added functions to do incremental hashing, removing most
+  large stack allocations in trousers.
+- Updated blob utility functions to use UINT64's instead of
+  UINT16, which had caused some arbitrary limits in parts of
+  trousers.
+- Merged in TSS 1.2 header files.
+- Merged in build changes for embedded.
+
 * TROUSERS_0_2 branch created
 
 - In obj_policy.c and obj_tpm.c, if NULL is passed in when trying
