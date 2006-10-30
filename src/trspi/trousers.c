@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -31,20 +31,20 @@
 
 
 void
-Trspi_UnloadBlob_DIGEST(UINT16 * offset, BYTE * blob, TCPA_DIGEST digest)
+Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest)
 {
 	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
 }
 
 void
-Trspi_LoadBlob_PUBKEY(UINT16 *offset, BYTE *blob, TCPA_PUBKEY *pubKey)
+Trspi_LoadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey)
 {
 	Trspi_LoadBlob_KEY_PARMS(offset, blob, &pubKey->algorithmParms);
 	Trspi_LoadBlob_STORE_PUBKEY(offset, blob, &pubKey->pubKey);
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * pubKey)
+Trspi_UnloadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey)
 {
 	TSS_RESULT result;
 
@@ -63,117 +63,82 @@ Trspi_UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * pubKey)
 	return TSS_SUCCESS;
 }
 
-TSS_RESULT
-Trspi_UnloadBlob_MigrationKeyAuth(UINT16 *offset,
-				  BYTE *blob,
-				  TCPA_MIGRATIONKEYAUTH *migAuth)
-{
-	TSS_RESULT result;
-
-	if ((result = Trspi_UnloadBlob_PUBKEY(offset, blob,
-					      &migAuth->migrationKey)))
-		return result;
-	Trspi_UnloadBlob_UINT16(offset, &migAuth->migrationScheme, blob);
-	Trspi_UnloadBlob_DIGEST(offset, blob, migAuth->digest);
-
-	return TSS_SUCCESS;
-}
-
-#if 0
 void
-LoadBlob_STORE_PRIVKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PRIVKEY * store)
-{
-	LoadBlob_UINT32(offset, store->keyLength, blob);
-	LoadBlob(offset, store->keyLength, blob, store->key);
-}
-
-void
-LoadBlob_STORE_ASYMKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_ASYMKEY * store)
-{
-	blob[(*offset)++] = store->payload;
-	LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, store->usageAuth.secret);
-	LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, store->migrationAuth.secret);
-	LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, store->pubDataDigest.digest);
-	LoadBlob_STORE_PRIVKEY(offset, blob, &store->privKey);
-}
-#endif
-
-void
-Trspi_LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object)
+Trspi_LoadBlob(UINT64 *offset, size_t size, BYTE *to, BYTE *from)
 {
 	if (size == 0)
 		return;
-	memcpy(&container[(*offset)], object, size);
-	(*offset) += (UINT16) size;
+	memcpy(&to[(*offset)], from, size);
+	*offset += size;
 }
 
 void
-Trspi_UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object)
+Trspi_UnloadBlob(UINT64 *offset, size_t size, BYTE *from, BYTE *to)
 {
-	if (size == 0)
+	if (size <= 0)
 		return;
-	memcpy(object, &container[(*offset)], size);
-	(*offset) += (UINT16) size;
+	memcpy(to, &from[*offset], size);
+	*offset += size;
 }
 
 void
-Trspi_LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob)
+Trspi_LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE *blob)
 {
 	blob[*offset] = data;
 	(*offset)++;
 }
 
 void
-Trspi_UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob)
+Trspi_UnloadBlob_BYTE(UINT64 *offset, BYTE *dataOut, BYTE *blob)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
 }
 
 void
-Trspi_LoadBlob_BOOL(UINT16 * offset, TSS_BOOL data, BYTE * blob)
+Trspi_LoadBlob_BOOL(UINT64 *offset, TSS_BOOL data, BYTE *blob)
 {
 	blob[*offset] = (BYTE) data;
 	(*offset)++;
 }
 
 void
-Trspi_UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL * dataOut, BYTE * blob)
+Trspi_UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE *blob)
 {
 	*dataOut = blob[*offset];
 	(*offset)++;
 }
 
 void
-Trspi_LoadBlob_UINT32(UINT16 * offset, UINT32 in, BYTE * blob)
+Trspi_LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE *blob)
 {
 	UINT32ToArray(in, &blob[*offset]);
 	*offset += 4;
 }
 
 void
-Trspi_LoadBlob_UINT16(UINT16 * offset, UINT16 in, BYTE * blob)
+Trspi_LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE *blob)
 {
 	UINT16ToArray(in, &blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
 void
-Trspi_UnloadBlob_UINT32(UINT16 * offset, UINT32 * out, BYTE * blob)
+Trspi_UnloadBlob_UINT32(UINT64 *offset, UINT32 *out, BYTE *blob)
 {
 	*out = Decode_UINT32(&blob[*offset]);
 	*offset += sizeof(UINT32);
 }
 
 void
-Trspi_UnloadBlob_UINT16(UINT16 * offset, UINT16 * out, BYTE * blob)
+Trspi_UnloadBlob_UINT16(UINT64 *offset, UINT16 *out, BYTE *blob)
 {
 	*out = Decode_UINT16(&blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
 void
-Trspi_LoadBlob_RSA_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_RSA_KEY_PARMS * parms)
+Trspi_LoadBlob_RSA_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_RSA_KEY_PARMS *parms)
 {
 	Trspi_LoadBlob_UINT32(offset, parms->keyLength, blob);
 	Trspi_LoadBlob_UINT32(offset, parms->numPrimes, blob);
@@ -184,7 +149,7 @@ Trspi_LoadBlob_RSA_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_RSA_KEY_PARMS * 
 }
 
 void
-Trspi_UnloadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION * out)
+Trspi_UnloadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION *out)
 {
 	out->bMajor = blob[(*offset)++];
 	out->bMinor = blob[(*offset)++];
@@ -193,7 +158,7 @@ Trspi_UnloadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION * out)
 }
 
 void
-Trspi_LoadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION version)
+Trspi_LoadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION version)
 {
 	blob[(*offset)++] = version.bMajor;
 	blob[(*offset)++] = version.bMinor;
@@ -202,7 +167,7 @@ Trspi_LoadBlob_TSS_VERSION(UINT16 * offset, BYTE * blob, TSS_VERSION version)
 }
 
 void
-Trspi_UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
+Trspi_UnloadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 {
 	out->major = blob[(*offset)++];
 	out->minor = blob[(*offset)++];
@@ -211,7 +176,7 @@ Trspi_UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
 }
 
 void
-Trspi_LoadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION version)
+Trspi_LoadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION version)
 {
 	blob[(*offset)++] = version.major;
 	blob[(*offset)++] = version.minor;
@@ -220,65 +185,7 @@ Trspi_LoadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION version)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr)
-{
-	TSS_RESULT result;
-
-	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
-		return result;
-	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtRelease.digest);
-	Trspi_UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, pcr->digestAtCreation.digest);
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-Trspi_UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data)
-{
-	Trspi_UnloadBlob_TCPA_VERSION(offset, blob, &data->ver);
-	Trspi_UnloadBlob_UINT32(offset, &data->sealInfoSize, blob);
-
-	if (data->sealInfoSize > 0) {
-		data->sealInfo = malloc(data->sealInfoSize);
-		if (data->sealInfo == NULL) {
-			LogError("malloc of %d bytes failed.", data->sealInfoSize);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-		Trspi_UnloadBlob(offset, data->sealInfoSize, blob, data->sealInfo);
-	} else {
-		data->sealInfo = NULL;
-	}
-
-	Trspi_UnloadBlob_UINT32(offset, &data->encDataSize, blob);
-
-	if (data->encDataSize > 0) {
-		data->encData = malloc(data->encDataSize);
-		if (data->encData == NULL) {
-			LogError("malloc of %d bytes failed.", data->encDataSize);
-			free(data->sealInfo);
-			data->sealInfo = NULL;
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-
-		Trspi_UnloadBlob(offset, data->encDataSize, blob, data->encData);
-	} else {
-		data->encData = NULL;
-	}
-
-	return TSS_SUCCESS;
-}
-
-void
-Trspi_LoadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data)
-{
-	Trspi_LoadBlob_TCPA_VERSION(offset, blob, data->ver);
-	Trspi_LoadBlob_UINT32(offset, data->sealInfoSize, blob);
-	Trspi_LoadBlob(offset, data->sealInfoSize, blob, data->sealInfo);
-	Trspi_LoadBlob_UINT32(offset, data->encDataSize, blob);
-	Trspi_LoadBlob(offset, data->encDataSize, blob, data->encData);
-}
-
-TSS_RESULT
-Trspi_UnloadBlob_PCR_SELECTION(UINT16 *offset, BYTE *blob, TCPA_PCR_SELECTION *pcr)
+Trspi_UnloadBlob_PCR_SELECTION(UINT64 *offset, BYTE *blob, TCPA_PCR_SELECTION *pcr)
 {
 	UINT16 i;
 
@@ -301,27 +208,8 @@ Trspi_UnloadBlob_PCR_SELECTION(UINT16 *offset, BYTE *blob, TCPA_PCR_SELECTION *p
 	return TSS_SUCCESS;
 }
 
-TSS_RESULT
-Trspi_UnloadBlob_PCR_COMPOSITE(UINT16 *offset, BYTE *blob, TCPA_PCR_COMPOSITE *out)
-{
-	TSS_RESULT result;
-
-	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &out->select)))
-		return result;
-
-	Trspi_UnloadBlob_UINT32(offset, &out->valueSize, blob);
-	out->pcrValue = malloc(out->valueSize);
-	if (out->pcrValue == NULL) {
-		LogError("malloc of %d bytes failed.", out->valueSize);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-	Trspi_UnloadBlob(offset, out->valueSize, blob, (BYTE *)out->pcrValue);
-
-	return TSS_SUCCESS;
-}
-
 void
-Trspi_LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION *pcr)
+Trspi_LoadBlob_PCR_SELECTION(UINT64 *offset, BYTE *blob, TCPA_PCR_SELECTION *pcr)
 {
 	UINT16 i;
 
@@ -332,7 +220,7 @@ Trspi_LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION *p
 }
 
 void
-Trspi_LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
+Trspi_LoadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 {
 	Trspi_LoadBlob_TCPA_VERSION(offset, blob, key->ver);
 	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
@@ -347,7 +235,7 @@ Trspi_LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
 }
 
 void
-Trspi_LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
+Trspi_LoadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 {
 	UINT32 tempFlag = 0;
 
@@ -361,7 +249,7 @@ Trspi_LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
 }
 
 void
-Trspi_UnloadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
+Trspi_UnloadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 {
 	UINT32 tempFlag = 0;
 	memset(flags, 0x00, sizeof(TCPA_KEY_FLAGS));
@@ -377,7 +265,7 @@ Trspi_UnloadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
 }
 
 void
-Trspi_LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo)
+Trspi_LoadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyInfo)
 {
 	Trspi_LoadBlob_UINT32(offset, keyInfo->algorithmID, blob);
 	Trspi_LoadBlob_UINT16(offset, keyInfo->encScheme, blob);
@@ -389,14 +277,14 @@ Trspi_LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo)
 }
 
 void
-Trspi_LoadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store)
+Trspi_LoadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 {
 	Trspi_LoadBlob_UINT32(offset, store->keyLength, blob);
 	Trspi_LoadBlob(offset, store->keyLength, blob, store->key);
 }
 
 void
-Trspi_LoadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID uuid)
+Trspi_LoadBlob_UUID(UINT64 *offset, BYTE *blob, TSS_UUID uuid)
 {
 	Trspi_LoadBlob_UINT32(offset, uuid.ulTimeLow, blob);
 	Trspi_LoadBlob_UINT16(offset, uuid.usTimeMid, blob);
@@ -407,7 +295,7 @@ Trspi_LoadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID uuid)
 }
 
 void
-Trspi_UnloadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID * uuid)
+Trspi_UnloadBlob_UUID(UINT64 *offset, BYTE *blob, TSS_UUID *uuid)
 {
 	memset(uuid, 0, sizeof(TSS_UUID));
 	Trspi_UnloadBlob_UINT32(offset, &uuid->ulTimeLow, blob);
@@ -419,7 +307,7 @@ Trspi_UnloadBlob_UUID(UINT16 * offset, BYTE * blob, TSS_UUID * uuid)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms)
+Trspi_UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 {
 	Trspi_UnloadBlob_UINT32(offset, &keyParms->algorithmID, blob);
 	Trspi_UnloadBlob_UINT16(offset, &keyParms->encScheme, blob);
@@ -441,7 +329,7 @@ Trspi_UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyPar
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key)
+Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 {
 	TSS_RESULT result;
 
@@ -495,7 +383,7 @@ void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ){
 */
 
 TSS_RESULT
-Trspi_UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store)
+Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 {
 	Trspi_UnloadBlob_UINT32(offset, &store->keyLength, blob);
 
@@ -513,45 +401,8 @@ Trspi_UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * 
 	return TSS_SUCCESS;
 }
 
-#if 0
 void
-LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY pubKey)
-{
-	LoadBlob_KEY_PARMS(offset, blob, &pubKey.algorithmParms);
-	LoadBlob_UINT32(offset, pubKey.pubKey.keyLength, blob);
-	LoadBlob(offset, pubKey.pubKey.keyLength, blob, pubKey.pubKey.key);
-}
-
-void
-LoadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify)
-{
-
-	LoadBlob_TCPA_VERSION(offset, blob, certify->version);
-	LoadBlob_UINT16(offset, certify->keyUsage, blob);
-	LoadBlob_KEY_FLAGS(offset, blob, &certify->keyFlags);
-	LoadBlob_BYTE(offset, (BYTE) certify->authDataUsage, blob);
-	LoadBlob_KEY_PARMS(offset, blob, &certify->algorithmParms);
-	LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, certify->pubkeyDigest.digest);
-	LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, certify->data.nonce);
-	LoadBlob_BYTE(offset, (BYTE) certify->parentPCRStatus, blob);
-	LoadBlob_UINT32(offset, certify->PCRInfoSize, blob);
-	LoadBlob(offset, certify->PCRInfoSize, blob, certify->PCRInfo);
-}
-
-void
-Trspi_UnloadBlob_TCPA_EVENT_CERT(UINT16 * offset, BYTE * blob, TCPA_EVENT_CERT * cert)
-{
-	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, cert->certificateHash.digest);
-	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, cert->entityDigest.digest);
-	cert->digestChecked = blob[(*offset)++];
-	cert->digestVerified = blob[(*offset)++];
-	Trspi_UnloadBlob_UINT32(offset, &cert->issuerSize, blob);
-	Trspi_UnloadBlob(offset, cert->issuerSize, blob, cert->issuer);
-}
-#endif
-
-void
-Trspi_UnloadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
+Trspi_UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 {
 	Trspi_UnloadBlob_BYTE(offset, &out->major, blob);
 	Trspi_UnloadBlob_BYTE(offset, &out->minor, blob);
@@ -560,7 +411,7 @@ Trspi_UnloadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
 }
 
 void
-Trspi_UnloadBlob_KM_KEYINFO(UINT16 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
+Trspi_UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
 	Trspi_UnloadBlob_TSS_VERSION( offset, blob, &info->versionInfo);
 	Trspi_UnloadBlob_UUID( offset, blob, &info->keyUUID);
@@ -572,7 +423,7 @@ Trspi_UnloadBlob_KM_KEYINFO(UINT16 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 }
 
 void
-Trspi_LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
+Trspi_LoadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 {
 	Trspi_LoadBlob_TCPA_VERSION(offset, blob, *(TCPA_VERSION *)(&event->versionInfo));
 	Trspi_LoadBlob_UINT32(offset, event->ulPcrIndex, blob);
@@ -589,7 +440,7 @@ Trspi_LoadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
+Trspi_UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 {
 	Trspi_UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(event->versionInfo));
 	Trspi_UnloadBlob_UINT32(offset, &event->ulPcrIndex, blob);
@@ -628,7 +479,7 @@ Trspi_UnloadBlob_PCR_EVENT(UINT16 *offset, BYTE *blob, TSS_PCR_EVENT *event)
  * of a TCPA_KEY from an external source
  */
 void
-Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key)
+Trspi_LoadBlob_PRIVKEY_DIGEST(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 {
 	Trspi_LoadBlob_TCPA_VERSION(offset, blob, key->ver);
 	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
@@ -646,7 +497,7 @@ Trspi_LoadBlob_PRIVKEY_DIGEST(UINT16 * offset, BYTE * blob, TCPA_KEY *key)
 }
 
 void
-Trspi_LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
+Trspi_LoadBlob_SYMMETRIC_KEY(UINT64 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 {
 	Trspi_LoadBlob_UINT32(offset, key->algId, blob);
 	Trspi_LoadBlob_UINT16(offset, key->encScheme, blob);
@@ -657,7 +508,7 @@ Trspi_LoadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
+Trspi_UnloadBlob_SYMMETRIC_KEY(UINT64 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 {
 	Trspi_UnloadBlob_UINT32(offset, &key->algId, blob);
 	Trspi_UnloadBlob_UINT16(offset, &key->encScheme, blob);
@@ -677,8 +528,26 @@ Trspi_UnloadBlob_SYMMETRIC_KEY(UINT16 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *k
 	return TSS_SUCCESS;
 }
 
+void
+Trspi_LoadBlob_IDENTITY_REQ(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req)
+{
+	Trspi_LoadBlob_UINT32(offset, req->asymSize, blob);
+	Trspi_LoadBlob_UINT32(offset, req->symSize, blob);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &req->asymAlgorithm);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &req->symAlgorithm);
+	Trspi_LoadBlob(offset, req->asymSize, blob, req->asymBlob);
+	Trspi_LoadBlob(offset, req->symSize, blob, req->symBlob);
+}
+
+void
+Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT64 *offset, BYTE *blob, TPM_CHANGEAUTH_VALIDATE *caValidate)
+{
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, caValidate->newAuthSecret.authdata);
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, caValidate->n1.nonce);
+}
+
 TSS_RESULT
-Trspi_UnloadBlob_IDENTITY_REQ(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req)
+Trspi_UnloadBlob_IDENTITY_REQ(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req)
 {
 	Trspi_UnloadBlob_UINT32(offset, &req->asymSize, blob);
 	Trspi_UnloadBlob_UINT32(offset, &req->symSize, blob);
@@ -715,7 +584,7 @@ Trspi_UnloadBlob_IDENTITY_REQ(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_IDENTITY_PROOF(UINT16 *offset, BYTE *blob, TCPA_IDENTITY_PROOF *proof)
+Trspi_UnloadBlob_IDENTITY_PROOF(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_PROOF *proof)
 {
 	TSS_RESULT result;
 
@@ -825,8 +694,7 @@ error:
 }
 
 void
-Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
-				  TCPA_SYM_CA_ATTESTATION *sym)
+Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT64 *offset, BYTE *blob, TCPA_SYM_CA_ATTESTATION *sym)
 {
 	Trspi_LoadBlob_UINT32(offset, sym->credSize, blob);
 	Trspi_LoadBlob_KEY_PARMS(offset, blob, &sym->algorithm);
@@ -834,14 +702,12 @@ Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
-				    TCPA_SYM_CA_ATTESTATION *sym)
+Trspi_UnloadBlob_SYM_CA_ATTESTATION(UINT64 *offset, BYTE *blob, TCPA_SYM_CA_ATTESTATION *sym)
 {
 	TSS_RESULT result;
 
 	Trspi_UnloadBlob_UINT32(offset, &sym->credSize, blob);
-	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, blob,
-						 &sym->algorithm))) {
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, blob, &sym->algorithm))) {
 		sym->credSize = 0;
 		return result;
 	}
@@ -862,8 +728,7 @@ Trspi_UnloadBlob_SYM_CA_ATTESTATION(UINT16 *offset, BYTE *blob,
 }
 
 void
-Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT16 *offset, BYTE *blob,
-				TCPA_ASYM_CA_CONTENTS *asym)
+Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT64 *offset, BYTE *blob, TCPA_ASYM_CA_CONTENTS *asym)
 {
 	Trspi_LoadBlob_SYMMETRIC_KEY(offset, blob, &asym->sessionKey);
 	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob,
@@ -871,17 +736,14 @@ Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT16 *offset, BYTE *blob,
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_ASYM_CA_CONTENTS(UINT16 *offset, BYTE *blob,
-				  TCPA_ASYM_CA_CONTENTS *asym)
+Trspi_UnloadBlob_ASYM_CA_CONTENTS(UINT64 *offset, BYTE *blob, TCPA_ASYM_CA_CONTENTS *asym)
 {
 	TSS_RESULT result;
 
-	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(offset, blob,
-						     &asym->sessionKey)))
+	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(offset, blob, &asym->sessionKey)))
 		return result;
 
-	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob,
-			 (BYTE *)&asym->idDigest);
+	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, (BYTE *)&asym->idDigest);
 
 	return TSS_SUCCESS;
 }
@@ -1223,3 +1085,347 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 
 	return (BYTE *)ret;
 }
+
+void
+Trspi_LoadBlob_BOUND_DATA(UINT64 *offset, TCPA_BOUND_DATA bd, UINT32 payloadLength, BYTE *blob)
+{
+	Trspi_LoadBlob_TCPA_VERSION(offset, blob, bd.ver);
+	Trspi_LoadBlob(offset, 1, blob, &bd.payload);
+	Trspi_LoadBlob(offset, payloadLength, blob, bd.payloadData);
+}
+
+/* Functions to support incremental hashing */
+TSS_RESULT
+Trspi_Hash_UINT16(Trspi_HashCtx *c, UINT16 i)
+{
+	BYTE bytes[sizeof(UINT16)];
+
+	UINT16ToArray(i, bytes);
+	return Trspi_HashUpdate(c, sizeof(UINT16), bytes);
+}
+
+TSS_RESULT
+Trspi_Hash_UINT32(Trspi_HashCtx *c, UINT32 i)
+{
+	BYTE bytes[sizeof(UINT32)];
+
+	UINT32ToArray(i, bytes);
+	return Trspi_HashUpdate(c, sizeof(UINT32), bytes);
+}
+
+TSS_RESULT
+Trspi_Hash_BYTE(Trspi_HashCtx *c, BYTE data)
+{
+	return Trspi_HashUpdate(c, sizeof(BYTE), &data);
+}
+
+TSS_RESULT
+Trspi_Hash_BOOL(Trspi_HashCtx *c, TSS_BOOL data)
+{
+	return Trspi_HashUpdate(c, sizeof(TSS_BOOL), &data);
+}
+
+TSS_RESULT
+Trspi_Hash_VERSION(Trspi_HashCtx *c, TSS_VERSION *version)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_BYTE(c, version->bMajor);
+	result |= Trspi_Hash_BYTE(c, version->bMinor);
+	result |= Trspi_Hash_BYTE(c, version->bRevMajor);
+	result |= Trspi_Hash_BYTE(c, version->bRevMinor);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_DAA_PK(Trspi_HashCtx *c, TSS_DAA_PK *pk)
+{
+	UINT32 i;
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, &pk->versionInfo);
+
+	result |= Trspi_Hash_UINT32(c, pk->modulusLength);
+	result |= Trspi_HashUpdate(c, pk->modulusLength, pk->modulus);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalSLength);
+	result |= Trspi_HashUpdate(c, pk->capitalSLength, pk->capitalS);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalZLength);
+	result |= Trspi_HashUpdate(c, pk->capitalZLength, pk->capitalZ);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalR0Length);
+	result |= Trspi_HashUpdate(c, pk->capitalR0Length, pk->capitalR0);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalR1Length);
+	result |= Trspi_HashUpdate(c, pk->capitalR1Length, pk->capitalR1);
+
+	result |= Trspi_Hash_UINT32(c, pk->gammaLength);
+	result |= Trspi_HashUpdate(c, pk->gammaLength, pk->gamma);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalGammaLength);
+	result |= Trspi_HashUpdate(c, pk->capitalGammaLength, pk->capitalGamma);
+
+	result |= Trspi_Hash_UINT32(c, pk->rhoLength);
+	result |= Trspi_HashUpdate(c, pk->rhoLength, pk->rho);
+
+	for (i = 0; i < pk->capitalYLength; i++)
+		result |= Trspi_HashUpdate(c, pk->capitalYLength2, pk->capitalY[i]);
+
+	result |= Trspi_Hash_UINT32(c, pk->capitalYPlatformLength);
+
+	result |= Trspi_Hash_UINT32(c, pk->issuerBaseNameLength);
+	result |= Trspi_HashUpdate(c, pk->issuerBaseNameLength, pk->issuerBaseName);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_RSA_KEY_PARMS(Trspi_HashCtx *c, TCPA_RSA_KEY_PARMS *parms)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, parms->keyLength);
+	result |= Trspi_Hash_UINT32(c, parms->numPrimes);
+	result |= Trspi_Hash_UINT32(c, parms->exponentSize);
+
+	if (parms->exponentSize > 0)
+		result |= Trspi_HashUpdate(c, parms->exponentSize, parms->exponent);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_STORE_PUBKEY(Trspi_HashCtx *c, TCPA_STORE_PUBKEY *store)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, store->keyLength);
+	result |= Trspi_HashUpdate(c, store->keyLength, store->key);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_KEY_PARMS(Trspi_HashCtx *c, TCPA_KEY_PARMS *keyInfo)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, keyInfo->algorithmID);
+	result |= Trspi_Hash_UINT16(c, keyInfo->encScheme);
+	result |= Trspi_Hash_UINT16(c, keyInfo->sigScheme);
+	result |= Trspi_Hash_UINT32(c, keyInfo->parmSize);
+
+	if (keyInfo->parmSize > 0)
+		result |= Trspi_HashUpdate(c, keyInfo->parmSize, keyInfo->parms);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_PUBKEY(Trspi_HashCtx *c, TCPA_PUBKEY *pubKey)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_KEY_PARMS(c, &pubKey->algorithmParms);
+	result |= Trspi_Hash_STORE_PUBKEY(c, &pubKey->pubKey);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_STORED_DATA(Trspi_HashCtx *c, TCPA_STORED_DATA *data)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, (TSS_VERSION *)&data->ver);
+	result |= Trspi_Hash_UINT32(c, data->sealInfoSize);
+	result |= Trspi_HashUpdate(c, data->sealInfoSize, data->sealInfo);
+	result |= Trspi_Hash_UINT32(c, data->encDataSize);
+	result |= Trspi_HashUpdate(c, data->encDataSize, data->encData);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_PCR_SELECTION(Trspi_HashCtx *c, TCPA_PCR_SELECTION *pcr)
+{
+	TSS_RESULT result;
+	UINT16 i;
+
+	result = Trspi_Hash_UINT16(c, pcr->sizeOfSelect);
+
+	for (i = 0; i < pcr->sizeOfSelect; i++)
+		result |= Trspi_Hash_BYTE(c, pcr->pcrSelect[i]);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_KEY_FLAGS(Trspi_HashCtx *c, TCPA_KEY_FLAGS *flags)
+{
+	UINT32 tempFlag = 0;
+
+	if (*flags & migratable)
+		tempFlag |= TSS_FLAG_MIGRATABLE;
+	if (*flags & redirection)
+		tempFlag |= TSS_FLAG_REDIRECTION;
+	if (*flags & volatileKey)
+		tempFlag |= TSS_FLAG_VOLATILE;
+	return Trspi_Hash_UINT32(c, tempFlag);
+}
+
+TSS_RESULT
+Trspi_Hash_KEY(Trspi_HashCtx *c, TCPA_KEY *key)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, (TSS_VERSION *)&key->ver);
+	result |= Trspi_Hash_UINT16(c, key->keyUsage);
+	result |= Trspi_Hash_KEY_FLAGS(c, &key->keyFlags);
+	result |= Trspi_Hash_BYTE(c, key->authDataUsage);
+	result |= Trspi_Hash_KEY_PARMS(c, &key->algorithmParms);
+	result |= Trspi_Hash_UINT32(c, key->PCRInfoSize);
+	result |= Trspi_HashUpdate(c, key->PCRInfoSize, key->PCRInfo);
+	result |= Trspi_Hash_STORE_PUBKEY(c, &key->pubKey);
+	result |= Trspi_Hash_UINT32(c, key->encSize);
+	result |= Trspi_HashUpdate(c, key->encSize, key->encData);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_UUID(Trspi_HashCtx *c, TSS_UUID uuid)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, uuid.ulTimeLow);
+	result |= Trspi_Hash_UINT16(c, uuid.usTimeMid);
+	result |= Trspi_Hash_UINT16(c, uuid.usTimeHigh);
+	result |= Trspi_Hash_BYTE(c, uuid.bClockSeqHigh);
+	result |= Trspi_Hash_BYTE(c, uuid.bClockSeqLow);
+	result |= Trspi_HashUpdate(c, sizeof(uuid.rgbNode), uuid.rgbNode);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_PCR_EVENT(Trspi_HashCtx *c, TSS_PCR_EVENT *event)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, &event->versionInfo);
+	result |= Trspi_Hash_UINT32(c, event->ulPcrIndex);
+	result |= Trspi_Hash_UINT32(c, event->eventType);
+
+	Trspi_Hash_UINT32(c, event->ulPcrValueLength);
+	if (event->ulPcrValueLength > 0)
+		result |= Trspi_HashUpdate(c, event->ulPcrValueLength, event->rgbPcrValue);
+
+	result |= Trspi_Hash_UINT32(c, event->ulEventLength);
+	if (event->ulEventLength > 0)
+		result |= Trspi_HashUpdate(c, event->ulEventLength, event->rgbEvent);
+
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_PRIVKEY_DIGEST(Trspi_HashCtx *c, TCPA_KEY *key)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, (TSS_VERSION *)&key->ver);
+	result |= Trspi_Hash_UINT16(c, key->keyUsage);
+	result |= Trspi_Hash_KEY_FLAGS(c, &key->keyFlags);
+	result |= Trspi_Hash_BYTE(c, key->authDataUsage);
+	result |= Trspi_Hash_KEY_PARMS(c, &key->algorithmParms);
+
+	result |= Trspi_Hash_UINT32(c, key->PCRInfoSize);
+	/* exclude pcrInfo when PCRInfoSize is 0 as spec'd in TPM 1.1b spec p.71 */
+	if (key->PCRInfoSize != 0)
+		result |= Trspi_HashUpdate(c, key->PCRInfoSize, key->PCRInfo);
+
+	Trspi_Hash_STORE_PUBKEY(c, &key->pubKey);
+	/* exclude encSize, encData as spec'd in TPM 1.1b spec p.71 */
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_SYMMETRIC_KEY(Trspi_HashCtx *c, TCPA_SYMMETRIC_KEY *key)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, key->algId);
+	result |= Trspi_Hash_UINT16(c, key->encScheme);
+	result |= Trspi_Hash_UINT16(c, key->size);
+
+	if (key->size > 0)
+		result |= Trspi_HashUpdate(c, key->size, key->data);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_IDENTITY_REQ(Trspi_HashCtx *c, TCPA_IDENTITY_REQ *req)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, req->asymSize);
+	result |= Trspi_Hash_UINT32(c, req->symSize);
+	result |= Trspi_Hash_KEY_PARMS(c, &req->asymAlgorithm);
+	result |= Trspi_Hash_KEY_PARMS(c, &req->symAlgorithm);
+	result |= Trspi_HashUpdate(c, req->asymSize, req->asymBlob);
+	result |= Trspi_HashUpdate(c, req->symSize, req->symBlob);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_CHANGEAUTH_VALIDATE(Trspi_HashCtx *c, TPM_CHANGEAUTH_VALIDATE *caValidate)
+{
+	TSS_RESULT result;
+
+	result = Trspi_HashUpdate(c, TCPA_SHA1_160_HASH_LEN, caValidate->newAuthSecret.authdata);
+	result |= Trspi_HashUpdate(c, TCPA_SHA1_160_HASH_LEN, caValidate->n1.nonce);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_SYM_CA_ATTESTATION(Trspi_HashCtx *c, TCPA_SYM_CA_ATTESTATION *sym)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, sym->credSize);
+	result |= Trspi_Hash_KEY_PARMS(c, &sym->algorithm);
+	result |= Trspi_HashUpdate(c, sym->credSize, sym->credential);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_ASYM_CA_CONTENTS(Trspi_HashCtx *c, TCPA_ASYM_CA_CONTENTS *asym)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_SYMMETRIC_KEY(c, &asym->sessionKey);
+	result |= Trspi_HashUpdate(c, TCPA_SHA1_160_HASH_LEN, (BYTE *)&asym->idDigest);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_BOUND_DATA(Trspi_HashCtx *c, TCPA_BOUND_DATA *bd, UINT32 payloadLength)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_VERSION(c, (TSS_VERSION *)&bd->ver);
+	result |= Trspi_Hash_BYTE(c, bd->payload);
+	result |= Trspi_HashUpdate(c, payloadLength, bd->payloadData);
+
+	return result;
+}
+
