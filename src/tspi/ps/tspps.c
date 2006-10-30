@@ -417,7 +417,8 @@ psfile_write_key(int fd,
 	TSS_RESULT result;
 	TCPA_KEY key;
 	UINT32 zero = 0;
-	UINT16 offset, pub_key_size, cache_flags = 0;
+	UINT64 offset;
+	UINT16 pub_key_size, cache_flags = 0;
 	struct stat stat_buf;
 	int rc, file_offset;
 
@@ -708,40 +709,10 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 {
 	TCPA_KEY key;
 	BYTE blob[4096];
-	UINT16 offset;
+	UINT64 offset;
 	TSS_RESULT result;
 	off_t off;
-#if 0
-	/* Set the file pointer to the offset that the key blob is at */
-	offset = lseek(fd, TSSPS_BLOB_DATA_OFFSET(&cache_entries[i]), SEEK_SET);
-	if (offset == ((off_t)-1)) {
-		LogDebug("lseek: %s", strerror(errno));
-		free(cache_entries);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
 
-	/* Read in the key blob */
-	if ((result = read_data(fd, (void *)blob, cache_entries[i].blob_size))) {
-		LogDebug("%s", __FUNCTION__);
-		free(cache_entries);
-		return result;
-	}
-
-	/* Expand the blob into a useable form */
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &key))) {
-		free(cache_entries);
-		return result;
-	}
-
-	memcpy(&keyinfos[i].versionInfo, &key.ver, sizeof(TSS_VERSION));
-	memcpy(&keyinfos[i].keyUUID, cache_entries[i].uuid, sizeof(TSS_UUID));
-	memcpy(&keyinfos[i].parentKeyUUID, cache_entries[i].parent_uuid,
-			sizeof(TSS_UUID));
-	keyinfos[i].bAuthDataUsage = key.authDataUsage;
-
-	free_key_refs(&key);
-#else
 	/* Set the file pointer to the offset that the key blob is at */
 	off = lseek(fd, TSSPS_BLOB_DATA_OFFSET(c), SEEK_SET);
 	if (off == ((off_t)-1)) {
@@ -766,7 +737,6 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 	ki->bAuthDataUsage = key.authDataUsage;
 
 	free_key_refs(&key);
-#endif
 
 	return TSS_SUCCESS;
 }
