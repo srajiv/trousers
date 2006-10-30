@@ -1,8 +1,8 @@
 /*++
 
-  TDDL error return codes for the TPM Device Driver Library Interface (TDDLI)
-
-  --*/
+TDDL error return codes for the TPM Device Driver Library Interface (TDDLI)
+ 
+--*/
 
 #ifndef __TDDLAPI_ERROR_H__
 #define __TDDLAPI_ERROR_H__
@@ -39,7 +39,7 @@
 //
 
 
-// no macros are used below intentionally
+// no macros are used below intentionally 
 // for a better error code recognition by the reader
 
 // note that the values of TPM_E_BASE and TSS_E_BASE, TSS_W_BASE and TSS_I_BASE

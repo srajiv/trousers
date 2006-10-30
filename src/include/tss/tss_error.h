@@ -1,11 +1,13 @@
 /*++
 
-  TSS error return codes
-
-  --*/
+TSS error return codes 
+ 
+--*/
 
 #ifndef __TSS_ERROR_H__
 #define __TSS_ERROR_H__
+
+#include <tss/platform.h>
 
 //
 // error coding scheme for a Microsoft Windows platform -
@@ -18,7 +20,7 @@
 //  +---+-+-+-----------------------+-------+-----------------------+
 //  |Lev|C|R|     Facility          | Layer |         Code          |
 //  +---+-+-+-----------------------+-------+-----------------------+
-// | Platform specific coding      | TSS error coding system       |
+//  | Platform specific coding      | TSS error coding system       |
 //  +---+-+-+-----------------------+-------+-----------------------+
 //
 //      Lev - is the Level code
@@ -40,7 +42,7 @@
 //
 // definitions for the code level information
 //
-#define TSS_LEVEL_SUCCESS  0x00000000L    // code level success
+#define TSS_LEVEL_SUCCESS  0x00     // code level success 
 #define TSS_LEVEL_INFO     0x40000000L    // code level information
 #define TSS_LEVEL_WARNING  0x80000000L    // code level warning
 #define TSS_LEVEL_ERROR    0xC0000000L    // code level error
@@ -49,11 +51,11 @@
 // some defines for the platform specific information
 //
 #define FACILITY_TSS            0x28L     // facility number for TCPA return codes
-#define FACILITY_TSS_CODEPOS   (FACILITY_TSS << 16)  // shift the facility info to the code
-// position
+#define FACILITY_TSS_CODEPOS   (FACILITY_TSS << 16)  // shift the facility info to the code 
+                                                                        // position
 
-#define TSS_CUSTOM_CODEFLAG     0x20000000L    // bit position for the custom flag in
-// return code
+#define TSS_CUSTOM_CODEFLAG     0x20000000L    // bit position for the custom flag in 
+                                                                        // return code
 
 //
 //
@@ -233,7 +235,7 @@
 // Core Service connection doesn't exist.
 //
 #define TSS_E_NO_CONNECTION    (UINT32)(TSS_E_BASE + 0x102L)
-
+ 
 //
 // MessageId: TSS_E_CONNECTION_FAILED
 //
@@ -313,9 +315,13 @@
 // MessageText:
 //
 // Wrong flag information for object creation.
+// 
+// The alternate spelling is supported to be compatible with a typo
+// in the 1.1b header files.
 //
-#define TSS_E_INVALID_OBJECT_INITFLAG  (UINT32)(TSS_E_BASE + 0x10CL)
-
+#define TSS_E_INVALID_OBJECT_INIT_FLAG  (UINT32)(TSS_E_BASE + 0x10CL)
+#define TSS_E_INVALID_OBJECT_INITFLAG   TSS_E_INVALID_OBJECT_INIT_FLAG
+ 
 //
 // MessageId: TSS_E_NO_PCRS_SET
 //
@@ -333,7 +339,7 @@
 // The addressed key is currently not loaded.
 //
 #define TSS_E_KEY_NOT_LOADED    (UINT32)(TSS_E_BASE + 0x10EL)
-
+ 
 //
 // MessageId: TSS_E_KEY_NOT_SET
 //
@@ -342,7 +348,7 @@
 // No key information is currently available.
 //
 #define TSS_E_KEY_NOT_SET    (UINT32)(TSS_E_BASE + 0x10FL)
-
+      
 //
 // MessageId: TSS_E_VALIDATION_FAILED
 //
@@ -387,7 +393,7 @@
 // Multiple authorization failed.
 //
 #define TSS_E_TSP_AUTH2FAIL    (UINT32)(TSS_E_BASE + 0x114L)
-
+ 
 //
 // MessageId: TSS_E_KEY_NO_MIGRATION_POLICY
 //
@@ -395,7 +401,7 @@
 //
 // There's no migration policy object set for the addressed key.
 //
-#define TSS_E_KEY_NO_MIGRATION_POLICY  (UINT32)(TSS_E_BASE + 0x115L)
+#define TSS_E_KEY_NO_MIGRATION_POLICY  (UINT32)(TSS_E_BASE + 0x115L) 
 
 //
 // MessageId: TSS_E_POLICY_NO_SECRET
@@ -420,7 +426,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_INVALID_ENCSCHEME   (UINT32)(TSS_E_BASE + 0x118L)
 
@@ -430,7 +436,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_INVALID_SIGSCHEME   (UINT32)(TSS_E_BASE + 0x119L)
 
@@ -439,7 +445,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_ENC_INVALID_LENGTH   (UINT32)(TSS_E_BASE + 0x120L)
 
@@ -449,7 +455,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_ENC_NO_DATA    (UINT32)(TSS_E_BASE + 0x121L)
 
@@ -458,7 +464,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_ENC_INVALID_TYPE   (UINT32)(TSS_E_BASE + 0x122L)
 
@@ -468,7 +474,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_INVALID_KEYUSAGE   (UINT32)(TSS_E_BASE + 0x123L)
 
@@ -477,7 +483,7 @@
 //
 // MessageText:
 //
-//
+// 
 //
 #define TSS_E_VERIFICATION_FAILED   (UINT32)(TSS_E_BASE + 0x124L)
 
@@ -518,7 +524,164 @@
 #define TSS_E_EK_CHECKSUM             (UINT32)(TSS_E_BASE + 0x128L)
 
 
+//
+// MessageId: TSS_E_DELGATION_NOTSET
+//
+// MessageText:
+//
+// The Policy object does not have a delegation blob set.
+//
+#define TSS_E_DELEGATION_NOTSET      (UINT32)(TSS_E_BASE + 0x129L)
+
+//
+// MessageId: TSS_E_DELFAMILY_NOTFOUND
+//
+// MessageText:
+//
+// The specified delegation family was not found
+//
+#define TSS_E_DELFAMILY_NOTFOUND       (UINT32)(TSS_E_BASE + 0x130L)
+
+//
+// MessageId: TSS_E_DELFAMILY_ROWEXISTS
+//
+// MessageText:
+//
+// The specified delegation family table row is already in use and
+// the command flags does not allow the TSS to overwrite the existing
+// entry.
+//
+#define TSS_E_DELFAMILY_ROWEXISTS    (UINT32)(TSS_E_BASE + 0x131L)
+
+//
+// MessageId: TSS_E_VERSION_MISMATCH
+//
+// MessageText:
+//
+// The specified delegation family table row is already in use and
+// the command flags does not allow the TSS to overwrite the existing
+// entry.
+//
+#define TSS_E_VERSION_MISMATCH       (UINT32)(TSS_E_BASE + 0x132L)
+
+//
+//  MessageId: TSS_E_DAA_AR_DECRYPTION_ERROR
+//
+//  Decryption of the encrypted pseudonym has failed, due to
+//  either a wrong secret key or a wrong decryption condition.
+//
+#define TSS_E_DAA_AR_DECRYPTION_ERROR             (UINT32)(TSS_E_BASE + 0x133L)
+
+//
+//  MessageId: TSS_E_DAA_AUTHENTICATION_ERROR
+//
+//  The TPM could not be authenticated by the DAA Issuer.
+//
+#define TSS_E_DAA_AUTHENTICATION_ERROR            (UINT32)(TSS_E_BASE + 0x134L)
+
+//
+//  MessageId: TSS_E_DAA_CHALLENGE_RESPONSE_ERROR
+//
+//  DAA Challenge response error.
+//
+#define TSS_E_DAA_CHALLENGE_RESPONSE_ERROR        (UINT32)(TSS_E_BASE + 0x135L)
+
+//
+//  MessageId: TSS_E_DAA_CREDENTIAL_PROOF_ERROR
+//
+//  Verification of the credential TSS_DAA_CRED_ISSUER issued by
+//  the DAA Issuer has failed.
+//
+#define TSS_E_DAA_CREDENTIAL_PROOF_ERROR          (UINT32)(TSS_E_BASE + 0x136L)
+
+//
+//  MessageId: TSS_E_DAA_CREDENTIAL_REQUEST_PROOF_ERROR
+//
+//  Verification of the platform's credential request
+//  TSS_DAA_CREDENTIAL_REQUEST has failed.
+//
+#define TSS_E_DAA_CREDENTIAL_REQUEST_PROOF_ERROR  (UINT32)(TSS_E_BASE + 0x137L)
+
+//
+//  MessageId: TSS_E_DAA_ISSUER_KEY_ERROR
+//
+//  DAA Issuer's authentication key chain could not be verified or
+//  is not correct.
+//
+#define TSS_E_DAA_ISSUER_KEY_ERROR                (UINT32)(TSS_E_BASE + 0x138L)
+
+//
+//  MessageId: TSS_E_DAA_PSEUDONYM_ERROR
+//
+//  While verifying the pseudonym of the TPM, the private key of the
+//  TPM was found on the rogue list.
+//
+#define TSS_E_DAA_PSEUDONYM_ERROR                 (UINT32)(TSS_E_BASE + 0x139L)
+
+//
+//  MessageId: TSS_E_INVALID_RESOURCE
+//
+//  Pointer to memory wrong.
+//
+#define TSS_E_INVALID_RESOURCE                    (UINT32)(TSS_E_BASE + 0x13AL)
+
+//
+//  MessageId: TSS_E_NV_AREA_EXIST
+//
+//  The NV area referenced already exists
+//
+#define TSS_E_NV_AREA_EXIST                       (UINT32)(TSS_E_BASE + 0x13BL)
+
+//
+//  MessageId: TSS_E_NV_AREA_NOT_EXIST
+//
+//  The NV area referenced doesn't exist
+//
+#define TSS_E_NV_AREA_NOT_EXIST                   (UINT32)(TSS_E_BASE + 0x13CL)
+
+//
+//  MessageId: TSS_E_TSP_TRANS_AUTHFAIL
+//
+//  The transport session authorization failed
+//
+#define TSS_E_TSP_TRANS_AUTHFAIL                  (UINT32)(TSS_E_BASE + 0x13DL)
+
+//
+//  MessageId: TSS_E_TSP_TRANS_AUTHREQUIRED
+//
+//  Authorization for transport is required
+//
+#define TSS_E_TSP_TRANS_AUTHREQUIRED              (UINT32)(TSS_E_BASE + 0x13EL)
+
+//
+//  MessageId: TSS_E_TSP_TRANS_NOT_EXCLUSIVE
+//
+//  A command was executed outside of an exclusive transport session.
+//
+#define TSS_E_TSP_TRANS_NOTEXCLUSIVE              (UINT32)(TSS_E_BASE + 0x13FL)
+
+//
+//  MessageId: TSS_E_TSP_TRANS_FAIL
+//
+//  Generic transport protection error.
+//
+#define TSS_E_TSP_TRANS_FAIL                     (UINT32)(TSS_E_BASE + 0x140L)
+
+//
+//  MessageId: TSS_E_TSP_TRANS_NO_PUBKEY
+//
+//  A command could not be executed through a logged transport session
+//  because the command used a key and the key's public key is not
+//  known to the TSP.
+//
+#define TSS_E_TSP_TRANS_NO_PUBKEY                (UINT32)(TSS_E_BASE + 0x141L)
+
+//
+//  MessageId: TSS_E_NO_ACTIVE_COUNTER
+//
+//  The TPM active counter has not been set yet.
+//
+#define TSS_E_NO_ACTIVE_COUNTER                  (UINT32)(TSS_E_BASE + 0x142L)
 
 
 #endif // __TSS_ERROR_H__
-
