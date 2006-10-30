@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -15,10 +15,6 @@
 
 #include <tss/platform.h>
 #include <tss/tss_error_basics.h>
-#include <tss/tcpa_defines.h>
-#include <tss/tcpa_typedef.h>
-#include <tss/tcpa_struct.h>
-#include <tss/tcpa_error.h>
 #include <tss/tddl_error.h>
 #include <tss/tcs_typedef.h>
 #include <tss/tss_typedef.h>
