@@ -1,4 +1,6 @@
 
+* TROUSERS_0_2 branch created
+
 - In obj_policy.c and obj_tpm.c, if NULL is passed in when trying
   to set a 1.2 style callback, clear the callback address.
 - Fix in Tspi_TPM_ActivateIdentity: Only validate over the out
