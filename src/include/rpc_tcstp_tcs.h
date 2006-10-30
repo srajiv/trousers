@@ -1,0 +1,248 @@
+
+/*
+ * Licensed Materials - Property of IBM
+ *
+ * trousers - An open source TCG Software Stack
+ *
+ * (C) Copyright International Business Machines Corp. 2004-2006
+ *
+ */
+
+#ifndef _RPC_TCSTP_TCS_H_
+#define _RPC_TCSTP_TCS_H_
+
+#define DECLARE_TCSTP_FUNC(x) \
+	TSS_RESULT tcs_wrap_##x(struct tcsd_thread_data *, \
+			      struct tsp_packet *, \
+			      struct tcsd_packet_hdr **)
+/* Auth session, context and TPM caps support are always compiled in. TPM caps
+ * are necessary so that the TCSD can know what type of TPM its talking to */
+DECLARE_TCSTP_FUNC(OpenContext);
+DECLARE_TCSTP_FUNC(CloseContext);
+DECLARE_TCSTP_FUNC(OIAP);
+DECLARE_TCSTP_FUNC(OSAP);
+DECLARE_TCSTP_FUNC(GetCapability);
+DECLARE_TCSTP_FUNC(GetCapabilityOwner);
+
+#ifdef TSS_BUILD_RANDOM
+DECLARE_TCSTP_FUNC(GetRandom);
+DECLARE_TCSTP_FUNC(StirRandom);
+#else
+#define tcs_wrap_GetRandom	tcs_wrap_Error
+#define tcs_wrap_StirRandom	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_EK
+DECLARE_TCSTP_FUNC(CreateEndorsementKeyPair);
+DECLARE_TCSTP_FUNC(ReadPubek);
+DECLARE_TCSTP_FUNC(OwnerReadPubek);
+DECLARE_TCSTP_FUNC(DisablePubekRead);
+#else
+#define tcs_wrap_CreateEndorsementKeyPair	tcs_wrap_Error
+#define tcs_wrap_ReadPubek			tcs_wrap_Error
+#define tcs_wrap_OwnerReadPubek			tcs_wrap_Error
+#define tcs_wrap_DisablePubekRead	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_KEY
+DECLARE_TCSTP_FUNC(EvictKey);
+DECLARE_TCSTP_FUNC(GetPubkey);
+DECLARE_TCSTP_FUNC(TerminateHandle);
+DECLARE_TCSTP_FUNC(LoadKeyByBlob);
+DECLARE_TCSTP_FUNC(CreateWrapKey);
+#else
+#define tcs_wrap_EvictKey		tcs_wrap_Error
+#define tcs_wrap_GetPubkey		tcs_wrap_Error
+#define tcs_wrap_TerminateHandle	tcs_wrap_Error
+#define tcs_wrap_LoadKeyByBlob		tcs_wrap_Error
+#define tcs_wrap_CreateWrapKey		tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_PCR_EXTEND
+DECLARE_TCSTP_FUNC(Extend);
+DECLARE_TCSTP_FUNC(PcrRead);
+#else
+#define tcs_wrap_Extend		tcs_wrap_Error
+#define tcs_wrap_PcrRead	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_CAPS
+DECLARE_TCSTP_FUNC(TCSGetCapability);
+#else
+#define tcs_wrap_TCSGetCapability	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_OWN
+DECLARE_TCSTP_FUNC(TakeOwnership);
+DECLARE_TCSTP_FUNC(OwnerClear);
+#else
+#define tcs_wrap_TakeOwnership	tcs_wrap_Error
+#define tcs_wrap_OwnerClear	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_PS
+DECLARE_TCSTP_FUNC(RegisterKey);
+DECLARE_TCSTP_FUNC(UnregisterKey);
+DECLARE_TCSTP_FUNC(GetRegisteredKeyBlob);
+DECLARE_TCSTP_FUNC(LoadKeyByUUID);
+DECLARE_TCSTP_FUNC(GetRegisteredKeyByPublicInfo);
+DECLARE_TCSTP_FUNC(EnumRegisteredKeys);
+#else
+#define tcs_wrap_RegisterKey			tcs_wrap_Error
+#define tcs_wrap_UnregisterKey			tcs_wrap_Error
+#define tcs_wrap_GetRegisteredKeyBlob		tcs_wrap_Error
+#define tcs_wrap_LoadKeyByUUID			tcs_wrap_Error
+#define tcs_wrap_GetRegisteredKeyByPublicInfo	tcs_wrap_Error
+#define tcs_wrap_EnumRegisteredKeys		tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_SIGN
+DECLARE_TCSTP_FUNC(Sign);
+#else
+#define tcs_wrap_Sign	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_DIR
+DECLARE_TCSTP_FUNC(DirWriteAuth);
+DECLARE_TCSTP_FUNC(DirRead);
+#else
+#define tcs_wrap_DirWriteAuth	tcs_wrap_Error
+#define tcs_wrap_DirRead	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_SEAL
+DECLARE_TCSTP_FUNC(Seal);
+DECLARE_TCSTP_FUNC(UnSeal);
+#else
+#define tcs_wrap_Seal	tcs_wrap_Error
+#define tcs_wrap_UnSeal	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_BIND
+DECLARE_TCSTP_FUNC(UnBind);
+#else
+#define tcs_wrap_UnBind	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_CHANGEAUTH
+DECLARE_TCSTP_FUNC(ChangeAuth);
+DECLARE_TCSTP_FUNC(ChangeAuthOwner);
+#else
+#define tcs_wrap_ChangeAuth		tcs_wrap_Error
+#define tcs_wrap_ChangeAuthOwner	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_QUOTE
+DECLARE_TCSTP_FUNC(Quote);
+#else
+#define tcs_wrap_Quote	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_PCR_EVENTS
+DECLARE_TCSTP_FUNC(LogPcrEvent);
+DECLARE_TCSTP_FUNC(GetPcrEvent);
+DECLARE_TCSTP_FUNC(GetPcrEventsByPcr);
+DECLARE_TCSTP_FUNC(GetPcrEventLog);
+#else
+#define tcs_wrap_LogPcrEvent		tcs_wrap_Error
+#define tcs_wrap_GetPcrEvent		tcs_wrap_Error
+#define tcs_wrap_GetPcrEventsByPcr	tcs_wrap_Error
+#define tcs_wrap_GetPcrEventLog		tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_SELFTEST
+DECLARE_TCSTP_FUNC(SelfTestFull);
+DECLARE_TCSTP_FUNC(CertifySelfTest);
+DECLARE_TCSTP_FUNC(GetTestResult);
+#else
+#define tcs_wrap_SelfTestFull		tcs_wrap_Error
+#define tcs_wrap_CertifySelfTest	tcs_wrap_Error
+#define tcs_wrap_GetTestResult		tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_ADMIN
+DECLARE_TCSTP_FUNC(DisableOwnerClear);
+DECLARE_TCSTP_FUNC(ForceClear);
+DECLARE_TCSTP_FUNC(DisableForceClear);
+DECLARE_TCSTP_FUNC(PhysicalEnable);
+DECLARE_TCSTP_FUNC(PhysicalSetDeactivated);
+DECLARE_TCSTP_FUNC(SetOwnerInstall);
+DECLARE_TCSTP_FUNC(OwnerSetDisable);
+DECLARE_TCSTP_FUNC(PhysicalDisable);
+DECLARE_TCSTP_FUNC(PhysicalPresence);
+DECLARE_TCSTP_FUNC(SetTempDeactivated);
+#else
+#define tcs_wrap_DisableOwnerClear	tcs_wrap_Error
+#define tcs_wrap_ForceClear		tcs_wrap_Error
+#define tcs_wrap_DisableForceClear	tcs_wrap_Error
+#define tcs_wrap_PhysicalEnable		tcs_wrap_Error
+#define tcs_wrap_PhysicalSetDeactivated	tcs_wrap_Error
+#define tcs_wrap_SetOwnerInstall	tcs_wrap_Error
+#define tcs_wrap_OwnerSetDisable	tcs_wrap_Error
+#define tcs_wrap_PhysicalDisable	tcs_wrap_Error
+#define tcs_wrap_PhysicalPresence	tcs_wrap_Error
+#define tcs_wrap_SetTempDeactivated	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_CERTIFY
+DECLARE_TCSTP_FUNC(CertifyKey);
+#else
+#define tcs_wrap_CertifyKey	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_AIK
+DECLARE_TCSTP_FUNC(MakeIdentity);
+DECLARE_TCSTP_FUNC(ActivateIdentity);
+#else
+#define tcs_wrap_MakeIdentity		tcs_wrap_Error
+#define tcs_wrap_ActivateIdentity	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_MIGRATION
+DECLARE_TCSTP_FUNC(CreateMigrationBlob);
+DECLARE_TCSTP_FUNC(ConvertMigrationBlob);
+DECLARE_TCSTP_FUNC(AuthorizeMigrationKey);
+#else
+#define tcs_wrap_CreateMigrationBlob	tcs_wrap_Error
+#define tcs_wrap_ConvertMigrationBlob	tcs_wrap_Error
+#define tcs_wrap_AuthorizeMigrationKey	tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_MAINT
+DECLARE_TCSTP_FUNC(KillMaintenanceFeature);
+DECLARE_TCSTP_FUNC(CreateMaintenanceArchive);
+DECLARE_TCSTP_FUNC(LoadMaintenanceArchive);
+DECLARE_TCSTP_FUNC(LoadManuMaintPub);
+DECLARE_TCSTP_FUNC(ReadManuMaintPub);
+#else
+#define tcs_wrap_KillMaintenanceFeature		tcs_wrap_Error
+#define tcs_wrap_CreateMaintenanceArchive	tcs_wrap_Error
+#define tcs_wrap_LoadMaintenanceArchive		tcs_wrap_Error
+#define tcs_wrap_LoadManuMaintPub		tcs_wrap_Error
+#define tcs_wrap_ReadManuMaintPub		tcs_wrap_Error
+#endif
+
+#ifdef TSS_BUILD_DAA
+DECLARE_TCSTP_FUNC(DaaJoin);
+DECLARE_TCSTP_FUNC(DaaSign);
+#else
+#define tcs_wrap_DaaJoin	tcs_wrap_Error
+#define tcs_wrap_DaaSign	tcs_wrap_Error
+#endif
+
+DECLARE_TCSTP_FUNC(dispatchCommand);
+
+void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
+void UnloadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
+void LoadBlob_KM_KEYINFO(UINT64 *, BYTE *, TSS_KM_KEYINFO *);
+void UnloadBlob_KM_KEYINFO(UINT64 *, BYTE *, TSS_KM_KEYINFO *);
+void LoadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
+void UnloadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
+void LoadBlob_PCR_EVENT(UINT64 *, BYTE *, TSS_PCR_EVENT *);
+TSS_RESULT UnloadBlob_PCR_EVENT(UINT64 *, BYTE *, TSS_PCR_EVENT *);
+int setData(BYTE, int, void *, int, struct tcsd_packet_hdr *);
+UINT32 getData(BYTE, int, void *, int, struct tsp_packet *);
+int access_control(struct tcsd_thread_data *, struct tsp_packet *);
+TSS_RESULT getTCSDPacket(struct tcsd_thread_data *, struct tcsd_packet_hdr **hdr);
+
+#endif
