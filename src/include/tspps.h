@@ -48,4 +48,10 @@ TSS_RESULT	   ps_get_parent_ps_type_by_uuid(TSS_UUID *, UINT32 *);
 TSS_RESULT	   ps_is_key_registered(TSS_UUID *, TSS_BOOL *);
 TSS_RESULT	   ps_get_registered_keys(TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO **);
 
+#ifdef TSS_BUILD_PS
+#define PS_close()	ps_close()
+#else
+#define PS_close()
+#endif
+
 #endif

@@ -349,7 +349,8 @@ int
 init_disk_cache(int fd)
 {
 	UINT32 num_keys = get_num_keys_in_file(fd);
-	UINT16 tmp_offset, i;
+	UINT16 i;
+	UINT64 tmp_offset;
 	int rc = 0, offset;
 	struct key_disk_cache *tmp, *prev = NULL;
 	BYTE srk_blob[2048];

@@ -14,6 +14,8 @@
 #include <assert.h>
 #include <pthread.h>
 
+#include "tcs_internal_types.h"
+
 struct key_mem_cache
 {
 	TCPA_KEY_HANDLE tpm_handle;
@@ -66,16 +68,23 @@ TSS_RESULT auth_mgr_close_context(TCS_CONTEXT_HANDLE);
 TSS_RESULT event_log_init();
 TSS_RESULT event_log_final();
 
+#ifdef TSS_BUILD_EVLOG
+#define EVENT_LOG_init()	event_log_init()
+#define EVENT_LOG_final()	event_log_final()
+#else
+#define EVENT_LOG_init()	(TSS_SUCCESS)
+#define EVENT_LOG_final()
+#endif
+
 #define TSS_TPM_TXBLOB_SIZE	4096
 #define TSS_MAX_AUTHS_CAP	1024
 #define TSS_REQ_MGR_MAX_RETRIES	5
 
 #define next( x ) x = x->next
 
-/* cache.c */
-void key_mgr_ref_count();
 TSS_RESULT key_mgr_dec_ref_count(TCS_KEY_HANDLE);
 TSS_RESULT key_mgr_inc_ref_count(TCS_KEY_HANDLE);
+void key_mgr_ref_count();
 TSS_RESULT key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE, TSS_UUID *, TCS_LOADKEY_INFO *,
 				TCS_KEY_HANDLE *);
 TSS_RESULT key_mgr_load_by_blob(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE *,
@@ -123,21 +132,32 @@ TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
 void destroy_key_refs(TCPA_KEY *);
 
 /* cxt.c */
-
-TSS_RESULT freeSomeMemory(TCS_CONTEXT_HANDLE, void *);
 TSS_RESULT context_close_auth(TCS_CONTEXT_HANDLE);
 TSS_RESULT checkContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT addContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT ctx_verify_context(TCS_CONTEXT_HANDLE);
 pthread_cond_t *ctx_get_cond_var(TCS_CONTEXT_HANDLE);
 TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
+void       ctx_ref_count_keys(struct tcs_context *);
+struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
+
+//TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
+#ifdef TSS_BUILD_KEY
+#define CTX_ref_count_keys(c)	ctx_ref_count_keys(c)
+#define KEY_MGR_ref_count()	key_mgr_ref_count()
+TSS_RESULT ensureKeyIsLoaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_KEY_HANDLE *);
+#else
+#define CTX_ref_count_keys(c)
+#define KEY_MGR_ref_count()
+#define ensureKeyIsLoaded(...)	(1 /* XXX non-zero return will indicate failure */)
+#endif
+
 
 TCS_CONTEXT_HANDLE make_context();
 void destroy_context(TCS_CONTEXT_HANDLE);
 
 /* tcs_utils.c */
 TSS_RESULT get_current_version(TCPA_VERSION *);
-TSS_RESULT ensureKeyIsLoaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCPA_KEY_HANDLE *);
 void LogData(char *string, UINT32 data);
 void LogResult(char *string, TSS_RESULT result);
 TSS_RESULT canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *);
@@ -146,61 +166,54 @@ TSS_RESULT internal_EvictByKeySlot(TCPA_KEY_HANDLE slot);
 TSS_RESULT clearKeysFromChip(TCS_CONTEXT_HANDLE hContext);
 TSS_RESULT clearUnknownKeys(TCS_CONTEXT_HANDLE, UINT32 *);
 
-UINT16 Decode_UINT16(BYTE * in);
-void UINT32ToArray(UINT32 i, BYTE * out);
-void UINT16ToArray(UINT16 i, BYTE * out);
-UINT32 Decode_UINT32(BYTE * y);
-void LoadBlob_UINT32(UINT16 * offset, UINT32 in, BYTE * blob, char *);
-void LoadBlob_UINT16(UINT16 * offset, UINT16 in, BYTE * blob, char *);
-void UnloadBlob_UINT32(UINT16 * offset, UINT32 * out, BYTE * blob, char *);
-void UnloadBlob_UINT16(UINT16 * offset, UINT16 * out, BYTE * blob, char *);
-void LoadBlob_BYTE(UINT16 * offset, BYTE data, BYTE * blob, char *);
-void UnloadBlob_BYTE(UINT16 * offset, BYTE * dataOut, BYTE * blob, char *);
-void LoadBlob_BOOL(UINT16 * offset, TSS_BOOL data, BYTE * blob, char *);
-void UnloadBlob_BOOL(UINT16 * offset, TSS_BOOL * dataOut, BYTE * blob, char *);
-void LoadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, char *);
-void UnloadBlob(UINT16 * offset, UINT32 size, BYTE * container, BYTE * object, char *);
-void LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal, BYTE * blob);
-TSS_RESULT UnloadBlob_Header(BYTE * blob, UINT32 * size);
-void LoadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob, TCPA_MIGRATIONKEYAUTH * mkAuth);
-TSS_RESULT UnloadBlob_MIGRATIONKEYAUTH(UINT16 * offset, BYTE * blob,
-				       TCPA_MIGRATIONKEYAUTH * mkAuth);
-void LoadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
-void UnloadBlob_Auth(UINT16 * offset, BYTE * blob, TPM_AUTH * auth);
-void LoadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyInfo);
-TSS_RESULT UnloadBlob_KEY_PARMS(UINT16 * offset, BYTE * blob, TCPA_KEY_PARMS * keyParms);
-TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
-void LoadBlob_STORE_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_STORE_PUBKEY * store);
-void UnloadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out);
-void LoadBlob_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * ver);
-TSS_RESULT UnloadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
-void LoadBlob_KEY(UINT16 * offset, BYTE * blob, TCPA_KEY * key);
-void LoadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
-TSS_RESULT UnloadBlob_PUBKEY(UINT16 * offset, BYTE * blob, TCPA_PUBKEY * key);
-void LoadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob, TCPA_SYMMETRIC_KEY * key);
-TSS_RESULT UnloadBlob_SYMMETRIC_KEY(UINT16 * offset, BYTE * blob, TCPA_SYMMETRIC_KEY * key);
-TSS_RESULT UnloadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION * pcr);
-void LoadBlob_PCR_SELECTION(UINT16 * offset, BYTE * blob, TCPA_PCR_SELECTION pcr);
-TSS_RESULT UnloadBlob_PCR_COMPOSITE(UINT16 * offset, BYTE * blob, TCPA_PCR_COMPOSITE * out);
-void LoadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_PCR_INFO(UINT16 * offset, BYTE * blob, TCPA_PCR_INFO * pcr);
-TSS_RESULT UnloadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
-void LoadBlob_STORED_DATA(UINT16 * offset, BYTE * blob, TCPA_STORED_DATA * data);
-void LoadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
-void UnloadBlob_KEY_FLAGS(UINT16 * offset, BYTE * blob, TCPA_KEY_FLAGS * flags);
-TSS_RESULT UnloadBlob_CERTIFY_INFO(UINT16 * offset, BYTE * blob, TCPA_CERTIFY_INFO * certify);
-TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(UINT16 * offset, BYTE * blob,
-				TCPA_KEY_HANDLE_LIST * list);
-void LoadBlob_UUID(UINT16 * offset, BYTE * outBlob, TSS_UUID uuid);
-void UnloadBlob_UUID(UINT16 * offset, BYTE * inBlob, TSS_UUID * outUuid);
+UINT16 Decode_UINT16(BYTE *);
+void UINT32ToArray(UINT32, BYTE *);
+void UINT16ToArray(UINT16, BYTE *);
+UINT32 Decode_UINT32(BYTE *);
+void LoadBlob_UINT32(UINT64 *, UINT32, BYTE *);
+void LoadBlob_UINT16(UINT64 *, UINT16, BYTE *);
+void UnloadBlob_UINT32(UINT64 *, UINT32 *, BYTE *);
+void UnloadBlob_UINT16(UINT64 *, UINT16 *, BYTE *);
+void LoadBlob_BYTE(UINT64 *, BYTE, BYTE *);
+void UnloadBlob_BYTE(UINT64 *, BYTE *, BYTE *);
+void LoadBlob_BOOL(UINT64 *, TSS_BOOL, BYTE *);
+void UnloadBlob_BOOL(UINT64 *, TSS_BOOL *, BYTE *);
+void LoadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
+void UnloadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
+void LoadBlob_Header(UINT16, UINT32, UINT32, BYTE *);
+TSS_RESULT UnloadBlob_Header(BYTE *, UINT32 *);
+void LoadBlob_MIGRATIONKEYAUTH(UINT64 *, BYTE *, TCPA_MIGRATIONKEYAUTH *);
+TSS_RESULT UnloadBlob_MIGRATIONKEYAUTH(UINT64 *, BYTE *, TCPA_MIGRATIONKEYAUTH *);
+void LoadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
+void UnloadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
+void LoadBlob_KEY_PARMS(UINT64 *, BYTE *, TCPA_KEY_PARMS *);
+TSS_RESULT UnloadBlob_KEY_PARMS(UINT64 *, BYTE *, TCPA_KEY_PARMS *);
+TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
+void LoadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
+void UnloadBlob_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
+void LoadBlob_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
+TSS_RESULT UnloadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
+void LoadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
+void LoadBlob_PUBKEY(UINT64 *, BYTE *, TCPA_PUBKEY *);
+TSS_RESULT UnloadBlob_PUBKEY(UINT64 *, BYTE *, TCPA_PUBKEY *);
+void LoadBlob_SYMMETRIC_KEY(UINT64 *, BYTE *, TCPA_SYMMETRIC_KEY *);
+TSS_RESULT UnloadBlob_SYMMETRIC_KEY(UINT64 *, BYTE *, TCPA_SYMMETRIC_KEY *);
+TSS_RESULT UnloadBlob_PCR_SELECTION(UINT64 *, BYTE *, TCPA_PCR_SELECTION *);
+void LoadBlob_PCR_SELECTION(UINT64 *, BYTE *, TCPA_PCR_SELECTION);
+TSS_RESULT UnloadBlob_PCR_COMPOSITE(UINT64 *, BYTE *, TCPA_PCR_COMPOSITE *);
+void LoadBlob_PCR_INFO(UINT64 *, BYTE *, TCPA_PCR_INFO *);
+TSS_RESULT UnloadBlob_PCR_INFO(UINT64 *, BYTE *, TCPA_PCR_INFO *);
+TSS_RESULT UnloadBlob_STORED_DATA(UINT64 *, BYTE *, TCPA_STORED_DATA *);
+void LoadBlob_STORED_DATA(UINT64 *, BYTE *, TCPA_STORED_DATA *);
+void LoadBlob_KEY_FLAGS(UINT64 *, BYTE *, TCPA_KEY_FLAGS *);
+void UnloadBlob_KEY_FLAGS(UINT64 *, BYTE *, TCPA_KEY_FLAGS *);
+TSS_RESULT UnloadBlob_CERTIFY_INFO(UINT64 *, BYTE *, TCPA_CERTIFY_INFO *);
+TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(UINT64 *, BYTE *, TCPA_KEY_HANDLE_LIST *);
+void LoadBlob_UUID(UINT64 *, BYTE *, TSS_UUID);
+void UnloadBlob_UUID(UINT64 *, BYTE *, TSS_UUID *);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
-void free_external_events(UINT32 eventCount, TSS_PCR_EVENT * ppEvents);
-
-#define PLATFORM        0
-#define CONFORMANCE     1
-#define ENDORSEMENT     2
-void get_credential(int, UINT32 *, BYTE **);
+void free_external_events(UINT32, TSS_PCR_EVENT *);
 
 TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
@@ -260,7 +273,7 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 					     BYTE * gbVendorData	/* in */
 	    );
 
-	TSS_RESULT TCSP_UnregisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+	TSS_RESULT TCS_UnregisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						TSS_UUID KeyUUID	/* in  */
 	    );
 
@@ -710,4 +723,28 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 	    );
         TSS_RESULT TCSP_Reset_Internal(TCS_CONTEXT_HANDLE hContext
             );
+	TSS_RESULT TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
+					 TPM_HANDLE handle, /* in */
+					 BYTE stage,               /* in */
+					 UINT32 inputSize0,   /* in */
+					 BYTE *inputData0,   /* in */
+					 UINT32 inputSize1, /* in */
+					 BYTE *inputData1, /* in */
+					 TPM_AUTH * ownerAuth,   /* in, out */
+					 UINT32 *outputSize, /* out */
+					 BYTE **outputData  /* out */
+	    );
+
+	TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
+					 TPM_HANDLE handle, /* in */
+					 BYTE stage,               /* in */
+					 UINT32 inputSize0,   /* in */
+					 BYTE *inputData0,   /* in */
+					 UINT32 inputSize1, /* in */
+					 BYTE *inputData1, /* in */
+					 TPM_AUTH * ownerAuth,   /* in, out */
+					 UINT32 *outputSize, /* out */
+					 BYTE **outputData  /* out */
+	    );
+
 #endif /*_TCS_UTILS_H_ */

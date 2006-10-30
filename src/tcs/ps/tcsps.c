@@ -490,7 +490,8 @@ psfile_write_key(int fd,
 		UINT16 key_blob_size)
 {
 	TCPA_KEY key;
-	UINT16 offset, pub_key_size, cache_flags = CACHE_FLAG_VALID;
+	UINT16 pub_key_size, cache_flags = CACHE_FLAG_VALID;
+	UINT64 offset;
 	int rc = 0;
 
 	/* leaving the cache flag for parent ps type as 0 implies TSS_PS_TYPE_USER */
@@ -573,7 +574,7 @@ psfile_write_key(int fd,
 		}
 	}
 
-	if ((rc = cache_key(offset, cache_flags, uuid, parent_uuid, pub_key_size,
+	if ((rc = cache_key((UINT32)offset, cache_flags, uuid, parent_uuid, pub_key_size,
 					key_blob_size, vendor_size)))
                 goto done;
 done:

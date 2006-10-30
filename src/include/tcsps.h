@@ -55,4 +55,12 @@ TSS_RESULT	   ps_init_disk_cache();
 void		   ps_close_disk_cache();
 TSS_RESULT	   ps_get_key_by_pub(TCPA_STORE_PUBKEY *, UINT32 *, BYTE **);
 
+#ifdef TSS_BUILD_PS
+#define PS_init_disk_cache()	ps_init_disk_cache()
+#define PS_close_disk_cache()	ps_close_disk_cache()
+#else
+#define PS_init_disk_cache()	(TSS_SUCCESS)
+#define PS_close_disk_cache()
+#endif
+
 #endif

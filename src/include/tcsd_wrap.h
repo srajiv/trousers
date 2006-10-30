@@ -139,10 +139,18 @@ enum TCSD_ORD {
 	TCSD_ORD_KILLMAINTENANCEFEATURE = 71,
 	TCSD_ORD_LOADMANUFACTURERMAINTENANCEPUB = 72,
 	TCSD_ORD_READMANUFACTURERMAINTENANCEPUB = 73,
+	/* DAA */
+	TCSD_ORD_DAAJOIN = 74,
+        TCSD_ORD_DAASIGN = 75,
 	/* Last */
-	TCSD_LAST_ORD = 74
+	TCSD_LAST_ORD = 76
 
 };
 #define TCSD_MAX_NUM_ORDS TCSD_LAST_ORD
 
+#include "tcsd.h"
+
+TSS_RESULT tcs_wrap_OpenContext(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
+TSS_RESULT tcs_wrap_CloseContext(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
+TSS_RESULT tcs_wrap_FreeMemory(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
 #endif

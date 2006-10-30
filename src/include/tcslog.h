@@ -49,7 +49,7 @@ extern int foreground;
 #define LogDebugUnrollKey(b) \
 	do { \
 			TCPA_KEY tmpkey; \
-			UINT16 offset = 0; \
+			UINT64 offset = 0; \
 			if (!UnloadBlob_KEY(&offset, b, &tmpkey)) { \
 				LogDebugKey(tmpkey); \
 				destroy_key_refs(&tmpkey); \

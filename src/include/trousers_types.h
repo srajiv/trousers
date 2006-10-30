@@ -11,7 +11,7 @@
 #ifndef _TROUSERS_TYPES_H_
 #define _TROUSERS_TYPES_H_
 
-typedef TCPA_NONCE		TCPA_SALT_NONCE;
+//typedef TCPA_NONCE		TCPA_SALT_NONCE;
 #define TCPA_NONCE_SIZE		sizeof(TCPA_NONCE)
 #define TCPA_DIGEST_SIZE	sizeof(TCPA_DIGEST)
 #define TCPA_ENCAUTH_SIZE	sizeof(TCPA_ENCAUTH)
@@ -50,7 +50,7 @@ extern TSS_UUID	SRK_UUID;
 #define TSS_PS_TYPE_NO			(0)
 
 /* ordinals */
-
+#if 0
 #define TPM_ORD_OIAP				(TCPA_PROTECTED_ORDINAL + 10)
 #define TPM_ORD_OSAP				(TCPA_PROTECTED_ORDINAL + 11)
 #define TPM_ORD_ChangeAuth			(TCPA_PROTECTED_ORDINAL + 12)
@@ -144,24 +144,7 @@ extern TSS_UUID	SRK_UUID;
 #define TPM_ORD_LoadAuthContext			(TCPA_PROTECTED_ORDINAL + 183)
 
 #define TPM_ORD_PhysicalPresence		(TCPA_CONNECTION_ORDINAL + 10)
-
-
-/* TSS 1.2 stuff needed for backporting its functionality */
-
-#define TPM_VERSION_BYTE	BYTE
-typedef struct tdTPM_VERSION {
-	TPM_VERSION_BYTE major;
-	TPM_VERSION_BYTE minor;
-	BYTE revMajor;
-	BYTE revMinor;
-} TPM_VERSION;
-
-/* use these to detect a 1.2 TPM, support to follow */
-#define TPM_CAP_PROP_MAX_AUTHSESS	0x0000010D
-#define TPM_CAP_VERSION_VAL		0x0000001A
-#define TPM_CAP_PROPERTY		TCPA_CAP_PROPERTY
-
-/* XXX end 1.2 stuff */
+#endif
 
 typedef struct tdTCPA_PERSISTENT_DATA{
 	BYTE revMajor;
@@ -203,12 +186,12 @@ typedef struct tdTCPA_CHANGEAUTH_VALIDATE {
 	TCPA_SECRET newAuthSecret;
 	TCPA_NONCE n1;
 } TCPA_CHANGEAUTH_VALIDATE;
-
+#if 0
 typedef struct tdTCPA_AUDIT_EVENT {
 	TCPA_COMMAND_CODE ordinal;
 	TCPA_RESULT returncode;
 } TCPA_AUDIT_EVENT;
-
+#endif
 typedef struct tdTCPA_EVENT_CERT {
 	TCPA_DIGEST certificateHash;
 	TCPA_DIGEST entityDigest;
@@ -217,13 +200,13 @@ typedef struct tdTCPA_EVENT_CERT {
 	UINT32 issuerSize;
 	BYTE *issuer;
 } TCPA_EVENT_CERT;
-
+#if 0
 typedef struct tdTCPA_BOUND_DATA {
 	TCPA_VERSION ver;
 	TCPA_PAYLOAD_TYPE payload;
 	BYTE *payloadData;
 } TCPA_BOUND_DATA;
-
+#endif
 typedef struct tdTCPA_MIGRATE_ASYMKEY {
 	TCPA_PAYLOAD_TYPE payload;
 	TCPA_SECRET usageAuth;
