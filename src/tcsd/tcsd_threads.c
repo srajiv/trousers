@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2006
  *
  */
 
@@ -182,7 +182,7 @@ tcsd_thread_run(void *v)
 	struct tcsd_packet_hdr *ret_buf = NULL;
 	TSS_RESULT result;
 	int sizeToSend, sent_total, sent;
-	UINT16 offset;
+	UINT64 offset;
 #ifndef TCSD_SINGLE_THREAD_DEBUG
 	int rc;
 
@@ -217,11 +217,11 @@ tcsd_thread_run(void *v)
 			 */
 			offset = 0;
 			/* load result */
-			LoadBlob_UINT32(&offset, result, buffer, NULL);
+			LoadBlob_UINT32(&offset, result, buffer);
 			/* load packet size */
-			LoadBlob_UINT32(&offset, sizeof(struct tcsd_packet_hdr), buffer, NULL);
+			LoadBlob_UINT32(&offset, sizeof(struct tcsd_packet_hdr), buffer);
 			/* load num parms */
-			LoadBlob_UINT16(&offset, 0, buffer, NULL);
+			LoadBlob_UINT16(&offset, 0, buffer);
 
 			sizeToSend = sizeof(struct tcsd_packet_hdr);
 			LogDebug("Sending 0x%X bytes back", sizeToSend);

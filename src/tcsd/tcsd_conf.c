@@ -249,7 +249,8 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 					conf->firmware_pcrs |= (1 << tmp_int);
 				else
 					LogError("Config option \"firmware_pcrs\" is out of range."
-						 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num, tmp_int);
+						 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num,
+						 tmp_int);
 				break;
 			}
 
@@ -258,8 +259,8 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if (tmp_int >= 0 && tmp_int < TCSD_MAX_PCRS)
 				conf->firmware_pcrs |= (1 << tmp_int);
 			else
-				LogError("Config option \"firmware_pcrs\" is out of range. %s:%d: \"%d\"",
-						TCSD_CONFIG_FILE, line_num, tmp_int);
+				LogError("Config option \"firmware_pcrs\" is out of range. "
+					 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num, tmp_int);
 		}
 		break;
 	case opt_kernel_pcrs:
@@ -277,7 +278,8 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 					conf->kernel_pcrs |= (1 << tmp_int);
 				else
 					LogError("Config option \"kernel_pcrs\" is out of range. "
-						 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num, tmp_int);
+						 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num,
+						 tmp_int);
 				break;
 			}
 
@@ -286,25 +288,25 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			if (tmp_int >= 0 && tmp_int < TCSD_MAX_PCRS)
 				conf->kernel_pcrs |= (1 << tmp_int);
 			else
-				LogError("Config option \"kernel_pcrs\" is out of range. %s:%d: \"%d\"",
-						TCSD_CONFIG_FILE, line_num, tmp_int);
+				LogError("Config option \"kernel_pcrs\" is out of range. "
+					 "%s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num, tmp_int);
 		}
 		break;
 	case opt_system_ps_file:
 		if (*arg != '/') {
-			LogError("Config option \"system_ps_dir\" must be an absolute path name. %s:%d: \"%s\"",
-					TCSD_CONFIG_FILE, line_num, arg);
+			LogError("Config option \"system_ps_dir\" must be an absolute path name. "
+				 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
 		} else {
 			char *dir_ptr;
 			int rc;
 
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
-				LogError("Config option \"system_ps_file\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, arg);
+				LogError("Config option \"system_ps_file\" is invalid."
+					 " %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
-				LogError("Config option \"system_ps_file\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, tmp_ptr);
+				LogError("Config option \"system_ps_file\" is invalid. %s:%d:"
+					 " \"%s\"", TCSD_CONFIG_FILE, line_num, tmp_ptr);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
@@ -335,18 +337,18 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 		break;
 	case opt_kernel_log:
 		if (*arg != '/') {
-			LogError("Config option \"kernel_log\" must be an absolute path name. %s:%d: \"%s\"",
-					TCSD_CONFIG_FILE, line_num, arg);
+			LogError("Config option \"kernel_log\" must be an absolute path name."
+				 " %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
 		} else {
 			int rc;
 
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
 				LogError("Config option \"kernel_log\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, arg);
+					 TCSD_CONFIG_FILE, line_num, arg);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
 				LogError("Config option \"kernel_log\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, tmp_ptr);
+					 TCSD_CONFIG_FILE, line_num, tmp_ptr);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
@@ -361,18 +363,18 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 		break;
 	case opt_firmware_log:
 		if (*arg != '/') {
-			LogError("Config option \"firmware_log\" must be an absolute path name. %s:%d: \"%s\"",
-					TCSD_CONFIG_FILE, line_num, arg);
+			LogError("Config option \"firmware_log\" must be an absolute path name."
+				 " %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, arg);
 		} else {
 			int rc;
 
 			if ((rc = get_file_path(arg, &tmp_ptr)) < 0) {
 				LogError("Config option \"firmware_log\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, arg);
+					 TCSD_CONFIG_FILE, line_num, arg);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			} else if (rc > 0) {
 				LogError("Config option \"firmware_log\" is invalid. %s:%d: \"%s\"",
-						TCSD_CONFIG_FILE, line_num, tmp_ptr);
+					 TCSD_CONFIG_FILE, line_num, tmp_ptr);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (tmp_ptr == NULL)
@@ -476,7 +478,8 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 				if (comma != NULL) {
 					if (tcsd_set_remote_op(conf, comma)) {
 						LogError("Config option \"remote_ops\" is invalid. "
-								"%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+							 "%s:%d: \"%s\"", TCSD_CONFIG_FILE,
+							 line_num, comma);
 					}
 				}
 				break;
@@ -485,14 +488,13 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			*comma++ = '\0';
 			if (tcsd_set_remote_op(conf, comma)) {
 				LogError("Config option \"remote_ops\" is invalid. "
-						"%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+					 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
 			}
 		}
 		break;
 	default:
 		/* bail out on any unknown option */
-		LogError("Unknown config option %s:%d \"%s\"!",
-				TCSD_CONFIG_FILE, line_num, arg);
+		LogError("Unknown config option %s:%d \"%s\"!", TCSD_CONFIG_FILE, line_num, arg);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -602,7 +604,6 @@ conf_file_init(struct tcsd_config *conf)
 
 	return result;
 }
-
 
 TSS_RESULT
 ps_dirs_init()
