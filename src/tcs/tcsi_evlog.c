@@ -269,7 +269,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* if pEventCount is larger than the number of events to return, just return less.
 	 * *pEventCount will be set to the number returned below.
 	 */
-	lastEventNumber = MIN(lastEventNumber, *pEventCount);
+	lastEventNumber = MIN(lastEventNumber, FirstEvent + *pEventCount);
 
 	if (FirstEvent > lastEventNumber)
 		return TCSERR(TSS_E_BAD_PARAMETER);
@@ -286,7 +286,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	*ppEvents = calloc((lastEventNumber - FirstEvent), sizeof(TSS_PCR_EVENT));
 	if (*ppEvents == NULL) {
 		LogError("malloc of %zd bytes failed.",
-				sizeof(TSS_PCR_EVENT) * (lastEventNumber - FirstEvent));
+			 sizeof(TSS_PCR_EVENT) * (lastEventNumber - FirstEvent));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
