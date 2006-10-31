@@ -1,4 +1,6 @@
 
+- In the TCS GetPcrEventsByPcr, fixed a bug in calculating
+  the number of events to return. Thanks to Seiji Munetoh.
 - Added functions to do incremental hashing, removing most
   large stack allocations in trousers.
 - Updated blob utility functions to use UINT64's instead of
