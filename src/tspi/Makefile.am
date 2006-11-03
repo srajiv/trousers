@@ -52,7 +52,7 @@ libtspi_la_SOURCES+=tspi_caps.c tsp_caps.c rpc/@RPC@/rpc_caps.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_CAPS
 endif
 if TSS_BUILD_CAPS_TPM
-libtspi_la_SOURCES+=tspi_caps_tpm.c rpc/@RPC@/rpc_caps_tpm.c
+libtspi_la_SOURCES+=tspi_caps_tpm.c tsp_caps_tpm.c rpc/@RPC@/rpc_caps_tpm.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_CAPS_TPM
 endif
 if TSS_BUILD_POLICY
