@@ -100,6 +100,7 @@ TSS_RESULT TCSP_SetTempDeactivated_TP(struct host_table_entry *,TCS_CONTEXT_HAND
 TSS_RESULT TCSP_FieldUpgrade_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,UINT32,BYTE *,UINT32 *,BYTE **,TPM_AUTH *);
 TSS_RESULT TCSP_SetRedirection_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,UINT32,UINT32,TPM_AUTH *);
 TSS_RESULT TCSP_OwnerSetDisable_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TSS_BOOL,TPM_AUTH *);
+TSS_RESULT TCSP_ResetLockValue_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE, TPM_AUTH *);
 #else
 #define TCSP_SetOwnerInstall_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_DisableOwnerClear_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
@@ -113,6 +114,7 @@ TSS_RESULT TCSP_OwnerSetDisable_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,
 #define TCSP_FieldUpgrade_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_SetRedirection_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_OwnerSetDisable_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ResetLockValue_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_OWN
@@ -205,10 +207,12 @@ TSS_RESULT TCSP_StirRandom_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,UINT3
 TSS_RESULT TCSP_GetCapability_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TCPA_CAPABILITY_AREA,UINT32,BYTE *,UINT32 *,BYTE **);
 TSS_RESULT TCSP_GetCapabilitySigned_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,TCPA_NONCE,TCPA_CAPABILITY_AREA,UINT32,BYTE *,TPM_AUTH *,TCPA_VERSION *,UINT32 *,BYTE **,UINT32 *,BYTE **);
 TSS_RESULT TCSP_GetCapabilityOwner_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TPM_AUTH *,TCPA_VERSION *,UINT32 *,UINT32 *);
+TSS_RESULT TCSP_SetCapability_TP(struct host_table_entry *,TCS_CONTEXT_HANDLE,TCPA_CAPABILITY_AREA,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *);
 #else
 #define TCSP_GetCapability_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_GetCapabilitySigned_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_GetCapabilityOwner_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_SetCapability_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_CAPS

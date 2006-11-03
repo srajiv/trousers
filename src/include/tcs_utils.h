@@ -68,7 +68,7 @@ TSS_RESULT auth_mgr_close_context(TCS_CONTEXT_HANDLE);
 TSS_RESULT event_log_init();
 TSS_RESULT event_log_final();
 
-#ifdef TSS_BUILD_EVLOG
+#ifdef TSS_BUILD_PCR_EVENTS
 #define EVENT_LOG_init()	event_log_init()
 #define EVENT_LOG_final()	event_log_final()
 #else
@@ -589,6 +589,14 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 						UINT32 * respSize,	/* out */
 						BYTE ** resp	/* out */
 	    );
+	TSS_RESULT TCSP_SetCapability_Internal(TCS_CONTEXT_HANDLE hContext,        /* in */
+					       TCPA_CAPABILITY_AREA capArea,       /* in */
+					       UINT32 subCapSize,  /* in */
+					       BYTE * subCap,      /* in */
+					       UINT32 valueSize,   /* in */
+					       BYTE * value,       /* in */
+					       TPM_AUTH * pOwnerAuth      /* in, out */
+	    );
 	TSS_RESULT TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						     TPM_AUTH * pOwnerAuth,	/* out */
 						     TCPA_VERSION * pVersion,	/* out */
@@ -641,6 +649,10 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 	TSS_RESULT TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  TSS_BOOL disableState,	/* in */
 						  TPM_AUTH * ownerAuth	/* in, out */
+	    );
+
+	TSS_RESULT TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TPM_AUTH * ownerAuth	/* in, out */
 	    );
 
 	TSS_RESULT TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */

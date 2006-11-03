@@ -171,6 +171,8 @@ DECLARE_TCSTP_FUNC(OwnerSetDisable);
 DECLARE_TCSTP_FUNC(PhysicalDisable);
 DECLARE_TCSTP_FUNC(PhysicalPresence);
 DECLARE_TCSTP_FUNC(SetTempDeactivated);
+DECLARE_TCSTP_FUNC(SetCapability);
+DECLARE_TCSTP_FUNC(ResetLockValue);
 #else
 #define tcs_wrap_DisableOwnerClear	tcs_wrap_Error
 #define tcs_wrap_ForceClear		tcs_wrap_Error
@@ -182,6 +184,8 @@ DECLARE_TCSTP_FUNC(SetTempDeactivated);
 #define tcs_wrap_PhysicalDisable	tcs_wrap_Error
 #define tcs_wrap_PhysicalPresence	tcs_wrap_Error
 #define tcs_wrap_SetTempDeactivated	tcs_wrap_Error
+#define tcs_wrap_SetCapability		tcs_wrap_Error
+#define tcs_wrap_ResetLockValue		tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_CERTIFY
