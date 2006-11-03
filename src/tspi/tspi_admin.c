@@ -42,16 +42,13 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 
 	switch (statusFlag) {
 	case TSS_TPMSTATUS_DISABLEOWNERCLEAR:
-
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_DisableOwnerClear);
 		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hTPM,
-						      TPM_ORD_DisableOwnerClear,
-						      hPolicy, &hashDigest,
-						      &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DisableOwnerClear, hPolicy,
+						      &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisableOwnerClear(tcsContext, &auth)))
@@ -76,10 +73,8 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hTPM,
-						      TPM_ORD_OwnerSetDisable,
-						      hPolicy, &hashDigest,
-						      &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerSetDisable, hPolicy,
+						      &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerSetDisable(tcsContext, fTpmState, &auth)))
@@ -95,7 +90,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 		break;
 	case TSS_TPMSTATUS_PHYSICALDISABLE:
-		if ( fTpmState )
+		if (fTpmState)
 			result = TCSP_PhysicalDisable(tcsContext);
 		else
 			result = TCSP_PhysicalEnable(tcsContext);
@@ -110,16 +105,13 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		result = TCSP_SetOwnerInstall(tcsContext, fTpmState);
 		break;
 	case TSS_TPMSTATUS_DISABLEPUBEKREAD:
-
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_DisablePubekRead);
 		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hTPM,
-						      TPM_ORD_DisablePubekRead,
-						      hPolicy, &hashDigest,
-						      &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DisablePubekRead, hPolicy,
+						      &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisablePubekRead(tcsContext, &auth)))
@@ -128,6 +120,37 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, result);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_DisablePubekRead);
+		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
+			return result;
+
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
+			return result;
+		break;
+	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
+		/* The logic of setting a 'disable' flag is reversed in the TPM, where setting this
+		 * flag to TRUE will enable the SRK read, while FALSE disables it. So we need to
+		 * flip the bool here. Sigh... */
+		fTpmState = fTpmState ? FALSE : TRUE;
+
+		result = TSP_SetCapability(tcsContext, hTPM, hPolicy, TPM_SET_PERMFLAGS,
+					   TPM_PF_READSRKPUB, fTpmState);
+		break;
+	case TSS_TPMSTATUS_RESETLOCK:
+		/* ignoring the bool here */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ResetLockValue);
+		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
+			return result;
+
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_ResetLockValue, hPolicy,
+						      &hashDigest, &auth)))
+			return result;
+
+		result = TCSP_ResetLockValue(tcsContext, &auth);
+
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_UINT32(&hashCtx, result);
+		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ResetLockValue);
 		if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
 			return result;
 
@@ -153,7 +176,9 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		break;
 	case TSS_TPMSTATUS_PHYSPRESENCE:
 		/* set the physical presence state */
-		result = TCSP_PhysicalPresence(tcsContext, (fTpmState ? TCPA_PHYSICAL_PRESENCE_PRESENT : TCPA_PHYSICAL_PRESENCE_NOTPRESENT));
+		result = TCSP_PhysicalPresence(tcsContext, (fTpmState ?
+							    TCPA_PHYSICAL_PRESENCE_PRESENT :
+							    TCPA_PHYSICAL_PRESENCE_NOTPRESENT));
 		break;
 #endif
 	default:
@@ -226,7 +251,8 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
 		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_LOCK);
 		break;
-
+	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
+		break;
 	default:
 		return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
