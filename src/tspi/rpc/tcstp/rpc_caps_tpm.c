@@ -136,3 +136,53 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 	free(hdr);
 	return result;
 }
+
+TSS_RESULT
+TCSP_SetCapability_TP(struct host_table_entry *hte,
+		      TCS_CONTEXT_HANDLE hContext,	/* in */
+		      TCPA_CAPABILITY_AREA capArea,	/* in */
+		      UINT32 subCapSize,	/* in */
+		      BYTE * subCap,	/* in */
+		      UINT32 valueSize,	/* in */
+		      BYTE * value,	/* in */
+		      TPM_AUTH * pOwnerAuth)	/* in, out */
+{
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_SETCAPABILITY;
+	LogDebugFn("TCS Context: 0x%x", hContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, value, valueSize, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (pOwnerAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pOwnerAuth, 0, &data))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, hdr))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	free(hdr);
+	return result;
+}

@@ -299,7 +299,9 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_LoadManuMaintPub,"LoadManuMaintPub"},
 	{tcs_wrap_ReadManuMaintPub,"ReadManuMaintPub"},
 	{tcs_wrap_DaaJoin,"DaaJoin"},
-        {tcs_wrap_DaaSign,"DaaSign"} /* 75 */
+        {tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
+	{tcs_wrap_SetCapability,"SetCapability"},
+	{tcs_wrap_ResetLockValue,"ResetLockValue"}
 };
 
 int

@@ -32,9 +32,10 @@ TSC_PhysicalPresence_TP(UINT16 physPres)
 }
 
 TSS_RESULT
-TCSP_SetOwnerInstall_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				    TSS_BOOL state	/* in */
-    ) {
+TCSP_SetOwnerInstall_TP(struct host_table_entry *hte,
+			TCS_CONTEXT_HANDLE hContext,	/* in */
+			TSS_BOOL state)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -59,9 +60,10 @@ TCSP_SetOwnerInstall_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 }
 
 TSS_RESULT
-TCSP_DisableOwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				      TPM_AUTH * ownerAuth	/* in, out */
-    ) {
+TCSP_DisableOwnerClear_TP(struct host_table_entry *hte,
+			  TCS_CONTEXT_HANDLE hContext,	/* in */
+			  TPM_AUTH * ownerAuth)	/* in, out */
+{
         TSS_RESULT result;
         struct tsp_packet data;
         struct tcsd_packet_hdr *hdr;
@@ -92,8 +94,9 @@ TCSP_DisableOwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 }
 
 TSS_RESULT
-TCSP_ForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
-    ) {
+TCSP_ForceClear_TP(struct host_table_entry *hte,
+		   TCS_CONTEXT_HANDLE hContext)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -116,8 +119,9 @@ TCSP_ForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* 
 }
 
 TSS_RESULT
-TCSP_DisableForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
-    ) {
+TCSP_DisableForceClear_TP(struct host_table_entry *hte,
+			  TCS_CONTEXT_HANDLE hContext)	/* in */
+{
         TSS_RESULT result;
         struct tsp_packet data;
         struct tcsd_packet_hdr *hdr;
@@ -140,8 +144,9 @@ TCSP_DisableForceClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCont
 }
 
 TSS_RESULT
-TCSP_PhysicalDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
-    ) {
+TCSP_PhysicalDisable_TP(struct host_table_entry *hte,
+			TCS_CONTEXT_HANDLE hContext)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -164,8 +169,9 @@ TCSP_PhysicalDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 }
 
 TSS_RESULT
-TCSP_PhysicalEnable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
-    ) {
+TCSP_PhysicalEnable_TP(struct host_table_entry *hte,
+		       TCS_CONTEXT_HANDLE hContext)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -188,10 +194,11 @@ TCSP_PhysicalEnable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
 }
 
 TSS_RESULT
-TCSP_OwnerSetDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,   /*  in */
+TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
+			TCS_CONTEXT_HANDLE hContext,   /*  in */
 			TSS_BOOL disableState,     /*  in */
-			TPM_AUTH * ownerAuth   /*  in, out */
-) {
+			TPM_AUTH * ownerAuth)   /*  in, out */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -222,11 +229,11 @@ TCSP_OwnerSetDisable_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 	return result;
 }
 
-
 TSS_RESULT
-TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-					   TSS_BOOL state	/* in */
-    ) {
+TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
+			       TCS_CONTEXT_HANDLE hContext,	/* in */
+			       TSS_BOOL state)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -251,9 +258,10 @@ TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE 
 }
 
 TSS_RESULT
-TCSP_PhysicalPresence_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				TCPA_PHYSICAL_PRESENCE fPhysicalPresence	/* in */
-    ) {
+TCSP_PhysicalPresence_TP(struct host_table_entry *hte,
+			 TCS_CONTEXT_HANDLE hContext,	/* in */
+			 TCPA_PHYSICAL_PRESENCE fPhysicalPresence)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -278,8 +286,9 @@ TCSP_PhysicalPresence_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 }
 
 TSS_RESULT
-TCSP_SetTempDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext	/* in */
-    ) {
+TCSP_SetTempDeactivated_TP(struct host_table_entry *hte,
+			   TCS_CONTEXT_HANDLE hContext)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -302,24 +311,59 @@ TCSP_SetTempDeactivated_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 }
 
 TSS_RESULT
-TCSP_FieldUpgrade_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				 UINT32 dataInSize,	/* in */
-				 BYTE * dataIn,	/* in */
-				 UINT32 * dataOutSize,	/* out */
-				 BYTE ** dataOut,	/* out */
-				 TPM_AUTH * ownerAuth	/* in, out */
-    ) {
+TCSP_FieldUpgrade_TP(struct host_table_entry *hte,
+		     TCS_CONTEXT_HANDLE hContext,	/* in */
+		     UINT32 dataInSize,	/* in */
+		     BYTE * dataIn,	/* in */
+		     UINT32 * dataOutSize,	/* out */
+		     BYTE ** dataOut,	/* out */
+		     TPM_AUTH * ownerAuth)	/* in, out */
+{
 	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-TCSP_SetRedirection_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				   TCS_KEY_HANDLE keyHandle,	/* in */
-				   UINT32 c1,	/* in */
-				   UINT32 c2,	/* in */
-				   TPM_AUTH * privAuth	/* in, out */
-    ) {
+TCSP_SetRedirection_TP(struct host_table_entry *hte,
+		       TCS_CONTEXT_HANDLE hContext,	/* in */
+		       TCS_KEY_HANDLE keyHandle,	/* in */
+		       UINT32 c1,	/* in */
+		       UINT32 c2,	/* in */
+		       TPM_AUTH * privAuth)	/* in, out */
+{
 	return TSPERR(TSS_E_NOTIMPL);
 
+}
+
+TSS_RESULT
+TCSP_ResetLockValue_TP(struct host_table_entry *hte,
+		       TCS_CONTEXT_HANDLE hContext,   /* in */
+		       TPM_AUTH * ownerAuth)   /* in, out */
+{
+	TSS_RESULT result;
+	struct tsp_packet data;
+	struct tcsd_packet_hdr *hdr;
+
+	memset(&data, 0, sizeof(struct tsp_packet));
+
+	data.ordinal = TCSD_ORD_RESETLOCKVALUE;
+	LogDebugFn("TCS Context: 0x%x", hContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte, 0, &data, &hdr);
+
+	if (result == TSS_SUCCESS)
+		result = hdr->result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	free(hdr);
+	return result;
 }
 

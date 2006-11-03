@@ -57,7 +57,7 @@ tcs_wrap_GetCapability(struct tcsd_thread_data *data,
 	else {
 		subCap = calloc(1, subCapSize);
 		if (subCap == NULL) {
-			LogError("malloc of %d bytes failed.", subCapSize);
+			LogError("malloc of %u bytes failed.", subCapSize);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, tsp_data)) {
@@ -66,8 +66,8 @@ tcs_wrap_GetCapability(struct tcsd_thread_data *data,
 		}
 	}
 
-	result = TCSP_GetCapability_Internal(hContext, capArea, subCapSize, subCap,
-					&respSize, &resp);
+	result = TCSP_GetCapability_Internal(hContext, capArea, subCapSize, subCap, &respSize,
+					     &resp);
 	free(subCap);
 
 	if (result == TSS_SUCCESS) {
@@ -91,7 +91,7 @@ tcs_wrap_GetCapability(struct tcsd_thread_data *data,
 	} else {
 		*hdr = calloc(1, size);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
+			LogError("malloc of %u bytes failed.", size);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		(*hdr)->packet_size = size;
@@ -107,7 +107,6 @@ tcs_wrap_GetCapabilityOwner(struct tcsd_thread_data *data,
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TPM_AUTH ownerAuth;
-
 	TCPA_VERSION version;
 	UINT32 nonVol;
 	UINT32 vol;
@@ -152,7 +151,100 @@ tcs_wrap_GetCapabilityOwner(struct tcsd_thread_data *data,
 	} else {
 		*hdr = calloc(1, size);
 		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
+			LogError("malloc of %u bytes failed.", size);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_SetCapability(struct tcsd_thread_data *data,
+		       struct tsp_packet *tsp_data,
+		       struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCPA_CAPABILITY_AREA capArea;
+	UINT32 subCapSize;
+	BYTE *subCap;
+	UINT32 valueSize;
+	BYTE *value;
+	TSS_RESULT result;
+	TPM_AUTH ownerAuth, *pOwnerAuth;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (subCapSize == 0)
+		subCap = NULL;
+	else {
+		subCap = calloc(1, subCapSize);
+		if (subCap == NULL) {
+			LogError("malloc of %u bytes failed.", subCapSize);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, tsp_data)) {
+			free(subCap);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (valueSize == 0)
+		value = NULL;
+	else {
+		value = calloc(1, valueSize);
+		if (value == NULL) {
+			free(subCap);
+			LogError("malloc of %u bytes failed.", valueSize);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 5, value, valueSize, tsp_data)) {
+			free(subCap);
+			free(value);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &ownerAuth, 0, tsp_data))
+		pOwnerAuth = NULL;
+	else
+		pOwnerAuth = &ownerAuth;
+
+
+	result = TCSP_SetCapability_Internal(hContext, capArea, subCapSize, subCap, valueSize,
+					     value, pOwnerAuth);
+	free(subCap);
+	free(value);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TPM_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		if (pOwnerAuth) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, *hdr)) {
+				free(*hdr);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %u bytes failed.", size);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		(*hdr)->packet_size = size;

@@ -411,3 +411,35 @@ done:
 	return result;
 }
 
+TSS_RESULT
+TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+			     TPM_AUTH * ownerAuth)	/* in, out */
+{
+	UINT64 offset;
+	TSS_RESULT result;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	offset = 10;
+
+	if ((result = ctx_verify_context(hContext)))
+		goto done;
+
+	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		goto done;
+
+	LoadBlob_Auth(&offset, txBlob, ownerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ResetLockValue, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
+
+	offset = 10;
+
+	if (!result)
+		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+
+done:
+	auth_mgr_release_auth(ownerAuth, NULL, hContext);
+	return result;
+}
+

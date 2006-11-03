@@ -19,7 +19,6 @@
 #include "spi_utils.h"
 #include "hosttable.h"
 #include "tsplog.h"
-//#include "obj.h"
 #include "rpc_tcstp_tsp.h"
 
 TSS_RESULT
@@ -1195,6 +1194,32 @@ TSS_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCSP_SetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
+			      TCPA_CAPABILITY_AREA capArea,	/* in */
+			      UINT32 subCapSize,	/* in */
+			      BYTE * subCap,	/* in */
+			      UINT32 valueSize,	/* in */
+			      BYTE * value,	/* in */
+			      TPM_AUTH *ownerAuth) /* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_SetCapability_TP(entry, hContext, capArea, subCapSize, subCap,
+						       valueSize, value, ownerAuth);
+			break;
+		default:
+			break;
+	}
+
+	return result;
+}
+
 TSS_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TCPA_CAPABILITY_AREA capArea,	/* in */
 			      UINT32 subCapSize,	/* in */
@@ -1451,6 +1476,26 @@ TSS_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE hContext,	/* in */
 	switch (entry->type) {
 		case CONNECTION_TYPE_TCP_PERSISTANT:
 			result = TCSP_OwnerSetDisable_TP(entry, hContext, disableState, ownerAuth);
+			break;
+		default:
+			break;
+	}
+
+	return result;
+}
+
+TSS_RESULT TCSP_ResetLockValue(TCS_CONTEXT_HANDLE hContext,	/* in */
+			       TPM_AUTH * ownerAuth)	/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ResetLockValue_TP(entry, hContext, ownerAuth);
 			break;
 		default:
 			break;

@@ -347,3 +347,46 @@ tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data,
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+tcs_wrap_ResetLockValue(struct tcsd_thread_data *data,
+			struct tsp_packet *tsp_data,
+			struct tcsd_packet_hdr **hdr)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TPM_AUTH ownerAuth;
+	TSS_RESULT result;
+	UINT32 size = sizeof(struct tcsd_packet_hdr);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &ownerAuth, 0, tsp_data))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	result = TCSP_ResetLockValue_Internal(hContext, &ownerAuth);
+
+	if (result == TSS_SUCCESS) {
+		*hdr = calloc(1, size + sizeof(TPM_AUTH));
+		if (*hdr == NULL) {
+			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
+			free(*hdr);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+	} else {
+		*hdr = calloc(1, size);
+		if (*hdr == NULL) {
+			LogError("malloc of %d bytes failed.", size);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		(*hdr)->packet_size = size;
+	}
+	(*hdr)->result = result;
+
+	return TSS_SUCCESS;
+}
+
