@@ -80,7 +80,7 @@ typedef struct tdTCPA_AUDIT_EVENT {
 
 #define TCPA_ET_KEYHANDLE       TPM_ET_KEYHANDLE
 #define TCPA_ET_KEY             TPM_ET_KEY
-#define TCPA_ET_OWNER           TPM_ET_KEY
+#define TCPA_ET_OWNER           TPM_ET_OWNER
 #define TCPA_ET_SRK             TPM_ET_SRK
 #define TCPA_ET_DATA            TPM_ET_DATA
 
