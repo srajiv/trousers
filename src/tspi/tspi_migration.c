@@ -31,7 +31,6 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 {
 	TCS_CONTEXT_HANDLE tcsContext;
 	UINT64 offset;
-	//BYTE hashblob[0x1000];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	TSS_HPOLICY hOwnerPolicy;
@@ -74,8 +73,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	}
 
 	/*  Get the migration key blob */
-	if ((result = obj_rsakey_get_blob(hMigrationKey,
-					&migrationKeySize, &migrationKeyBlob)))
+	if ((result = obj_rsakey_get_blob(hMigrationKey, &migrationKeySize, &migrationKeyBlob)))
 		return result;
 
 	/* First, turn the keyBlob into a TCPA_KEY structure */
@@ -109,13 +107,9 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	/* Send command */
-	if ((result = TCSP_AuthorizeMigrationKey(tcsContext,
-						migrationScheme,
-						pubKeySize,
-						pubKeyBlob,
-						&ownerAuth,
-						pulMigTicketLength,
-						prgbMigTicket)))
+	if ((result = TCSP_AuthorizeMigrationKey(tcsContext, migrationScheme, pubKeySize,
+						 pubKeyBlob, &ownerAuth, pulMigTicketLength,
+						 prgbMigTicket)))
 		return result;
 
 	/* Validate Auth */
