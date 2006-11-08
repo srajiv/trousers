@@ -1122,7 +1122,7 @@ Trspi_Hash_BYTE(Trspi_HashCtx *c, BYTE data)
 TSS_RESULT
 Trspi_Hash_BOOL(Trspi_HashCtx *c, TSS_BOOL data)
 {
-	return Trspi_HashUpdate(c, sizeof(TSS_BOOL), &data);
+	return Trspi_HashUpdate(c, (UINT32)sizeof(TSS_BOOL), (BYTE *)&data);
 }
 
 TSS_RESULT

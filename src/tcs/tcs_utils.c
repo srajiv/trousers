@@ -339,7 +339,7 @@ UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify)
 
 	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, certify->pubkeyDigest.digest);
 	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, certify->data.nonce);
-	UnloadBlob_BOOL(offset, &certify->parentPCRStatus, blob);
+	UnloadBlob_BOOL(offset, (TSS_BOOL *)&certify->parentPCRStatus, blob);
 	UnloadBlob_UINT32(offset, &certify->PCRInfoSize, blob);
 
 	if (certify->PCRInfoSize > 0) {
