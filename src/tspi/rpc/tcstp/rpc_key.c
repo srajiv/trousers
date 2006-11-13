@@ -26,14 +26,15 @@
 
 
 TSS_RESULT
-TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				  TCS_KEY_HANDLE hUnwrappingKey,	/* in */
-				  UINT32 cWrappedKeyBlobSize,	/* in */
-				  BYTE * rgbWrappedKeyBlob,	/* in */
-				  TPM_AUTH * pAuth,	/* in, out */
-				  TCS_KEY_HANDLE * phKeyTCSI,	/* out */
-				  TCS_KEY_HANDLE * phKeyHMAC	/* out */
-    ) {
+TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
+		      TCS_CONTEXT_HANDLE hContext,	/* in */
+		      TCS_KEY_HANDLE hUnwrappingKey,	/* in */
+		      UINT32 cWrappedKeyBlobSize,	/* in */
+		      BYTE * rgbWrappedKeyBlob,	/* in */
+		      TPM_AUTH * pAuth,	/* in, out */
+		      TCS_KEY_HANDLE * phKeyTCSI,	/* out */
+		      TCS_KEY_HANDLE * phKeyHMAC)	/* out */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	int i;
@@ -83,9 +84,10 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 }
 
 TSS_RESULT
-TCSP_EvictKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-			     TCS_KEY_HANDLE hKey	/* in */
-    ) {
+TCSP_EvictKey_TP(struct host_table_entry *hte,
+		 TCS_CONTEXT_HANDLE hContext,	/* in */
+		 TCS_KEY_HANDLE hKey)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -110,16 +112,17 @@ TCSP_EvictKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* i
 }
 
 TSS_RESULT
-TCSP_CreateWrapKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				  TCS_KEY_HANDLE hWrappingKey,	/* in */
-				  TCPA_ENCAUTH KeyUsageAuth,	/* in */
-				  TCPA_ENCAUTH KeyMigrationAuth,	/* in */
-				  UINT32 keyInfoSize,	/* in */
-				  BYTE * keyInfo,	/* in */
-				  UINT32 * keyDataSize,	/* out */
-				  BYTE ** keyData,	/* out */
-				  TPM_AUTH * pAuth	/* in, out */
-    ) {
+TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
+		      TCS_CONTEXT_HANDLE hContext,	/* in */
+		      TCS_KEY_HANDLE hWrappingKey,	/* in */
+		      TCPA_ENCAUTH KeyUsageAuth,	/* in */
+		      TCPA_ENCAUTH KeyMigrationAuth,	/* in */
+		      UINT32 keyInfoSize,	/* in */
+		      BYTE * keyInfo,	/* in */
+		      UINT32 * keyDataSize,	/* out */
+		      BYTE ** keyData,	/* out */
+		      TPM_AUTH * pAuth)	/* in, out */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
@@ -178,12 +181,13 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetPubKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-			      TCS_KEY_HANDLE hKey,	/* in */
-			      TPM_AUTH * pAuth,	/* in, out */
-			      UINT32 * pcPubKeySize,	/* out */
-			      BYTE ** prgbPubKey	/* out */
-    ) {
+TCSP_GetPubKey_TP(struct host_table_entry *hte,
+		  TCS_CONTEXT_HANDLE hContext,	/* in */
+		  TCS_KEY_HANDLE hKey,	/* in */
+		  TPM_AUTH * pAuth,	/* in, out */
+		  UINT32 * pcPubKeySize,	/* out */
+		  BYTE ** prgbPubKey)	/* out */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	int i;
@@ -243,9 +247,10 @@ done:
 }
 
 TSS_RESULT
-TCSP_TerminateHandle_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				    TCS_AUTHHANDLE handle	/* in */
-    ) {
+TCSP_TerminateHandle_TP(struct host_table_entry *hte,
+			TCS_CONTEXT_HANDLE hContext,	/* in */
+			TCS_AUTHHANDLE handle)	/* in */
+{
 	TSS_RESULT result;
 	struct tsp_packet data;
 	struct tcsd_packet_hdr *hdr;
