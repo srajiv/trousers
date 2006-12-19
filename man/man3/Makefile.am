@@ -35,6 +35,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_Key_GetPubKey.3 \
 	    Tspi_Key_LoadKey.3 \
 	    Tspi_Key_UnloadKey.3 \
+	    Tspi_Key_WrapKey.3 \
 	    Tspi_PcrComposite_GetPcrValue.3 \
 	    Tspi_PcrComposite_SelectPcrIndex.3 \
 	    Tspi_PcrComposite_SetPcrValue.3 \
