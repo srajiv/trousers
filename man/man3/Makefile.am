@@ -10,7 +10,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_Context_GetDefaultPolicy.3 \
 	    Tspi_Context_GetKeyByPublicInfo.3 \
 	    Tspi_Context_GetKeyByUUID.3 \
-	    Tspi_Context_GetRegisteredKeyByUUID.3 \
+	    Tspi_Context_GetRegisteredKeysByUUID.3 \
 	    Tspi_Context_GetTpmObject.3 \
 	    Tspi_Context_LoadKeyByBlob.3 \
 	    Tspi_Context_LoadKeyByUUID.3 \
