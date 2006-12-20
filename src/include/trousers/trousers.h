@@ -163,7 +163,7 @@ TSS_RESULT Trspi_Encrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
 TSS_RESULT Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
 			     BYTE *out, UINT32 *out_len);
 
-#define TR_SYM_MODE_EBC	1
+#define TR_SYM_MODE_ECB	1
 #define TR_SYM_MODE_CBC	2
 #define TR_SYM_MODE_CTR	3
 #define TR_SYM_MODE_OFB	4
