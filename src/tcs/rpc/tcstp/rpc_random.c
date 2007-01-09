@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,72 +28,59 @@
 
 
 TSS_RESULT
-tcs_wrap_GetRandom(struct tcsd_thread_data *data,
-		   struct tsp_packet *tsp_data,
-		   struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetRandom(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	UINT32 bytesRequested;
 	BYTE *randomBytes = NULL;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &bytesRequested, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &bytesRequested, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_GetRandom_Internal(hContext, &bytesRequested, &randomBytes);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(UINT32) + bytesRequested);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + bytesRequested);
-			free(randomBytes);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, &data->comm)) {
 			free(randomBytes);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, randomBytes, bytesRequested, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, randomBytes, bytesRequested, &data->comm)) {
 			free(randomBytes);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(randomBytes);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_StirRandom(struct tcsd_thread_data *data,
-		    struct tsp_packet *tsp_data,
-		    struct tcsd_packet_hdr **hdr)
+tcs_wrap_StirRandom(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	UINT32 inDataSize;
 	BYTE *inData;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &inDataSize, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &inDataSize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	inData = calloc(1, inDataSize);
@@ -102,22 +88,20 @@ tcs_wrap_StirRandom(struct tcsd_thread_data *data,
 		LogError("malloc of %d bytes failed.", inDataSize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 2, inData, inDataSize, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 2, inData, inDataSize, &data->comm)) {
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
+	MUTEX_LOCK(tcsp_lock);
+
 	result = TCSP_StirRandom_Internal(hContext, inDataSize, inData);
 
+	MUTEX_UNLOCK(tcsp_lock);
 	free(inData);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }

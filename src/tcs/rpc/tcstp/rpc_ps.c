@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,9 +28,7 @@
 
 
 TSS_RESULT
-tcs_wrap_RegisterKey(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_RegisterKey(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_UUID WrappingKeyUUID;
@@ -41,18 +38,17 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data,
 	UINT32 cVendorData;
 	BYTE *gbVendorData;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UUID, 1, &WrappingKeyUUID, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UUID, 1, &WrappingKeyUUID, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UUID, 2, &KeyUUID, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UUID, 2, &KeyUUID, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &cKeySize, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &cKeySize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	rgbKey = calloc(1, cKeySize);
@@ -60,11 +56,11 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data,
 		LogError("malloc of %d bytes failed.", cKeySize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 4, rgbKey, cKeySize, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 4, rgbKey, cKeySize, &data->comm)) {
 		free(rgbKey);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_UINT32, 5, &cVendorData, 0, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_UINT32, 5, &cVendorData, 0, &data->comm)) {
 		free(rgbKey);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -79,7 +75,7 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data,
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 6, gbVendorData, cVendorData, tsp_data)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 6, gbVendorData, cVendorData, &data->comm)) {
 			free(rgbKey);
 			free(gbVendorData);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -92,122 +88,90 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data,
 	free(rgbKey);
 	free(gbVendorData);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_UnregisterKey(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_UnregisterKey(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_UUID uuid;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	result = TCS_UnregisterKey_Internal(hContext, uuid);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_GetRegisteredKeyBlob(struct tcsd_thread_data *data,
-				struct tsp_packet *tsp_data,
-				struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetRegisteredKeyBlob(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_UUID uuid;
 	UINT32 pcKeySize;
 	BYTE *prgbKey;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	result = TCS_GetRegisteredKeyBlob_Internal(hContext, &uuid, &pcKeySize,
 					      &prgbKey);
 
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(UINT32) + pcKeySize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + pcKeySize);
-			free(prgbKey);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pcKeySize, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pcKeySize, 0, &data->comm)) {
 			free(prgbKey);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, prgbKey, pcKeySize, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, prgbKey, pcKeySize, &data->comm)) {
 			free(prgbKey);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(prgbKey);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
-		       struct tsp_packet *tsp_data,
-		       struct tcsd_packet_hdr **hdr)
+tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_UUID uuid;
 	TCS_LOADKEY_INFO info, *pInfo;
 	TCS_KEY_HANDLE phKeyTCSI;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	result = getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 2, &info, 0, tsp_data);
+	result = getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 2, &info, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pInfo = NULL;
 	else if (result)
@@ -218,50 +182,31 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data,
 	result = key_mgr_load_by_uuid(hContext, &uuid, pInfo, &phKeyTCSI);
 
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(UINT32) + sizeof(TCS_LOADKEY_INFO));
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &phKeyTCSI, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &phKeyTCSI, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (pInfo != NULL) {
-			if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 1, pInfo, 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 1, pInfo, 0, &data->comm)) {
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 	} else {
 		if (result == TCSERR(TCS_E_KM_LOADFAILED) && pInfo != NULL) {
-			*hdr = calloc(1, size + sizeof(TCS_LOADKEY_INFO));
-			if (*hdr == NULL) {
-				LogError("malloc of %zd bytes failed.", size + sizeof(TCS_LOADKEY_INFO));
-				return TCSERR(TSS_E_OUTOFMEMORY);
-			}
-
-			if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 0, pInfo, 0, *hdr)) {
-				free(*hdr);
+			initData(&data->comm, 1);
+			if (setData(TCSD_PACKET_TYPE_LOADKEY_INFO, 0, pInfo, 0, &data->comm)) {
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
-		} else {
-			*hdr = calloc(1, size);
-			if (*hdr == NULL) {
-				LogError("malloc of %d bytes failed.", size);
-				return TCSERR(TSS_E_OUTOFMEMORY);
-			}
-			(*hdr)->packet_size = size;
-		}
+		} else
+			initData(&data->comm, 0);
+
 	}
-	(*hdr)->result = result;
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
-			    struct tsp_packet *tsp_data,
-			    struct tcsd_packet_hdr **hdr)
+tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_UUID uuid, *pUuid;
@@ -269,15 +214,14 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 	TSS_KM_KEYINFO *pKeyHierarchy;
 	unsigned int i, j;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	/* Receive */
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, tsp_data);
+	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pUuid = NULL;
 	else if (result)
@@ -293,59 +237,43 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data,
 
 	if (result == TSS_SUCCESS) {
 		i=0;
-		*hdr = calloc(1, size + sizeof(UINT32) + (cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
-		if (*hdr == NULL) {
-			free(pKeyHierarchy);
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) +
-					(cKeyHierarchySize * sizeof(TSS_KM_KEYINFO)));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &cKeyHierarchySize, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, cKeyHierarchySize + 1);
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &cKeyHierarchySize, 0, &data->comm)) {
 			free(pKeyHierarchy);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		for (j = 0; j < cKeyHierarchySize; j++) {
-			if (setData(TCSD_PACKET_TYPE_KM_KEYINFO, i++, &pKeyHierarchy[j], 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_KM_KEYINFO, i++, &pKeyHierarchy[j], 0, &data->comm)) {
 				free(pKeyHierarchy);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 		free(pKeyHierarchy);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
-				      struct tsp_packet *tsp_data,
-				      struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
 	UINT32 algId, ulPublicInfoLength, keySize;
 	BYTE *rgbPublicInfo, *keyBlob;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &algId, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &algId, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &ulPublicInfoLength, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &ulPublicInfoLength, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	rgbPublicInfo = (BYTE *)calloc(1, ulPublicInfoLength);
@@ -353,7 +281,7 @@ tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
 		LogError("malloc of %d bytes failed.", ulPublicInfoLength);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicInfo, ulPublicInfoLength, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicInfo, ulPublicInfoLength, &data->comm)) {
 		free(rgbPublicInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -363,33 +291,20 @@ tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data,
 
 	free(rgbPublicInfo);
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(UINT32) + keySize);
-		if (*hdr == NULL) {
-			free(keyBlob);
-			LogError("malloc of %zd bytes failed.", size +
-						sizeof(UINT32) + keySize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &keySize, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &keySize, 0, &data->comm)) {
 			free(keyBlob);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, keyBlob, keySize, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, keyBlob, keySize, &data->comm)) {
 			free(keyBlob);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(keyBlob);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }

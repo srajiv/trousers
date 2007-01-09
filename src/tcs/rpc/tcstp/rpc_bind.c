@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,15 +28,12 @@
 
 
 TSS_RESULT
-tcs_wrap_UnBind(struct tcsd_thread_data *data,
-		struct tsp_packet *tsp_data,
-		struct tcsd_packet_hdr **hdr)
+tcs_wrap_UnBind(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TCS_KEY_HANDLE keyHandle;
 	UINT32 inDataSize;
 	BYTE *inData;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	TPM_AUTH privAuth;
 	TPM_AUTH *pPrivAuth;
@@ -48,14 +44,14 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data,
 
 	int i;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &inDataSize, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &inDataSize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	inData = calloc(1, inDataSize);
@@ -63,12 +59,12 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data,
 		LogError("malloc of %d bytes failed.", inDataSize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, &data->comm)) {
 		free(inData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &privAuth, 0, tsp_data);
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &privAuth, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pPrivAuth = NULL;
 	else if (result) {
@@ -77,42 +73,33 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data,
 	} else
 		pPrivAuth = &privAuth;
 
+	MUTEX_LOCK(tcsp_lock);
+
 	result = TCSP_UnBind_Internal(hContext, keyHandle, inDataSize, inData,
 				 pPrivAuth, &outDataSize, &outData);
+
+	MUTEX_UNLOCK(tcsp_lock);
 	free(inData);
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
-		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + outDataSize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
-					sizeof(UINT32) + outDataSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
+		initData(&data->comm, 3);
 		if (pPrivAuth != NULL) {
-			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pPrivAuth, 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pPrivAuth, 0, &data->comm)) {
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &outDataSize, 0, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &outDataSize, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, outData, outDataSize, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, outData, outDataSize, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(outData);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }

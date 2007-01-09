@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,363 +28,301 @@
 
 
 TSS_RESULT
-tcs_wrap_PhysicalSetDeactivated(struct tcsd_thread_data *data,
-				struct tsp_packet *tsp_data,
-				struct tcsd_packet_hdr **hdr)
+tcs_wrap_PhysicalSetDeactivated(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_BOOL state;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_PhysicalSetDeactivated_Internal(hContext, state);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_DisableOwnerClear(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_DisableOwnerClear(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	TPM_AUTH auth;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &auth, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_DisableOwnerClear_Internal(hContext, &auth);
 
+	MUTEX_UNLOCK(tcsp_lock);
+
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(TPM_AUTH));
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 1);
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &auth, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_ForceClear(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_ForceClear(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_ForceClear_Internal(hContext);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
+	MUTEX_UNLOCK(tcsp_lock);
 
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_DisableForceClear(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_DisableForceClear(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_DisableForceClear_Internal(hContext);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
+	MUTEX_UNLOCK(tcsp_lock);
 
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_PhysicalEnable(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_PhysicalEnable(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_PhysicalEnable_Internal(hContext);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_SetOwnerInstall(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_SetOwnerInstall(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_BOOL state;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_SetOwnerInstall_Internal(hContext, state);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_OwnerSetDisable(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_OwnerSetDisable(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_BOOL disableState;
 	TPM_AUTH ownerAuth;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &disableState, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_BOOL, 1, &disableState, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 2, &ownerAuth, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 2, &ownerAuth, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_OwnerSetDisable_Internal(hContext, disableState, &ownerAuth);
 
+	MUTEX_UNLOCK(tcsp_lock);
+
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(TPM_AUTH));
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 1);
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_PhysicalDisable(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_PhysicalDisable(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_PhysicalDisable_Internal(hContext);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_PhysicalPresence(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_PhysicalPresence(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
 	TCPA_PHYSICAL_PRESENCE phyPresFlags;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT16, 1, &phyPresFlags, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT16, 1, &phyPresFlags, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_PhysicalPresence_Internal(hContext, phyPresFlags);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_SetTempDeactivated_Internal(hContext);
 
-	*hdr = calloc(1, size);
-	if (*hdr == NULL) {
-		LogError("malloc of %d bytes failed.", size);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	(*hdr)->packet_size = size;
-	(*hdr)->result = result;
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_ResetLockValue(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_ResetLockValue(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TPM_AUTH ownerAuth;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &ownerAuth, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &ownerAuth, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_ResetLockValue_Internal(hContext, &ownerAuth);
 
+	MUTEX_UNLOCK(tcsp_lock);
+
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(TPM_AUTH));
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 1);
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }

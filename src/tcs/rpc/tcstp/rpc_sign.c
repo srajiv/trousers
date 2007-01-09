@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,9 +28,7 @@
 
 
 TSS_RESULT
-tcs_wrap_Sign(struct tcsd_thread_data *data,
-		struct tsp_packet *tsp_data,
-		struct tcsd_packet_hdr **hdr)
+tcs_wrap_Sign(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TCS_KEY_HANDLE hKey;
@@ -44,18 +41,17 @@ tcs_wrap_Sign(struct tcsd_thread_data *data,
 	UINT32 sigSize;
 	BYTE *sig;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 
 	int i;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &areaToSignSize, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &areaToSignSize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	areaToSign = calloc(1, areaToSignSize);
@@ -63,11 +59,11 @@ tcs_wrap_Sign(struct tcsd_thread_data *data,
 		LogError("malloc of %d bytes failed.", areaToSignSize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, areaToSign, areaToSignSize, tsp_data)) {
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, areaToSign, areaToSignSize, &data->comm)) {
 		free(areaToSign);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, tsp_data);
+	result = getData(TCSD_PACKET_TYPE_AUTH, 4, &auth, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
 		pAuth = NULL;
 	else if (result) {
@@ -76,45 +72,35 @@ tcs_wrap_Sign(struct tcsd_thread_data *data,
 	} else
 		pAuth = &auth;
 
-	result = TCSP_Sign_Internal(hContext, hKey, areaToSignSize, areaToSign,
-			       pAuth, &sigSize, &sig);
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_Sign_Internal(hContext, hKey, areaToSignSize, areaToSign, pAuth, &sigSize,
+				    &sig);
+
+	MUTEX_UNLOCK(tcsp_lock);
 	free(areaToSign);
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
-		*hdr = calloc(1, size + sizeof(TPM_AUTH) + sizeof(UINT32) + sigSize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(TPM_AUTH) +
-					sizeof(UINT32) + sigSize);
-			free(sig);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
+		initData(&data->comm, 3);
 		if (pAuth != NULL) {
-			if (setData(TCSD_PACKET_TYPE_AUTH, i++, &auth, 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, &auth, 0, &data->comm)) {
 				free(sig);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &sigSize, 0, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &sigSize, 0, &data->comm)) {
 			free(sig);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, sig, sigSize, *hdr)) {
-			free(*hdr);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, sig, sigSize, &data->comm)) {
 			free(sig);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(sig);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }

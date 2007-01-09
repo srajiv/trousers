@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -29,29 +28,26 @@
 
 
 TSS_RESULT
-tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_PCR_EVENT *pEvent = NULL;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	UINT32 pcrIndex, number, totalSize;
 	BYTE lengthOnly;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &number, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &number, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_BYTE, 3, &lengthOnly, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_BYTE, 3, &lengthOnly, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (lengthOnly)
@@ -65,17 +61,8 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 		else
 			totalSize = 0;
 
-		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
-			if (lengthOnly == FALSE)
-				free_external_events(1, pEvent);
-			free(pEvent);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &number, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &number, 0, &data->comm)) {
 			if (lengthOnly == FALSE)
 				free_external_events(1, pEvent);
 			free(pEvent);
@@ -83,8 +70,7 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 		}
 
 		if (lengthOnly == FALSE) {
-			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, pEvent, 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, pEvent, 0, &data->comm)) {
 				free_external_events(1, pEvent);
 				free(pEvent);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -92,61 +78,46 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data,
 			free_external_events(1, pEvent);
 			free(pEvent);
 		}
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 
 TSS_RESULT
-tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
-			   struct tsp_packet *tsp_data,
-			   struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_PCR_EVENT *ppEvents = NULL;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	UINT32 firstEvent, eventCount, totalSize, pcrIndex, i, j;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &firstEvent, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &firstEvent, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &eventCount, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &eventCount, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	result = TCS_GetPcrEventsByPcr_Internal(hContext, pcrIndex, firstEvent, &eventCount, &ppEvents);
 
 	if (result == TSS_SUCCESS) {
+		/* XXX totalSize not used */
 		for (i = 0, totalSize = 0; i < eventCount; i++)
 			totalSize += get_pcr_event_size(&(ppEvents[i]));
 
-		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
-			free_external_events(eventCount, ppEvents);
-			free(ppEvents);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, eventCount + 1);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, &data->comm)) {
 			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -154,8 +125,7 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
 
 		i = 1;
 		for (j = 0; j < eventCount; j++) {
-			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, &data->comm)) {
 				free_external_events(eventCount, ppEvents);
 				free(ppEvents);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -164,34 +134,26 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data,
 
 		free_external_events(eventCount, ppEvents);
 		free(ppEvents);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
-			struct tsp_packet *tsp_data,
-			struct tcsd_packet_hdr **hdr)
+tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_PCR_EVENT *ppEvents;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	UINT32 eventCount, totalSize, i, j;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
 	result = TCS_GetPcrEventLog_Internal(hContext, &eventCount, &ppEvents);
 
@@ -199,16 +161,8 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 		for (i = 0, totalSize = 0; i < eventCount; i++)
 			totalSize += get_pcr_event_size(&(ppEvents[i]));
 
-		*hdr = calloc(1, size + sizeof(UINT32) + totalSize);
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32) + totalSize);
-			free_external_events(eventCount, ppEvents);
-			free(ppEvents);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, eventCount + 1);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &eventCount, 0, &data->comm)) {
 			free_external_events(eventCount, ppEvents);
 			free(ppEvents);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -216,8 +170,7 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 
 		i = 1;
 		for (j = 0; j < eventCount; j++) {
-			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, *hdr)) {
-				free(*hdr);
+			if (setData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &(ppEvents[j]), 0, &data->comm)) {
 				free_external_events(eventCount, ppEvents);
 				free(ppEvents);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -226,61 +179,42 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data,
 
 		free_external_events(eventCount, ppEvents);
 		free(ppEvents);
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %d bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data,
-		     struct tsp_packet *tsp_data,
-		     struct tcsd_packet_hdr **hdr)
+tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_PCR_EVENT event;
 	TSS_RESULT result;
-	UINT32 size = sizeof(struct tcsd_packet_hdr);
 	UINT32 number;
 
 	/* Receive */
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebug("thread %x context %x: %s", (UINT32)pthread_self(), hContext, __FUNCTION__);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_PCR_EVENT , 1, &event, 0, tsp_data))
+	if (getData(TCSD_PACKET_TYPE_PCR_EVENT , 1, &event, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	result = TCS_LogPcrEvent_Internal(hContext, event, &number);
 
 	if (result == TSS_SUCCESS) {
-		*hdr = calloc(1, size + sizeof(UINT32));
-		if (*hdr == NULL) {
-			LogError("malloc of %zd bytes failed.", size + sizeof(UINT32));
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &number, 0, *hdr)) {
-			free(*hdr);
+		initData(&data->comm, 1);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &number, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-	} else {
-		*hdr = calloc(1, size);
-		if (*hdr == NULL) {
-			LogError("malloc of %u bytes failed.", size);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		(*hdr)->packet_size = size;
-	}
-	(*hdr)->result = result;
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
 }
