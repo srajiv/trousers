@@ -30,7 +30,7 @@ struct memTable {
 	struct memTable *nextTable;
 };
 
-pthread_mutex_t memtable_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_DECLARE_INIT(memtable_lock);
 
 struct memTable *SpiMemoryTable = NULL;
 

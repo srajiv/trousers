@@ -11,6 +11,8 @@
 #ifndef _OBJ_H_
 #define _OBJ_H_
 
+#include "threads.h"
+
 /* definitions */
 
 /* When TRUE, the object has PCRs associated with it */
@@ -36,7 +38,7 @@ struct tsp_object {
 
 struct obj_list {
 	struct tsp_object *head;
-	pthread_mutex_t lock;
+	MUTEX_DECLARE(lock);
 };
 
 /* prototypes */

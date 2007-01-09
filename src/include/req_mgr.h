@@ -12,11 +12,11 @@
 #ifndef _REQ_MGR_H_
 #define _REQ_MGR_H_
 
-#include <pthread.h>
+#include "threads.h"
 
 struct tpm_req_mgr
 {
-	pthread_mutex_t queue_lock;
+	MUTEX_DECLARE(queue_lock);
 };
 
 TSS_RESULT req_mgr_init();

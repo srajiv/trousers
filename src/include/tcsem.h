@@ -24,7 +24,7 @@ struct event_wrapper {
 };
 
 struct event_log {
-	pthread_mutex_t lock;
+	MUTEX_DECLARE(lock);
 	struct ext_log_source *firmware_source;
 	struct ext_log_source *kernel_source;
 	struct event_wrapper **lists;

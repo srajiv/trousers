@@ -11,13 +11,13 @@
 #ifndef _TCSPS_H_
 #define _TCSPS_H_
 
-#include <pthread.h>
+#include "threads.h"
 
 extern struct key_disk_cache *key_disk_cache_head;
 /* file handles for the persistent stores */
 extern int system_ps_fd;
 /* The lock that surrounds all manipulations of the disk cache */
-extern pthread_mutex_t disk_cache_lock;
+MUTEX_DECLARE_EXTERN(disk_cache_lock);
 
 int		   get_file();
 int		   put_file(int);
