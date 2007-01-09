@@ -41,7 +41,7 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	for (i = 0; (unsigned long)i < sizeOfBlob; i++) {
 		if ((i > 0) && ((i % 16) == 0)) {
 			if (foreground)
-				fprintf(stderr, "%s %s\n", szDescriptor, temp);
+				fprintf(stdout, "%s %s\n", szDescriptor, temp);
 			else
 				syslog(LOG_DEBUG, temp);
 			memset(temp, 0, sizeof(temp));
@@ -51,7 +51,7 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 
 	if (i == sizeOfBlob) {
 		if (foreground)
-			fprintf(stderr, "%s %s\n", szDescriptor, temp);
+			fprintf(stdout, "%s %s\n", szDescriptor, temp);
 		else
 			syslog(LOG_DEBUG, temp);
 	}
