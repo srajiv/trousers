@@ -24,11 +24,9 @@
 #include <errno.h>
 #include <limits.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -216,7 +214,7 @@ bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEven
 		event = (TCG_PCClientPCREventStruc *)page;
 
 		if (pcr_index == event->pcrIndex) {
-			if (seen_indices == *num) {
+			if (!ppEvent && seen_indices == *num) {
 				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 				if (*ppEvent == NULL) {
 					LogError("malloc of %zd bytes failed.",
@@ -281,7 +279,10 @@ bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEven
 	}
 
 done:
-	if (e == NULL)
+	if (!ppEvent) {
+		*num = seen_indices;
+		result = TSS_SUCCESS;
+	} else if (e == NULL)
 		*ppEvent = NULL;
 
 	return result;
