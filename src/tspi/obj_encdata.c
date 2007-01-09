@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -349,7 +348,7 @@ obj_encdata_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 	struct obj_list *list = &encdata_list;
 	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
-	pthread_mutex_lock(&list->lock);
+	MUTEX_LOCK(list->lock);
 
 	for (obj = list->head; obj; prev = obj, obj = obj->next) {
 		if (obj->handle == hObject) {
@@ -368,7 +367,7 @@ obj_encdata_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 		}
 	}
 
-	pthread_mutex_unlock(&list->lock);
+	MUTEX_UNLOCK(list->lock);
 
 	return result;
 }
@@ -381,7 +380,7 @@ obj_list_encdata_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 	struct tsp_object *toKill;
 	struct tsp_object *prev = NULL;
 
-	pthread_mutex_lock(&list->lock);
+	MUTEX_LOCK(list->lock);
 
 	for (index = list->head; index; ) {
 		next = index->next;
@@ -403,5 +402,5 @@ obj_list_encdata_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 		}
 	}
 
-	pthread_mutex_unlock(&list->lock);
+	MUTEX_UNLOCK(list->lock);
 }

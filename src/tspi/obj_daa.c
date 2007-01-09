@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -62,7 +61,7 @@ obj_daa_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 	struct obj_list *list = &daa_list;
         TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
-        pthread_mutex_lock(&daa_list.lock);
+        MUTEX_LOCK(list->lock);
 
         for (obj = list->head; obj; prev = obj, obj = obj->next) {
                 if (obj->handle == hObject) {
@@ -80,7 +79,7 @@ obj_daa_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
                 }
         }
 
-        pthread_mutex_unlock(&daa_list.lock);
+        MUTEX_UNLOCK(list->lock);
 
         return result;
 
