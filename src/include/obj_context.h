@@ -14,13 +14,12 @@
 /* structures */
 struct tr_context_obj {
 	TSS_FLAG silentMode;
-#ifndef TSS_SPEC_COMPLIANCE
 	UINT32 hashMode;
-#endif
 	TSS_HPOLICY policy;
 	TCS_CONTEXT_HANDLE tcsHandle;
 	BYTE *machineName;
 	UINT32 machineNameLength;
+	UINT32 connection_policy, current_connection;
 };
 
 /* obj_context.c */
@@ -39,6 +38,8 @@ TSS_RESULT obj_context_get_mode(TSS_HCONTEXT, UINT32 *);
 TSS_BOOL   obj_context_has_popups(TSS_HCONTEXT);
 TSS_RESULT obj_context_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_set_hash_mode(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_get_connection_version(TSS_HCONTEXT, UINT32 *);
+TSS_RESULT obj_context_set_connection_policy(TSS_HCONTEXT, UINT32);
 
 #define CONTEXT_LIST_DECLARE		struct obj_list context_list
 #define CONTEXT_LIST_DECLARE_EXTERN	extern struct obj_list context_list
