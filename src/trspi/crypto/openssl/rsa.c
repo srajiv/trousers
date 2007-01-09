@@ -212,7 +212,7 @@ Trspi_RSA_Public_Encrypt(unsigned char *in, unsigned int inlen,
 
 	switch (padding) {
 		case TR_RSA_PKCS1_OAEP_PADDING:
-			padding = TR_RSA_PKCS1_OAEP_PADDING;
+			padding = RSA_PKCS1_OAEP_PADDING;
 			break;
 		case TR_RSA_PKCS1_PADDING:
 			padding = RSA_PKCS1_PADDING;
