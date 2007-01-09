@@ -12,12 +12,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <limits.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -135,19 +133,19 @@ TCS_GetPcrEvent_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* if this is a kernel or firmware controlled PCR, call an external routine */
         if ((tcsd_options.kernel_pcrs & (1 << PcrIndex)) ||
 	    (tcsd_options.firmware_pcrs & (1 << PcrIndex))) {
-		pthread_mutex_lock(&(tcs_event_log->lock));
+		MUTEX_LOCK(tcs_event_log->lock);
 		result =  TCS_GetExternalPcrEvent(PcrIndex, pNumber, ppEvent);
-		pthread_mutex_unlock(&(tcs_event_log->lock));
+		MUTEX_UNLOCK(tcs_event_log->lock);
 
 		return result;
 	}
 
 	if (ppEvent == NULL) {
-		pthread_mutex_lock(&(tcs_event_log->lock));
+		MUTEX_LOCK(tcs_event_log->lock);
 
 		*pNumber = get_num_events(PcrIndex);
 
-		pthread_mutex_unlock(&(tcs_event_log->lock));
+		MUTEX_UNLOCK(tcs_event_log->lock);
 	} else {
 		*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 		if (*ppEvent == NULL) {
@@ -252,19 +250,19 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* if this is a kernel or firmware controlled PCR, call an external routine */
         if ((tcsd_options.kernel_pcrs & (1 << PcrIndex)) ||
 	    (tcsd_options.firmware_pcrs & (1 << PcrIndex))) {
-		pthread_mutex_lock(&(tcs_event_log->lock));
+		MUTEX_LOCK(tcs_event_log->lock);
 		result = TCS_GetExternalPcrEventsByPcr(PcrIndex, FirstEvent,
 							pEventCount, ppEvents);
-		pthread_mutex_unlock(&(tcs_event_log->lock));
+		MUTEX_UNLOCK(tcs_event_log->lock);
 
 		return result;
 	}
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	lastEventNumber = get_num_events(PcrIndex);
 
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	/* if pEventCount is larger than the number of events to return, just return less.
 	 * *pEventCount will be set to the number returned below.
@@ -290,7 +288,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	tmp = tcs_event_log->lists[PcrIndex];
 
@@ -304,7 +302,7 @@ TCS_GetPcrEventsByPcr_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		tmp = tmp->next;
 	}
 
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	*pEventCount = eventIndex;
 
@@ -324,7 +322,7 @@ TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	/* for each PCR index, if its externally controlled, get the total number of events
 	 * externally, else copy the events from the TCSD list. Then tack that list onto a
@@ -382,7 +380,7 @@ TCS_GetPcrEventLog_Internal(TCS_CONTEXT_HANDLE hContext,/* in  */
 	*pEventCount = aggregate_count;
 	result = TSS_SUCCESS;
 error:
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	return result;
 }
