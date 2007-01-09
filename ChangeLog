@@ -1,4 +1,17 @@
 
+- Added support for TSS 1.2 style keys and PCR info long and
+  short structures.
+- Added support for TPM_Save/LoadAuthContext.
+- Grouped all threading functions in one header file, threads.h.
+- Fix added in TCSD's event parsing code for a segfault when only
+  the number of events is requested.
+- Several bugs fixed in the Tspi_Context_GetRegisteredKeysByUUID
+  code path in the TSP lib.
+- Added a lock around all TCSP functions; removed auth_mgr_lock
+  since the TCSP lock now suffices. This fixed some TCSD multi-
+  threaded errors.
+- hosttable.c: Fixed bug in host table entry removal, thanks
+  to Thomas Winkler for the testcase that helped in finding this.
 - In the TCS GetPcrEventsByPcr, fixed a bug in calculating
   the number of events to return. Thanks to Seiji Munetoh.
 - Added functions to do incremental hashing, removing most
