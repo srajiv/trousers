@@ -12,9 +12,9 @@
 #define _TCS_UTILS_H_
 
 #include <assert.h>
-#include <pthread.h>
 
-#include "tcs_internal_types.h"
+#include "threads.h"
+#include "tcs_context.h"
 
 struct key_mem_cache
 {
@@ -31,7 +31,7 @@ struct key_mem_cache
 };
 
 extern struct key_mem_cache *key_mem_cache_head;
-extern pthread_mutex_t mem_cache_lock;
+MUTEX_DECLARE_EXTERN(mem_cache_lock);
 
 struct tpm_properties
 {
@@ -57,7 +57,7 @@ TSS_RESULT get_tpm_metrics(struct tpm_properties *);
 
 TSS_RESULT auth_mgr_init();
 TSS_RESULT auth_mgr_final();
-TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
+TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TPM_AUTHHANDLE *);
 TSS_RESULT auth_mgr_release_auth_handle(TCS_AUTHHANDLE, TCS_CONTEXT_HANDLE, TSS_BOOL);
 void       auth_mgr_release_auth(TPM_AUTH *, TPM_AUTH *, TCS_CONTEXT_HANDLE);
 TSS_RESULT auth_mgr_oiap(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE *, TCPA_NONCE *);
@@ -136,7 +136,7 @@ TSS_RESULT context_close_auth(TCS_CONTEXT_HANDLE);
 TSS_RESULT checkContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT addContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT ctx_verify_context(TCS_CONTEXT_HANDLE);
-pthread_cond_t *ctx_get_cond_var(TCS_CONTEXT_HANDLE);
+COND_VAR *ctx_get_cond_var(TCS_CONTEXT_HANDLE);
 TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 void       ctx_ref_count_keys(struct tcs_context *);
 struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
@@ -219,12 +219,12 @@ TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 
-TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *,
-				TSS_KM_KEYINFO *);
+TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO *);
 char platform_get_runlevel();
 TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
-
-	TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
+TSS_RESULT LoadKeyByBlob_Internal(UINT32,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,
+				  TCS_KEY_HANDLE *,TCS_KEY_HANDLE *);
+TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 
 	TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/* in */
 							       UINT32 ulPublicInfoLength,	/* in */
@@ -301,6 +301,14 @@ TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 						TPM_AUTH * pAuth,	/* in, out */
 						TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 						TCS_KEY_HANDLE * phKeyHMAC	/* out */
+	    );
+
+	TSS_RESULT TCSP_LoadKey2ByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TCS_KEY_HANDLE hUnwrappingKey,	/* in */
+						UINT32 cWrappedKeyBlobSize,	/* in */
+						BYTE * rgbWrappedKeyBlob,	/* in */
+						TPM_AUTH * pAuth,	/* in, out */
+						TCS_KEY_HANDLE * phKeyTCSI	/* out */
 	    );
 
 	TSS_RESULT TCSP_LoadKeyByUUID_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
