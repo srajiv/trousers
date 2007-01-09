@@ -73,12 +73,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	/* If PCR's are of interest */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
-		if ((result = obj_pcrs_get_composite(hPcrComposite,
-						     &digAtCreation)))
+		if ((result = obj_pcrs_get_composite(hPcrComposite, &digAtCreation)))
 			return result;
 
-		if ((result = obj_pcrs_get_selection(hPcrComposite,
-						     &pcrSelect)))
+		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
 			return result;
 
 		LogDebug("Digest at Creation:");
@@ -87,20 +85,15 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 		offset = 0;
 		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
 		free(pcrSelect.pcrSelect);
-		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
-			       digAtCreation.digest);
+		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
 		/* XXX */
-		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData,
-			       digAtCreation.digest);
+		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
 		pcrDataSize = offset;
 	}
 
-	if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy,
-					     hEncKey, TCPA_ET_KEYHANDLE,
-					     tcsKeyHandle,
-					     &encAuthUsage, &encAuthMig,
-					     sharedSecret, &auth,
-					     &nonceEvenOSAP)))
+	if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy, hEncKey,
+					     TCPA_ET_KEYHANDLE, tcsKeyHandle, &encAuthUsage,
+					     &encAuthMig, sharedSecret, &auth, &nonceEvenOSAP)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -113,15 +106,13 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy,
-					      hEncPolicy, hEncPolicy,
-					      sharedSecret, &auth,
-					      digest.digest, &nonceEvenOSAP)))
+	if ((result = secret_PerformAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy, hEncPolicy,
+					      hEncPolicy, sharedSecret, &auth, digest.digest,
+					      &nonceEvenOSAP)))
 		return result;
 
-	if ((result = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage,
-				pcrDataSize, pcrData, ulDataLength,
-				rgbDataToSeal, &auth, &encDataSize, &encData)))
+	if ((result = TCSP_Seal(tcsContext, tcsKeyHandle, encAuthUsage, pcrDataSize, pcrData,
+				ulDataLength, rgbDataToSeal, &auth, &encDataSize, &encData)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -131,10 +122,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_ValidateAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy,
-					       hEncPolicy, hEncPolicy,
-					       sharedSecret, &auth,
-					       digest.digest,
+	if ((result = secret_ValidateAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy, hEncPolicy,
+					       hEncPolicy, sharedSecret, &auth, digest.digest,
 					       &nonceEvenOSAP))) {
 		free(encData);
 		return result;
