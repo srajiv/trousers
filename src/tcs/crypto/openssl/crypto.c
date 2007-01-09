@@ -19,7 +19,6 @@
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcslog.h"
 
