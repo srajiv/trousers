@@ -8,18 +8,20 @@
  *
  */
 
-#ifndef _RPC_TCSTP_H_
-#define _RPC_TCSTP_H_
+#ifndef _RPC_TCSTP_TSP_H_
+#define _RPC_TCSTP_TSP_H_
 
 #include "hosttable.h"
+#include "rpc_tcstp.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 
-int setData(BYTE,int,void *,int,struct tsp_packet *);
-int getData(BYTE,int,void *,int,struct tcsd_packet_hdr *);
-TSS_RESULT sendTCSDPacket(struct host_table_entry *,TCS_CONTEXT_HANDLE,struct tsp_packet *,struct tcsd_packet_hdr **);
-TSS_RESULT send_init(struct host_table_entry *,BYTE *,int,struct tcsd_packet_hdr **);
-TSS_RESULT sendit(struct host_table_entry *,BYTE *,int,struct tcsd_packet_hdr **);
+int setData(TCSD_PACKET_TYPE,int,void *,int,struct tcsd_comm_data *);
+UINT32 getData(TCSD_PACKET_TYPE,int,void *,int,struct tcsd_comm_data *);
+void initData(struct tcsd_comm_data *, int);
+TSS_RESULT sendTCSDPacket(struct host_table_entry *);
+TSS_RESULT send_init(struct host_table_entry *);
+TSS_RESULT sendit(struct host_table_entry *);
 short get_port();
 
 /* Context commands always included */

@@ -11,10 +11,10 @@
 #ifndef _RPC_TCSTP_TCS_H_
 #define _RPC_TCSTP_TCS_H_
 
+#include "rpc_tcstp.h"
+
 #define DECLARE_TCSTP_FUNC(x) \
-	TSS_RESULT tcs_wrap_##x(struct tcsd_thread_data *, \
-			      struct tsp_packet *, \
-			      struct tcsd_packet_hdr **)
+	TSS_RESULT tcs_wrap_##x(struct tcsd_thread_data *)
 /* Auth session, context and TPM caps support are always compiled in. TPM caps
  * are necessary so that the TCSD can know what type of TPM its talking to */
 DECLARE_TCSTP_FUNC(OpenContext);
@@ -244,9 +244,15 @@ void LoadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
 void UnloadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
 void LoadBlob_PCR_EVENT(UINT64 *, BYTE *, TSS_PCR_EVENT *);
 TSS_RESULT UnloadBlob_PCR_EVENT(UINT64 *, BYTE *, TSS_PCR_EVENT *);
-int setData(BYTE, int, void *, int, struct tcsd_packet_hdr *);
-UINT32 getData(BYTE, int, void *, int, struct tsp_packet *);
-int access_control(struct tcsd_thread_data *, struct tsp_packet *);
-TSS_RESULT getTCSDPacket(struct tcsd_thread_data *, struct tcsd_packet_hdr **hdr);
+int setData(TCSD_PACKET_TYPE, int, void *, int, struct tcsd_comm_data *);
+UINT32 getData(TCSD_PACKET_TYPE, int, void *, int, struct tcsd_comm_data *);
+void initData(struct tcsd_comm_data *, int);
+int recv_from_socket(int, void *, int);
+int send_to_socket(int, void *, int);
+TSS_RESULT getTCSDPacket(struct tcsd_thread_data *);
+
+MUTEX_DECLARE_EXTERN(tcsp_lock);
 
 #endif
+
+
