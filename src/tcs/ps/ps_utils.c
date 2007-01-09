@@ -18,13 +18,11 @@
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
-#include <pthread.h>
 #include <errno.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "tcs_int_literals.h"
-#include "tcs_internal_types.h"
 #include "tcsps.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
@@ -95,7 +93,7 @@ find_write_offset(UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_data_siz
 	struct key_disk_cache *tmp;
 	unsigned int offset;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	tmp = key_disk_cache_head;
 	while (tmp) {
@@ -105,13 +103,13 @@ find_write_offset(UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_data_siz
 		    tmp->blob_size == blob_size &&
 		    tmp->vendor_data_size == vendor_data_size) {
 			offset = tmp->offset;
-			pthread_mutex_unlock(&disk_cache_lock);
+			MUTEX_UNLOCK(disk_cache_lock);
 			return offset;
 		}
 		tmp = tmp->next;
 	}
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 
 	/* no correctly sized holes */
 	return -1;
@@ -226,7 +224,7 @@ cache_key(UINT32 offset, UINT16 flags,
 {
 	struct key_disk_cache *tmp;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	tmp = key_disk_cache_head;
 
@@ -239,7 +237,7 @@ cache_key(UINT32 offset, UINT16 flags,
 	tmp = malloc(sizeof(struct key_disk_cache));
 	if (tmp == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(struct key_disk_cache));
-		pthread_mutex_unlock(&disk_cache_lock);
+		MUTEX_UNLOCK(disk_cache_lock);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	tmp->next = key_disk_cache_head;
@@ -258,7 +256,7 @@ fill_cache_entry:
 	memcpy(&tmp->uuid, uuid, sizeof(TSS_UUID));
 	memcpy(&tmp->parent_uuid, parent_uuid, sizeof(TSS_UUID));
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	return TSS_SUCCESS;
 }
 
@@ -298,7 +296,7 @@ get_num_keys()
 	int num_keys = 0;
 	struct key_disk_cache *tmp;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	tmp = key_disk_cache_head;
 
@@ -307,7 +305,7 @@ get_num_keys()
 			num_keys++;
 	}
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	return num_keys;
 }
 
@@ -359,11 +357,11 @@ init_disk_cache(int fd)
 	int valid_keys = 0;
 #endif
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	if (num_keys == 0) {
 		key_disk_cache_head = NULL;
-		pthread_mutex_unlock(&disk_cache_lock);
+		MUTEX_UNLOCK(disk_cache_lock);
 		return 0;
 	} else {
 		key_disk_cache_head = tmp = calloc(1, sizeof(struct key_disk_cache));
@@ -505,7 +503,7 @@ init_disk_cache(int fd)
 	LogDebug("%s: found %d valid key(s) on disk.\n", __FUNCTION__, valid_keys);
 
 err_exit:
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	return rc;
 }
 
@@ -517,7 +515,7 @@ close_disk_cache(int fd)
 	if (key_disk_cache_head == NULL)
 		return 0;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 	tmp = key_disk_cache_head;
 
 	do {
@@ -526,7 +524,7 @@ close_disk_cache(int fd)
 		tmp = tmp_next;
 	} while (tmp);
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 
 	return 0;
 }

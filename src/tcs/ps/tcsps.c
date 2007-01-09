@@ -17,7 +17,6 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <assert.h>
 
 #include "trousers/tss.h"
@@ -31,7 +30,7 @@
 #include "tcsd.h"
 
 int system_ps_fd = -1;
-pthread_mutex_t disk_cache_lock;
+MUTEX_DECLARE(disk_cache_lock);
 
 int
 get_file()
@@ -93,7 +92,7 @@ psfile_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
         UINT32 file_offset = 0;
         struct key_disk_cache *tmp;
 
-        pthread_mutex_lock(&disk_cache_lock);
+        MUTEX_LOCK(disk_cache_lock);
         tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -108,20 +107,20 @@ psfile_get_parent_uuid_by_uuid(int fd, TSS_UUID *uuid, TSS_UUID *ret_uuid)
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return -1;
                 }
 
                 if ((rc = read_data(fd, ret_uuid, sizeof(TSS_UUID)))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 
-                pthread_mutex_unlock(&disk_cache_lock);
+                MUTEX_UNLOCK(disk_cache_lock);
                 return TSS_SUCCESS;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
+        MUTEX_UNLOCK(disk_cache_lock);
         /* key not found */
         return -2;
 }
@@ -136,7 +135,7 @@ psfile_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buf
         UINT32 file_offset = 0;
         struct key_disk_cache *tmp;
 
-        pthread_mutex_lock(&disk_cache_lock);
+        MUTEX_LOCK(disk_cache_lock);
         tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -151,28 +150,28 @@ psfile_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *ret_buffer, UINT16 *ret_buf
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
                 /* we found the key; file ptr is pointing at the blob */
                 if (*ret_buffer_size < tmp->blob_size) {
                         /* not enough room */
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_FAIL);
                 }
 
                 if ((rc = read_data(fd, ret_buffer, tmp->blob_size))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 		*ret_buffer_size = tmp->blob_size;
 		LogDebugUnrollKey(ret_buffer);
-                pthread_mutex_unlock(&disk_cache_lock);
+                MUTEX_UNLOCK(disk_cache_lock);
                 return TSS_SUCCESS;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
+        MUTEX_UNLOCK(disk_cache_lock);
         /* key not found */
         return TCSERR(TSS_E_FAIL);
 }
@@ -219,7 +218,7 @@ psfile_get_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 {
 	struct key_disk_cache *tmp;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 	tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -238,7 +237,7 @@ psfile_get_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 
 	*ret_ps_type = TSS_PS_TYPE_USER;
 done:
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	return TSS_SUCCESS;
 }
 
@@ -250,7 +249,7 @@ psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
         struct key_disk_cache *tmp;
 	char tmp_buffer[2048];
 
-        pthread_mutex_lock(&disk_cache_lock);
+        MUTEX_LOCK(disk_cache_lock);
         tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -269,7 +268,7 @@ psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
@@ -278,7 +277,7 @@ psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 
@@ -291,10 +290,10 @@ psfile_is_pub_registered(int fd, TCPA_STORE_PUBKEY *pub, TSS_BOOL *is_reg)
 		/* the key matches, copy the uuid out */
 		*is_reg = TRUE;
 
-                pthread_mutex_unlock(&disk_cache_lock);
+                MUTEX_UNLOCK(disk_cache_lock);
                 return TSS_SUCCESS;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
+        MUTEX_UNLOCK(disk_cache_lock);
         /* key not found */
 	*is_reg = FALSE;
         return TSS_SUCCESS;
@@ -309,7 +308,7 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
         struct key_disk_cache *tmp;
 	char tmp_buffer[2048];
 
-        pthread_mutex_lock(&disk_cache_lock);
+        MUTEX_LOCK(disk_cache_lock);
         tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -328,7 +327,7 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
@@ -337,7 +336,7 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 
@@ -350,17 +349,17 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 		*ret_uuid = (TSS_UUID *)malloc(sizeof(TSS_UUID));
 		if (*ret_uuid == NULL) {
 			LogError("malloc of %zd bytes failed.", sizeof(TSS_UUID));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		/* the key matches, copy the uuid out */
 		memcpy(*ret_uuid, &tmp->uuid, sizeof(TSS_UUID));
 
-                pthread_mutex_unlock(&disk_cache_lock);
+                MUTEX_UNLOCK(disk_cache_lock);
                 return TSS_SUCCESS;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
+        MUTEX_UNLOCK(disk_cache_lock);
         /* key not found */
         return TCSERR(TSS_E_PS_KEY_NOTFOUND);
 }
@@ -373,7 +372,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
         struct key_disk_cache *tmp;
 	BYTE tmp_buffer[4096];
 
-        pthread_mutex_lock(&disk_cache_lock);
+        MUTEX_LOCK(disk_cache_lock);
         tmp = key_disk_cache_head;
 
         while (tmp) {
@@ -392,7 +391,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
@@ -401,7 +400,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 
@@ -417,7 +416,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                 rc = lseek(fd, file_offset, SEEK_SET);
                 if (rc == ((off_t) - 1)) {
                         LogError("lseek: %s", strerror(errno));
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return TCSERR(TSS_E_INTERNAL_ERROR);
                 }
 
@@ -426,24 +425,24 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
 		/* read in the key blob */
                 if ((rc = read_data(fd, tmp_buffer, tmp->blob_size))) {
 			LogError("%s", __FUNCTION__);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
                         return rc;
                 }
 
 		*ret_key = malloc(tmp->blob_size);
 		if (*ret_key == NULL) {
 			LogError("malloc of %d bytes failed.", tmp->blob_size);
-                        pthread_mutex_unlock(&disk_cache_lock);
+                        MUTEX_UNLOCK(disk_cache_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
 		memcpy(*ret_key, tmp_buffer, tmp->blob_size);
 		*size = tmp->blob_size;
 
-                pthread_mutex_unlock(&disk_cache_lock);
+                MUTEX_UNLOCK(disk_cache_lock);
                 return rc;
         }
-        pthread_mutex_unlock(&disk_cache_lock);
+        MUTEX_UNLOCK(disk_cache_lock);
         /* key not found */
         return -2;
 }
