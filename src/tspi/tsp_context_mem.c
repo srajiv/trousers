@@ -145,11 +145,11 @@ add_mem_entry(TSS_HCONTEXT tspContext, void *allocd_mem)
 
 	newEntry->memPointer = allocd_mem;
 
-	pthread_mutex_lock(&memtable_lock);
+	MUTEX_LOCK(memtable_lock);
 
 	addEntry(tspContext, newEntry);
 
-	pthread_mutex_unlock(&memtable_lock);
+	MUTEX_UNLOCK(memtable_lock);
 
 	return TSS_SUCCESS;
 }
@@ -164,7 +164,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	struct memTable *table = NULL;
 	struct memEntry *newEntry = NULL;
 
-	pthread_mutex_lock(&memtable_lock);
+	MUTEX_LOCK(memtable_lock);
 
 	table = getTable(tspContext);
 	if (table == NULL) {
@@ -174,7 +174,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 		table = calloc(1, sizeof(struct memTable));
 		if (table == NULL) {
 			LogError("malloc of %zd bytes failed.", sizeof(struct memTable));
-			pthread_mutex_unlock(&memtable_lock);
+			MUTEX_UNLOCK(memtable_lock);
 			return NULL;
 		}
 		table->tspContext = tspContext;
@@ -184,7 +184,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	newEntry = calloc(1, sizeof(struct memEntry));
 	if (newEntry == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(struct memEntry));
-		pthread_mutex_unlock(&memtable_lock);
+		MUTEX_UNLOCK(memtable_lock);
 		return NULL;
 	}
 
@@ -192,7 +192,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	if (newEntry->memPointer == NULL) {
 		LogError("malloc of %d bytes failed.", howMuch);
 		free(newEntry);
-		pthread_mutex_unlock(&memtable_lock);
+		MUTEX_UNLOCK(memtable_lock);
 		return NULL;
 	}
 
@@ -201,7 +201,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	 */
 	addEntry(tspContext, newEntry);
 
-	pthread_mutex_unlock(&memtable_lock);
+	MUTEX_UNLOCK(memtable_lock);
 
 	return newEntry->memPointer;
 }
@@ -216,23 +216,23 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 	struct memTable *index;
 	TSS_RESULT result;
 
-	pthread_mutex_lock(&memtable_lock);
+	MUTEX_LOCK(memtable_lock);
 
 	if (memPointer == NULL) {
 		result = freeTable(tspContext);
-		pthread_mutex_unlock(&memtable_lock);
+		MUTEX_UNLOCK(memtable_lock);
 		return result;
 	}
 
 	if ((index = getTable(tspContext)) == NULL) {
-		pthread_mutex_unlock(&memtable_lock);
+		MUTEX_UNLOCK(memtable_lock);
 		return TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
 	/* just free one entry */
 	result = freeEntry(index, memPointer);
 
-	pthread_mutex_unlock(&memtable_lock);
+	MUTEX_UNLOCK(memtable_lock);
 
 	return result;
 }
