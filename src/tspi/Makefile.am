@@ -35,6 +35,11 @@ libtspi_la_SOURCES=log.c \
                    rpc/hosttable.c \
                    rpc/@RPC@/rpc.c
 
+if TSS_BUILD_TSS12
+# This is for individual APIs that exist outside TSS 1.2, but may have some TSS 1.2 internal
+# features/options such as Tspi_TPM_SetStatus
+libtspi_la_CFLAGS+=-DTSS_BUILD_TSS12
+endif
 if TSS_BUILD_AUTH
 libtspi_la_SOURCES+=tsp_auth.c rpc/@RPC@/rpc_auth.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_AUTH
