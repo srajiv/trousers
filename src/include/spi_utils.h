@@ -12,7 +12,7 @@
 #ifndef _SPI_UTILS_H_
 #define _SPI_UTILS_H_
 
-#include <pthread.h>
+#include "threads.h"
 #include <netinet/in.h> // for endian routines
 
 struct key_mem_cache
@@ -29,7 +29,7 @@ struct key_mem_cache
 };
 
 extern struct key_mem_cache *key_mem_cache_head;
-extern pthread_mutex_t mem_cache_lock;
+MUTEX_DECLARE_EXTERN(mem_cache_lock);
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
@@ -147,7 +147,9 @@ TSS_RESULT popup_GetSecret(UINT32, UINT32, BYTE *, void *);
 
 TSS_BOOL check_flagset_collision(TSS_FLAG, UINT32);
 TSS_RESULT get_tpm_flags(TCS_CONTEXT_HANDLE, TSS_HTPM, UINT32 *, UINT32 *);
-TSS_RESULT calc_composite_from_object(TCPA_PCR_SELECTION *, TCPA_PCRVALUE *, TCPA_DIGEST *);
+TSS_RESULT pcrs_calc_composite(TCPA_PCR_SELECTION *, TCPA_PCRVALUE *, TCPA_DIGEST *);
+struct tr_pcrs_obj;
+TSS_RESULT pcrs_sanity_check_selection(TCS_CONTEXT_HANDLE, struct tr_pcrs_obj *, TPM_PCR_SELECTION *);
 
 void LoadBlob_AUTH(UINT64 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_AUTH(UINT64 *, BYTE *, TPM_AUTH *);
