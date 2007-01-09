@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -47,8 +46,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 	unsigned len = strlen(TSS_LOCALHOST_STRING) + 1;
 
 	if (context == NULL) {
-		LogError("malloc of %zd bytes failed.",
-				sizeof(struct tr_context_obj));
+		LogError("malloc of %zd bytes failed.", sizeof(struct tr_context_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -65,9 +63,8 @@ obj_context_add(TSS_HOBJECT *phObject)
 	memcpy(context->machineName, TSS_LOCALHOST_STRING, len);
 	context->machineNameLength = len;
 
-#ifndef TSS_SPEC_COMPLIANCE
-	context->hashMode = TSS_TSPATTRIB_HASH_MODE_NULL;
-#endif
+	context->hashMode = TSS_TSPATTRIB_HASH_MODE_NOT_NULL;
+	context->connection_policy = TSS_TSPATTRIB_CONTEXT_VERSION_V1_1;
 
 	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, 0, context, phObject))) {
 		free(context);
@@ -165,8 +162,7 @@ done:
  * returning it, as Tspi_GetAttribData would like. We could do the conversion
  * in Tspi_GetAttribData, but we don't have access to the TSP context there */
 TSS_RESULT
-obj_context_get_machine_name_attrib(TSS_HCONTEXT tspContext, UINT32 *size,
-				    BYTE **data)
+obj_context_get_machine_name_attrib(TSS_HCONTEXT tspContext, UINT32 *size, BYTE **data)
 {
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
@@ -311,7 +307,7 @@ obj_context_has_popups(TSS_HCONTEXT tspContext)
 	struct obj_list *list = &policy_list;
 	TSS_BOOL ret = FALSE;
 
-	pthread_mutex_lock(&list->lock);
+	MUTEX_LOCK(list->lock);
 
 	for (obj = list->head; obj; obj = obj->next) {
 		if (obj->tspContext == tspContext) {
@@ -322,12 +318,11 @@ obj_context_has_popups(TSS_HCONTEXT tspContext)
 		}
 	}
 
-	pthread_mutex_unlock(&list->lock);
+	MUTEX_UNLOCK(list->lock);
 
 	return ret;
 }
 
-#ifndef TSS_SPEC_COMPLIANCE
 TSS_RESULT
 obj_context_get_hash_mode(TSS_HCONTEXT tspContext, UINT32 *mode)
 {
@@ -369,4 +364,48 @@ obj_context_set_hash_mode(TSS_HCONTEXT tspContext, UINT32 mode)
 
 	return TSS_SUCCESS;
 }
-#endif
+
+TSS_RESULT
+obj_context_get_connection_version(TSS_HCONTEXT tspContext, UINT32 *version)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	*version = context->current_connection;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_context_set_connection_policy(TSS_HCONTEXT tspContext, UINT32 policy)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	switch (policy) {
+		case TSS_TSPATTRIB_CONTEXT_VERSION_V1_1:
+		case TSS_TSPATTRIB_CONTEXT_VERSION_V1_2:
+		case TSS_TSPATTRIB_CONTEXT_VERSION_AUTO:
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+	}
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	context->connection_policy = policy;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
