@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -42,7 +41,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	if (dirIndex > tpm_metrics.num_dirs) {

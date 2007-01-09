@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -53,9 +52,9 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	if ((result = ctx_verify_context(contextHandle)))
 		goto done;
 
-	if ((result = auth_mgr_check(contextHandle, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(contextHandle, &ownerAuth->AuthHandle)))
 		goto done;
-	if ((result = auth_mgr_check(contextHandle, entityAuth->AuthHandle)))
+	if ((result = auth_mgr_check(contextHandle, &entityAuth->AuthHandle)))
 		goto done;
 
 	if ((result = ensureKeyIsLoaded(contextHandle, parentHandle, &keySlot)))
@@ -137,7 +136,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	offset = 10;
@@ -322,7 +321,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (ownerAuth != NULL) {
 		LogDebug("Auth used");
-		if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth");

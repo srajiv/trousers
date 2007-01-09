@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -57,13 +56,13 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 
 	if (pSrkAuth != NULL) {
 		LogDebug("SRK Auth Used");
-		if ((result = auth_mgr_check(hContext, pSrkAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &pSrkAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No SRK Auth");
 	}
 
-	if ((result = auth_mgr_check(hContext, pOwnerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		goto done;
 
 	offset = 0;
@@ -156,10 +155,10 @@ TCSP_ActivateTPMIdentity_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (idKeyAuth != NULL) {
-		if ((result = auth_mgr_check(hContext, idKeyAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &idKeyAuth->AuthHandle)))
 			goto done;
 	}
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, idKey, &keySlot)))

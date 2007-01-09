@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -72,7 +71,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, checksum->digest);
 	}
 done:
-	LogData("Leaving CreateEKPair with result:", result);
+	LogDebug("Leaving CreateEKPair with result: 0x%x", result);
 	return result;
 }
 
@@ -137,7 +136,7 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	offset = 10;
@@ -176,7 +175,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	offset = 10;

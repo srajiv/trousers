@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -48,7 +47,7 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	LogDebugFn("Enter");
 	if ( (result = ctx_verify_context(hContext)) != TSS_SUCCESS)
 		return result;
-	if( (result = auth_mgr_check(hContext, ownerAuth->AuthHandle)) != TSS_SUCCESS)
+	if( (result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)) != TSS_SUCCESS)
 		goto done;
 	offset = 10;
 	LoadBlob_UINT32( &offset, handle, txBlob);
@@ -117,7 +116,7 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	if ( (result = ctx_verify_context(hContext)) != TSS_SUCCESS)
 		return result;
 
-	if( (result = auth_mgr_check(hContext, ownerAuth->AuthHandle)) != TSS_SUCCESS)
+	if( (result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)) != TSS_SUCCESS)
 		goto done;
 
 	offset = 10;

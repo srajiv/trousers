@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -55,7 +54,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (certAuth != NULL) {
 		LogDebug("Auth Used for Cert signing key");
-		if ((result = auth_mgr_check(hContext, certAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &certAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth used for Cert signing key");
@@ -63,7 +62,7 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (keyAuth != NULL) {
 		LogDebug("Auth Used for Key being signed");
-		if ((result = auth_mgr_check(hContext, keyAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &keyAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth used for Key being signed");
