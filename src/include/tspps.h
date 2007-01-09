@@ -30,7 +30,7 @@ TSS_RESULT	   psfile_is_key_registered(int, TSS_UUID *, TSS_BOOL *);
 TSS_RESULT	   psfile_get_uuid_by_pub(int, UINT32, BYTE *, TSS_UUID *);
 TSS_RESULT	   psfile_write_key(int, TSS_UUID *, TSS_UUID *, UINT32, BYTE *, UINT16);
 TSS_RESULT	   psfile_get_key_by_pub(int, TSS_UUID *, UINT32, BYTE *, BYTE *);
-TSS_RESULT	   psfile_get_registered_keys(int, TSS_UUID *, UINT32 *, TSS_KM_KEYINFO **);
+TSS_RESULT	   psfile_get_registered_keys(int, TSS_UUID *, TSS_UUID *, UINT32 *, TSS_KM_KEYINFO **);
 TSS_RESULT	   psfile_remove_key(int, TSS_UUID *);
 TSS_RESULT	   psfile_get_parent_ps_type(int, TSS_UUID *, UINT32 *);
 TSS_RESULT	   psfile_get_cache_entry_by_uuid(int, TSS_UUID *, struct key_disk_cache *);
@@ -46,7 +46,7 @@ TSS_RESULT	   ps_get_key_by_pub(TSS_HCONTEXT, UINT32, BYTE *, TSS_HKEY *);
 TSS_RESULT	   ps_get_parent_uuid_by_uuid(TSS_UUID *, TSS_UUID *);
 TSS_RESULT	   ps_get_parent_ps_type_by_uuid(TSS_UUID *, UINT32 *);
 TSS_RESULT	   ps_is_key_registered(TSS_UUID *, TSS_BOOL *);
-TSS_RESULT	   ps_get_registered_keys(TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO **);
+TSS_RESULT	   ps_get_registered_keys(TSS_UUID *uuid, TSS_UUID *, UINT32 *size, TSS_KM_KEYINFO **);
 
 #ifdef TSS_BUILD_PS
 #define PS_close()	ps_close()
