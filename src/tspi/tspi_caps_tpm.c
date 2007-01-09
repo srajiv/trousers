@@ -122,7 +122,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		respLen = 2 * sizeof(UINT32);
 		respData = calloc_tspi(tspContext, respLen);
 		if (respData == NULL) {
-			LogError("malloc of %d bytes failed.", respLen);
+			LogError("malloc of %u bytes failed.", respLen);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -132,29 +132,32 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 
 		*pulRespDataLength = respLen;
 		*prgbRespData = respData;
-	} else {
-		tcsSubCap = endian32(tcsSubCap);
 
-		result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength,
-					    (BYTE *)&tcsSubCap, &respLen, &respData);
-
-		*prgbRespData = calloc_tspi(tspContext, respLen);
-		if (*prgbRespData == NULL) {
-			free(respData);
-			LogError("malloc of %d bytes failed.", respLen);
-			return TSPERR(TSS_E_OUTOFMEMORY);
-		}
-
-		*pulRespDataLength = respLen;
-		memcpy(*prgbRespData, respData, respLen);
-		free(respData);
-
-		if (*pulRespDataLength == sizeof(UINT32) && correct_endianess) {
-			*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
-		}
+		return TSS_SUCCESS;
 	}
 
-	return result;
+	tcsSubCap = endian32(tcsSubCap);
+
+	if ((result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
+					 &respLen, &respData)))
+		return result;
+
+	*prgbRespData = calloc_tspi(tspContext, respLen);
+	if (*prgbRespData == NULL) {
+		free(respData);
+		LogError("malloc of %u bytes failed.", respLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*pulRespDataLength = respLen;
+	memcpy(*prgbRespData, respData, respLen);
+	free(respData);
+
+	if (*pulRespDataLength == sizeof(UINT32) && correct_endianess) {
+		*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
+	}
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
