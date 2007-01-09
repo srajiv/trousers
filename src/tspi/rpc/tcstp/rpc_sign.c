@@ -35,47 +35,44 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			 BYTE ** sig	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
 	int i;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_SIGN;
+	initData(&hte->comm, 5);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_SIGN;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &areaToSignSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &areaToSignSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, areaToSign, areaToSignSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, areaToSign, areaToSignSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (privAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, privAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, privAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (privAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -86,13 +83,12 @@ TCSP_Sign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, &hte->comm)) {
 			free_tspi(tspContext, *sig);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }

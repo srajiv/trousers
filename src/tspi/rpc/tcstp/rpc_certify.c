@@ -38,8 +38,6 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       BYTE ** outData	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 	TPM_AUTH null_auth;
 	int i;
@@ -47,55 +45,55 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
+	initData(&hte->comm, 6);
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
-	data.ordinal = TCSD_ORD_CERTIFYKEY;
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CERTIFYKEY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &certHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &certHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &keyHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &antiReplay, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (certAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, certAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, certAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, &null_auth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, &null_auth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (keyAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 5, keyAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 5, keyAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 5, &null_auth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 5, &null_auth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (certAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, certAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, certAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
 		if (keyAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, keyAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, keyAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, CertifyInfoSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, CertifyInfoSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -106,12 +104,12 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *CertifyInfo, *CertifyInfoSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *CertifyInfo, *CertifyInfoSize, &hte->comm)) {
 			free(*CertifyInfo);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, &hte->comm)) {
 			free(*CertifyInfo);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -124,7 +122,7 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
 			free(*CertifyInfo);
 			free(*outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -133,6 +131,5 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	}
 
 done:
-	free(hdr);
 	return result;
 }

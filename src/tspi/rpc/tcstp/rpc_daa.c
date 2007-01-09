@@ -38,49 +38,48 @@ TCSP_DaaJoin_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 		BYTE** outputData) // out
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	UINT32 i;
 
 	LogDebugFn("stage=%d", stage);
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_DAAJOIN;
+	initData(&hte->comm, 8);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_DAAJOIN;
 	LogDebugFn("TCS Context: 0x%x", hContext);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	LogDebugFn("inputSize0=<network>=%d <host>=%d\n", inputSize0, inputSize0);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	LogDebugFn("inputSize1=<network>=%d <host>=%d\n", inputSize1, inputSize1);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if( ownerAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-	LogDebugFn("sendTCSDPacket: 0x%x", (int)hte);
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
-	if (result == TSS_SUCCESS) result = hdr->result;
+
+	result = sendTCSDPacket(hte);
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		LogDebugFn("getData outputSize");
 
 		if( ownerAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outputSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outputSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -91,7 +90,7 @@ TCSP_DaaJoin_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 			goto done;
 		}
 		LogDebugFn("getData outputData (outputSize=%d)", *outputSize);
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outputData, *outputSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outputData, *outputSize, &hte->comm)) {
 			free(*outputData);
 			*outputData = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -100,7 +99,6 @@ TCSP_DaaJoin_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 	}
 
 done:
-	free(hdr);
 	LogDebugFn("result=%u", result);
 	return result;
 }
@@ -118,52 +116,49 @@ TCSP_DaaSign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 		BYTE** outputData) // out
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	UINT32 i;
 
 	LogDebugFn("stage=%d", stage);
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_DAASIGN;
+	initData(&hte->comm, 8);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_DAASIGN;
 	LogDebugFn("TCS Context: 0x%x", hContext);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	LogDebugFn("inputSize0=<network>=%d <host>=%d\n", inputSize0, inputSize0);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	LogDebugFn("inputSize1=<network>=%d <host>=%d\n", inputSize1, inputSize1);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if( ownerAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	LogDebugFn("sendTCSDPacket: 0x%x", (int)hte);
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 	//
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 	//
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		LogDebugFn("getData outputSize");
 
 		if( ownerAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outputSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outputSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -174,7 +169,7 @@ TCSP_DaaSign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 			goto done;
 		}
 		LogDebugFn("getData outputData (outputSize=%d)", *outputSize);
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outputData, *outputSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outputData, *outputSize, &hte->comm)) {
 			free(*outputData);
 			*outputData = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -183,7 +178,6 @@ TCSP_DaaSign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 	}
 
 done:
-	free(hdr);
 	LogDebugFn("result=%u", result);
 	return result;
 }

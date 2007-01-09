@@ -34,30 +34,27 @@ TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 				  BYTE ** resp)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETCAPABILITY;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETCAPABILITY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, respSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, respSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -68,14 +65,13 @@ TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *resp, *respSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *resp, *respSize, &hte->comm)) {
 			free(*resp);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -104,36 +100,32 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 				       UINT32 * pVolatileFlags)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETCAPABILITYOWNER;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETCAPABILITYOWNER;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 1, pOwnerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 1, pOwnerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_VERSION, 0, pVersion, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_VERSION, 0, pVersion, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_UINT32, 1, pNonVolatileFlags, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 1, pNonVolatileFlags, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_UINT32, 2, pVolatileFlags, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 2, pVolatileFlags, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_AUTH, 3, pOwnerAuth, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_AUTH, 3, pOwnerAuth, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -148,41 +140,37 @@ TCSP_SetCapability_TP(struct host_table_entry *hte,
 		      TPM_AUTH * pOwnerAuth)	/* in, out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_SETCAPABILITY;
+	initData(&hte->comm, 7);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_SETCAPABILITY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &subCapSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, value, valueSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, value, valueSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (pOwnerAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pOwnerAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pOwnerAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }

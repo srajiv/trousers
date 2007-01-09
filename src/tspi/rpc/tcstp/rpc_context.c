@@ -29,25 +29,21 @@ TCS_OpenContext_RPC_TP(struct host_table_entry	*hte,
 		       TCS_CONTEXT_HANDLE *hContext)
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_OPENCONTEXT;
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	initData(&hte->comm, 0);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_OPENCONTEXT;
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, hContext, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, hContext, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		LogDebugFn("Received TCS Context: 0x%x", *hContext);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -56,23 +52,19 @@ TCS_CloseContext_TP(struct host_table_entry *hte,
 		    TCS_CONTEXT_HANDLE hContext)
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CLOSECONTEXT;
+	initData(&hte->comm, 1);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CLOSECONTEXT;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	free(hdr);
 	return result;
 }
 

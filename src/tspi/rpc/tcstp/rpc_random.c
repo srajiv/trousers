@@ -32,30 +32,27 @@ TCSP_GetRandom_TP(struct host_table_entry *hte,
 		  BYTE ** randomBytes)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETRANDOM;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETRANDOM;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &bytesRequested, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &bytesRequested, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, &bytesRequested, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -65,14 +62,13 @@ TCSP_GetRandom_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, bytesRequested, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, bytesRequested, &hte->comm)) {
 			free_tspi(tspContext, *randomBytes);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -83,26 +79,22 @@ TCSP_StirRandom_TP(struct host_table_entry *hte,
 		   BYTE * inData)	/* in */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_STIRRANDOM;
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_STIRRANDOM;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &inDataSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &inDataSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 2, inData, inDataSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 2, inData, inDataSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	free(hdr);
 	return result;
 }

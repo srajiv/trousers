@@ -26,71 +26,69 @@
 
 
 TSS_RESULT
-TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				 TCPA_ENCAUTH identityAuth,	/* in */
-				 TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
-				 UINT32 idKeyInfoSize,	/* in */
-				 BYTE * idKeyInfo,	/* in */
-				 TPM_AUTH * pSrkAuth,	/* in, out */
-				 TPM_AUTH * pOwnerAuth,	/* in, out */
-				 UINT32 * idKeySize,	/* out */
-				 BYTE ** idKey,	/* out */
-				 UINT32 * pcIdentityBindingSize,	/* out */
-				 BYTE ** prgbIdentityBinding,	/* out */
-				 UINT32 * pcEndorsementCredentialSize,	/* out */
-				 BYTE ** prgbEndorsementCredential,	/* out */
-				 UINT32 * pcPlatformCredentialSize,	/* out */
-				 BYTE ** prgbPlatformCredential,	/* out */
-				 UINT32 * pcConformanceCredentialSize,	/* out */
-				 BYTE ** prgbConformanceCredential	/* out */
-    ) {
+TCSP_MakeIdentity_TP(struct host_table_entry *hte,
+		     TCS_CONTEXT_HANDLE hContext,	/* in */
+		     TCPA_ENCAUTH identityAuth,	/* in */
+		     TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+		     UINT32 idKeyInfoSize,	/* in */
+		     BYTE * idKeyInfo,	/* in */
+		     TPM_AUTH * pSrkAuth,	/* in, out */
+		     TPM_AUTH * pOwnerAuth,	/* in, out */
+		     UINT32 * idKeySize,	/* out */
+		     BYTE ** idKey,	/* out */
+		     UINT32 * pcIdentityBindingSize,	/* out */
+		     BYTE ** prgbIdentityBinding,	/* out */
+		     UINT32 * pcEndorsementCredentialSize,	/* out */
+		     BYTE ** prgbEndorsementCredential,	/* out */
+		     UINT32 * pcPlatformCredentialSize,	/* out */
+		     BYTE ** prgbPlatformCredential,	/* out */
+		     UINT32 * pcConformanceCredentialSize,	/* out */
+		     BYTE ** prgbConformanceCredential)	/* out */
+{
 	TSS_RESULT result;
-	struct tsp_packet data;
 	int i;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_MAKEIDENTITY;
+	initData(&hte->comm, 7);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_MAKEIDENTITY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 1, &identityAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 1, &identityAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_DIGEST, 2, &IDLabel_PrivCAHash, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_DIGEST, 2, &IDLabel_PrivCAHash, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &idKeyInfoSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &idKeyInfoSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, idKeyInfo, idKeyInfoSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, idKeyInfo, idKeyInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	i = 5;
 	if (pSrkAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	i = 0;
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (pSrkAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, idKeySize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, idKeySize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -101,12 +99,12 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *idKey, *idKeySize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *idKey, *idKeySize, &hte->comm)) {
 			free(*idKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcIdentityBindingSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcIdentityBindingSize, 0, &hte->comm)) {
 			free(*idKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -119,13 +117,13 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbIdentityBinding, *pcIdentityBindingSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbIdentityBinding, *pcIdentityBindingSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcEndorsementCredentialSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcEndorsementCredentialSize, 0, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -140,14 +138,14 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbEndorsementCredential, *pcEndorsementCredentialSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbEndorsementCredential, *pcEndorsementCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcPlatformCredentialSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcPlatformCredentialSize, 0, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -164,7 +162,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPlatformCredential, *pcPlatformCredentialSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPlatformCredential, *pcPlatformCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -172,7 +170,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcConformanceCredentialSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcConformanceCredentialSize, 0, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -191,7 +189,7 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbConformanceCredential, *pcConformanceCredentialSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbConformanceCredential, *pcConformanceCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
 			free(*prgbEndorsementCredential);
@@ -202,7 +200,6 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -217,51 +214,44 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 					BYTE ** SymmetricKey	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	int i = 0;
 
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_ACTIVATETPMIDENTITY;
+	initData(&hte->comm, 6);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_ACTIVATETPMIDENTITY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &idKey, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &idKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &blobSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &blobSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, blob, blobSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, blob, blobSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (idKeyAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (setData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	if (hdr->result == TSS_SUCCESS) {
+	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (idKeyAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, hdr))
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, idKeyAuth, 0, &hte->comm))
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, i++, ownerAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, SymmetricKeySize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, SymmetricKeySize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -272,12 +262,11 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *SymmetricKey, *SymmetricKeySize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *SymmetricKey, *SymmetricKeySize, &hte->comm)) {
 			free(*SymmetricKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 done:
-	free(hdr);
 	return result;
 }

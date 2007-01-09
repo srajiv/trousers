@@ -36,50 +36,46 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
 		      TCS_KEY_HANDLE * phKeyHMAC)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
 	int i;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_LOADKEYBYBLOB;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_LOADKEYBYBLOB;
 	LogDebugFn("IN: TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hUnwrappingKey, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hUnwrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &cWrappedKeyBlobSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &cWrappedKeyBlobSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, rgbWrappedKeyBlob, cWrappedKeyBlobSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, rgbWrappedKeyBlob, cWrappedKeyBlobSize, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (pAuth != NULL) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, pAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 4, pAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (pAuth != NULL) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pAuth, 0, hdr))
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pAuth, 0, &hte->comm))
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyTCSI, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyTCSI, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyHMAC, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, phKeyHMAC, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		LogDebugFn("OUT: TCS key handle: 0x%x, TPM key slot: 0x%x", *phKeyTCSI,
 			   *phKeyHMAC);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -89,25 +85,21 @@ TCSP_EvictKey_TP(struct host_table_entry *hte,
 		 TCS_KEY_HANDLE hKey)	/* in */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_EVICTKEY;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_EVICTKEY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	free(hdr);
 	return result;
 }
 
@@ -124,36 +116,33 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
 		      TPM_AUTH * pAuth)	/* in, out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CREATEWRAPKEY;
+	initData(&hte->comm, 7);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEWRAPKEY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hWrappingKey, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hWrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &KeyUsageAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &KeyUsageAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &KeyMigrationAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &KeyMigrationAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &keyInfoSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &keyInfoSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, keyInfo, keyInfoSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, keyInfo, keyInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 6, pAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 6, pAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, keyDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, keyDataSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -163,12 +152,12 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *keyData, *keyDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *keyData, *keyDataSize, &hte->comm)) {
 			free(*keyData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &hte->comm)) {
 			free(*keyData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -176,7 +165,6 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -189,42 +177,39 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte,
 		  BYTE ** prgbPubKey)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
 	int i;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETPUBKEY;
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPUBKEY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (pAuth != NULL) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	i = 0;
 	if (result == TSS_SUCCESS) {
 		if (pAuth != NULL) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcPubKeySize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcPubKeySize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -235,14 +220,13 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPubKey, *pcPubKeySize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPubKey, *pcPubKeySize, &hte->comm)) {
 			free(*prgbPubKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -252,24 +236,20 @@ TCSP_TerminateHandle_TP(struct host_table_entry *hte,
 			TCS_AUTHHANDLE handle)	/* in */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_TERMINATEHANDLE;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_TERMINATEHANDLE;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	free(hdr);
 	return result;
 }

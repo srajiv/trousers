@@ -36,30 +36,27 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
     ) {
 
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CREATEENDORSEMENTKEYPAIR;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEENDORSEMENTKEYPAIR;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &endorsementKeyInfoSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &endorsementKeyInfoSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, endorsementKeyInfo, endorsementKeyInfoSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, endorsementKeyInfo, endorsementKeyInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, endorsementKeySize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, endorsementKeySize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -70,19 +67,18 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *endorsementKey, *endorsementKeySize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *endorsementKey, *endorsementKeySize, &hte->comm)) {
 			free(*endorsementKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, &hte->comm)) {
 			free(*endorsementKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -94,27 +90,24 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 			      TCPA_DIGEST * checksum	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_READPUBEK;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_READPUBEK;
 	LogDebugFn("TCS Context: 0x%x", hContext);
-	/*      data.numParms = 2; */
+	/*      &hte->comm.numParms = 2; */
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pubEndorsementKeySize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pubEndorsementKeySize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -125,18 +118,17 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *pubEndorsementKey, *pubEndorsementKeySize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *pubEndorsementKey, *pubEndorsementKeySize, &hte->comm)) {
 			free(*pubEndorsementKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_DIGEST, 2, &(checksum->digest), 0, &hte->comm)) {
 			free(*pubEndorsementKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 done:
-	free(hdr);
 	return result;
 }
 
@@ -145,31 +137,27 @@ TCSP_DisablePubekRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 				     TPM_AUTH * ownerAuth	/* in, out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_DISABLEPUBEKREAD;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_DISABLEPUBEKREAD;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-        result = sendTCSDPacket(hte, 0, &data, &hdr);
+        result = sendTCSDPacket(hte);
 
-        if (result == TSS_SUCCESS) 
-                result = hdr->result;
+        if (result == TSS_SUCCESS)
+                result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -181,31 +169,28 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
     ) {
 
         TSS_RESULT result;
-        struct tsp_packet data;
-        struct tcsd_packet_hdr *hdr;
 
-        memset(&data, 0, sizeof(struct tsp_packet));
-
-        data.ordinal = TCSD_ORD_OWNERREADPUBEK;
+	initData(&hte->comm, 2);
+        hte->comm.hdr.u.ordinal = TCSD_ORD_OWNERREADPUBEK;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
-        if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &data))
+        if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
 
-        result = sendTCSDPacket(hte, 0, &data, &hdr);
+        result = sendTCSDPacket(hte);
 
         if (result == TSS_SUCCESS)
-                result = hdr->result;
+                result = hte->comm.hdr.u.result;
 
         if (result == TSS_SUCCESS) {
-                if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr)){
+                if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, &hte->comm)){
 			free(*pubEndorsementKey);
                         result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
-                if (getData(TCSD_PACKET_TYPE_UINT32, 1, pubEndorsementKeySize, 0, hdr)) {
+                if (getData(TCSD_PACKET_TYPE_UINT32, 1, pubEndorsementKeySize, 0, &hte->comm)) {
                         result = TSPERR(TSS_E_INTERNAL_ERROR);
                         goto done;
                 }
@@ -217,7 +202,7 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
                         goto done;
                 }
 
-                if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *pubEndorsementKey, *pubEndorsementKeySize, hdr)) {
+                if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *pubEndorsementKey, *pubEndorsementKeySize, &hte->comm)) {
                         free(*pubEndorsementKey);
                         result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -225,6 +210,5 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
         }
 
 done:
-	free(hdr);
 	return result;
 }

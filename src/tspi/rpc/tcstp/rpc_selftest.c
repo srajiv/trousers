@@ -29,23 +29,19 @@ TSS_RESULT
 TCSP_SelfTestFull_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext)	/* in */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_SELFTESTFULL;
+	initData(&hte->comm, 1);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_SELFTESTFULL;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	free(hdr);
 	return result;
 }
 
@@ -59,42 +55,39 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte,
 			BYTE ** sig)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	int i;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CERTIFYSELFTEST;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CERTIFYSELFTEST;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (privAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 3, privAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 3, privAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (privAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, privAuth, 0, &hte->comm)) {
 				LogDebug("privAuth");
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, sigSize, 0, &hte->comm)) {
 			LogDebug("sigSize");
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -105,7 +98,7 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, &hte->comm)) {
 			LogDebug("sig");
 			free(*sig);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -113,7 +106,6 @@ TCSP_CertifySelfTest_TP(struct host_table_entry *hte,
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -124,30 +116,27 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte,
 		      BYTE ** outData)	/* out */
 {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETTESTRESULT;
+	initData(&hte->comm, 1);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETTESTRESULT;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	LogDebug("TCSP_GetTestResult_TP");
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		LogDebug("sendTCSDPacket succeeded");
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, outDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, outDataSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -159,7 +148,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *outData, *outDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *outData, *outDataSize, &hte->comm)) {
 			free_tspi(tspContext, *outData);
 			*outData = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -168,6 +157,5 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte,
 	LogDebug("TCSP_GetTestResult_TP exit");
 
 done:
-	free(hdr);
 	return result;
 }

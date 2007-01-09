@@ -41,8 +41,6 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 					BYTE ** outData	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 	TPM_AUTH null_auth;
 	UINT32 i;
@@ -50,55 +48,55 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
+	initData(&hte->comm, 9);
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
-	data.ordinal = TCSD_ORD_CREATEMIGRATIONBLOB;
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEMIGRATIONBLOB;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
 	i = 0;
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &parentHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, i++, &migrationType, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, i++, &migrationType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &MigrationKeyAuthSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &MigrationKeyAuthSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, MigrationKeyAuth, MigrationKeyAuthSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, MigrationKeyAuth, MigrationKeyAuthSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &encDataSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &encDataSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, encData, encDataSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, encData, encDataSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (parentAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (setData(TCSD_PACKET_TYPE_AUTH, i++, entityAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, entityAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (parentAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, i++, entityAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, i++, entityAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, randomSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, randomSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -110,14 +108,14 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
-			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *random, *randomSize, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *random, *randomSize, &hte->comm)) {
 				free_tspi(tspContext, *random);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
 
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, &hte->comm)) {
 			if (*randomSize > 0)
 				free_tspi(tspContext, *random);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -132,7 +130,7 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
 			if (*randomSize > 0)
 				free_tspi(tspContext, *random);
 			free_tspi(tspContext, *outData);
@@ -142,7 +140,6 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -158,48 +155,45 @@ TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hC
 					 BYTE ** outData	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	UINT32 i;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CONVERTMIGRATIONBLOB;
+	initData(&hte->comm, 6);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CONVERTMIGRATIONBLOB;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &inDataSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &inDataSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &randomSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &randomSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, random, randomSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, random, randomSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (parentAuth) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 6, parentAuth, 0, &data))
+		if (setData(TCSD_PACKET_TYPE_AUTH, 6, parentAuth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
 		i = 0;
 		if (parentAuth) {
-			if (getData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, parentAuth, 0, &hte->comm)) {
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		}
 
-		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -210,14 +204,13 @@ TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hC
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -231,40 +224,37 @@ TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE h
 					  BYTE ** MigrationKeyAuth	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_AUTHORIZEMIGRATIONKEY;
+	initData(&hte->comm, 5);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_AUTHORIZEMIGRATIONKEY;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &migrateScheme, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &migrateScheme, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &MigrationKeySize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &MigrationKeySize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, MigrationKey, MigrationKeySize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, MigrationKey, MigrationKeySize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 4, ownerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 4, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, 1, MigrationKeyAuthSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 1, MigrationKeyAuthSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -276,7 +266,7 @@ TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE h
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *MigrationKeyAuth, *MigrationKeyAuthSize,
-			    hdr)) {
+			    &hte->comm)) {
 			free(*MigrationKeyAuth);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
@@ -284,6 +274,5 @@ TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE h
 	}
 
 done:
-	free(hdr);
 	return result;
 }

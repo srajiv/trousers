@@ -31,30 +31,26 @@ TCSP_OIAP_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TCPA_NONCE * nonce0	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_OIAP;
+	initData(&hte->comm, 1);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_OIAP;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, authHandle, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, authHandle, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_NONCE, 1, nonce0, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_NONCE, 1, nonce0, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -68,37 +64,33 @@ TCSP_OSAP_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TCPA_NONCE * nonceEvenOSAP	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_OSAP;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_OSAP;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &entityType, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &entityType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &entityValue, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &entityValue, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &nonceOddOSAP, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &nonceOddOSAP, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, authHandle, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, authHandle, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_NONCE, 1, nonceEven, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_NONCE, 1, nonceEven, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
-		if (getData(TCSD_PACKET_TYPE_NONCE, 2, nonceEvenOSAP, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_NONCE, 2, nonceEvenOSAP, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }

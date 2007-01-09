@@ -36,51 +36,48 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       TPM_AUTH * ownerAuth,	/* in, out */
 			       TPM_AUTH * entityAuth,	/* in, out */
 			       UINT32 * outDataSize,	/* out */
-			       BYTE ** outData	/* out */
-    ) {
+			       BYTE ** outData)	/* out */
+{
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CHANGEAUTH;
+	initData(&hte->comm, 9);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CHANGEAUTH;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 2, &protocolID, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 2, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &newAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &newAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 4, &entityType, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 4, &entityType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &encDataSize, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &encDataSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, encData, encDataSize, &data))
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, encData, encDataSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 7, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 8, entityAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 8, entityAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, 1, entityAuth, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 1, entityAuth, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_UINT32, 2, outDataSize, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 2, outDataSize, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -91,14 +88,13 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, *outData, *outDataSize, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, *outData, *outDataSize, &hte->comm)) {
 			free(*outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -110,36 +106,32 @@ TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 				    TPM_AUTH * ownerAuth	/* in, out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_CHANGEAUTHOWNER;
+	initData(&hte->comm, 5);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_CHANGEAUTHOWNER;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &newAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &newAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT16, 3, &entityType, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT16, 3, &entityType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 4, ownerAuth, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_AUTH, 4, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
-	if (hdr->result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, hdr))
+	if (hte->comm.hdr.u.result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, ownerAuth, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }
 

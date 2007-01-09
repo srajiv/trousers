@@ -31,31 +31,27 @@ TCS_LogPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       UINT32 * pNumber	/*  out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_LOGPCREVENT;
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_LOGPCREVENT;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, &Event, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, &Event, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pNumber, 0, hdr))
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pNumber, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	free(hdr);
 	return result;
 }
 
@@ -66,34 +62,31 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       TSS_PCR_EVENT ** ppEvent	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	BYTE lengthOnly = (ppEvent == NULL) ? TRUE : FALSE;
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETPCREVENT;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENT;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, pNumber, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, pNumber, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_BYTE, 3, &lengthOnly, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_BYTE, 3, &lengthOnly, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pNumber, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pNumber, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -107,8 +100,7 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 				goto done;
 			}
 
-			if (getData(TCSD_PACKET_TYPE_PCR_EVENT, 1, *ppEvent,
-				    0, hdr)) {
+			if (getData(TCSD_PACKET_TYPE_PCR_EVENT, 1, *ppEvent, 0, &hte->comm)) {
 				free(*ppEvent);
 				*ppEvent = NULL;
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -117,7 +109,6 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -129,38 +120,35 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 				     TSS_PCR_EVENT ** ppEvents	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	UINT32 i, j;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETPCREVENTBYPCR;
+	initData(&hte->comm, 4);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENTBYPCR;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &FirstEvent, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &FirstEvent, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 3, pEventCount, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 3, pEventCount, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pEventCount, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pEventCount, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -175,7 +163,7 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 
 			i = 1;
 			for (j = 0; j < (*pEventCount); j++) {
-				if (getData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &((*ppEvents)[j]), 0, hdr)) {
+				if (getData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &((*ppEvents)[j]), 0, &hte->comm)) {
 					free(*ppEvents);
 					*ppEvents = NULL;
 					result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -188,7 +176,6 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 	}
 
 done:
-	free(hdr);
 	return result;
 }
 
@@ -198,29 +185,26 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 				  TSS_PCR_EVENT ** ppEvents	/* out */
     ) {
 	TSS_RESULT result;
-	struct tsp_packet data;
-	struct tcsd_packet_hdr *hdr;
 	int i, j;
 	TSS_HCONTEXT tspContext;
 
 	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	memset(&data, 0, sizeof(struct tsp_packet));
-
-	data.ordinal = TCSD_ORD_GETPCREVENTLOG;
+	initData(&hte->comm, 1);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENTLOG;
 	LogDebugFn("TCS Context: 0x%x", hContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
-	result = sendTCSDPacket(hte, 0, &data, &hdr);
+	result = sendTCSDPacket(hte);
 
 	if (result == TSS_SUCCESS)
-		result = hdr->result;
+		result = hte->comm.hdr.u.result;
 
 	if (result == TSS_SUCCESS) {
-		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pEventCount, 0, hdr)) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pEventCount, 0, &hte->comm)) {
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -235,7 +219,7 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 			i = 1;
 			for (j = 0; (UINT32)j < (*pEventCount); j++) {
-				if (getData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &((*ppEvents)[j]), 0, hdr)) {
+				if (getData(TCSD_PACKET_TYPE_PCR_EVENT, i++, &((*ppEvents)[j]), 0, &hte->comm)) {
 					free(*ppEvents);
 					*ppEvents = NULL;
 					result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -248,6 +232,5 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 	}
 
 done:
-	free(hdr);
 	return result;
 }
