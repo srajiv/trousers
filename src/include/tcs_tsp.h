@@ -76,6 +76,7 @@ struct key_disk_cache
 #define TSSPS_BLOB_DATA_OFFSET(c)     ((c)->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + (c)->pub_data_size)
 #define TSSPS_VENDOR_DATA_OFFSET(c)   ((c)->offset + (2 * sizeof(TSS_UUID)) + (3 * sizeof(UINT16)) + sizeof(UINT32) + (c)->pub_data_size + (c)->blob_size)
 
+/* XXX Get rid of this, there's no reason to set an arbitrary limit */
 #define MAX_KEY_CHILDREN	10
 
 #define STRUCTURE_PACKING_ATTRIBUTE	__attribute__((packed))
