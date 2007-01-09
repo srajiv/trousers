@@ -35,6 +35,14 @@ TCS_OpenContext_RPC(BYTE *hostname, UINT32 *tcsContext, int type)
 
 	entry->hostname = hostname;
         entry->type = type;
+        entry->comm.buf_size = TCSD_INIT_TXBUF_SIZE;
+	entry->comm.buf = calloc(1, entry->comm.buf_size);
+	if (entry->comm.buf == NULL) {
+		LogError("malloc of %u bytes failed.", entry->comm.buf_size);
+		free(entry);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	MUTEX_INIT(entry->lock);
 
 	switch (type) {
 		case CONNECTION_TYPE_TCP_PERSISTANT:
@@ -42,7 +50,7 @@ TCS_OpenContext_RPC(BYTE *hostname, UINT32 *tcsContext, int type)
 		 * two sessions don't get opened with the same TCS and that then one has to
 		 * be closed.
 		 */
-		pthread_mutex_lock(&(ht->lock));
+		MUTEX_LOCK(ht->lock);
 
 		result = TCS_OpenContext_RPC_TP(entry, tcsContext);
 
@@ -50,17 +58,20 @@ TCS_OpenContext_RPC(BYTE *hostname, UINT32 *tcsContext, int type)
 			/* add_table_entry() will make sure an entry doesn't already exist
 			 * for this tcs context */
 			if ((result = add_table_entry(entry, *tcsContext))) {
+				free(entry->comm.buf);
 				free(entry);
 			}
 		} else {
+			free(entry->comm.buf);
 			free(entry);
 		}
 
-		pthread_mutex_unlock(&(ht->lock));
+		MUTEX_UNLOCK(ht->lock);
 
 		return result;
 	}
 
+	free(entry->comm.buf);
 	free(entry);
 
 	return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -88,6 +99,8 @@ TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo(TCS_CONTEXT_HANDLE tcsContext,
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -131,6 +144,8 @@ TSS_RESULT TCS_FreeMemory(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -151,6 +166,8 @@ TSS_RESULT TCS_LogPcrEvent(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -174,6 +191,8 @@ TSS_RESULT TCS_GetPcrEvent(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -199,6 +218,8 @@ TSS_RESULT TCS_GetPcrEventsByPcr(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -219,6 +240,8 @@ TSS_RESULT TCS_GetPcrEventLog(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -246,6 +269,8 @@ TSS_RESULT TCS_RegisterKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -265,6 +290,8 @@ TSS_RESULT TCSP_UnregisterKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -289,6 +316,8 @@ TSS_RESULT TCS_EnumRegisteredKeys(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -309,6 +338,8 @@ TSS_RESULT TCS_GetRegisteredKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -332,6 +363,8 @@ TSS_RESULT TCS_GetRegisteredKeyBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -360,6 +393,8 @@ TSS_RESULT TCSP_LoadKeyByBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -383,6 +418,8 @@ TSS_RESULT TCSP_LoadKeyByUUID(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -402,6 +439,8 @@ TSS_RESULT TCSP_EvictKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -432,6 +471,8 @@ TSS_RESULT TCSP_CreateWrapKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -455,6 +496,8 @@ TSS_RESULT TCSP_GetPubKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -500,6 +543,8 @@ TSS_RESULT TCSP_MakeIdentity(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -519,6 +564,8 @@ TSS_RESULT TCSP_SetOwnerInstall(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -552,6 +599,8 @@ TSS_RESULT TCSP_TakeOwnership(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -572,6 +621,8 @@ TSS_RESULT TCSP_OIAP(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -598,6 +649,8 @@ TSS_RESULT TCSP_OSAP(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -630,6 +683,8 @@ TSS_RESULT TCSP_ChangeAuth(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -653,6 +708,8 @@ TSS_RESULT TCSP_ChangeAuthOwner(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -688,6 +745,8 @@ TSS_RESULT TCSP_ChangeAuthAsymStart(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -726,6 +785,8 @@ TSS_RESULT TCSP_ChangeAuthAsymFinish(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -745,6 +806,8 @@ TSS_RESULT TCSP_TerminateHandle(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -774,6 +837,8 @@ TSS_RESULT TCSP_ActivateTPMIdentity(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -796,6 +861,8 @@ TSS_RESULT TCSP_Extend(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -816,6 +883,8 @@ TSS_RESULT TCSP_PcrRead(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -847,6 +916,8 @@ TSS_RESULT TCSP_Quote(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -870,6 +941,8 @@ TSS_RESULT TCSP_DirWriteAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -890,6 +963,8 @@ TSS_RESULT TCSP_DirRead(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -921,6 +996,8 @@ TSS_RESULT TCSP_Seal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -948,6 +1025,8 @@ TSS_RESULT TCSP_Unseal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -974,6 +1053,8 @@ TSS_RESULT TCSP_UnBind(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1010,6 +1091,8 @@ TSS_RESULT TCSP_CreateMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1040,6 +1123,8 @@ TSS_RESULT TCSP_ConvertMigrationBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1067,6 +1152,8 @@ TSS_RESULT TCSP_AuthorizeMigrationKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1098,6 +1185,8 @@ TSS_RESULT TCSP_CertifyKey(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1124,6 +1213,8 @@ TSS_RESULT TCSP_Sign(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1145,6 +1236,8 @@ TSS_RESULT TCSP_GetRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1165,6 +1258,8 @@ TSS_RESULT TCSP_StirRandom(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1190,6 +1285,8 @@ TSS_RESULT TCS_GetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1217,6 +1314,8 @@ TSS_RESULT TCSP_SetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1241,6 +1340,8 @@ TSS_RESULT TCSP_GetCapability(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1274,6 +1375,8 @@ TSS_RESULT TCSP_GetCapabilitySigned(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1297,6 +1400,8 @@ TSS_RESULT TCSP_GetCapabilityOwner(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1327,6 +1432,8 @@ TSS_RESULT TCSP_CreateEndorsementKeyPair(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1352,6 +1459,8 @@ TSS_RESULT TCSP_ReadPubek(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1371,6 +1480,8 @@ TSS_RESULT TCSP_DisablePubekRead(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1395,6 +1506,8 @@ TSS_RESULT TCSP_OwnerReadPubek(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1413,6 +1526,8 @@ TSS_RESULT TCSP_SelfTestFull(TCS_CONTEXT_HANDLE hContext)	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1439,6 +1554,8 @@ TSS_RESULT TCSP_CertifySelfTest(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1459,6 +1576,8 @@ TSS_RESULT TCSP_GetTestResult(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1481,6 +1600,8 @@ TSS_RESULT TCSP_OwnerSetDisable(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1500,6 +1621,8 @@ TSS_RESULT TCSP_ResetLockValue(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1521,6 +1644,8 @@ TSS_RESULT TCSP_OwnerClear(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1541,6 +1666,8 @@ TSS_RESULT TCSP_DisableOwnerClear(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1559,6 +1686,8 @@ TSS_RESULT TCSP_ForceClear(TCS_CONTEXT_HANDLE hContext)	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1579,6 +1708,8 @@ TSS_RESULT TCSP_DisableForceClear(TCS_CONTEXT_HANDLE hContext)	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1598,6 +1729,8 @@ TSS_RESULT TCSP_PhysicalDisable(TCS_CONTEXT_HANDLE hContext)	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1616,6 +1749,8 @@ TSS_RESULT TCSP_PhysicalEnable(TCS_CONTEXT_HANDLE hContext)	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1637,6 +1772,8 @@ TSS_RESULT TCSP_PhysicalSetDeactivated(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1657,6 +1794,8 @@ TSS_RESULT TCSP_PhysicalPresence(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1675,6 +1814,8 @@ TSS_RESULT TCSP_SetTempDeactivated(TCS_CONTEXT_HANDLE hContext)	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1700,6 +1841,8 @@ TSS_RESULT TCSP_FieldUpgrade(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1722,6 +1865,8 @@ TSS_RESULT TCSP_SetRedirection(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1750,6 +1895,8 @@ TSS_RESULT TCSP_CreateMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1775,6 +1922,8 @@ TSS_RESULT TCSP_LoadMaintenanceArchive(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1794,6 +1943,8 @@ TSS_RESULT TCSP_KillMaintenanceFeature(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1819,6 +1970,8 @@ TSS_RESULT TCSP_LoadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 }
 
@@ -1839,6 +1992,8 @@ TSS_RESULT TCSP_ReadManuMaintPub(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }
@@ -1871,6 +2026,8 @@ TCSP_DaaJoin(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
+	put_table_entry(entry);
+
 	return result;
 
 }
@@ -1902,6 +2059,8 @@ TCSP_DaaSign(TCS_CONTEXT_HANDLE hContext,	/* in */
 		default:
 			break;
 	}
+
+	put_table_entry(entry);
 
 	return result;
 }

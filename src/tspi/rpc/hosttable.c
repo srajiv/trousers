@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
@@ -31,7 +30,7 @@ host_table_init()
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-	pthread_mutex_init(&ht->lock, NULL);
+	MUTEX_INIT(ht->lock);
 
 	return TSS_SUCCESS;
 }
@@ -48,7 +47,7 @@ host_table_final()
 {
 	struct host_table_entry *hte, *next = NULL;
 
-	pthread_mutex_lock(&(ht->lock));
+	MUTEX_LOCK(ht->lock);
 
 	for (hte = ht->entries; hte; hte = next) {
 		if (hte)
@@ -56,7 +55,7 @@ host_table_final()
 		free(hte);
 	}
 
-	pthread_mutex_unlock(&(ht->lock));
+	MUTEX_UNLOCK(ht->lock);
 
 	free(ht);
 	ht = NULL;
@@ -100,20 +99,20 @@ remove_table_entry(TCS_CONTEXT_HANDLE tcsContext)
 {
 	struct host_table_entry *hte, *prev = NULL;
 
-	pthread_mutex_lock(&(ht->lock));
+	MUTEX_LOCK(ht->lock);
 
 	for (hte = ht->entries; hte; prev = hte, hte = hte->next) {
 		if (hte->tcsContext == tcsContext) {
 			if (prev != NULL)
 				prev->next = hte->next;
 			else
-				ht->entries = NULL;
+				ht->entries = hte->next;
 			free(hte);
 			break;
 		}
 	}
 
-	pthread_mutex_unlock(&(ht->lock));
+	MUTEX_UNLOCK(ht->lock);
 }
 
 struct host_table_entry *
@@ -121,14 +120,25 @@ get_table_entry(TCS_CONTEXT_HANDLE hContext)
 {
 	struct host_table_entry *index = NULL;
 
-	pthread_mutex_lock(&(ht->lock));
+	MUTEX_LOCK(ht->lock);
 
 	for (index = ht->entries; index; index = index->next) {
 		if (index->tcsContext == hContext)
 			break;
 	}
 
-	pthread_mutex_unlock(&(ht->lock));
+	if (index)
+		MUTEX_LOCK(index->lock);
+
+	MUTEX_UNLOCK(ht->lock);
 
 	return index;
 }
+
+void
+put_table_entry(struct host_table_entry *entry)
+{
+	if (entry)
+		MUTEX_UNLOCK(entry->lock);
+}
+
