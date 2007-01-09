@@ -148,9 +148,9 @@ AC_SUBST(RPC, "tcstp")
 # APIs, you'll need to set this to 1.2. Send mail to trousers-tech@lists.sf.net
 # if you have questions.
 #
-API=1.1
+API=1.2
 AC_ARG_WITH(api,
-	    [AC_HELP_STRING([--with-api], [Version of the TSS API to build [default=1.1]])],
+	    [AC_HELP_STRING([--with-api], [Version of the TSS API to build [default=1.2]])],
 	    [API=$withval],
 	    [])
 
@@ -215,8 +215,11 @@ if test "x$API" == "x1.1" || test "x$API" == "x1.2"; then
 fi
 
 if test "x$API" == "x1.2"; then
-	AM_CONDITIONAL(TSS_BUILD_DAA, true)
+	AM_CONDITIONAL(TSS_BUILD_TSS12, true)
+	# Don't build DAA until the API is fixed - KEY
+	AM_CONDITIONAL(TSS_BUILD_DAA, false)
 else
+	AM_CONDITIONAL(TSS_BUILD_TSS12, false)
 	AM_CONDITIONAL(TSS_BUILD_DAA, false)
 fi
 
@@ -295,6 +298,8 @@ dnl Add the languages which your application supports here.
 #AM_GLIB_GNU_GETTEXT
 
 # end Glade section
+
+AC_CHECK_HEADER(pthread.h, [AC_DEFINE(HAVE_PTHREAD_H)])
 
 AC_DISABLE_STATIC
 AC_PROG_CC
