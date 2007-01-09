@@ -68,7 +68,8 @@ Trspi_LoadBlob(UINT64 *offset, size_t size, BYTE *to, BYTE *from)
 {
 	if (size == 0)
 		return;
-	memcpy(&to[(*offset)], from, size);
+	if (to)
+		memcpy(&to[(*offset)], from, size);
 	*offset += size;
 }
 
@@ -84,7 +85,8 @@ Trspi_UnloadBlob(UINT64 *offset, size_t size, BYTE *from, BYTE *to)
 void
 Trspi_LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE *blob)
 {
-	blob[*offset] = data;
+	if (blob)
+		blob[*offset] = data;
 	(*offset)++;
 }
 
@@ -98,7 +100,8 @@ Trspi_UnloadBlob_BYTE(UINT64 *offset, BYTE *dataOut, BYTE *blob)
 void
 Trspi_LoadBlob_BOOL(UINT64 *offset, TSS_BOOL data, BYTE *blob)
 {
-	blob[*offset] = (BYTE) data;
+	if (blob)
+		blob[*offset] = (BYTE) data;
 	(*offset)++;
 }
 
@@ -112,14 +115,16 @@ Trspi_UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE *blob)
 void
 Trspi_LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE *blob)
 {
-	UINT32ToArray(in, &blob[*offset]);
-	*offset += 4;
+	if (blob)
+		UINT32ToArray(in, &blob[*offset]);
+	*offset += sizeof(UINT32);
 }
 
 void
 Trspi_LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE *blob)
 {
-	UINT16ToArray(in, &blob[*offset]);
+	if (blob)
+		UINT16ToArray(in, &blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
@@ -160,28 +165,28 @@ Trspi_UnloadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION *out)
 void
 Trspi_LoadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION version)
 {
-	blob[(*offset)++] = version.bMajor;
-	blob[(*offset)++] = version.bMinor;
-	blob[(*offset)++] = version.bRevMajor;
-	blob[(*offset)++] = version.bRevMinor;
+	Trspi_LoadBlob_BYTE(offset, version.bMajor, blob);
+	Trspi_LoadBlob_BYTE(offset, version.bMinor, blob);
+	Trspi_LoadBlob_BYTE(offset, version.bRevMajor, blob);
+	Trspi_LoadBlob_BYTE(offset, version.bRevMinor, blob);
 }
 
 void
 Trspi_UnloadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 {
-	out->major = blob[(*offset)++];
-	out->minor = blob[(*offset)++];
-	out->revMajor = blob[(*offset)++];
-	out->revMinor = blob[(*offset)++];
+	Trspi_UnloadBlob_BYTE(offset, &out->major, blob);
+	Trspi_UnloadBlob_BYTE(offset, &out->minor, blob);
+	Trspi_UnloadBlob_BYTE(offset, &out->revMajor, blob);
+	Trspi_UnloadBlob_BYTE(offset, &out->revMinor, blob);
 }
 
 void
 Trspi_LoadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION version)
 {
-	blob[(*offset)++] = version.major;
-	blob[(*offset)++] = version.minor;
-	blob[(*offset)++] = version.revMajor;
-	blob[(*offset)++] = version.revMinor;
+	Trspi_LoadBlob_BYTE(offset, version.major, blob);
+	Trspi_LoadBlob_BYTE(offset, version.minor, blob);
+	Trspi_LoadBlob_BYTE(offset, version.revMajor, blob);
+	Trspi_LoadBlob_BYTE(offset, version.revMinor, blob);
 }
 
 TSS_RESULT
@@ -189,18 +194,17 @@ Trspi_UnloadBlob_PCR_SELECTION(UINT64 *offset, BYTE *blob, TCPA_PCR_SELECTION *p
 {
 	UINT16 i;
 
-	pcr->sizeOfSelect = Decode_UINT16(&blob[*offset]);
+	Trspi_UnloadBlob_UINT16(offset, &pcr->sizeOfSelect, blob);
 
 	if (pcr->sizeOfSelect > 0) {
-		*offset += sizeof(UINT16);
 		pcr->pcrSelect = calloc(1, pcr->sizeOfSelect);
 		if (pcr->pcrSelect == NULL) {
 			LogError("malloc of %d bytes failed.", pcr->sizeOfSelect);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
-		for (i = 0; i < pcr->sizeOfSelect; i++, (*offset)++)
-			pcr->pcrSelect[i] = blob[*offset];
+		for (i = 0; i < pcr->sizeOfSelect; i++)
+			Trspi_UnloadBlob_BYTE(offset, &pcr->pcrSelect[i], blob);
 	} else {
 		pcr->pcrSelect = NULL;
 	}
@@ -213,10 +217,9 @@ Trspi_LoadBlob_PCR_SELECTION(UINT64 *offset, BYTE *blob, TCPA_PCR_SELECTION *pcr
 {
 	UINT16 i;
 
-	UINT16ToArray(pcr->sizeOfSelect, &blob[*offset]);
-	*offset += sizeof(UINT16);
-	for (i = 0; i < pcr->sizeOfSelect; i++, (*offset)++)
-		blob[*offset] = pcr->pcrSelect[i];
+	Trspi_LoadBlob_UINT16(offset, pcr->sizeOfSelect, blob);
+	for (i = 0; i < pcr->sizeOfSelect; i++)
+		Trspi_LoadBlob_BYTE(offset, pcr->pcrSelect[i], blob);
 }
 
 void
@@ -225,7 +228,7 @@ Trspi_LoadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 	Trspi_LoadBlob_TCPA_VERSION(offset, blob, key->ver);
 	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
 	Trspi_LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	blob[(*offset)++] = key->authDataUsage;
+	Trspi_LoadBlob_BYTE(offset, key->authDataUsage, blob);
 	Trspi_LoadBlob_KEY_PARMS(offset, blob, &key->algorithmParms);
 	Trspi_LoadBlob_UINT32(offset, key->PCRInfoSize, blob);
 	Trspi_LoadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo);
@@ -336,7 +339,7 @@ Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 	Trspi_UnloadBlob_TCPA_VERSION(offset, blob, &key->ver);
 	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	Trspi_UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	key->authDataUsage = blob[(*offset)++];
+	Trspi_UnloadBlob_BYTE(offset, &key->authDataUsage, blob);
 	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, (BYTE *) blob, &key->algorithmParms)))
 		return result;
 	Trspi_UnloadBlob_UINT32(offset, &key->PCRInfoSize, blob);
@@ -369,18 +372,6 @@ Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 
 	return result;
 }
-
-/*
-void UnloadBlob_VERSION( UINT16* offset,  BYTE* blob, TCPA_VERSION* out ){
-
-	out->major = blob[(*offset)++];
-	out->minor = blob[(*offset)++];
-	out->revMajor = blob[(*offset)++];
-	out->revMinor = blob[(*offset)++];
-
-	return;
-}
-*/
 
 TSS_RESULT
 Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
@@ -484,7 +475,7 @@ Trspi_LoadBlob_PRIVKEY_DIGEST(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 	Trspi_LoadBlob_TCPA_VERSION(offset, blob, key->ver);
 	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
 	Trspi_LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
-	blob[(*offset)++] = key->authDataUsage;
+	Trspi_LoadBlob_BYTE(offset, key->authDataUsage, blob);
 	Trspi_LoadBlob_KEY_PARMS(offset, blob, &key->algorithmParms);
 
 	Trspi_LoadBlob_UINT32(offset, key->PCRInfoSize, blob);
