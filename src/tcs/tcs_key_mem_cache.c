@@ -13,13 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -34,19 +32,19 @@
  * mem_cache_lock will be responsible for protecting the key_mem_cache_head list. This is a
  * TCSD global linked list of all keys which have been loaded into the TPM at some time.
  */
-pthread_mutex_t mem_cache_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_DECLARE_INIT(mem_cache_lock);
 
 /*
  * tcs_keyhandle_lock is only used to make TCS keyhandle generation atomic for all TCSD
  * threads.
  */
-static pthread_mutex_t tcs_keyhandle_lock = PTHREAD_MUTEX_INITIALIZER;
+static MUTEX_DECLARE_INIT(tcs_keyhandle_lock);
 
 /*
  * timestamp_lock is only used to make TCS key timestamp generation atomic for all TCSD
  * threads.
  */
-static pthread_mutex_t timestamp_lock = PTHREAD_MUTEX_INITIALIZER;
+static MUTEX_DECLARE_INIT(timestamp_lock);
 
 TCS_KEY_HANDLE
 getNextTcsKeyHandle()
@@ -54,13 +52,13 @@ getNextTcsKeyHandle()
 	static TCS_KEY_HANDLE NextTcsKeyHandle = 0x22330000;
 	TCS_KEY_HANDLE ret;
 
-	pthread_mutex_lock(&tcs_keyhandle_lock);
+	MUTEX_LOCK(tcs_keyhandle_lock);
 
 	do {
 		ret = NextTcsKeyHandle++;
 	} while (NextTcsKeyHandle == SRK_TPM_HANDLE);
 
-	pthread_mutex_unlock(&tcs_keyhandle_lock);
+	MUTEX_UNLOCK(tcs_keyhandle_lock);
 
 	return ret;
 }
@@ -71,9 +69,9 @@ getNextTimeStamp()
 	static UINT32 time_stamp = 1;
 	UINT32 ret;
 
-	pthread_mutex_lock(&timestamp_lock);
+	MUTEX_LOCK(timestamp_lock);
 	ret = time_stamp++;
-	pthread_mutex_unlock(&timestamp_lock);
+	MUTEX_UNLOCK(timestamp_lock);
 
 	return ret;
 }
@@ -160,7 +158,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle, TCPA_KE
 
 	LogDebugFn("0x%x", keyHandle);
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	*keySlot = mc_get_slot_by_handle(keyHandle);
 	LogDebug("keySlot is %08X", *keySlot);
@@ -187,7 +185,7 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle, TCPA_KE
 	mc_update_time_stamp(*keySlot);
 
 done:
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 	LogDebugFn("Exit");
 	return result;
 }
@@ -234,7 +232,7 @@ mc_get_handle_by_encdata(BYTE *encData)
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
@@ -242,11 +240,11 @@ mc_get_handle_by_encdata(BYTE *encData)
 			continue;
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
 			ret = tmp->tcs_handle;
-			pthread_mutex_unlock(&mem_cache_lock);
+			MUTEX_UNLOCK(mem_cache_lock);
 			return ret;
 		}
 	}
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 	return 0;
 }
 
@@ -256,7 +254,7 @@ mc_update_encdata(BYTE *encData, BYTE *newEncData)
 	struct key_mem_cache *tmp;
 	BYTE *tmp_enc_data;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
@@ -266,18 +264,18 @@ mc_update_encdata(BYTE *encData, BYTE *newEncData)
 			tmp_enc_data = (BYTE *)malloc(tmp->blob->encSize);
 			if (tmp_enc_data == NULL) {
 				LogError("malloc of %u bytes failed.", tmp->blob->encSize);
-				pthread_mutex_unlock(&mem_cache_lock);
+				MUTEX_UNLOCK(mem_cache_lock);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 
 			memcpy(tmp_enc_data, newEncData, tmp->blob->encSize);
 			free(tmp->blob->encData);
 			tmp->blob->encData = tmp_enc_data;
-			pthread_mutex_unlock(&mem_cache_lock);
+			MUTEX_UNLOCK(mem_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 	LogError("Couldn't find requested encdata in mem cache");
 	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
@@ -442,13 +440,13 @@ mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	struct key_mem_cache *entry, *tmp;
 
 	/* Make sure the cache doesn't already have an entry for this key */
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		if (tcs_handle == tmp->tcs_handle) {
 			mc_remove_entry(tcs_handle);
 		}
 	}
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	/* Not found - we need to create a new entry */
 	entry = (struct key_mem_cache *)calloc(1, sizeof(struct key_mem_cache));
@@ -511,7 +509,7 @@ mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 
 	memcpy(&entry->uuid, &SRK_UUID, sizeof(TSS_UUID));
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	entry->next = key_mem_cache_head;
 	if (key_mem_cache_head)
@@ -519,7 +517,7 @@ mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 
 	entry->ref_cnt = 1;
 	key_mem_cache_head = entry;
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	return TSS_SUCCESS;
 }
@@ -575,11 +573,11 @@ key_mgr_evict(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hKey)
 {
 	TSS_RESULT result;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	result = TCSP_EvictKey_Internal(hContext, hKey);
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	return result;
 }
@@ -591,12 +589,18 @@ key_mgr_load_by_blob(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hUnwrappingKey,
 {
 	TSS_RESULT result;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
-	result = TCSP_LoadKeyByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
-					     rgbWrappedKeyBlob, pAuth, phKeyTCSI, phKeyHMAC);
+	if (phKeyHMAC) {
+		result = TCSP_LoadKeyByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
+						     rgbWrappedKeyBlob, pAuth, phKeyTCSI,
+						     phKeyHMAC);
+	} else {
+		result = TCSP_LoadKey2ByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
+						      rgbWrappedKeyBlob, pAuth, phKeyTCSI);
+	}
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	return result;
 }
@@ -628,19 +632,19 @@ key_mgr_dec_ref_count(TCS_KEY_HANDLE key_handle)
 {
 	struct key_mem_cache *cur;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	for (cur = key_mem_cache_head; cur; cur = cur->next) {
 		if (cur->tcs_handle == key_handle) {
 			cur->ref_cnt--;
 			LogDebugFn("decrementing ref cnt for key 0x%x",
 				   key_handle);
-			pthread_mutex_unlock(&mem_cache_lock);
+			MUTEX_UNLOCK(mem_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 	return TCSERR(TSS_E_FAIL);
 }
 
@@ -650,7 +654,7 @@ key_mgr_ref_count()
 {
 	struct key_mem_cache *tmp, *cur;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	for (cur = key_mem_cache_head; cur;) {
 		if (cur->ref_cnt == 0) {
@@ -672,7 +676,7 @@ key_mgr_ref_count()
 		}
 	}
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 }
 
 /* only called from load key paths, so no locking */
@@ -701,18 +705,18 @@ mc_get_slot_by_handle_lock(TCS_KEY_HANDLE tcs_handle)
 	struct key_mem_cache *tmp;
 	TCS_KEY_HANDLE ret;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
 		if (tmp->tcs_handle == tcs_handle) {
 			ret = tmp->tpm_handle;
-			pthread_mutex_unlock(&mem_cache_lock);
+			MUTEX_UNLOCK(mem_cache_lock);
 			return ret;
 		}
 	}
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 	LogDebugFn("returning NULL_TPM_HANDLE");
 	return NULL_TPM_HANDLE;
 }
