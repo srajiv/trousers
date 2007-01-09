@@ -18,8 +18,8 @@ struct tr_encdata_obj {
 	TSS_HPOLICY usagePolicy;
 	TSS_HPOLICY migPolicy;
 	UINT32 encryptedDataLength;
-	BYTE encryptedData[512];
-	TCPA_PCR_INFO pcrInfo;
+	BYTE encryptedData[512]; /* XXX get rid of hardcoded size */
+	TCPA_PCR_INFO pcrInfo; /* XXX use a link to a PCR object here */
 	UINT32 type;
 };
 
