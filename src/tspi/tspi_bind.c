@@ -48,6 +48,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 	if ((result = obj_rsakey_get_tsp_context(hEncKey, &tspContext)))
 		return result;
 
+	/* XXX Just get the pubkey here */
 	if ((result = obj_rsakey_get_blob(hEncKey, &keyDataLength, &keyData)))
 		return result;
 
@@ -125,8 +126,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 	}
 
 	if ((result = obj_encdata_set_data(hEncData, encDataLength, encData))) {
-		LogError("Error in calling SetAttribData on the encrypted "
-				"data object.");
+		LogError("Error in calling SetAttribData on the encrypted data object.");
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
