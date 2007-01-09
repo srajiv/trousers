@@ -15,7 +15,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -33,6 +32,34 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    TPM_AUTH * pAuth,			/* in, out */
 			    TCS_KEY_HANDLE * phKeyTCSI,		/* out */
 			    TCS_KEY_HANDLE * phKeyHMAC)		/* out */
+{
+	return LoadKeyByBlob_Internal(TPM_ORD_LoadKey, hContext, hUnwrappingKey,
+				      cWrappedKeyBlobSize, rgbWrappedKeyBlob, pAuth, phKeyTCSI,
+				      phKeyHMAC);
+}
+
+TSS_RESULT
+TCSP_LoadKey2ByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+			     TCS_KEY_HANDLE hUnwrappingKey,	/* in */
+			     UINT32 cWrappedKeyBlobSize,	/* in */
+			     BYTE * rgbWrappedKeyBlob,		/* in */
+			     TPM_AUTH * pAuth,			/* in, out */
+			     TCS_KEY_HANDLE * phKeyTCSI)	/* out */
+{
+	return LoadKeyByBlob_Internal(TPM_ORD_LoadKey2, hContext, hUnwrappingKey,
+				      cWrappedKeyBlobSize, rgbWrappedKeyBlob, pAuth, phKeyTCSI,
+				      NULL);
+}
+
+TSS_RESULT
+LoadKeyByBlob_Internal(UINT32 ord,	/* The ordinal to use, LoadKey or LoadKey2 */
+		       TCS_CONTEXT_HANDLE hContext,	/* in */
+		       TCS_KEY_HANDLE hUnwrappingKey,	/* in */
+		       UINT32 cWrappedKeyBlobSize,		/* in */
+		       BYTE * rgbWrappedKeyBlob,		/* in */
+		       TPM_AUTH * pAuth,			/* in, out */
+		       TCS_KEY_HANDLE * phKeyTCSI,		/* out */
+		       TCS_KEY_HANDLE * phKeyHMAC)		/* out */
 {
 	UINT64 offset;
 	TSS_RESULT result;
@@ -53,7 +80,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (pAuth != NULL) {
 		LogDebug("Auth Used");
-		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
 			return result;
 	} else {
 		LogDebug("No Auth Used");
@@ -97,8 +124,7 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* If it's an authorized load, then assume that we brute-force load it every time */
 	if (pAuth == NULL) {
-		LogDebugFn("Checking if LoadKeyByBlob can be avoided by using"
-			    " existing key");
+		LogDebugFn("Checking if LoadKeyByBlob can be avoided by using existing key");
 
 		myTcsKeyHandle = mc_get_handle_by_pub(&key.pubKey, hUnwrappingKey);
 		if (myTcsKeyHandle != NULL_TCS_HANDLE) {
@@ -142,9 +168,9 @@ TCSP_LoadKeyByBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob(&offset, cWrappedKeyBlobSize, txBlob, rgbWrappedKeyBlob);
 	if (pAuth != NULL) {
 		LoadBlob_Auth(&offset, txBlob, pAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, ord, txBlob);
 	} else
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_LoadKey, txBlob);
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, ord, txBlob);
 
 	LogDebugUnrollKey(rgbWrappedKeyBlob);
 	LogDebugFn("Submitting request to the TPM");
@@ -204,7 +230,8 @@ add_cache_entry:
 
 	/* Setup the outHandles */
 	*phKeyTCSI = myTcsKeyHandle;
-	*phKeyHMAC = myKeySlot;
+	if (phKeyHMAC)
+		*phKeyHMAC = myKeySlot;
 
 	LogDebugFn("Key handles for loadKeyByBlob slot:%.8X tcshandle:%.8X", myKeySlot,
 		   myTcsKeyHandle);
@@ -259,7 +286,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
 		goto done;
 
 	/* Since hWrappingKey must already be loaded, we can fail immediately if
@@ -332,7 +359,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (pAuth != NULL) {
 		LogDebug("Auth Used");
-		if ((result = auth_mgr_check(hContext, pAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth");
