@@ -15,7 +15,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -110,8 +109,8 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 
 	/* this entire operation needs to be atomic wrt registered keys. We must
 	 * lock the mem cache as well to test if a given key is loaded. */
-	pthread_mutex_lock(&disk_cache_lock);
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	/* return an array of all registered keys if pKeyUUID == NULL */
 	if (pKeyUUID == NULL) {
@@ -232,8 +231,8 @@ TCS_EnumRegisteredKeys_Internal(TCS_CONTEXT_HANDLE hContext,		/* in */
 	}
 done:
 
-	pthread_mutex_unlock(&disk_cache_lock);
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	*ppKeyHierarchy = ret;
 	*pcKeyHierarchySize = count;

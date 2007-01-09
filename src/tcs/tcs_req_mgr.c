@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <syslog.h>
-#include <pthread.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
@@ -21,8 +20,6 @@
 #include "trousers/tss.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
-#include "tcsd_wrap.h"
-#include "tcsd.h"
 #include "tddl.h"
 #include "req_mgr.h"
 #include "tcslog.h"
@@ -41,7 +38,7 @@ req_mgr_submit_req(BYTE *blob)
 	UINT32 size = TSS_TPM_TXBLOB_SIZE;
 	UINT32 retry = TSS_REQ_MGR_MAX_RETRIES;
 
-	pthread_mutex_lock(&(trm->queue_lock));
+	MUTEX_LOCK(trm->queue_lock);
 
 #ifdef TSS_TPM_DEBUG
 	LogBlobData("To TPM:", Decode_UINT32(&blob[2]), blob);
@@ -58,7 +55,7 @@ req_mgr_submit_req(BYTE *blob)
 	LogBlobData("From TPM:", size, loc_buf);
 #endif
 
-	pthread_mutex_unlock(&(trm->queue_lock));
+	MUTEX_UNLOCK(trm->queue_lock);
 
 	return result;
 }
@@ -71,7 +68,7 @@ req_mgr_init()
 		return TSS_E_OUTOFMEMORY;
 	}
 
-	pthread_mutex_init(&(trm->queue_lock), NULL);
+	MUTEX_INIT(trm->queue_lock);
 
 	return Tddli_Open();
 }

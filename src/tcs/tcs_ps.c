@@ -16,7 +16,6 @@
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -82,14 +81,14 @@ key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 
-	pthread_mutex_lock(&mem_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
 
 	result = TCSP_LoadKeyByUUID_Internal(hContext, uuid, pInfo, phKeyTCSI);
 
 	LogDebug("Key %s loaded by UUID w/ TCS handle: 0x%x",
 		result ? "NOT" : "successfully", result ? 0 : *phKeyTCSI);
 
-	pthread_mutex_unlock(&mem_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
 
 	return result;
 }

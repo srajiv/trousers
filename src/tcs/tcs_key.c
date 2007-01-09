@@ -10,11 +10,9 @@
 
 
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
-#include "tcs_internal_types.h"
 #include "req_mgr.h"
 #include "tcs_tsp.h"
 #include "tcslog.h"
@@ -39,12 +37,9 @@ canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
 	LoadBlob_KEY_PARMS(&offset, subCap, parms);
 	subCapLength = offset;
 
-	if ((result = TCSP_GetCapability_Internal(InternalContext,	/* in */
-					    TCPA_CAP_CHECK_LOADED,	/* in */
-					    subCapLength,	/* in */
-					    subCap,	/* in */
-					    &respDataLength,	/* out */
-					    &respData))) {	/* out */
+	if ((result = TCSP_GetCapability_Internal(InternalContext, TCPA_CAP_CHECK_LOADED,
+						  subCapLength, subCap, &respDataLength,
+						  &respData))) {
 		*b = FALSE;
 		LogDebugFn("NO");
 		return result;
@@ -95,8 +90,8 @@ clearUnknownKeys(TCS_CONTEXT_HANDLE hContext, UINT32 *cleared)
 
 	capArea = TCPA_CAP_KEY_HANDLE;
 
-	if ((result = TCSP_GetCapability_Internal(hContext, capArea, 0, NULL,
-						&respDataSize, &respData)))
+	if ((result = TCSP_GetCapability_Internal(hContext, capArea, 0, NULL, &respDataSize,
+						  &respData)))
 		return result;
 
 	if ((result = UnloadBlob_KEY_HANDLE_LIST(&offset, respData, &keyList)))

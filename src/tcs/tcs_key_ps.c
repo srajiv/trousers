@@ -13,13 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -35,7 +33,7 @@ ps_init_disk_cache(void)
 	int fd;
 	TSS_RESULT rc;
 
-	pthread_mutex_init(&disk_cache_lock, NULL);
+	MUTEX_INIT(disk_cache_lock);
 
 	if ((fd = get_file()) < 0)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -98,17 +96,17 @@ getParentUUIDByUUID(TSS_UUID *uuid, TSS_UUID *ret_uuid)
 	struct key_disk_cache *disk_tmp;
 
 	/* check the registered key disk cache */
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	for (disk_tmp = key_disk_cache_head; disk_tmp; disk_tmp = disk_tmp->next) {
 		if ((disk_tmp->flags & CACHE_FLAG_VALID) &&
 		    !memcmp(&disk_tmp->uuid, uuid, sizeof(TSS_UUID))) {
 			memcpy(ret_uuid, &disk_tmp->parent_uuid, sizeof(TSS_UUID));
-			pthread_mutex_unlock(&disk_cache_lock);
+			MUTEX_UNLOCK(disk_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 
 	return TCSERR(TSS_E_FAIL);
 }
@@ -119,17 +117,17 @@ isUUIDRegistered(TSS_UUID *uuid, TSS_BOOL *is_reg)
 	struct key_disk_cache *disk_tmp;
 
 	/* check the registered key disk cache */
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 
 	for (disk_tmp = key_disk_cache_head; disk_tmp; disk_tmp = disk_tmp->next) {
 		if ((disk_tmp->flags & CACHE_FLAG_VALID) &&
 		    !memcmp(&disk_tmp->uuid, uuid, sizeof(TSS_UUID))) {
 			*is_reg = TRUE;
-			pthread_mutex_unlock(&disk_cache_lock);
+			MUTEX_UNLOCK(disk_cache_lock);
 			return TSS_SUCCESS;
 		}
 	}
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	*is_reg = FALSE;
 
 	return TSS_SUCCESS;
@@ -166,7 +164,7 @@ ps_remove_key(TSS_UUID *uuid)
 	TSS_RESULT rc;
         int fd = -1;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 	tmp = key_disk_cache_head;
 
 	for (; tmp; prev = tmp, tmp = tmp->next) {
@@ -197,12 +195,12 @@ ps_remove_key(TSS_UUID *uuid)
 				LogError("Error removing registered key.");
 			}
 
-			pthread_mutex_unlock(&disk_cache_lock);
+			MUTEX_UNLOCK(disk_cache_lock);
 			return rc;
 		}
 	}
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 
 	return TCSERR(TCSERR(TSS_E_PS_KEY_NOTFOUND));
 }
@@ -217,7 +215,7 @@ clean_disk_cache(int fd)
 	struct key_disk_cache *tmp, *prev = NULL;
 	TSS_RESULT rc;
 
-	pthread_mutex_lock(&disk_cache_lock);
+	MUTEX_LOCK(disk_cache_lock);
 	tmp = key_disk_cache_head;
 
 	for (; tmp; prev = tmp, tmp = tmp->next) {
@@ -238,12 +236,12 @@ clean_disk_cache(int fd)
 				LogError("Error removing blank key.");
 			}
 
-			pthread_mutex_unlock(&disk_cache_lock);
+			MUTEX_UNLOCK(disk_cache_lock);
 			return rc;
 		}
 	}
 
-	pthread_mutex_unlock(&disk_cache_lock);
+	MUTEX_UNLOCK(disk_cache_lock);
 	return TSS_SUCCESS;
 }
 

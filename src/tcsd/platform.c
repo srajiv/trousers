@@ -14,18 +14,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <utmp.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcsps.h"
 #include "tcslog.h"
 
-pthread_mutex_t utmp_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_DECLARE_INIT(utmp_lock);
 
 char
 platform_get_runlevel()
@@ -35,7 +33,7 @@ platform_get_runlevel()
 	struct timeval tv;
 	int flag = 0, counter = 0;
 
-	pthread_mutex_lock(&utmp_lock);
+	MUTEX_LOCK(utmp_lock);
 
 	memset(&ut, 0, sizeof(struct utmp));
 	memset(&save, 0, sizeof(struct utmp));
@@ -68,7 +66,7 @@ platform_get_runlevel()
 		runlevel = 'u';
 	}
 
-	pthread_mutex_unlock(&utmp_lock);
+	MUTEX_UNLOCK(utmp_lock);
 
 	return runlevel;
 }

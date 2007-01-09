@@ -25,7 +25,6 @@
 #include <getopt.h>
 
 #include "trousers/tss.h"
-#include "tcs_internal_types.h"
 #include "spi_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
@@ -99,8 +98,8 @@ signals_init()
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if ((rc = pthread_sigmask(SIG_UNBLOCK, &sigmask, NULL))) {
-		LogError("pthread_sigmask: %s", strerror(rc));
+	if ((rc = THREAD_SET_SIGNAL_MASK(SIG_UNBLOCK, &sigmask, NULL))) {
+		LogError("Setting thread signal mask: %s", strerror(rc));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
