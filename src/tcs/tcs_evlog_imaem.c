@@ -33,11 +33,9 @@
 #include <errno.h>
 #include <limits.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
