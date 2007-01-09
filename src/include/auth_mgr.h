@@ -14,8 +14,10 @@
 struct auth_map
 {
 	TSS_BOOL full;
-	TCS_AUTHHANDLE auth;
-	TCS_CONTEXT_HANDLE ctx;
+	TPM_AUTHHANDLE tpm_handle;
+	TCS_CONTEXT_HANDLE tcs_ctx;
+	BYTE *swap; /* These 'swap' variables manage blobs received from TPM_SaveAuthContext */
+	UINT32 swap_size;
 };
 
 /*
@@ -32,23 +34,25 @@ struct _auth_mgr
 	short max_auth_sessions;
 	short open_auth_sessions;
 	short sleeping_threads;
-	pthread_cond_t **overflow;	/* queue of TCS contexts waiting for an
-					   auth session to become available */
-	int of_head, of_tail;		/* head and tail of the overflow queue */
-	struct auth_map auth_mapper[AUTH_TABLE_SIZE]; /* table of currently loaded
-							 auth sessions */
+	COND_VAR **overflow;	/* queue of TCS contexts waiting for an auth session to become
+				 * available */
+	int of_head, of_tail;	/* head and tail of the overflow queue */
+	struct auth_map auth_mapper[AUTH_TABLE_SIZE]; /* table of currently loaded auth sessions */
 } auth_mgr;
 
-pthread_mutex_t auth_mgr_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_DECLARE_INIT(auth_mgr_lock);
 
 TSS_RESULT auth_mgr_init();
 TSS_RESULT auth_mgr_final();
-TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
+TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TPM_AUTHHANDLE *);
 TSS_RESULT auth_mgr_release_auth_handle(TCS_AUTHHANDLE, TCS_CONTEXT_HANDLE, TSS_BOOL);
 void       auth_mgr_release_auth(TPM_AUTH *, TPM_AUTH *, TCS_CONTEXT_HANDLE);
 TSS_RESULT auth_mgr_oiap(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE *, TCPA_NONCE *);
 TSS_RESULT auth_mgr_osap(TCS_CONTEXT_HANDLE, TCPA_ENTITY_TYPE, UINT32, TCPA_NONCE,
 			 TCS_AUTHHANDLE *, TCPA_NONCE *, TCPA_NONCE *);
 TSS_RESULT auth_mgr_close_context(TCS_CONTEXT_HANDLE);
+
+TSS_RESULT TPM_SaveAuthContext(TPM_AUTHHANDLE, UINT32 *, BYTE **);
+TSS_RESULT TPM_LoadAuthContext(UINT32, BYTE *, TPM_AUTHHANDLE *);
 
 #endif
