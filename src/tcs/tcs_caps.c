@@ -19,12 +19,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <openssl/evp.h>
-
 #include "trousers/tss.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -33,8 +29,6 @@
 #include "tcslog.h"
 #include "tddl.h"
 #include "req_mgr.h"
-#include "tcsd_wrap.h"
-#include "tcsd.h"
 
 
 TSS_RESULT
@@ -47,12 +41,7 @@ get_current_version(TCPA_VERSION *version)
 	UINT64 offset;
 
 	/* try the 1.2 way first */
-	result = TCSP_GetCapability_Internal(InternalContext,
-			capArea,
-			0,
-			NULL,
-			&respSize,
-			&resp);
+	result = TCSP_GetCapability_Internal(InternalContext, capArea, 0, NULL, &respSize, &resp);
 	if (result == TSS_SUCCESS) {
 		offset = sizeof(UINT16); // XXX hack
 		UnloadBlob_VERSION(&offset, resp, version);
@@ -60,12 +49,8 @@ get_current_version(TCPA_VERSION *version)
 	} else if (result == TCPA_E_BAD_MODE) {
 		/* if the TPM doesn't understand VERSION_VAL, try the 1.1 way */
 		capArea = TCPA_CAP_VERSION;
-		result = TCSP_GetCapability_Internal(InternalContext,
-				capArea,
-				0,
-				NULL,
-				&respSize,
-				&resp);
+		result = TCSP_GetCapability_Internal(InternalContext, capArea, 0, NULL, &respSize,
+						     &resp);
 		if (result == TSS_SUCCESS) {
 			offset = 0;
 			UnloadBlob_VERSION(&offset, resp, version);
@@ -84,12 +69,8 @@ get_cap_uint32(TCPA_CAPABILITY_AREA capArea, BYTE *subCap, UINT32 subCapSize, UI
 	TSS_RESULT result;
 	UINT64 offset;
 
-	result = TCSP_GetCapability_Internal(InternalContext,
-			capArea,
-			subCapSize,
-			subCap,
-			&respSize,
-			&resp);
+	result = TCSP_GetCapability_Internal(InternalContext, capArea, subCapSize, subCap,
+					     &respSize, &resp);
 	if (!result) {
 		offset = 0;
 		switch (respSize) {
@@ -126,13 +107,11 @@ get_max_auths(UINT32 *auths)
 
 	if (TPM_VERSION(1,2)) {
 		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, (BYTE *)(&subCap));
-		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap,
-					sizeof(subCap), auths);
+		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
 	} else if (TPM_VERSION(1,1)) {
 		/* open auth sessions until we get a failure */
 		for (i = 0; i < TSS_MAX_AUTHS_CAP; i++) {
-			result = TCSP_OIAP_Internal(InternalContext,
-						    &(handles[i]), &nonce);
+			result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);
 			if (result != TSS_SUCCESS) {
 				/* this is not off by one since we're 0 indexed */
 				*auths = i;
