@@ -63,8 +63,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/*  get the identKey Policy */
-	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE,
-					    &hPolicy, &usesAuth)))
+	if ((result = obj_rsakey_get_policy(hIdentKey, TSS_POLICY_USAGE, &hPolicy, &usesAuth)))
 		return result;
 
 	/*  get the Identity TCS keyHandle */
@@ -100,14 +99,13 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Quote);
-	result |= Trspi_HashUpdate(&hashCtx, 20, antiReplay.nonce);
+	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, antiReplay.nonce);
 	result |= Trspi_HashUpdate(&hashCtx, pcrDataSize, pcrData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_Quote,
-						      hPolicy, &digest,
+		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_Quote, hPolicy, &digest,
 						      &privAuth))) {
 			return result;
 		}
@@ -116,14 +114,9 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Quote(tcsContext,
-				tcsKeyHandle,
-				antiReplay,
-				pcrDataSize,
-				pcrData,
-				pPrivAuth,
-				&pcrDataOutSize, &pcrDataOut, &validationLength,
-				&validationData)))
+	if ((result = TCSP_Quote(tcsContext, tcsKeyHandle, antiReplay, pcrDataSize, pcrData,
+				 pPrivAuth, &pcrDataOutSize, &pcrDataOut, &validationLength,
+				 &validationData)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -147,8 +140,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		TCPA_PCR_COMPOSITE pcrComp;
 
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_PCR_COMPOSITE(&offset, pcrDataOut,
-							     &pcrComp))) {
+		if ((result = Trspi_UnloadBlob_PCR_COMPOSITE(&offset, pcrDataOut, &pcrComp))) {
 			free(pcrDataOut);
 			free(validationData);
 			return result;
@@ -162,8 +154,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	}
 
 	if ((result = Tspi_GetAttribData(hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-					 TSS_TSPATTRIB_KEYBLOB_BLOB,
-					 &keyDataSize, &keyData))) {
+					 TSS_TSPATTRIB_KEYBLOB_BLOB, &keyDataSize, &keyData))) {
 		free(pcrDataOut);
 		free(validationData);
 		return result;
