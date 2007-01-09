@@ -19,22 +19,15 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <openssl/evp.h>
-
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcsps.h"
 #include "tcslog.h"
-#include "tddl.h"
-#include "req_mgr.h"
-#include "tcsd_wrap.h"
-#include "tcsd.h"
 
 
 TCS_CONTEXT_HANDLE InternalContext = 0x30000000;
@@ -100,14 +93,16 @@ Decode_UINT32(BYTE * y)
 void
 LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE * blob)
 {
-	UINT32ToArray(in, &blob[*offset]);
+	if (blob)
+		UINT32ToArray(in, &blob[*offset]);
 	*offset += sizeof(UINT32);
 }
 
 void
 LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE * blob)
 {
-	UINT16ToArray(in, &blob[*offset]);
+	if (blob)
+		UINT16ToArray(in, &blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
@@ -128,7 +123,8 @@ UnloadBlob_UINT16(UINT64 *offset, UINT16 * out, BYTE * blob)
 void
 LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE * blob)
 {
-	blob[*offset] = data;
+	if (blob)
+		blob[*offset] = data;
 	(*offset)++;
 }
 
@@ -142,7 +138,8 @@ UnloadBlob_BYTE(UINT64 *offset, BYTE * dataOut, BYTE * blob)
 void
 LoadBlob_BOOL(UINT64 *offset, TSS_BOOL data, BYTE * blob)
 {
-	blob[*offset] = data;
+	if (blob)
+		blob[*offset] = data;
 	(*offset)++;
 }
 
@@ -156,7 +153,8 @@ UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE * blob)
 void
 LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
-	memcpy(&container[*offset], object, size);
+	if (container)
+		memcpy(&container[*offset], object, size);
 	(*offset) += (UINT64) size;
 }
 
