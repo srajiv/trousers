@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -50,7 +49,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (privAuth != NULL) {
 		LogDebug("Auth Used");
-		if ((result = auth_mgr_check(hContext, privAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &privAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth");

@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -53,7 +52,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, pubAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &pubAuth->AuthHandle)))
 		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
@@ -129,13 +128,13 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (parentAuth != NULL) {
 		LogDebug("Auth used");
-		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &parentAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth");
 	}
 
-	if ((result = auth_mgr_check(hContext, dataAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &dataAuth->AuthHandle)))
 		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))

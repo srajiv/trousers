@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -54,11 +53,11 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if (parentAuth != NULL) {
-		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &parentAuth->AuthHandle)))
 			goto done;
 	}
 
-	if ((result = auth_mgr_check(hContext, entityAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &entityAuth->AuthHandle)))
 		goto done;
 
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keyHandle)))
@@ -156,7 +155,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (parentAuth != NULL) {
 		LogDebug("Auth Used");
-		if ((result = auth_mgr_check(hContext, parentAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &parentAuth->AuthHandle)))
 			goto done;
 	} else {
 		LogDebug("No Auth");
@@ -225,7 +224,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, ownerAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
 	switch (migrateScheme) {
