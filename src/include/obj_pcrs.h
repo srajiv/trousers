@@ -15,15 +15,19 @@
 
 /* structures */
 struct tr_pcrs_obj {
-	TCPA_PCR_SELECTION select;
-	TCPA_PCRVALUE *pcrs;
-	TCPA_PCRVALUE compositeHash;
+	int type;
+	union {
+		TPM_PCR_INFO info11;
+		TPM_PCR_INFO_SHORT infoshort;
+		TPM_PCR_INFO_LONG infolong;
+	} info;
+	TPM_PCRVALUE *pcrs;
 };
 
 /* obj_pcrs.c */
 TSS_BOOL   obj_is_pcrs(TSS_HOBJECT);
 TSS_RESULT obj_pcrs_get_tsp_context(TSS_HPCRS, TSS_HCONTEXT *);
-TSS_RESULT obj_pcrs_add(TSS_HCONTEXT, TSS_HOBJECT *);
+TSS_RESULT obj_pcrs_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
 TSS_RESULT obj_pcrs_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_pcrs_select_index(TSS_HPCRS, UINT32);
 TSS_RESULT obj_pcrs_get_value(TSS_HPCRS, UINT32, UINT32 *, BYTE **);
@@ -31,6 +35,7 @@ TSS_RESULT obj_pcrs_set_value(TSS_HPCRS, UINT32, UINT32, BYTE *);
 TSS_RESULT obj_pcrs_set_values(TSS_HPCRS hPcrs, TCPA_PCR_COMPOSITE *);
 TSS_RESULT obj_pcrs_get_selection(TSS_HPCRS, TCPA_PCR_SELECTION *);
 TSS_RESULT obj_pcrs_get_composite(TSS_HPCRS, TCPA_PCRVALUE *);
+TSS_RESULT obj_pcrs_create_info(TSS_HPCRS, UINT32 *, BYTE **);
 
 #define PCRS_LIST_DECLARE		struct obj_list pcrs_list
 #define PCRS_LIST_DECLARE_EXTERN	extern struct obj_list pcrs_list
