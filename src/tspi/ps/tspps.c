@@ -18,7 +18,6 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <assert.h>
 
 #include "trousers/tss.h"
@@ -30,7 +29,7 @@
 #include "tsplog.h"
 
 static int user_ps_fd = -1;
-static pthread_mutex_t user_ps_lock = PTHREAD_MUTEX_INITIALIZER;
+static MUTEX_DECLARE_INIT(user_ps_lock);
 
 /*
  * Determine the default path to the persistent storage file and create it if it doesn't exist.
@@ -117,13 +116,13 @@ get_file(int *fd)
 	int rc = 0;
 	char *file_name = NULL;
 
-	pthread_mutex_lock(&user_ps_lock);
+	MUTEX_LOCK(user_ps_lock);
 
 	/* check the global file handle first.  If it exists, lock it and return */
 	if (user_ps_fd != -1) {
 		if ((rc = flock(user_ps_fd, LOCK_EX))) {
 			LogDebug("USER PS: failed to lock file: %s", strerror(errno));
-			pthread_mutex_unlock(&user_ps_lock);
+			MUTEX_UNLOCK(user_ps_lock);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
@@ -134,7 +133,7 @@ get_file(int *fd)
 	/* open and lock the file */
 	if ((result = get_user_ps_path(&file_name))) {
 		LogDebugFn("USER PS: error getting file path");
-		pthread_mutex_unlock(&user_ps_lock);
+		MUTEX_UNLOCK(user_ps_lock);
 		return result;
 	}
 
@@ -142,7 +141,7 @@ get_file(int *fd)
 	if (user_ps_fd < 0) {
 		LogDebug("USER PS: open of %s failed: %s", file_name, strerror(errno));
 		free(file_name);
-		pthread_mutex_unlock(&user_ps_lock);
+		MUTEX_UNLOCK(user_ps_lock);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -151,7 +150,7 @@ get_file(int *fd)
 		free(file_name);
 		close(user_ps_fd);
 		user_ps_fd = -1;
-		pthread_mutex_unlock(&user_ps_lock);
+		MUTEX_UNLOCK(user_ps_lock);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -173,7 +172,7 @@ put_file(int fd)
 		rc = -1;
 	}
 
-	pthread_mutex_unlock(&user_ps_lock);
+	MUTEX_UNLOCK(user_ps_lock);
 	return rc;
 }
 
@@ -182,7 +181,7 @@ psfile_close(int fd)
 {
 	close(fd);
 	user_ps_fd = -1;
-	pthread_mutex_unlock(&user_ps_lock);
+	MUTEX_UNLOCK(user_ps_lock);
 }
 
 TSS_RESULT
@@ -742,7 +741,11 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 }
 
 TSS_RESULT
-psfile_get_registered_keys(int fd, TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO **keys)
+psfile_get_registered_keys(int fd,
+			   TSS_UUID *uuid,
+			   TSS_UUID *tcs_uuid,
+			   UINT32 *size,
+			   TSS_KM_KEYINFO **keys)
 {
 	TSS_RESULT result;
 	struct key_disk_cache *cache_entries;
@@ -754,38 +757,50 @@ psfile_get_registered_keys(int fd, TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO 
                 return result;
 
 	if (cache_size == 0) {
-		*size = 0;
-		*keys = NULL;
-		return TSS_SUCCESS;
+		if (uuid)
+			return TSPERR(TSS_E_PS_KEY_NOTFOUND);
+		else {
+			*size = 0;
+			*keys = NULL;
+			return TSS_SUCCESS;
+		}
 	}
 
         if (uuid) {
 		find_uuid = uuid;
-		j = 1;
+		j = 0;
 
 restart_search:
-		/* Search for the requested UUID.  When found, allocated new space for it, copy
+		/* Search for the requested UUID.  When found, allocate new space for it, copy
 		 * it in, then change the uuid to be searched for it its parent and start over. */
 		for (i = 0; i < cache_size; i++) {
 			if (!memcmp(&cache_entries[i].uuid, find_uuid, sizeof(TSS_UUID))) {
-				if (!(keyinfos = realloc(keyinfos, j * sizeof(TSS_KM_KEYINFO)))) {
+				if (!(keyinfos = realloc(keyinfos,
+							 (j+1) * sizeof(TSS_KM_KEYINFO)))) {
 					free(cache_entries);
 					free(keyinfos);
-					return result;
+					return TSPERR(TSS_E_OUTOFMEMORY);
 				}
 				memset(&keyinfos[j], 0, sizeof(TSS_KM_KEYINFO));
 
-				if ((result = copy_key_info(fd, &keyinfos[j-1], &cache_entries[i]))) {
+				if ((result = copy_key_info(fd, &keyinfos[j], &cache_entries[i]))) {
 					free(cache_entries);
 					free(keyinfos);
 					return result;
 				}
 
-				find_uuid = &keyinfos[j-1].parentKeyUUID;
+				find_uuid = &keyinfos[j].parentKeyUUID;
 				j++;
 				goto restart_search;
 			}
 		}
+
+		/* Searching for keys in the user PS will always lead us up to some key in the
+		 * system PS. Return that key's uuid so that the upper layers can call down to TCS
+		 * to search for it. */
+		memcpy(tcs_uuid, find_uuid, sizeof(TSS_UUID));
+
+		*size = j;
         } else {
 		if ((keyinfos = calloc(cache_size, sizeof(TSS_KM_KEYINFO))) == NULL) {
 			LogDebug("malloc of %zu bytes failed.",
@@ -801,11 +816,12 @@ restart_search:
 				return result;
 			}
                 }
+
+		*size = cache_size;
         }
 
 	free(cache_entries);
 
-	*size = cache_size;
 	*keys = keyinfos;
 
 	return TSS_SUCCESS;
