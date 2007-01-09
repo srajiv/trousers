@@ -15,7 +15,27 @@
 
 /* structures */
 struct tr_rsakey_obj {
-	TCPA_KEY tcpaKey;
+	int type;
+	struct {
+		union {
+			struct {
+				TPM_VERSION ver;
+			} key11;
+			struct {
+				TPM_STRUCTURE_TAG tag;
+				UINT16 fill;
+			} key12;
+		} u;
+		TPM_KEY_USAGE keyUsage;
+		TPM_KEY_FLAGS keyFlags;
+		TPM_AUTH_DATA_USAGE authDataUsage;
+		TPM_KEY_PARMS algorithmParms;
+		UINT32 PCRInfoSize;
+		BYTE *PCRInfo;
+		TPM_STORE_PUBKEY pubKey;
+		UINT32 encSize;
+		BYTE *encData;
+	} key;
 	TSS_HPOLICY usagePolicy;
 	TSS_HPOLICY migPolicy;
 	TSS_UUID uuid;
