@@ -58,7 +58,7 @@
  */
 
 TSS_RESULT
-ps_get_registered_keys(TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO **keys)
+ps_get_registered_keys(TSS_UUID *uuid, TSS_UUID *tcs_uuid, UINT32 *size, TSS_KM_KEYINFO **keys)
 {
 	int fd;
 	UINT32 result;
@@ -66,7 +66,7 @@ ps_get_registered_keys(TSS_UUID *uuid, UINT32 *size, TSS_KM_KEYINFO **keys)
 	if ((result = get_file(&fd)))
 		return result;
 
-	result = psfile_get_registered_keys(fd, uuid, size, keys);
+	result = psfile_get_registered_keys(fd, uuid, tcs_uuid, size, keys);
 
 	put_file(fd);
 
@@ -225,7 +225,7 @@ merge_key_hierarchies(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO *
 {
 	UINT32 i, j;
 
-	*merged_hier = calloc_tspi(tspContext, (tsp_size + tcs_size) * sizeof(TSS_KM_KEYINFO));
+	*merged_hier = malloc((tsp_size + tcs_size) * sizeof(TSS_KM_KEYINFO));
 	if (*merged_hier == NULL) {
 		LogError("malloc of %zu bytes failed.", (tsp_size + tcs_size) *
 				sizeof(TSS_KM_KEYINFO));
