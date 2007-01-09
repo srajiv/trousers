@@ -178,10 +178,8 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		/* If other flags are set that disagree with the SRK, this will
 		 * help catch that conflict in the later steps */
 		if (initFlags & TSS_KEY_TSP_SRK) {
-			initFlags |= (TSS_KEY_TYPE_STORAGE |
-				      TSS_KEY_NOT_MIGRATABLE |
-				      TSS_KEY_NON_VOLATILE | TSS_KEY_SIZE_2048 |
-				      TSS_KEY_AUTHORIZATION);
+			initFlags |= (TSS_KEY_TYPE_STORAGE | TSS_KEY_NOT_MIGRATABLE |
+				      TSS_KEY_NON_VOLATILE | TSS_KEY_SIZE_2048);
 		}
 
 		/* Set default key flags */
@@ -250,11 +248,21 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 #endif
 #ifdef TSS_BUILD_PCRS_LIST
 	case TSS_OBJECT_TYPE_PCRS:
-		/* There are no valid flags for a PCRs object */
-		if (initFlags & ~(0UL))
-			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+		switch (initFlags) {
+			case TSS_PCRS_STRUCT_DEFAULT:
+				/* fall through */
+			case TSS_PCRS_STRUCT_INFO:
+				/* fall through */
+			case TSS_PCRS_STRUCT_INFO_LONG:
+				/* fall through */
+			case TSS_PCRS_STRUCT_INFO_SHORT:
+				/* fall through */
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+		}
 
-		result = obj_pcrs_add(tspContext, phObject);
+		result = obj_pcrs_add(tspContext, initFlags, phObject);
 		break;
 #endif
 #ifdef TSS_BUILD_HASH_LIST
@@ -326,8 +334,8 @@ Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/* in */
 }
 
 TSS_RESULT
-Tspi_Context_GetTpmObject(TSS_HCONTEXT tspContext,	/*  in */
-			  TSS_HTPM * phTPM)		/*  out */
+Tspi_Context_GetTpmObject(TSS_HCONTEXT tspContext,	/* in */
+			  TSS_HTPM * phTPM)		/* out */
 {
 	if (phTPM == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
