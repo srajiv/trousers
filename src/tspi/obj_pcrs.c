@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -23,16 +22,35 @@
 #include "tsplog.h"
 #include "obj.h"
 
+
 TSS_RESULT
-obj_pcrs_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
+obj_pcrs_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 {
 	TSS_RESULT result;
-	struct tr_pcrs_obj *pcrs = calloc(1, sizeof(struct tr_pcrs_obj));
+	UINT32 ver;
+	struct tr_pcrs_obj *pcrs;
 
-	if (pcrs == NULL) {
-		LogError("malloc of %zd bytes failed.",
-				sizeof(struct tr_pcrs_obj));
+	if ((pcrs = calloc(1, sizeof(struct tr_pcrs_obj))) == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(struct tr_pcrs_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	if (type == TSS_PCRS_STRUCT_DEFAULT) {
+		if ((result = obj_context_get_connection_version(tspContext, &ver))) {
+			free(pcrs);
+			return result;
+		}
+
+		switch (ver) {
+			case TSS_TSPATTRIB_CONTEXT_VERSION_V1_2:
+				pcrs->type = TSS_PCRS_STRUCT_INFO_LONG;
+				break;
+			case TSS_TSPATTRIB_CONTEXT_VERSION_V1_1:
+				/* fall through */
+			default:
+				pcrs->type = TSS_PCRS_STRUCT_INFO;
+				break;
+		}
 	}
 
 	if ((result = obj_list_add(&pcrs_list, tspContext, 0, pcrs, phObject))) {
@@ -46,7 +64,22 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 void
 free_pcrs(struct tr_pcrs_obj *pcrs)
 {
-	free(pcrs->select.pcrSelect);
+	switch (pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			free(pcrs->info.info11.pcrSelection.pcrSelect);
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			free(pcrs->info.infoshort.pcrSelection.pcrSelect);
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			free(pcrs->info.infolong.creationPCRSelection.pcrSelect);
+			free(pcrs->info.infolong.releasePCRSelection.pcrSelect);
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			break;
+	}
+
 	free(pcrs);
 }
 
@@ -57,7 +90,7 @@ obj_pcrs_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 	struct obj_list *list = &pcrs_list;
         TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
-        pthread_mutex_lock(&pcrs_list.lock);
+        MUTEX_LOCK(list->lock);
 
         for (obj = list->head; obj; prev = obj, obj = obj->next) {
                 if (obj->handle == hObject) {
@@ -76,7 +109,7 @@ obj_pcrs_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
                 }
         }
 
-        pthread_mutex_unlock(&pcrs_list.lock);
+        MUTEX_UNLOCK(list->lock);
 
         return result;
 
@@ -111,30 +144,45 @@ obj_pcrs_get_tsp_context(TSS_HTPM hPcrs, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
-obj_pcrs_get_selection(TSS_HPCRS hPcrs, TCPA_PCR_SELECTION *pcrSelect)
+obj_pcrs_get_selection(TSS_HPCRS hPcrs, TPM_PCR_SELECTION *pcrSelect)
 {
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *select;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
-	if (pcrs->select.pcrSelect == NULL) {
-		memcpy(pcrSelect, &pcrs->select, sizeof(TCPA_PCR_SELECTION));
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			select = &pcrs->info.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			select = &pcrs->info.infolong.creationPCRSelection;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	if (select->pcrSelect == NULL) {
+		memcpy(pcrSelect, select, sizeof(TPM_PCR_SELECTION));
 	} else {
-		if ((pcrSelect->pcrSelect = calloc(1,
-					pcrs->select.sizeOfSelect)) == NULL) {
-			LogError("malloc of %d bytes failed.",
-					pcrs->select.sizeOfSelect);
+		if ((pcrSelect->pcrSelect = calloc(1, select->sizeOfSelect)) == NULL) {
+			LogError("malloc of %hu bytes failed.", select->sizeOfSelect);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		pcrSelect->sizeOfSelect = pcrs->select.sizeOfSelect;
-		memcpy(pcrSelect->pcrSelect, pcrs->select.pcrSelect,
-				pcrs->select.sizeOfSelect);
+		pcrSelect->sizeOfSelect = select->sizeOfSelect;
+		memcpy(pcrSelect->pcrSelect, select->pcrSelect, select->sizeOfSelect);
 	}
 
 done:
@@ -144,10 +192,10 @@ done:
 }
 
 TSS_RESULT
-obj_pcrs_set_values(TSS_HPCRS hPcrs, TCPA_PCR_COMPOSITE *pcrComp)
+obj_pcrs_set_values(TSS_HPCRS hPcrs, TPM_PCR_COMPOSITE *pcrComp)
 {
 	TSS_RESULT result = TSS_SUCCESS;
-	TCPA_PCR_SELECTION *select = &(pcrComp->select);
+	TPM_PCR_SELECTION *select = &(pcrComp->select);
 	UINT16 i, val_idx = 0;
 
 	for (i = 0; i < select->sizeOfSelect * 8; i++) {
@@ -169,6 +217,7 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *select;
 	UINT16 bytes_to_hold = (idx / 8) + 1;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
@@ -176,15 +225,32 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			select = &pcrs->info.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			select = &pcrs->info.infolong.creationPCRSelection;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
 	/* allocate the selection structure */
-	if (pcrs->select.pcrSelect == NULL) {
-		if ((pcrs->select.pcrSelect = malloc(bytes_to_hold)) == NULL) {
+	if (select->pcrSelect == NULL) {
+		if ((select->pcrSelect = malloc(bytes_to_hold)) == NULL) {
 			LogError("malloc of %d bytes failed.", bytes_to_hold);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		pcrs->select.sizeOfSelect = bytes_to_hold;
-		memset(pcrs->select.pcrSelect, 0, bytes_to_hold);
+		select->sizeOfSelect = bytes_to_hold;
+		memset(select->pcrSelect, 0, bytes_to_hold);
 
 		/* allocate the pcr array */
 		if ((pcrs->pcrs = malloc(bytes_to_hold * 8 *
@@ -194,21 +260,20 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-	} else if (pcrs->select.sizeOfSelect < bytes_to_hold) {
-		if ((pcrs->select.pcrSelect = realloc(pcrs->select.pcrSelect,
-				bytes_to_hold)) == NULL) {
+	} else if (select->sizeOfSelect < bytes_to_hold) {
+		if ((select->pcrSelect = realloc(select->pcrSelect, bytes_to_hold)) == NULL) {
 			LogError("malloc of %d bytes failed.", bytes_to_hold);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		/* set the newly allocated bytes to 0 */
-		memset(&pcrs->select.pcrSelect[pcrs->select.sizeOfSelect], 0,
-				bytes_to_hold - pcrs->select.sizeOfSelect);
-		pcrs->select.sizeOfSelect = bytes_to_hold;
+		memset(&select->pcrSelect[select->sizeOfSelect], 0,
+				bytes_to_hold - select->sizeOfSelect);
+		select->sizeOfSelect = bytes_to_hold;
 
 		/* realloc the pcrs array */
 		if ((pcrs->pcrs = realloc(pcrs->pcrs, bytes_to_hold * 8 *
-						sizeof(TCPA_PCRVALUE))) == NULL) {
+					  sizeof(TPM_PCRVALUE))) == NULL) {
 			LogError("malloc of %d bytes failed.",
 					bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -217,7 +282,7 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 	}
 
 	/* set the bit in the selection structure */
-	pcrs->select.pcrSelect[idx / 8] |= (1 << (idx % 8));
+	select->pcrSelect[idx / 8] |= (1 << (idx % 8));
 
 	/* set the value in the pcrs array */
 	memcpy(&(pcrs->pcrs[idx]), value, size);
@@ -233,19 +298,36 @@ obj_pcrs_get_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 *size, BYTE **value)
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *select;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
-	if (pcrs->select.sizeOfSelect < (idx / 8) + 1) {
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			select = &pcrs->info.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			select = &pcrs->info.infolong.creationPCRSelection;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	if (select->sizeOfSelect < (idx / 8) + 1) {
 		result = TSPERR(TSS_E_BAD_PARAMETER);
 		goto done;
 	}
 
-	if ((*value = calloc_tspi(obj->tspContext, TCPA_SHA1_160_HASH_LEN))
-					== NULL) {
+	if ((*value = calloc_tspi(obj->tspContext, TCPA_SHA1_160_HASH_LEN)) == NULL) {
 		LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
@@ -268,63 +350,35 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
-	UINT16 num_pcrs, bytes_to_hold;
+	//UINT16 num_pcrs, bytes_to_hold;
+	TPM_PCR_SELECTION *select;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
-	if ((num_pcrs = get_num_pcrs(obj->tcsContext)) == 0) {
-		result = TSPERR(TSS_E_INTERNAL_ERROR);
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			select = &pcrs->info.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			select = &pcrs->info.infolong.creationPCRSelection;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	if ((result = pcrs_sanity_check_selection(obj->tcsContext, pcrs, select)))
 		goto done;
-	}
-	bytes_to_hold = num_pcrs / 8;
 
-	/* Is the current select object going to be interpretable by the TPM?
-	 * If the select object is of a size greater than the one the TPM
-	 * wants, just calculate the composite hash and let the TPM return an
-	 * error code to the user.  If its less than the size of the one the
-	 * TPM wants, add extra zero bytes until its the right size. */
-	if (bytes_to_hold > pcrs->select.sizeOfSelect) {
-		if ((pcrs->select.pcrSelect = realloc(pcrs->select.pcrSelect,
-						bytes_to_hold)) == NULL) {
-			LogError("malloc of %d bytes failed.", bytes_to_hold);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		/* set the newly allocated bytes to 0 */
-		memset(&pcrs->select.pcrSelect[pcrs->select.sizeOfSelect], 0,
-				bytes_to_hold - pcrs->select.sizeOfSelect);
-		pcrs->select.sizeOfSelect = bytes_to_hold;
-
-		/* realloc the pcr array as well */
-		if ((pcrs->pcrs = realloc(pcrs->pcrs,
-			(bytes_to_hold * 8) * TCPA_SHA1_160_HASH_LEN))
-								== NULL) {
-			LogError("malloc of %d bytes failed.",
-				 (bytes_to_hold * 8) * TCPA_SHA1_160_HASH_LEN);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-	}
-
-#ifdef TSS_DEBUG
-	{
-		int i;
-		for (i = 0; i < pcrs->select.sizeOfSelect * 8; i++) {
-			if (pcrs->select.pcrSelect[i/8] & (1 << (i % 8))) {
-				LogDebug("PCR%d: Selected", i);
-				LogBlobData(APPID, TCPA_SHA1_160_HASH_LEN,
-					    (unsigned char *)&pcrs->pcrs[i]);
-			} else {
-				LogDebug("PCR%d: Not Selected", i);
-			}
-		}
-	}
-#endif
-
-	result = calc_composite_from_object(&pcrs->select, pcrs->pcrs, comp);
+	result = pcrs_calc_composite(select, pcrs->pcrs, comp);
 
 done:
 	obj_list_put(&pcrs_list);
@@ -338,6 +392,7 @@ obj_pcrs_select_index(TSS_HPCRS hPcrs, UINT32 idx)
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *select;
 	UINT16 bytes_to_hold = (idx / 8) + 1;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
@@ -345,48 +400,63 @@ obj_pcrs_select_index(TSS_HPCRS hPcrs, UINT32 idx)
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			select = &pcrs->info.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			select = &pcrs->info.infolong.creationPCRSelection;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
 	/* allocate the selection structure */
-	if (pcrs->select.pcrSelect == NULL) {
-		if ((pcrs->select.pcrSelect = malloc(bytes_to_hold)) == NULL) {
+	if (select->pcrSelect == NULL) {
+		if ((select->pcrSelect = malloc(bytes_to_hold)) == NULL) {
 			LogError("malloc of %d bytes failed.", bytes_to_hold);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		pcrs->select.sizeOfSelect = bytes_to_hold;
-		memset(pcrs->select.pcrSelect, 0, bytes_to_hold);
+		select->sizeOfSelect = bytes_to_hold;
+		memset(select->pcrSelect, 0, bytes_to_hold);
 
 		/* alloc the pcrs array */
-		if ((pcrs->pcrs = malloc(bytes_to_hold * 8 *
-						TCPA_SHA1_160_HASH_LEN)) == NULL) {
-			LogError("malloc of %d bytes failed.", bytes_to_hold *
-					8 * TCPA_SHA1_160_HASH_LEN);
+		if ((pcrs->pcrs = malloc(bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold * 8 *
+				 TCPA_SHA1_160_HASH_LEN);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-	} else if (pcrs->select.sizeOfSelect < bytes_to_hold) {
-		if ((pcrs->select.pcrSelect = realloc(pcrs->select.pcrSelect,
-				bytes_to_hold)) == NULL) {
+	} else if (select->sizeOfSelect < bytes_to_hold) {
+		if ((select->pcrSelect = realloc(select->pcrSelect, bytes_to_hold)) == NULL) {
 			LogError("malloc of %d bytes failed.", bytes_to_hold);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		/* set the newly allocated bytes to 0 */
-		memset(&pcrs->select.pcrSelect[pcrs->select.sizeOfSelect], 0,
-				bytes_to_hold - pcrs->select.sizeOfSelect);
-		pcrs->select.sizeOfSelect = bytes_to_hold;
+		memset(&select->pcrSelect[select->sizeOfSelect], 0,
+		       bytes_to_hold - select->sizeOfSelect);
+		select->sizeOfSelect = bytes_to_hold;
 
 		/* realloc the pcrs array */
-		if ((pcrs->pcrs = realloc(pcrs->pcrs, bytes_to_hold * 8 *
-						TCPA_SHA1_160_HASH_LEN)) == NULL) {
-			LogError("malloc of %d bytes failed.", bytes_to_hold *
-					8 * TCPA_SHA1_160_HASH_LEN);
+		if ((pcrs->pcrs = realloc(pcrs->pcrs,
+					  bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold * 8 *
+				 TCPA_SHA1_160_HASH_LEN);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 	}
 
 	/* set the bit in the selection structure */
-	pcrs->select.pcrSelect[idx / 8] |= (1 << (idx % 8));
+	select->pcrSelect[idx / 8] |= (1 << (idx % 8));
 
 done:
 	obj_list_put(&pcrs_list);
@@ -394,42 +464,80 @@ done:
 	return result;
 }
 
+/* Create a PCR info struct based on the hPcrs object. def is the default style for this context */
 TSS_RESULT
-calc_composite_from_object(TCPA_PCR_SELECTION *select, TCPA_PCRVALUE *arrayOfPcrs,
-			   TCPA_DIGEST *digestOut)
+obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 {
-	UINT32 size, index;
-	BYTE mask;
-	BYTE hashBlob[1024];
-	UINT32 numPCRs = 0;
-	UINT64 offset = 0;
-	UINT64 sizeOffset = 0;
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT64 offset;
+	UINT32 ret_size = 0;
+	BYTE *ret;
+	TPM_PCR_SELECTION *select;
+	BYTE *creation_digest = NULL, release_digest[TPM_SHA1_160_HASH_LEN] = { 0, };
 
-	if (select->sizeOfSelect > 0) {
-		sizeOffset = 0;
-		Trspi_LoadBlob_PCR_SELECTION(&sizeOffset, hashBlob, select);
-		offset = sizeOffset + 4;
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
-		for (size = 0; size < select->sizeOfSelect; size++) {
-			for (index = 0, mask = 1; index < 8; index++, mask = mask << 1) {
-				if (select->pcrSelect[size] & mask) {
-					memcpy(&hashBlob[(numPCRs * TCPA_SHA1_160_HASH_LEN) + offset],
-					       arrayOfPcrs[index + (size << 3)].digest,
-					       TCPA_SHA1_160_HASH_LEN);
-					numPCRs++;
-				}
-			}
-		}
+	pcrs = (struct tr_pcrs_obj *)obj->data;
 
-		if (numPCRs > 0) {
-			offset += (numPCRs * TCPA_SHA1_160_HASH_LEN);
-			UINT32ToArray(numPCRs * TCPA_SHA1_160_HASH_LEN, &hashBlob[sizeOffset]);
-
-			return Trspi_Hash(TSS_HASH_SHA1, offset, hashBlob, digestOut->digest);
-		}
+	switch (pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			ret_size = (UINT32)sizeof(TPM_PCR_INFO);
+			select = &pcrs->info.info11.pcrSelection;
+			creation_digest = (BYTE *)&pcrs->info.info11.digestAtCreation;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			ret_size = (UINT32)sizeof(TPM_PCR_INFO_LONG);
+			select = &pcrs->info.infolong.creationPCRSelection;
+			creation_digest = (BYTE *)&pcrs->info.infolong.digestAtCreation;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			ret_size = (UINT32)sizeof(TPM_PCR_INFO_SHORT);
+			select = &pcrs->info.infoshort.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_DEFAULT:
+			/* fall through */
+		default:
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
 	}
 
-	return TSPERR(TSS_E_INTERNAL_ERROR);
+	if ((ret = calloc(1, ret_size)) == NULL) {
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		LogDebug("malloc of %u bytes failed.", ret_size);
+		goto done;
+	}
+
+	offset = 0;
+	if (pcrs->type == TSS_PCRS_STRUCT_INFO) {
+		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
+		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, creation_digest);
+		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
+		ret_size = offset;
+	} else if (pcrs->type == TSS_PCRS_STRUCT_INFO_LONG) {
+		Trspi_LoadBlob_UINT16(&offset, TPM_TAG_PCR_INFO_LONG, ret);
+		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
+		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
+		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
+		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
+		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, creation_digest);
+		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
+		ret_size = offset;
+	} else if (pcrs->type == TSS_PCRS_STRUCT_INFO_SHORT) {
+		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
+		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
+		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
+		ret_size = offset;
+	}
+
+	*info = ret;
+	*size = ret_size;
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
 }
-
-
