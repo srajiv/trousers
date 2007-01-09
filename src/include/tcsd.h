@@ -14,6 +14,8 @@
 
 #include <signal.h>
 
+#include "rpc_tcstp.h"
+
 /* config structures */
 struct tcsd_config
 {
@@ -28,7 +30,7 @@ struct tcsd_config
 	char *platform_cred;		/* location of the platform credential */
 	char *conformance_cred;		/* location of the conformance credential */
 	char *endorsement_cred;		/* location of the endorsement credential */
-	int remote_ops[TCSD_MAX_NUM_ORDS];	/* array of integer ordinals allow to be used by external hosts */
+	int remote_ops[TCSD_MAX_NUM_ORDS];	/* array of ordinals executable by remote hosts */
 	unsigned int unset;	/* bitmask of options which are still unset */
 };
 
@@ -96,17 +98,16 @@ void	   tcsd_signal_handler(int);
 /* threading structures */
 struct tcsd_thread_data
 {
-	BYTE *buf;
-	int buf_size;
 	int sock;
 	UINT32 context;
-	pthread_t thread_id;
+	THREAD_TYPE thread_id;
 	char *hostname;
+	struct tcsd_comm_data comm;
 };
 
 struct tcsd_thread_mgr
 {
-	pthread_mutex_t lock;
+	MUTEX_DECLARE(lock);
 	struct tcsd_thread_data *thread_data;
 
 	int shutdown;
@@ -123,7 +124,5 @@ void	   thread_signal_init();
 /* signal handling */
 struct sigaction tcsd_sa_int;
 struct sigaction tcsd_sa_chld;
-
-TSS_RESULT getTCSDPacket(struct tcsd_thread_data *, struct tcsd_packet_hdr **);
 
 #endif
