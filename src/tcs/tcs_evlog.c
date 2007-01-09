@@ -12,12 +12,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <limits.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -42,7 +40,7 @@ event_log_init()
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
-	pthread_mutex_init(&(tcs_event_log->lock), NULL);
+	MUTEX_INIT(tcs_event_log->lock);
 
 	/* allocate as many event lists as there are PCR's */
 	tcs_event_log->lists = calloc(tpm_metrics.num_pcrs, sizeof(struct event_wrapper *));
@@ -54,9 +52,9 @@ event_log_init()
 	}
 
 	/* assign external event log sources here */
-	//tcs_event_log->firmware_source = EVLOG_BIOS_SOURCE;
-	tcs_event_log->firmware_source = EVLOG_IMA_SOURCE;
-	tcs_event_log->kernel_source = EVLOG_IMA_SOURCE;
+	//tcs_event_log->firmware_source = EVLOG_IMA_SOURCE;
+	tcs_event_log->firmware_source = EVLOG_BIOS_SOURCE;
+	tcs_event_log->kernel_source = EVLOG_BIOS_SOURCE;
 
 	return TSS_SUCCESS;
 }
@@ -67,7 +65,7 @@ event_log_final()
 	struct event_wrapper *cur, *next;
 	UINT32 i;
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	for (i = 0; i < tpm_metrics.num_pcrs; i++) {
 		cur = tcs_event_log->lists[i];
@@ -80,7 +78,7 @@ event_log_final()
 		}
 	}
 
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	free(tcs_event_log->lists);
 	free(tcs_event_log);
@@ -102,18 +100,18 @@ event_log_add(TSS_PCR_EVENT *event, UINT32 *pNumber)
 	TSS_RESULT result;
 	UINT32 i;
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	new = calloc(1, sizeof(struct event_wrapper));
 	if (new == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(struct event_wrapper));
-		pthread_mutex_unlock(&(tcs_event_log->lock));
+		MUTEX_UNLOCK(tcs_event_log->lock);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
 	if ((result = copy_pcr_event(&(new->event), event))) {
 		free(new);
-		pthread_mutex_unlock(&(tcs_event_log->lock));
+		MUTEX_UNLOCK(tcs_event_log->lock);
 		return result;
 	}
 
@@ -133,7 +131,7 @@ event_log_add(TSS_PCR_EVENT *event, UINT32 *pNumber)
 
 	*pNumber = ++i;
 
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	return TSS_SUCCESS;
 }
@@ -144,7 +142,7 @@ get_pcr_event(UINT32 pcrIndex, UINT32 eventNumber)
 	struct event_wrapper *tmp;
 	UINT32 counter = 0;
 
-	pthread_mutex_lock(&(tcs_event_log->lock));
+	MUTEX_LOCK(tcs_event_log->lock);
 
 	tmp = tcs_event_log->lists[pcrIndex];
 	for (; tmp; tmp = tmp->next) {
@@ -154,7 +152,7 @@ get_pcr_event(UINT32 pcrIndex, UINT32 eventNumber)
 		counter++;
 	}
 
-	pthread_mutex_unlock(&(tcs_event_log->lock));
+	MUTEX_UNLOCK(tcs_event_log->lock);
 
 	return (tmp ? &(tmp->event) : NULL);
 }
