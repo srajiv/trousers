@@ -16,7 +16,6 @@
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
 #include "tcs_tsp.h"
 #include "tcsps.h"
 #include "tcs_utils.h"
@@ -116,7 +115,6 @@ internal_TerminateHandle(TCS_AUTHHANDLE handle)
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	return UnloadBlob_Header(txBlob, &paramSize);
 }
 
