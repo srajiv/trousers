@@ -126,6 +126,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
+#ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
 		/* The logic of setting a 'disable' flag is reversed in the TPM, where setting this
 		 * flag to TRUE will enable the SRK read, while FALSE disables it. So we need to
@@ -157,6 +158,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 		break;
+#endif
 #ifndef TSS_SPEC_COMPLIANCE
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
 		/* set the lifetime lock bit */
@@ -251,8 +253,10 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
 		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_LOCK);
 		break;
+#ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
 		break;
+#endif
 	default:
 		return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
