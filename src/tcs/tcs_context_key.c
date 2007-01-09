@@ -13,18 +13,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
+#include "tcs_context.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcslog.h"
 
-extern pthread_mutex_t tcs_ctx_lock;
+MUTEX_DECLARE_EXTERN(tcs_ctx_lock);
 
 /* runs through the list of all keys loaded by context c and decrements
  * their ref count by 1, then free's their structures.
@@ -57,7 +56,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 	struct keys_loaded *k = NULL, *new;
 	TSS_RESULT result = TCSERR(TSS_E_FAIL);
 
-	pthread_mutex_lock(&tcs_ctx_lock);
+	MUTEX_LOCK(tcs_ctx_lock);
 
 	c = get_context(ctx_handle);
 
@@ -76,7 +75,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 			k = k->next;
 		}
 	} else {
-		pthread_mutex_unlock(&tcs_ctx_lock);
+		MUTEX_UNLOCK(tcs_ctx_lock);
 		return result;
 	}
 
@@ -87,7 +86,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 		new = calloc(1, sizeof(struct keys_loaded));
 		if (new == NULL) {
 			LogError("malloc of %zd bytes failed.", sizeof(struct keys_loaded));
-			pthread_mutex_unlock(&tcs_ctx_lock);
+			MUTEX_UNLOCK(tcs_ctx_lock);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
@@ -97,7 +96,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 		result = key_mgr_inc_ref_count(new->key_handle);
 	}
 
-	pthread_mutex_unlock(&tcs_ctx_lock);
+	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	return result;
 }
