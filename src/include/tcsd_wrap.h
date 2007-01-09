@@ -32,28 +32,6 @@ enum TCSP_PACKET_TYPE {
 	TCSD_PACKET_TYPE_PCR_EVENT
 };
 
-#define TCSD_DATABUF_SIZE		65536
-#define TCSD_MAX_NUM_PARMS		1024
-
-/* these are the formats of the two packet types.
- */
-struct tsp_packet {
-	UINT32 ordinal;
-	UINT16 numParms;
-	BYTE types[TCSD_MAX_NUM_PARMS];
-	UINT32 dataSize;
-	BYTE dataBuffer[TCSD_DATABUF_SIZE];
-	UINT32 result;
-} STRUCTURE_PACKING_ATTRIBUTE;
-
-struct tcsd_packet_hdr {
-	UINT32 result;
-	UINT32 packet_size;
-	UINT16 num_parms;
-	BYTE parm_types[TCSD_MAX_NUM_PARMS];
-	BYTE data;
-} STRUCTURE_PACKING_ATTRIBUTE;
-
 enum TCSD_ORD {
 	TCSD_ORD_ERROR = 0,
 	/* 4.5 TCS Contest Manager */
@@ -152,7 +130,4 @@ enum TCSD_ORD {
 
 #include "tcsd.h"
 
-TSS_RESULT tcs_wrap_OpenContext(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
-TSS_RESULT tcs_wrap_CloseContext(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
-TSS_RESULT tcs_wrap_FreeMemory(struct tcsd_thread_data *, struct tsp_packet *, struct tcsd_packet_hdr **);
 #endif
