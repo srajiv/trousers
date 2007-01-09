@@ -13,11 +13,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 #include "trousers/tss.h"
 #include "spi_internal_types.h"
-#include "tcs_internal_types.h"
+#include "tcs_context.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -28,7 +27,7 @@
 unsigned long nextContextHandle = 0xA0000000;
 struct tcs_context *tcs_context_table = NULL;
 
-pthread_mutex_t tcs_ctx_lock = PTHREAD_MUTEX_INITIALIZER;
+MUTEX_DECLARE_INIT(tcs_ctx_lock);
 
 TCS_CONTEXT_HANDLE getNextHandle();
 struct tcs_context *create_tcs_context();
@@ -70,11 +69,8 @@ create_tcs_context()
 
 	if (ret != NULL) {
 		ret->handle = getNextHandle();
-		if (tpm_metrics.authctx_swap) {
-			ret->u_auth.blob = NULL;
-		} else {
-			pthread_cond_init(&(ret->u_auth.cond), NULL);
-		}
+		if (!tpm_metrics.authctx_swap)
+			COND_INIT(ret->cond);
 	}
 	return ret;
 }
@@ -115,7 +111,7 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 	struct tcs_context *toKill;
 	struct tcs_context *previous;
 
-	pthread_mutex_lock(&tcs_ctx_lock);
+	MUTEX_LOCK(tcs_ctx_lock);
 
 	toKill = get_context(handle);
 	previous = get_previous_context(handle);
@@ -125,11 +121,11 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 	} else if (previous && toKill) {	/*both are found */
 		previous->next = toKill->next;
 	} else {
-		pthread_mutex_unlock(&tcs_ctx_lock);
+		MUTEX_UNLOCK(tcs_ctx_lock);
 		return;
 	}
 
-	pthread_mutex_unlock(&tcs_ctx_lock);
+	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	CTX_ref_count_keys(toKill);
 	free(toKill);
@@ -140,7 +136,7 @@ make_context()
 {
 	struct tcs_context *index;
 
-	pthread_mutex_lock(&tcs_ctx_lock);
+	MUTEX_LOCK(tcs_ctx_lock);
 
 	index = tcs_context_table;
 
@@ -148,7 +144,7 @@ make_context()
 		tcs_context_table = create_tcs_context();
 		if (tcs_context_table == NULL) {
 			LogError("Malloc Failure.");
-			pthread_mutex_unlock(&tcs_ctx_lock);
+			MUTEX_UNLOCK(tcs_ctx_lock);
 			return 0;
 		}
 		index = tcs_context_table;
@@ -159,36 +155,36 @@ make_context()
 		index->next = create_tcs_context();
 		if (index->next == NULL) {
 			LogError("Malloc Failure.");
-			pthread_mutex_unlock(&tcs_ctx_lock);
+			MUTEX_UNLOCK(tcs_ctx_lock);
 			return 0;
 		}
 		index = index->next;
 	}
 
-	pthread_mutex_unlock(&tcs_ctx_lock);
+	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	return index->handle;
 }
 
 
-TCPA_RESULT
+TSS_RESULT
 ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 {
 	struct tcs_context *c;
 
 	if (tcsContext == InternalContext) {
-		LogDebug("Success: %.8X is an Internal Context", tcsContext);
+		LogDebug("Success: %x is an Internal Context", tcsContext);
 		return TSS_SUCCESS;
 	}
 
-	pthread_mutex_lock(&tcs_ctx_lock);
+	MUTEX_LOCK(tcs_ctx_lock);
 
 	c = get_context(tcsContext);
 
-	pthread_mutex_unlock(&tcs_ctx_lock);
+	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	if (c == NULL) {
-		LogDebug("Fail: Context %.8X not found", tcsContext);
+		LogDebug("Fail: Context %x not found", tcsContext);
 		return TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 	}
 
@@ -196,20 +192,20 @@ ctx_verify_context(TCS_CONTEXT_HANDLE tcsContext)
 }
 
 
-pthread_cond_t *
+COND_VAR *
 ctx_get_cond_var(TCS_CONTEXT_HANDLE tcs_handle)
 {
 	struct tcs_context *c;
-	pthread_cond_t *ret = NULL;
+	COND_VAR *ret = NULL;
 
-	pthread_mutex_lock(&tcs_ctx_lock);
+	MUTEX_LOCK(tcs_ctx_lock);
 
 	c = get_context(tcs_handle);
 
 	if (c != NULL)
-		ret = &(c->u_auth.cond);
+		ret = &c->cond;
 
-	pthread_mutex_unlock(&tcs_ctx_lock);
+	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	return ret;
 }
