@@ -124,6 +124,9 @@ TSS_RESULT TCS_CloseContext(TCS_CONTEXT_HANDLE hContext)	/* in */
 			break;
 	}
 
+	if (result != TSS_SUCCESS)
+		put_table_entry(entry);
+
 	return result;
 }
 
