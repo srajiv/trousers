@@ -35,7 +35,7 @@ Tspi_Context_LoadKeyByUUID \- load a key that's been registered in persistent st
 .B #include <tss/tspi.h>
 .sp
 .BI "TSS_RESULT Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT " hContext ", TSS_FLAG " persistentStorageType ", "
-.BI "                                      TSS_UUID     " uuidData ", TSS_HKEY " phKey ");"
+.BI "                                      TSS_UUID     " uuidData ", TSS_HKEY* " phKey ");"
 .fi
 .sp
 .ad
@@ -43,7 +43,7 @@ Tspi_Context_LoadKeyByUUID \- load a key that's been registered in persistent st
 
 .SH "DESCRIPTION"
 .PP
-\fBTSS_Context_LoadKeyByUUID\fR  
+\fBTSS_Context_LoadKeyByUUID\fR
 creates a key object based on the information got from the manager using the UUID and loads the key into the TPM. The persistent storage provides all information to load the parent keys required to load the key associated with the given UUID.
 .SH "PARAMETERS"
 .PP
@@ -51,7 +51,7 @@ creates a key object based on the information got from the manager using the UUI
 The handle of the context object.
 .PP
 .SS persistentStorageType
-Flag indicating the persistent storage the key is registered in.
+Flag indicating the persistent storage the key is registered in. Should be either TSS_PS_TYPE_USER ot TSS_PS_TYPE_SYSTEM.
 .PP
 .SS uuidData
 The UUID of the key by which the key was registered in the persistent storage (TSP or connected TCS).
@@ -61,10 +61,10 @@ Receives the handle of the key object representing the loaded key.
 .SH "RETURN CODES"
 .PP
 \fBTspi_Context_LoadKeyByUUID\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
-.TPTSS_HCONTEXT " hContext ", TSS_FLAG " persistentStorageType ", TSS_UUID " uuidData ", TSS_HKEY " phKey ");
-.SM TSS_E_INVALID_HANDLE - Either \fIhContext\fR, \fIpersistentStorageType\fR, \fIuuid\fR or \fIphKey\fR are invalid.
+.TP TSS_HCONTEXT " hContext ", TSS_FLAG " persistentStorageType ", TSS_UUID " uuidData ", TSS_HKEY " phKey ");
+.SM TSS_E_INVALID_HANDLE - \fIhContext\fR is an invalid handle.
 .TP
-.SM TSS_E_BAD_PARAMETER - Can't find the context.
+.SM TSS_E_BAD_PARAMETER -  \fIpersistentStorageType\fR is not valid.
 .TP
 .SM TSS_E_INTERNAL_ERROR
 An error occurred internal to the TSS.
@@ -75,4 +75,4 @@ An error occurred internal to the TSS.
 .SH "SEE ALSO"
 
 .PP
-\fB(none)\fR.
+\fBTspi_Context_LoadKeyByBlob(3)\fR, \fBTspi_Key_LoadKey(3)\fR.
