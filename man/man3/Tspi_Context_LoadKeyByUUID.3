@@ -61,7 +61,7 @@ Receives the handle of the key object representing the loaded key.
 .SH "RETURN CODES"
 .PP
 \fBTspi_Context_LoadKeyByUUID\fR returns TSS_SUCCESS on success, otherwise one of the following values are returned:
-.TP TSS_HCONTEXT " hContext ", TSS_FLAG " persistentStorageType ", TSS_UUID " uuidData ", TSS_HKEY " phKey ");
+.TP
 .SM TSS_E_INVALID_HANDLE - \fIhContext\fR is an invalid handle.
 .TP
 .SM TSS_E_BAD_PARAMETER -  \fIpersistentStorageType\fR is not valid.
