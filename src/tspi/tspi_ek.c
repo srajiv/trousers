@@ -85,7 +85,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_HashUpdate(&hashCtx, newEKSize, newEK);
 		result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, antiReplay.nonce);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		if ((result |= Trspi_HashFinal(&hashCtx, hash.digest)))
 			return result;
 
 		if (memcmp(hash.digest, digest.digest, TCPA_SHA1_160_HASH_LEN)) {
