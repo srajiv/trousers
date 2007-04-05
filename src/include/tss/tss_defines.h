@@ -26,8 +26,10 @@ Global defines for TSS.
 #define   TSS_OBJECT_TYPE_DELFAMILY (0x06)      // Delegation Family object
 #define   TSS_OBJECT_TYPE_NV        (0x07)      // NV object
 #define   TSS_OBJECT_TYPE_MIGDATA   (0x08)      // CMK Migration data object
-#define   TSS_OBJECT_TYPE_DAA       (0x09)      // DAA object
-#define   TSS_OBJECT_TYPE_DAA_DATA  (0x0a)      // DAA data object
+#define   TSS_OBJECT_TYPE_DAA_CERTIFICATE (0x09) // DAA credential
+#define   TSS_OBJECT_TYPE_DAA_ISSUER_KEY  (0x0a) // DAA cred. issuer keypair
+#define   TSS_OBJECT_TYPE_DAA_ARA_KEY     (0x0b) // DAA anonymity revocation
+                                                 // authority keypair
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -727,52 +729,77 @@ Global defines for TSS.
 
 
 
-//**************
-// DAA Object: *
-//**************
+//*************************
+// DAA Credential Object: *
+//*************************
 
 //
 // Attribute flags
 //
-#define TSS_TSPATTRIB_DAA                            (0x00000001)
-#define TSS_TSPATTRIB_DAA_SIGN                       (0x00000002)
-#define TSS_TSPATTRIB_DAA_CALLBACK_SIGN              (0x00000003)
-#define TSS_TSPATTRIB_DAA_CALLBACK_VERIFYSIGNATURE   (0x00000004)
-#define TSS_TSPATTRIB_DAA_DATA                       (0x00000005)
+#define TSS_TSPATTRIB_DAACRED_COMMIT                   (0x00000001)
+#define TSS_TSPATTRIB_DAACRED_ATTRIB_GAMMAS            (0x00000002)
+#define TSS_TSPATTRIB_DAACRED_CREDENTIAL_BLOB          (0x00000003)
+#define TSS_TSPATTRIB_DAACRED_CALLBACK_SIGN            (0x00000004)
+#define TSS_TSPATTRIB_DAACRED_CALLBACK_VERIFYSIGNATURE (0x00000005)
 
 //
-// Subflags for TSS_TSPATTRIB_DAA
+// Subflags for TSS_TSPATTRIB_DAACRED_COMMIT
 // 
-#define TSS_TSPATTRIB_DAA_COMMIT_NUMBER              (0x00000001) // UINT32
-#define TSS_TSPATTRIB_DAA_SELECTED_ATTRIB            (0x00000002) // TSS_DAA_SELECTED_ATTRIB
-#define TSS_TSPATTRIB_DAA_COMMITMENT                 (0x00000003) // TSS_DAA_ATTRIB_COMMIT
+#define TSS_TSPATTRIB_DAACOMMIT_NUMBER              (0x00000001)
+#define TSS_TSPATTRIB_DAACOMMIT_SELECTION           (0x00000002)
+#define TSS_TSPATTRIB_DAACOMMIT_COMMITMENTS         (0x00000003)
 
 //
-// Subflags for TSS_TSPATTRIB_DAA_SIGN
+// Subflags for TSS_TSPATTRIB_DAACRED_ATTRIB_GAMMAS
 // 
-#define TSS_TSPATTRIB_DAA_SIGN_ANONYMITY_REVOCATION  (0x00000001) // TSS_BOOL
-#define TSS_TSPATTRIB_DAA_SIGN_AR_PUBKEY             (0x00000002) // TSS_HKEY
-#define TSS_TSPATTRIB_DAA_SIGN_AR_CONDITION          (0x00000003) // TSS_HHASH
+#define TSS_TSPATTRIB_DAAATTRIBGAMMAS_BLOB          (0xffffffff)
+
+
+
+//*************************
+// DAA Issuer Key Object: *
+//*************************
 
 //
-// Subflags for TSS_TSPATTRIB_DAA_DATA
+// Attribute flags
 //
-#define TSS_TSPATTRIB_DAADATA_KEY_PAIR               (0x00000001)
-#define TSS_TSPATTRIB_DAADATA_PK                     (0x00000002)
-#define TSS_TSPATTRIB_DAADATA_PK_PROOF               (0x00000003)
-#define TSS_TSPATTRIB_DAADATA_SK                     (0x00000004)
-#define TSS_TSPATTRIB_DAADATA_AR_PK                  (0x00000005)
-#define TSS_TSPATTRIB_DAADATA_AR_SK                  (0x00000006)
-#define TSS_TSPATTRIB_DAADATA_CREDENTIAL             (0x00000007)
+#define TSS_TSPATTRIB_DAAISSUERKEY_BLOB              (0x00000001)
+#define TSS_TSPATTRIB_DAAISSUERKEY_PUBKEY            (0x00000002)
 
 //
-// Structure payload flags for TSS_DAA_SIGN_DATA.
-// (TSS_DAA_SIGN_DATA.payloadFlag)
-// Additionally, its byte values can be directly used as input to the TPM
-// to determine the signature type. 
+// Subflags for TSS_TSPATTRIB_DAAISSUERKEY_BLOB
+// 
+#define TSS_TSPATTRIB_DAAISSUERKEYBLOB_PUBLIC_KEY     (0x00000001)
+#define TSS_TSPATTRIB_DAAISSUERKEYBLOB_SECRET_KEY     (0x00000002)
+#define TSS_TSPATTRIB_DAAISSUERKEYBLOB_KEYBLOB        (0x00000003)
+#define TSS_TSPATTRIB_DAAISSUERKEYBLOB_PROOF          (0x00000004)
+
 //
-#define TSS_FLAG_DAA_SIGN_IDENTITY_KEY               (0x00000000)
-#define TSS_FLAG_DAA_SIGN_MESSAGE_HASH               (0x00000001)
+// Subflags for TSS_TSPATTRIB_DAAISSUERKEY_PUBKEY
+// 
+#define TSS_TSPATTRIB_DAAISSUERKEYPUBKEY_NUM_ATTRIBS          (0x00000001)
+#define TSS_TSPATTRIB_DAAISSUERKEYPUBKEY_NUM_PLATFORM_ATTRIBS (0x00000002)
+#define TSS_TSPATTRIB_DAAISSUERKEYPUBKEY_NUM_ISSUER_ATTRIBS   (0x00000003)
+
+
+
+//***************************************
+// DAA Anonymity Revocation Key Object: *
+//***************************************
+
+//
+// Attribute flags
+//
+#define TSS_TSPATTRIB_DAAARAKEY_BLOB                 (0x00000001)
+
+//
+// Subflags for TSS_TSPATTRIB_DAAARAKEY_BLOB
+// 
+#define TSS_TSPATTRIB_DAAARAKEYBLOB_PUBLIC_KEY     (0x00000001)
+#define TSS_TSPATTRIB_DAAARAKEYBLOB_SECRET_KEY     (0x00000002)
+#define TSS_TSPATTRIB_DAAARAKEYBLOB_KEYBLOB        (0x00000003)
+
+
 
 //
 // Structure payload flags for TSS_DAA_PSEUDONYM,

@@ -28,8 +28,10 @@ typedef  TSS_HOBJECT     TSS_HHASH;       // hash object handle
 typedef  TSS_HOBJECT     TSS_HNVSTORE;    // NV storage object handle
 typedef  TSS_HOBJECT     TSS_HMIGDATA;    // migration data utility obj handle
 typedef  TSS_HOBJECT     TSS_HDELFAMILY;  // delegation family object handle
-typedef  TSS_HOBJECT     TSS_HDAA;        // daa family object handle
-typedef  TSS_HOBJECT     TSS_HDAA_DATA;   // daa data object handle
+typedef  TSS_HOBJECT     TSS_HDAA_CREDENTIAL; // daa credential
+typedef  TSS_HOBJECT     TSS_HDAA_ISSUER_KEY; // daa credential issuer keypair
+typedef  TSS_HOBJECT     TSS_HDAA_ARA_KEY;    // daa anonymity revocation
+                                              // authority keypair
 
 typedef UINT32  TSS_EVENTTYPE;
 typedef UINT16  TSS_MIGRATE_SCHEME;

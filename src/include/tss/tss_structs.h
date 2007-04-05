@@ -191,6 +191,8 @@ typedef struct tdTSS_DAA_PK
     [size_is(issuerBaseName)] 
 #endif
     BYTE*       issuerBaseName;
+    UINT32      numPlatformAttributes;
+    UINT32      numIssuerAttributes;
 } TSS_DAA_PK;
 
 typedef struct tdTSS_DAA_PK_PROOF
@@ -287,6 +289,13 @@ typedef struct tdTSS_DAA_AR_SK
     BYTE*       x5;
 } TSS_DAA_AR_SK;
 
+typedef struct tdTSS_DAA_AR_KEY_PAIR
+{
+    TSS_VERSION   versionInfo;
+    TSS_DAA_AR_SK secretKey;
+    TSS_DAA_AR_PK publicKey;
+} TSS_DAA_AR_KEY_PAIR;
+
 typedef struct tdTSS_DAA_CRED_ISSUER
 {
     TSS_VERSION versionInfo;
@@ -361,6 +370,21 @@ typedef struct tdTSS_DAA_CREDENTIAL
     UINT32      daaCounter;
 } TSS_DAA_CREDENTIAL;
 
+typedef struct tdTSS_DAA_ATTRIB_COMMIT
+{
+    TSS_VERSION versionInfo;
+    UINT32      betaLength;
+#ifdef __midl
+    [size_is(betaLength)]
+#endif
+    BYTE*       beta;
+    UINT32      sMuLength;
+#ifdef __midl
+    [size_is(sMuLength)]
+#endif
+    BYTE*       sMu;
+} TSS_DAA_ATTRIB_COMMIT;
+
 typedef struct tdTSS_DAA_CREDENTIAL_REQUEST
 {
     TSS_VERSION versionInfo;
@@ -420,12 +444,8 @@ typedef struct tdTSS_DAA_CREDENTIAL_REQUEST
     [size_is(sALength,sALength2)]
 #endif
     BYTE**      sA;
-    UINT32      sMuLength;      // Length of first dimension
-    UINT32      sMuLength2;     // Length of second dimension
-#ifdef __midl
-    [size_is(sMuLength,sMuLength2)]
-#endif
-    BYTE**      sMu;
+    UINT32      attributeCommitmentsLength;
+    TSS_DAA_ATTRIB_COMMIT* attributeCommitments;
 } TSS_DAA_CREDENTIAL_REQUEST;
 
 typedef struct tdTSS_DAA_SELECTED_ATTRIB
@@ -437,47 +457,6 @@ typedef struct tdTSS_DAA_SELECTED_ATTRIB
 #endif
     TSS_BOOL*   indicesList;
 } TSS_DAA_SELECTED_ATTRIB;
-
-typedef struct tdTSS_DAA_ATTRIB_COMMIT_PARAM
-{
-    TSS_VERSION versionInfo;
-    UINT32      baseGammaLength;
-#ifdef __midl
-    [size_is(baseGammaLength)]
-#endif
-    BYTE*       baseGamma;
-    UINT32      gammasLength;
-#ifdef __midl
-    [size_is(gammasLength)]
-#endif
-    BYTE*       gammas;
-    UINT32      capitalGammaLength;
-#ifdef __midl
-    [size_is(capitalGammaLength)]
-#endif
-    BYTE*       capitalGamma;
-    UINT32      rhoLength;
-#ifdef __midl
-    [size_is(rhoLength)]
-#endif
-    BYTE*       rho;
-    UINT32      sizeMu;
-} TSS_DAA_ATTRIB_COMMIT_PARAM;
-
-typedef struct tdTSS_DAA_ATTRIB_COMMIT
-{
-    TSS_VERSION versionInfo;
-    UINT32      betaLength;
-#ifdef __midl
-    [size_is(betaLength)]
-#endif
-    BYTE*       beta;
-    UINT32      sMuLength;
-#ifdef __midl
-    [size_is(sMuLength)]
-#endif
-    BYTE*       sMu;
-} TSS_DAA_ATTRIB_COMMIT;
 
 typedef struct tdTSS_DAA_PSEUDONYM
 {
@@ -529,6 +508,18 @@ typedef struct tdTSS_DAA_PSEUDONYM_ENCRYPTED
 #endif
     BYTE*       sTau;
 } TSS_DAA_PSEUDONYM_ENCRYPTED;
+
+typedef struct tdTSS_DAA_SIGN_CALLBACK
+{
+    TSS_VERSION versionInfo;
+    TSS_HHASH   challenge;
+    TSS_FLAG    payloadFlag;
+    UINT32      payloadLength;
+#ifdef __midl
+    [size_is(payloadLength)]
+#endif
+    BYTE*       payload;
+} TSS_DAA_SIGN_CALLBACK;
 
 typedef struct tdTSS_DAA_SIGNATURE
 {
@@ -585,30 +576,8 @@ typedef struct tdTSS_DAA_SIGNATURE
 #endif
     TSS_DAA_ATTRIB_COMMIT* attributeCommitments;
     TSS_DAA_PSEUDONYM      signedPseudonym;
+    TSS_DAA_SIGN_CALLBACK  callbackResult;
 } TSS_DAA_SIGNATURE;
-
-typedef struct tdTSS_DAA_SIGN_CALLBACK
-{
-    TSS_VERSION versionInfo;
-    TSS_HHASH   challenge;
-    TSS_FLAG    payloadFlag;
-    UINT32      payloadLength;
-#ifdef __midl
-    [size_is(payloadLength)]
-#endif
-    BYTE*       payload;
-} TSS_DAA_SIGN_CALLBACK;
-
-typedef struct tdTSS_DAA_SIGN_DATA
-{
-    TSS_VERSION versionInfo;
-    TSS_FLAG    payloadFlag;
-    UINT32      payloadLength;
-#ifdef __midl
-    [size_is(payloadLength)]
-#endif
-    BYTE*       payload;
-} TSS_DAA_SIGN_DATA;
 
 typedef struct tdTSS_DAA_IDENTITY_PROOF
 {
@@ -630,62 +599,7 @@ typedef struct tdTSS_DAA_IDENTITY_PROOF
     BYTE*       conformance;
 } TSS_DAA_IDENTITY_PROOF;
 
-typedef struct tdTSS_DAA_JOIN_SESSION
-{
-    TSS_VERSION   versionInfo;
-    UINT32        noncePlatformLength;
-#ifdef __midl
-    [size_is(noncePlatformLength)]
-#endif
-    BYTE*         noncePlatform;
-    UINT32        capitalULength;
-#ifdef __midl
-    [size_is(capitalULength)]
-#endif
-    BYTE*         capitalU;
-    UINT32        capitalUPrimeLength;
-#ifdef __midl
-    [size_is(capitalUPrimeLength)]
-#endif
-    BYTE*         capitalUPrime;
-    UINT32        vTildePrimeLength;
-#ifdef __midl
-    [size_is(vTildePrimeLength)]
-#endif
-    BYTE*         vTildePrime;
-    UINT32        attributesPlatformLength;       // Length of first dimension
-    UINT32        attributesPlatformLength2;      // Length of second dimension
-#ifdef __midl
-    [size_is(attributesPlatformLength,attributesPlatformLength2)]
-#endif
-    BYTE**        attributesPlatform;
-    TSS_HDAA_DATA issuerPk;
-    UINT32        daaCounter;
-} TSS_DAA_JOIN_SESSION;
 
-typedef struct tdTSS_DAA_JOIN_ISSUER_SESSION
-{
-    TSS_VERSION            versionInfo;
-    TSS_HKEY               issuerAuthPK;
-    TSS_HDAA_DATA          issuerKeyPair;
-    TSS_DAA_IDENTITY_PROOF identityProof;
-    UINT32                 capitalUprimeLength;
-#ifdef __midl
-    [size_is(capitalUprimeLength)]
-#endif
-    BYTE*                  capitalUprime;
-    UINT32                 daaCounter;
-    UINT32                 nonceIssuerLength;
-#ifdef __midl
-    [size_is(nonceIssuerLength)]
-#endif
-    BYTE*                  nonceIssuer;
-    UINT32                 nonceEncryptedLength;
-#ifdef __midl
-    [size_is(nonceEncryptedLength)]
-#endif
-    BYTE*                  nonceEncrypted;
-} TSS_DAA_JOIN_ISSUER_SESSION;
 ////////////////////////////////////////////////////////////////////
 
 typedef UINT32 TSS_FAMILY_ID;

@@ -660,6 +660,14 @@ extern TSS_RESULT Tcsip_SetTempDeactivated2
     TCS_CONTEXT_HANDLE    hContext,                    // in
     TPM_AUTH*             pOperatorAuth                // in, out
 );
+extern TSS_RESULT Tcsip_OwnerReadInternalPub
+(
+    TCS_CONTEXT_HANDLE   hContext,                     // in
+    TCS_KEY_HANDLE       hKey,                         // in
+    TPM_AUTH*            pOwnerAuth,                   // in, out
+    UINT32*              punPubKeySize,                // out
+    BYTE**               ppbPubKeyData                 // out
+);
 extern TSS_RESULT Tcsip_PhysicalPresence
 (
     TCS_CONTEXT_HANDLE            hContext,            // in
@@ -678,6 +686,12 @@ extern TSS_RESULT Tcsip_ResetLockValue
 (
     TCS_CONTEXT_HANDLE            hContext,            // in
     TPM_AUTH*                     ownerAuth            // in, out
+);
+extern TSS_RESULT Tcsip_FlushSpecific
+(
+    TCS_CONTEXT_HANDLE    hContext,                    // in
+    TCS_HANDLE            hResHandle,                  // in
+    TPM_RESOURCE_TYPE     resourceType                 // in
 );
 extern TSS_RESULT Tcsip_SetRedirection
 (

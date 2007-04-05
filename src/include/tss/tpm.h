@@ -1468,7 +1468,7 @@ typedef UINT32 TPM_CAPABILITY_AREA;                         /* 1.1b */
 
 
 // Part 2, section 21.4: SetCapability Values
-#define TPM_SET_PERMFLAGS              ((UINT32)0x00000001)
+#define TPM_SET_PERM_FLAGS             ((UINT32)0x00000001)
 #define TPM_SET_PERM_DATA              ((UINT32)0x00000002)
 #define TPM_SET_STCLEAR_FLAGS          ((UINT32)0x00000003)
 #define TPM_SET_STCLEAR_DATA           ((UINT32)0x00000004)

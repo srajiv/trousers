@@ -638,54 +638,57 @@ TSPICALL Tspi_TPM_Delegate_ReadTables
 
 TSPICALL Tspi_TPM_DAA_JoinInit
 (
-    TSS_HDAA                      hDAA,                          // in
     TSS_HTPM                      hTPM,                          // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     UINT32                        daaCounter,                    // in
-    TSS_HDAA_DATA                 issuerPk,                      // in
     UINT32                        issuerAuthPKsLength,           // in
     TSS_HKEY*                     issuerAuthPKs,                 // in
     UINT32                        issuerAuthPKSignaturesLength,  // in
+    UINT32                        issuerAuthPKSignaturesLength2, // in
     BYTE**                        issuerAuthPKSignatures,        // in
     UINT32*                       capitalUprimeLength,           // out
     BYTE**                        capitalUprime,                 // out
     TSS_DAA_IDENTITY_PROOF**      identityProof,                 // out
-    TSS_DAA_JOIN_SESSION**        joinSession                    // out
+    UINT32*                       joinSessionLength,             // out
+    BYTE**                        joinSession                    // out
 );
 
 TSPICALL Tspi_TPM_DAA_JoinCreateDaaPubKey
 (
-    TSS_HDAA                      hDAA,                          // in
     TSS_HTPM                      hTPM,                          // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
     UINT32                        authenticationChallengeLength, // in
     BYTE*                         authenticationChallenge,       // in
     UINT32                        nonceIssuerLength,             // in
     BYTE*                         nonceIssuer,                   // in
     UINT32                        attributesPlatformLength,      // in
+    UINT32                        attributesPlatformLength2,     // in
     BYTE**                        attributesPlatform,            // in
-    TSS_DAA_JOIN_SESSION*         joinSession,                   // in, out
+    UINT32                        joinSessionLength,             // in
+    BYTE*                         joinSession,                   // in
     TSS_DAA_CREDENTIAL_REQUEST**  credentialRequest              // out
 );
 
 TSPICALL Tspi_TPM_DAA_JoinStoreCredential
 (
-    TSS_HDAA                      hDAA,                          // in
     TSS_HTPM                      hTPM,                          // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
     TSS_DAA_CRED_ISSUER*          credIssuer,                    // in
-    TSS_DAA_JOIN_SESSION*         joinSession,                   // in
-    TSS_HDAA_DATA*                phDaaCredential                // out
+    UINT32                        joinSessionLength,             // in
+    BYTE*                         joinSession                    // in
 );
 
 TSPICALL Tspi_TPM_DAA_Sign
 (
-    TSS_HDAA                      hDAA,                          // in
     TSS_HTPM                      hTPM,                          // in
-    TSS_HDAA_DATA                 hDaaCredential,                // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
+    TSS_HDAA_ARA_KEY              hARAKey,                       // in
     TSS_DAA_SELECTED_ATTRIB*      revealAttributes,              // in
-    UINT32                        verifierBaseNameLength,        // in
-    BYTE*                         verifierBaseName,              // in
     UINT32                        verifierNonceLength,           // in
     BYTE*                         verifierNonce,                 // in
-    TSS_DAA_SIGN_DATA*            signData,                      // in
+    UINT32                        verifierBaseNameLength,        // in
+    BYTE*                         verifierBaseName,              // in
+    TSS_HOBJECT                   signData,                      // in
     TSS_DAA_SIGNATURE**           daaSignature                   // out
 );
 
@@ -958,30 +961,24 @@ TSPICALL Tspi_NV_ReadValue
 
 
 // DAA Utility functions (optional, do not require a TPM or TCS)
-TSPICALL Tspi_DAA_IssuerKeyVerification
+TSPICALL Tspi_DAA_IssuerKeyVerify
 (
-    TSS_HDAA                      hDAA,                          // in
-    TSS_HDAA_DATA                 issuerPk,                      // in
-    TSS_HDAA_DATA                 issuerPkProof,                 // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     TSS_BOOL*                     isCorrect                      // out
 );
 
-TSPICALL Tspi_DAA_IssueSetup
+TSPICALL Tspi_DAA_Issuer_GenerateKey
 (
-    TSS_HDAA                      hDAA,                          // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     UINT32                        issuerBaseNameLength,          // in
-    BYTE*                         issuerBaseName,                // in
-    UINT32                        numberPlatformAttributes,      // in
-    UINT32                        numberIssuerAttributes,        // in
-    TSS_HDAA_DATA*                keyPair,                       // out
-    TSS_HDAA_DATA*                publicKeyProof                 // out
+    BYTE*                         issuerBaseName                 // in
 );
 
-TSPICALL Tspi_DAA_IssueInit
+TSPICALL Tspi_DAA_Issuer_InitCredential
 (
-    TSS_HDAA                      hDAA,                          // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     TSS_HKEY                      issuerAuthPK,                  // in
-    TSS_HDAA_DATA                 issuerKeyPair,                 // in
     TSS_DAA_IDENTITY_PROOF*       identityProof,                 // in
     UINT32                        capitalUprimeLength,           // in
     BYTE*                         capitalUprime,                 // in
@@ -990,22 +987,22 @@ TSPICALL Tspi_DAA_IssueInit
     BYTE**                        nonceIssuer,                   // out
     UINT32*                       authenticationChallengeLength, // out
     BYTE**                        authenticationChallenge,       // out
-    TSS_DAA_JOIN_ISSUER_SESSION** joinSession                    // out
+    UINT32*                       joinSessionLength,             // out
+    BYTE**                        joinSession                    // out
 );
 
-TSPICALL Tspi_DAA_IssueCredential
+TSPICALL Tspi_DAA_Issuer_IssueCredential
 (
-    TSS_HDAA                      hDAA,                          // in
-    UINT32                        attributesIssuerLength,        // in
-    BYTE**                        attributesIssuer,              // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     TSS_DAA_CREDENTIAL_REQUEST*   credentialRequest,             // in
-    TSS_DAA_JOIN_ISSUER_SESSION*  joinSession,                   // in
+    UINT32                        issuerJoinSessionLength,       // in
+    BYTE*                         issuerJoinSession,             // in
     TSS_DAA_CRED_ISSUER**         credIssuer                     // out
 );
 
-TSPICALL Tspi_DAA_VerifyInit
+TSPICALL Tspi_DAA_Verifier_Init
 (
-    TSS_HDAA                      hDAA,                          // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
     UINT32*                       nonceVerifierLength,           // out
     BYTE**                        nonceVerifier,                 // out
     UINT32*                       baseNameLength,                // out
@@ -1014,34 +1011,34 @@ TSPICALL Tspi_DAA_VerifyInit
 
 TSPICALL Tspi_DAA_VerifySignature
 (
-    TSS_HDAA                      hDAA,                          // in
-    TSS_DAA_SIGNATURE*            daaSignature,                  // in
-    TSS_HDAA_DATA                 hPubKeyIssuer,                 // in
-    TSS_DAA_SIGN_DATA*            signData,                      // in
+    TSS_HDAA_CREDENTIAL           hDAACredential,                // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
+    TSS_HDAA_ARA_KEY              hARAKey,                       // in
+    TSS_HHASH                     hARACondition,                 // in
     UINT32                        attributesLength,              // in
+    UINT32                        attributesLength2,             // in
     BYTE**                        attributes,                    // in
-    UINT32                        nonceVerifierLength,           // in
-    BYTE*                         nonceVerifier,                 // in
-    UINT32                        baseNameLength,                // in
-    BYTE*                         baseName,                      // in
+    UINT32                        verifierNonceLength,           // in
+    BYTE*                         verifierNonce,                 // in
+    UINT32                        verifierBaseNameLength,        // in
+    BYTE*                         verifierBaseName,              // in
+    TSS_HOBJECT                   signData,                      // in
+    TSS_DAA_SIGNATURE*            daaSignature,                  // in
     TSS_BOOL*                     isCorrect                      // out
 );
 
-TSPICALL Tspi_DAA_RevokeSetup
+TSPICALL Tspi_DAA_ARA_GenerateKey
 (
-    TSS_HDAA                      hDAA,                          // in
-    TSS_HDAA_DATA                 daaPublicKey,                  // in
-    TSS_HDAA_DATA*                arPublicKey,                   // out
-    TSS_HDAA_DATA*                arPrivateKey                   // out
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
+    TSS_HDAA_ARA_KEY              hARAKey                        // in
 );
 
-TSPICALL Tspi_DAA_ARDecrypt
+TSPICALL Tspi_DAA_ARA_RevokeAnonymity
 (
-    TSS_HDAA                      hDAA,                          // in
+    TSS_HDAA_ARA_KEY              hARAKey,                       // in
+    TSS_HHASH                     hARACondition,                 // in
+    TSS_HDAA_ISSUER_KEY           hIssuerKey,                    // in
     TSS_DAA_PSEUDONYM_ENCRYPTED*  encryptedPseudonym,            // in
-    TSS_HHASH                     decryptCondition,              // in
-    TSS_HDAA_DATA                 arPrivateKey,                  // in
-    TSS_HDAA_DATA                 daaPublicKey,                  // in
     TSS_DAA_PSEUDONYM_PLAIN**     pseudonym                      // out
 );
 
@@ -1141,6 +1138,7 @@ typedef TSS_RESULT (*Tspicb_ActivateIdentity)
    BYTE*            rgbCredential                 // out
 );
 
+#if 0
 
 typedef TSS_RESULT (*Tspicb_DAA_Sign)
 (
@@ -1184,6 +1182,8 @@ typedef TSS_RESULT (*Tspicb_DAA_VerifySignature)
     TSS_DAA_PSEUDONYM*           pseudonymProof,            // in
     TSS_BOOL*                    isCorrect                  // out
 );
+
+#endif
 
 #if defined ( __cplusplus )
 }
