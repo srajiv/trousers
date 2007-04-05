@@ -68,45 +68,68 @@ void __attribute__ ((destructor)) my_fini(void)
 #endif
 
 TSS_RESULT
-add_table_entry(struct host_table_entry *entry, TCS_CONTEXT_HANDLE tcsContext)
+add_table_entry(TSS_HCONTEXT tspContext, BYTE *host, int type, struct host_table_entry **ret)
 {
-	struct host_table_entry *hte;
+	struct host_table_entry *entry, *tmp;
 
-	for (hte = ht->entries; hte; hte = hte->next) {
-		if (hte->tcsContext == tcsContext) {
-			LogError("Tspi_Context_Connect() attempted on an "
-					"already connected context!");
+        entry = calloc(1, sizeof(struct host_table_entry));
+        if (entry == NULL) {
+                LogError("malloc of %zd bytes failed.", sizeof(struct host_table_entry));
+                return TSPERR(TSS_E_OUTOFMEMORY);
+        }
+
+	entry->tspContext = tspContext;
+        entry->hostname = host;
+        entry->type = type;
+        entry->comm.buf_size = TCSD_INIT_TXBUF_SIZE;
+        entry->comm.buf = calloc(1, entry->comm.buf_size);
+        if (entry->comm.buf == NULL) {
+                LogError("malloc of %u bytes failed.", entry->comm.buf_size);
+                free(entry);
+                return TSPERR(TSS_E_OUTOFMEMORY);
+        }
+        MUTEX_INIT(entry->lock);
+
+	MUTEX_LOCK(ht->lock);
+
+	for (tmp = ht->entries; tmp; tmp = tmp->next) {
+		if (tmp->tspContext == tspContext) {
+			LogError("Tspi_Context_Connect attempted on an already connected context!");
+			MUTEX_UNLOCK(ht->lock);
+			free(entry->comm.buf);
+			free(entry);
 			return TSPERR(TSS_E_CONNECTION_FAILED);
 		}
 	}
 
-	/* fill in the entry */
-	entry->tcsContext = tcsContext;
-
 	if( ht->entries == NULL ) {
 		ht->entries = entry;
 	} else {
-		for (hte = ht->entries; hte->next; hte = hte->next)
+		for (tmp = ht->entries; tmp->next; tmp = tmp->next)
 			;
-		hte->next = entry;
+		tmp->next = entry;
 	}
+	MUTEX_UNLOCK(ht->lock);
+
+	*ret = entry;
 
 	return TSS_SUCCESS;
 }
 
 void
-remove_table_entry(TCS_CONTEXT_HANDLE tcsContext)
+remove_table_entry(TSS_HCONTEXT tspContext)
 {
 	struct host_table_entry *hte, *prev = NULL;
 
 	MUTEX_LOCK(ht->lock);
 
 	for (hte = ht->entries; hte; prev = hte, hte = hte->next) {
-		if (hte->tcsContext == tcsContext) {
+		if (hte->tspContext == tspContext) {
 			if (prev != NULL)
 				prev->next = hte->next;
 			else
 				ht->entries = hte->next;
+			free(hte->comm.buf);
 			free(hte);
 			break;
 		}
@@ -116,14 +139,14 @@ remove_table_entry(TCS_CONTEXT_HANDLE tcsContext)
 }
 
 struct host_table_entry *
-get_table_entry(TCS_CONTEXT_HANDLE hContext)
+get_table_entry(TSS_HCONTEXT tspContext)
 {
 	struct host_table_entry *index = NULL;
 
 	MUTEX_LOCK(ht->lock);
 
 	for (index = ht->entries; index; index = index->next) {
-		if (index->tcsContext == hContext)
+		if (index->tspContext == tspContext)
 			break;
 	}
 
