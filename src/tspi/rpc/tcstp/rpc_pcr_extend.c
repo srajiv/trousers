@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Extend_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_Extend_TP(struct host_table_entry *hte,
 			   TCPA_PCRINDEX pcrNum,	/* in */
 			   TCPA_DIGEST inDigest,	/* in */
 			   TCPA_PCRVALUE * outDigest	/* out */
@@ -35,9 +35,9 @@ TCSP_Extend_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 
 	initData(&hte->comm, 3);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_EXTEND;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &pcrNum, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -58,7 +58,7 @@ TCSP_Extend_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 }
 
 TSS_RESULT
-TCSP_PcrRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_PcrRead_TP(struct host_table_entry *hte,
 			    TCPA_PCRINDEX pcrNum,	/* in */
 			    TCPA_PCRVALUE * outDigest	/* out */
     ) {
@@ -66,9 +66,9 @@ TCSP_PcrRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_PCRREAD;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &pcrNum, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

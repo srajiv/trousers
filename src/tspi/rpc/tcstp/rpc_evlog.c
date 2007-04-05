@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCS_LogPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*  in   */
+TCS_LogPcrEvent_TP(struct host_table_entry *hte,
 			       TSS_PCR_EVENT Event,	/*  in  */
 			       UINT32 * pNumber	/*  out */
     ) {
@@ -34,9 +34,9 @@ TCS_LogPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_LOGPCREVENT;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (setData(TCSD_PACKET_TYPE_PCR_EVENT, 1, &Event, 0, &hte->comm))
@@ -56,7 +56,7 @@ TCS_LogPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 }
 
 TSS_RESULT
-TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetPcrEvent_TP(struct host_table_entry *hte,
 			       UINT32 PcrIndex,	/* in */
 			       UINT32 * pNumber,	/* in, out */
 			       TSS_PCR_EVENT ** ppEvent	/* out */
@@ -66,9 +66,9 @@ TCS_GetPcrEvent_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENT;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &hte->comm))
@@ -113,7 +113,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte,
 				     UINT32 PcrIndex,	/* in */
 				     UINT32 FirstEvent,	/* in */
 				     UINT32 * pEventCount,	/* in, out */
@@ -121,16 +121,12 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
     ) {
 	TSS_RESULT result;
 	UINT32 i, j;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENTBYPCR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &PcrIndex, 0, &hte->comm))
@@ -154,7 +150,8 @@ TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 		}
 
 		if (*pEventCount > 0) {
-			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
+			*ppEvents = calloc_tspi(hte->tspContext,
+						sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
 				LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -180,22 +177,18 @@ done:
 }
 
 TSS_RESULT
-TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetPcrEventLog_TP(struct host_table_entry *hte,
 				  UINT32 * pEventCount,	/* out */
 				  TSS_PCR_EVENT ** ppEvents	/* out */
     ) {
 	TSS_RESULT result;
 	int i, j;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPCREVENTLOG;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -210,9 +203,11 @@ TCS_GetPcrEventLog_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 		}
 
 		if (*pEventCount > 0) {
-			*ppEvents = calloc_tspi(tspContext, sizeof(TSS_PCR_EVENT) * (*pEventCount));
+			*ppEvents = calloc_tspi(hte->tspContext,
+						sizeof(TSS_PCR_EVENT) * (*pEventCount));
 			if (*ppEvents == NULL) {
-				LogError("malloc of %zd bytes failed.", sizeof(TSS_PCR_EVENT) * (*pEventCount));
+				LogError("malloc of %zd bytes failed.",
+					 sizeof(TSS_PCR_EVENT) * (*pEventCount));
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}

@@ -32,14 +32,10 @@ TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
 
 TSS_RESULT
-internal_GetRandomNonce(TCS_CONTEXT_HANDLE tcsContext, TCPA_NONCE * nonce)
+internal_GetRandomNonce(TSS_HCONTEXT tspContext, TCPA_NONCE * nonce)
 {
 	TSS_RESULT result;
 	BYTE *random;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(tcsContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if ((result = get_local_random(tspContext, sizeof(TCPA_NONCE), &random)))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

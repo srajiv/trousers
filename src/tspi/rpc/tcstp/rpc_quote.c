@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_Quote_TP(struct host_table_entry *hte,
 			  TCS_KEY_HANDLE keyHandle,	/* in */
 			  TCPA_NONCE antiReplay,	/* in */
 			  UINT32 pcrDataSizeIn,	/* in */
@@ -43,9 +43,9 @@ TCSP_Quote_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in *
 	initData(&hte->comm, 6);
 
 	hte->comm.hdr.u.ordinal = TCSD_ORD_QUOTE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

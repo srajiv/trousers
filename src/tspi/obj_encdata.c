@@ -87,25 +87,6 @@ obj_encdata_get_tsp_context(TSS_HENCDATA hEncdata, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
-obj_encdata_is_connected(TSS_HENCDATA hEncdata, TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&encdata_list, hEncdata)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	if (obj->tcsContext == NULL_HCONTEXT)
-		result = TSPERR(TSS_E_NO_CONNECTION);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&encdata_list);
-
-	return result;
-}
-
-TSS_RESULT
 obj_encdata_get_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY *phPolicy)
 {
 	struct tsp_object *obj;

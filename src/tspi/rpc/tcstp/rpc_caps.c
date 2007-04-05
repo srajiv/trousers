@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetCapability_TP(struct host_table_entry *hte,
 				 TCPA_CAPABILITY_AREA capArea,	/* in */
 				 UINT32 subCapSize,	/* in */
 				 BYTE * subCap,	/* in */
@@ -34,16 +34,12 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 				 BYTE ** resp)	/* out */
 {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_TCSGETCAPABILITY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -63,14 +59,14 @@ TCS_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 			goto done;
 		}
 
-		*resp = (BYTE *) calloc_tspi(tspContext, *respSize);
+		*resp = (BYTE *) calloc_tspi(hte->tspContext, *respSize);
 		if (*resp == NULL) {
 			LogError("malloc of %u bytes failed.", *respSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *resp, *respSize, &hte->comm)) {
-			free_tspi(tspContext, *resp);
+			free_tspi(hte->tspContext, *resp);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

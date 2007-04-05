@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_GetCapability_TP(struct host_table_entry *hte,
 				  TCPA_CAPABILITY_AREA capArea,	/* in */
 				  UINT32 subCapSize,	/* in */
 				  BYTE * subCap,	/* in */
@@ -37,9 +37,9 @@ TCSP_GetCapability_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETCAPABILITY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -76,7 +76,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetCapabilitySigned_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_GetCapabilitySigned_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE keyHandle,	/* in */
 					TCPA_NONCE antiReplay,	/* in */
 					TCPA_CAPABILITY_AREA capArea,	/* in */
@@ -93,7 +93,7 @@ TCSP_GetCapabilitySigned_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 }
 
 TSS_RESULT
-TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte,
 				       TPM_AUTH * pOwnerAuth,	/* out */
 				       TCPA_VERSION * pVersion,	/* out */
 				       UINT32 * pNonVolatileFlags,	/* out */
@@ -103,9 +103,9 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETCAPABILITYOWNER;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_AUTH, 1, pOwnerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -131,7 +131,6 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCon
 
 TSS_RESULT
 TCSP_SetCapability_TP(struct host_table_entry *hte,
-		      TCS_CONTEXT_HANDLE hContext,	/* in */
 		      TCPA_CAPABILITY_AREA capArea,	/* in */
 		      UINT32 subCapSize,	/* in */
 		      BYTE * subCap,	/* in */
@@ -143,9 +142,9 @@ TCSP_SetCapability_TP(struct host_table_entry *hte,
 
 	initData(&hte->comm, 7);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_SETCAPABILITY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &capArea, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

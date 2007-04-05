@@ -27,7 +27,6 @@
 
 TSS_RESULT
 TCSP_MakeIdentity_TP(struct host_table_entry *hte,
-		     TCS_CONTEXT_HANDLE hContext,	/* in */
 		     TCPA_ENCAUTH identityAuth,	/* in */
 		     TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
 		     UINT32 idKeyInfoSize,	/* in */
@@ -50,9 +49,9 @@ TCSP_MakeIdentity_TP(struct host_table_entry *hte,
 
 	initData(&hte->comm, 7);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_MAKEIDENTITY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 1, &identityAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -204,7 +203,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE idKey,	/* in */
 					UINT32 blobSize,	/* in */
 					BYTE * blob,	/* in */
@@ -218,9 +217,9 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 
 	initData(&hte->comm, 6);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_ACTIVATETPMIDENTITY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &idKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

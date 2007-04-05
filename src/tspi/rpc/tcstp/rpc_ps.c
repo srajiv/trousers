@@ -27,7 +27,6 @@
 
 TSS_RESULT
 TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
-				     TCS_CONTEXT_HANDLE hContext,
 				     TCPA_ALGORITHM_ID algID,	/* in */
 				     UINT32 ulPublicInfoLength,	/* in */
 				     BYTE * rgbPublicInfo,	/* in */
@@ -38,9 +37,9 @@ TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETREGISTEREDKEYBYPUBLICINFO;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &algID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -77,7 +76,7 @@ done:
 }
 
 TSS_RESULT
-TCS_RegisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_RegisterKey_TP(struct host_table_entry *hte,
 			       TSS_UUID WrappingKeyUUID,	/* in */
 			       TSS_UUID KeyUUID,	/* in */
 			       UINT32 cKeySize,	/* in */
@@ -89,9 +88,9 @@ TCS_RegisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 	initData(&hte->comm, 7);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_REGISTERKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UUID, 1, &WrappingKeyUUID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -115,16 +114,16 @@ TCS_RegisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 }
 
 TSS_RESULT
-TCSP_UnregisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_UnregisterKey_TP(struct host_table_entry *hte,
 				  TSS_UUID KeyUUID	/* in */
     ) {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_UNREGISTERKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UUID, 1, &KeyUUID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -138,23 +137,19 @@ TCSP_UnregisterKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 }
 
 TSS_RESULT
-TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte,
 				      TSS_UUID * pKeyUUID,	/* in */
 				      UINT32 * pcKeyHierarchySize,	/* out */
 				      TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
 	int i, j;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_ENUMREGISTEREDKEYS;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (pKeyUUID != NULL) {
@@ -200,7 +195,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetRegisteredKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetRegisteredKey_TP(struct host_table_entry *hte,
 				    TSS_UUID KeyUUID,	/* in */
 				    TSS_KM_KEYINFO ** ppKeyInfo	/* out */
     ) {
@@ -208,7 +203,7 @@ TCS_GetRegisteredKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 }
 
 TSS_RESULT
-TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte,
 					TSS_UUID KeyUUID,	/* in */
 					UINT32 * pcKeySize,	/* out */
 					BYTE ** prgbKey	/* out */
@@ -217,9 +212,9 @@ TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETREGISTEREDKEYBLOB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UUID, 1, &KeyUUID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -252,7 +247,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte,
 				  TSS_UUID KeyUUID,	/* in */
 				  TCS_LOADKEY_INFO * pLoadKeyInfo,	/* in, out */
 				  TCS_KEY_HANDLE * phKeyTCSI	/* out */
@@ -261,9 +256,9 @@ TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,
 
 	initData(&hte->comm, 3);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_LOADKEYBYUUID;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UUID, 1, &KeyUUID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

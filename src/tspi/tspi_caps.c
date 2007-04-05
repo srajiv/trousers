@@ -36,7 +36,6 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 			   BYTE ** prgbRespData)	/* out */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	UINT32 subCap;
 
 	if (prgbRespData == NULL || pulRespDataLength == NULL )
@@ -70,11 +69,6 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 		case TSS_TCSCAP_CACHING:
 		case TSS_TCSCAP_PERSSTORAGE:
 		case TSS_TCSCAP_MANUFACTURER:
-			/* make sure we're connected to a TCS first */
-			if ((result = obj_context_is_connected(tspContext,
-							&tcsContext)))
-				return result;
-
 			if (capArea == TSS_TCSCAP_ALG) {
 				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
 					return TSPERR(TSS_E_BAD_PARAMETER);
@@ -82,12 +76,9 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 
 			subCap = rgbSubCap ? endian32(*(UINT32 *)rgbSubCap) : 0;
 
-			result = TCS_GetCapability(tcsContext,
-							capArea,
-							ulSubCapLength,
-							(BYTE *)&subCap,
-							pulRespDataLength,
-							prgbRespData);
+			result = TCS_GetCapability(tspContext, capArea, ulSubCapLength,
+						   (BYTE *)&subCap, pulRespDataLength,
+						   prgbRespData);
 			break;
 		default:
 			result = TSPERR(TSS_E_BAD_PARAMETER);

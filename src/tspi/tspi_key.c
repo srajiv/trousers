@@ -25,17 +25,17 @@
 TSS_RESULT
 Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 {
+	TSS_HCONTEXT tspContext;
 	TCS_KEY_HANDLE hTcsKey;
-	TSS_HCONTEXT tcsContext;
 	TSS_RESULT result;
 
-	if ((result = obj_rsakey_is_connected(hKey, &tcsContext)))
+	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &hTcsKey)))
 		return result;
 
-	return TCSP_EvictKey(tcsContext, hTcsKey);
+	return TCSP_EvictKey(tspContext, hTcsKey);
 }
 
 TSS_RESULT
@@ -47,7 +47,6 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
 	UINT32 keyslot;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hPolicy;
 	UINT32 keySize;
@@ -57,13 +56,10 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 	TPM_AUTH *pAuth;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
-		return result;
-
 	if (!obj_is_rsakey(hUnwrappingKey))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
+	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
@@ -101,7 +97,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_LoadKeyByBlob(tcsContext, parentTCSKeyHandle, keySize, keyBlob, pAuth,
+	if ((result = TCSP_LoadKeyByBlob(tspContext, parentTCSKeyHandle, keySize, keyBlob, pAuth,
 					 &tcsKey, &keyslot))) {
 		free_tspi(tspContext, keyBlob);
 		return result;
@@ -133,7 +129,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 	TPM_AUTH *pAuth;
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hPolicy;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
@@ -143,7 +139,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 	if (pulPubKeyLength == NULL || prgbPubKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_rsakey_is_connected(hKey, &tcsContext)))
+	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
@@ -168,11 +164,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_GetPubKey(tcsContext,
-				    tcsKeyHandle,
-				    pAuth,
-				    pulPubKeyLength,
-				    prgbPubKey)))
+	if ((result = TCSP_GetPubKey(tspContext, tcsKeyHandle, pAuth, pulPubKeyLength, prgbPubKey)))
 		return result;
 
 	memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
@@ -212,7 +204,6 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	TCPA_ENCAUTH encAuthMig;
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hUsagePolicy;
 	TSS_HPOLICY hMigPolicy;
 	TSS_HPOLICY hWrapPolicy;
@@ -227,9 +218,6 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	Trspi_HashCtx hashCtx;
 
 	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
@@ -291,13 +279,8 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 
 	/* Now call the function */
-	if ((result = TCSP_CreateWrapKey(tcsContext,
-					parentTCSKeyHandle,
-					encAuthUsage,
-					encAuthMig,
-					keySize,
-					keyBlob,
-					&newKeySize, &newKey, &auth)))
+	if ((result = TCSP_CreateWrapKey(tspContext, parentTCSKeyHandle, encAuthUsage, encAuthMig,
+					 keySize, keyBlob, &newKeySize, &newKey, &auth)))
 		return result;
 
 	/* Validate the Authorization before using the new key */
@@ -431,13 +414,11 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 			   TSS_HKEY * phKey)		/* out */
 {
 	TPM_AUTH auth;
-	//BYTE blob[1024];
 	UINT64 offset;
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
 	UINT32 keyslot;
 	TSS_HPOLICY hPolicy;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 	TCS_KEY_HANDLE myTCSKeyHandle;
 	TCPA_KEY keyContainer;
@@ -454,10 +435,6 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 
 	if (!obj_is_context(tspContext) || !obj_is_rsakey(hUnwrappingKey))
 		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	/* Loading a key always requires us to be connected to a TCS */
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
 
 	/* Get the Parent Handle */
 	if ((result = obj_rsakey_get_tcs_handle(hUnwrappingKey, &parentTCSKeyHandle)))
@@ -493,9 +470,8 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_LoadKeyByBlob(tcsContext, parentTCSKeyHandle,
-					ulBlobLength, rgbBlobData,
-					pAuth, &myTCSKeyHandle, &keyslot)))
+	if ((result = TCSP_LoadKeyByBlob(tspContext, parentTCSKeyHandle, ulBlobLength, rgbBlobData,
+					 pAuth, &myTCSKeyHandle, &keyslot)))
 		return result;
 
 	if (useAuth) {

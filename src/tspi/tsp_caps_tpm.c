@@ -27,7 +27,7 @@
  * sent.  This will keep the owner auth code from being duplicated around the TSP.
  */
 TSS_RESULT
-TSP_SetCapability(TCS_CONTEXT_HANDLE tcsContext,
+TSP_SetCapability(TSS_HCONTEXT tspContext,
 		  TSS_HTPM hTPM,
 		  TSS_HPOLICY hTPMPolicy,
 		  TPM_CAPABILITY_AREA tcsCapArea,
@@ -51,11 +51,11 @@ TSP_SetCapability(TCS_CONTEXT_HANDLE tcsContext,
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_SetCapability, hTPMPolicy, &digest,
-					      &auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_SetCapability, hTPMPolicy,
+					      &digest, &auth)))
 		return result;
 
-	if ((result = TCSP_SetCapability(tcsContext, tcsCapArea, sizeof(UINT32), (BYTE *)&subCap,
+	if ((result = TCSP_SetCapability(tspContext, tcsCapArea, sizeof(UINT32), (BYTE *)&subCap,
 					 sizeof(TSS_BOOL), (BYTE *)&value, &auth)))
 		return result;
 

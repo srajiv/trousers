@@ -96,7 +96,6 @@ TSS_RESULT obj_policy_get_type(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_policy_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
 TSS_RESULT obj_policy_set_type(TSS_HPOLICY, UINT32);
-TSS_RESULT obj_policy_get_tcs_context(TSS_HPOLICY, TCS_CONTEXT_HANDLE *);
 TSS_RESULT obj_policy_set_cb12(TSS_HPOLICY, TSS_FLAG, BYTE *);
 TSS_RESULT obj_policy_get_cb12(TSS_HPOLICY, TSS_FLAG, UINT32 *, BYTE **);
 TSS_RESULT obj_policy_set_cb11(TSS_HPOLICY, TSS_FLAG, TSS_FLAG, UINT32);

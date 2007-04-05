@@ -97,25 +97,6 @@ obj_tpm_get_policy(TSS_HTPM hTpm, TSS_HPOLICY *phPolicy)
 }
 
 TSS_RESULT
-obj_tpm_is_connected(TSS_HTPM hTpm, TSS_HCONTEXT *tcsContext)
-{
-	struct tsp_object *obj;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	if (obj->tcsContext == NULL_HCONTEXT)
-		result = TSPERR(TSS_E_NO_CONNECTION);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&tpm_list);
-
-	return result;
-}
-
-TSS_RESULT
 obj_tpm_get_tsp_context(TSS_HTPM hTpm, TSS_HCONTEXT *tspContext)
 {
 	struct tsp_object *obj;
@@ -124,22 +105,6 @@ obj_tpm_get_tsp_context(TSS_HTPM hTpm, TSS_HCONTEXT *tspContext)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	*tspContext = obj->tspContext;
-
-	obj_list_put(&tpm_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_tpm_get_tcs_context(TSS_HTPM hTpm,
-			TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-
-	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	*tcsContext = obj->tcsContext;
 
 	obj_list_put(&tpm_list);
 

@@ -29,14 +29,12 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		TSS_HOBJECT hParentObject,	/* in */
 		TSS_HPOLICY hNewPolicy)		/* in */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ENCAUTH encAuthUsage;
 	TCPA_ENCAUTH encAuthMig;
 	BYTE sharedSecret[20];
 	TPM_AUTH auth1;
 	TPM_AUTH auth2;
 	UINT64 offset;
-	//BYTE hashBlob[0x1000];
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	UINT32 keyHandle;
@@ -66,9 +64,6 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	 */
 
 	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	/* if the object to change is the TPM object, then the parent should
@@ -113,10 +108,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					    digest.digest, &nonceEvenOSAP)))
 			return result;
 
-		if ((result = TCSP_ChangeAuthOwner(tcsContext,
-						  TCPA_PID_ADCP,
-						  encAuthUsage, TCPA_ET_OWNER,
-						  &auth1)))
+		if ((result = TCSP_ChangeAuthOwner(tspContext, TCPA_PID_ADCP, encAuthUsage,
+						   TCPA_ET_OWNER, &auth1)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -174,11 +167,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 						    &nonceEvenOSAP)))
 				return result;
 
-			if ((result = TCSP_ChangeAuthOwner(tcsContext,
-							  TCPA_PID_ADCP,
-							  encAuthUsage,
-							  TCPA_ET_SRK,
-							  &auth1)))
+			if ((result = TCSP_ChangeAuthOwner(tspContext, TCPA_PID_ADCP, encAuthUsage,
+							   TCPA_ET_SRK, &auth1)))
 				return result;
 
 			/* Validate the Auths */
@@ -252,30 +242,20 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			if ((result =
-			    secret_PerformAuth_OSAP(hParentObject,
-						    TPM_ORD_ChangeAuth,
-						    hParentPolicy, hNewPolicy,
-						    hNewPolicy, sharedSecret,
-						    &auth1, digest.digest,
+			    secret_PerformAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
+						    hParentPolicy, hNewPolicy, hNewPolicy,
+						    sharedSecret, &auth1, digest.digest,
 						    &nonceEvenOSAP)))
 				return result;
 
-			if ((result = secret_PerformAuth_OIAP(hObjectToChange,
-							      TPM_ORD_ChangeAuth,
-							      hPolicy, &digest,
-							      &auth2))) {
-				TCSP_TerminateHandle(tcsContext,
-							auth1.AuthHandle);
+			if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
+							      hPolicy, &digest, &auth2)))
 				return result;
-			}
 
-			if ((result = TCSP_ChangeAuth(tcsContext, keyHandle,
-						      TCPA_PID_ADCP, encAuthUsage,
-						      TCPA_ET_KEY,
-						      keyToChange.encSize,
-						      keyToChange.encData, &auth1,
-						      &auth2, &newEncSize,
-						      &newEncData)))
+			if ((result = TCSP_ChangeAuth(tspContext, keyHandle, TCPA_PID_ADCP,
+						      encAuthUsage, TCPA_ET_KEY,
+						      keyToChange.encSize, keyToChange.encData,
+						      &auth1, &auth2, &newEncSize, &newEncData)))
 				return result;
 
 			/* Validate the Auths */
@@ -315,25 +295,20 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		}
 	} else if (obj_is_encdata(hObjectToChange)) {
 		/*  get the secret for the parent */
-		if ((result = obj_encdata_get_policy(hObjectToChange,
-						   TSS_POLICY_USAGE,
-						   &hPolicy)))
+		if ((result = obj_encdata_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
 
 		/*  get the parent secret */
-		if ((result = obj_rsakey_get_policy(hParentObject,
-						   TSS_POLICY_USAGE,
-						   &hParentPolicy, NULL)))
+		if ((result = obj_rsakey_get_policy(hParentObject, TSS_POLICY_USAGE, &hParentPolicy,
+						    NULL)))
 			return result;
 
 		/*  get the data Object  */
-		if ((result = obj_encdata_get_data(hObjectToChange,
-						 &dataBlobLength, &dataBlob)))
+		if ((result = obj_encdata_get_data(hObjectToChange, &dataBlobLength, &dataBlob)))
 			return result;
 
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataBlob,
-							   &storedData)))
+		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataBlob, &storedData)))
 			return result;
 
 		if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle))) {
@@ -343,12 +318,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		}
 
 		if ((result =
-		    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
-					   hNewPolicy, hParentObject,
-					   TCPA_ET_KEYHANDLE, keyHandle,
-					   &encAuthUsage, &encAuthMig,
-					   sharedSecret, &auth1,
-					   &nonceEvenOSAP))) {
+		    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy, hNewPolicy, hParentObject,
+					   TCPA_ET_KEYHANDLE, keyHandle, &encAuthUsage, &encAuthMig,
+					   sharedSecret, &auth1, &nonceEvenOSAP))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
@@ -379,19 +351,15 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 						      TPM_ORD_ChangeAuth,
 						      hPolicy, &digest,
 						      &auth2))) {
-			TCSP_TerminateHandle(tcsContext, auth1.AuthHandle);
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
 		}
 
-		if ((result = TCSP_ChangeAuth(tcsContext, keyHandle,
-					      TCPA_PID_ADCP, encAuthUsage,
-					     TCPA_ET_DATA,
-					     storedData.encDataSize,
-					     storedData.encData, &auth1,
-					     &auth2, &newEncSize,
-					     &newEncData))) {
+		if ((result = TCSP_ChangeAuth(tspContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,
+					      TCPA_ET_DATA, storedData.encDataSize,
+					      storedData.encData, &auth1, &auth2, &newEncSize,
+					      &newEncData))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
@@ -455,7 +423,6 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		    TSS_HKEY hIdentKey,			/* in */
 		    TSS_HPOLICY hNewPolicy)		/* in */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TPM_AUTH auth;
 	UINT64 offset;
 	BYTE hashBlob[0x1000];
@@ -510,9 +477,6 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	Trspi_HashCtx hashCtx;
 
 	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	/*  grab all of the needed handles */
@@ -578,30 +542,19 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			if (useAuth) {
 				if ((result = secret_PerformAuth_OIAP(hIdentKey,
 								      TPM_ORD_ChangeAuthAsymStart,
-								      hPolicy,
-								      &digest,
-								      &auth))) {
-					TCSP_TerminateHandle(tcsContext, auth.AuthHandle);
+								      hPolicy, &digest, &auth)))
 					return result;
-				}
+
 				pAuth = &auth;
 			} else {
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymStart(tcsContext,
-							      idHandle,
-							      antiReplay,
-							      tempSize,
-							      tempKey,
-							      pAuth,
-							      &KeySizeOut,
-							      &KeyDataOut,
-							      &CertifyInfoSize,
-							      &CertifyInfo,
-							      &sigSize,
-							      &sig,
-							      &ephHandle)))
+			if ((result = TCSP_ChangeAuthAsymStart(tspContext, idHandle, antiReplay,
+							       tempSize, tempKey, pAuth,
+							       &KeySizeOut, &KeyDataOut,
+							       &CertifyInfoSize, &CertifyInfo,
+							       &sigSize, &sig, &ephHandle)))
 				return result;
 
 			/* Validate the Auth's */
@@ -617,9 +570,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			if (useAuth) {
-				if ((result = obj_policy_validate_auth_oiap(hPolicy,
-								       &digest,
-								       &auth)))
+				if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
+									    &auth)))
 					return result;
 			}
 
@@ -750,8 +702,6 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 								      hParentPolicy,
 								      &digest,
 								      &auth))) {
-					TCSP_TerminateHandle(tcsContext,
-							     auth.AuthHandle);
 					free(encObject);
 					free_key_refs(&keyContainer);
 					return result;
@@ -761,20 +711,11 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				pAuth = NULL;
 			}
 
-			if ((result = TCSP_ChangeAuthAsymFinish(tcsContext,
-							       keyHandle,
-							       ephHandle,
-							       entityType,
-							       newAuthLink,
-							       a1Size,
-							       a1,
-							       encObjectSize,
-							       encObject,
-							       pAuth,
-							       &encDataSizeOut,
-							       &encDataOut,
-							       &saltNonce,
-							       &changeProof))) {
+			if ((result = TCSP_ChangeAuthAsymFinish(tspContext, keyHandle, ephHandle,
+							       entityType, newAuthLink, a1Size, a1,
+							       encObjectSize, encObject, pAuth,
+							       &encDataSizeOut, &encDataOut,
+							       &saltNonce, &changeProof))) {
 				free_key_refs(&keyContainer);
 				free(encObject);
 				return result;

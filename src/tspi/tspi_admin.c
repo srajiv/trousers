@@ -30,11 +30,11 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 	TPM_AUTH auth;
 	TSS_RESULT result;
 	TCPA_DIGEST hashDigest;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hPolicy;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
@@ -51,7 +51,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 						      &hashDigest, &auth)))
 			return result;
 
-		if ((result = TCSP_DisableOwnerClear(tcsContext, &auth)))
+		if ((result = TCSP_DisableOwnerClear(tspContext, &auth)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -64,7 +64,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 		break;
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
-		result = TCSP_DisableForceClear(tcsContext);
+		result = TCSP_DisableForceClear(tspContext);
 		break;
 	case TSS_TPMSTATUS_OWNERSETDISABLE:
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -77,7 +77,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 						      &hashDigest, &auth)))
 			return result;
 
-		if ((result = TCSP_OwnerSetDisable(tcsContext, fTpmState, &auth)))
+		if ((result = TCSP_OwnerSetDisable(tspContext, fTpmState, &auth)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -91,18 +91,18 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		break;
 	case TSS_TPMSTATUS_PHYSICALDISABLE:
 		if (fTpmState)
-			result = TCSP_PhysicalDisable(tcsContext);
+			result = TCSP_PhysicalDisable(tspContext);
 		else
-			result = TCSP_PhysicalEnable(tcsContext);
+			result = TCSP_PhysicalEnable(tspContext);
 		break;
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
-		result = TCSP_PhysicalSetDeactivated(tcsContext, fTpmState);
+		result = TCSP_PhysicalSetDeactivated(tspContext, fTpmState);
 		break;
 	case TSS_TPMSTATUS_SETTEMPDEACTIVATED:
-		result = TCSP_SetTempDeactivated(tcsContext);
+		result = TCSP_SetTempDeactivated(tspContext);
 		break;
 	case TSS_TPMSTATUS_SETOWNERINSTALL:
-		result = TCSP_SetOwnerInstall(tcsContext, fTpmState);
+		result = TCSP_SetOwnerInstall(tspContext, fTpmState);
 		break;
 	case TSS_TPMSTATUS_DISABLEPUBEKREAD:
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -114,7 +114,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 						      &hashDigest, &auth)))
 			return result;
 
-		if ((result = TCSP_DisablePubekRead(tcsContext, &auth)))
+		if ((result = TCSP_DisablePubekRead(tspContext, &auth)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -133,7 +133,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		 * flip the bool here. Sigh... */
 		fTpmState = fTpmState ? FALSE : TRUE;
 
-		result = TSP_SetCapability(tcsContext, hTPM, hPolicy, TPM_SET_PERMFLAGS,
+		result = TSP_SetCapability(tspContext, hTPM, hPolicy, TPM_SET_PERM_FLAGS,
 					   TPM_PF_READSRKPUB, fTpmState);
 		break;
 	case TSS_TPMSTATUS_RESETLOCK:
@@ -147,7 +147,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 						      &hashDigest, &auth)))
 			return result;
 
-		result = TCSP_ResetLockValue(tcsContext, &auth);
+		result = TCSP_ResetLockValue(tspContext, &auth);
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, result);
@@ -162,23 +162,23 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 #ifndef TSS_SPEC_COMPLIANCE
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
 		/* set the lifetime lock bit */
-		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LIFETIME_LOCK);
+		result = TCSP_PhysicalPresence(tspContext, TCPA_PHYSICAL_PRESENCE_LIFETIME_LOCK);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_HWENABLE:
 		/* set the HW enable bit */
-		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_HW_ENABLE);
+		result = TCSP_PhysicalPresence(tspContext, TCPA_PHYSICAL_PRESENCE_HW_ENABLE);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_CMDENABLE:
 		/* set the command enable bit */
-		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_CMD_ENABLE);
+		result = TCSP_PhysicalPresence(tspContext, TCPA_PHYSICAL_PRESENCE_CMD_ENABLE);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
 		/* set the physical presence lock bit */
-		result = TCSP_PhysicalPresence(tcsContext, TCPA_PHYSICAL_PRESENCE_LOCK);
+		result = TCSP_PhysicalPresence(tspContext, TCPA_PHYSICAL_PRESENCE_LOCK);
 		break;
 	case TSS_TPMSTATUS_PHYSPRESENCE:
 		/* set the physical presence state */
-		result = TCSP_PhysicalPresence(tcsContext, (fTpmState ?
+		result = TCSP_PhysicalPresence(tspContext, (fTpmState ?
 							    TCPA_PHYSICAL_PRESENCE_PRESENT :
 							    TCPA_PHYSICAL_PRESENCE_NOTPRESENT));
 		break;
@@ -196,7 +196,7 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 		   TSS_FLAG statusFlag,		/* in */
 		   TSS_BOOL * pfTpmState)	/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 	UINT32 nonVolFlags;
 	UINT32 volFlags;
@@ -204,10 +204,10 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 	if (pfTpmState == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
+	if ((result = get_tpm_flags(tspContext, hTPM, &volFlags, &nonVolFlags)))
 		return result;
 
 	switch (statusFlag) {

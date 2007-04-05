@@ -28,14 +28,13 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 		       TSS_HKEY hEndorsementPubKey)	/* in */
 {
 	TPM_AUTH privAuth;
-
 	BYTE encOwnerAuth[256];
 	UINT32 encOwnerAuthLength;
 	BYTE encSRKAuth[256];
 	UINT32 encSRKAuthLength;
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	UINT32 srkKeyBlobLength;
 	BYTE *srkKeyBlob;
 	TSS_HPOLICY hOwnerPolicy;
@@ -56,7 +55,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 		hPubEK = hEndorsementPubKey;
 	}
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	/* Get the srkKeyData */
@@ -77,18 +76,10 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 
 	/* Now, take ownership is ready to call.  The auth structure should be complete
 	 * and the encrypted data structures should be ready */
-
-	if ((result = TCSP_TakeOwnership(tcsContext,
-				TCPA_PID_OWNER,
-				encOwnerAuthLength,
-				encOwnerAuth,
-				encSRKAuthLength,
-				encSRKAuth,
-				srkKeyBlobLength,
-				srkKeyBlob,
-				&privAuth,
-				&newSrkBlobSize,
-				&newSrkBlob)))
+	if ((result = TCSP_TakeOwnership(tspContext, TCPA_PID_OWNER, encOwnerAuthLength,
+					 encOwnerAuth, encSRKAuthLength, encSRKAuth,
+					 srkKeyBlobLength, srkKeyBlob, &privAuth, &newSrkBlobSize,
+					 &newSrkBlob)))
 		return result;
 
 	/* The final step is to validate the return Auth */
@@ -131,12 +122,12 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 {
 	TCPA_RESULT result;
 	TPM_AUTH auth;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TCPA_DIGEST hashDigest;
 	TSS_HPOLICY hPolicy;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_policy(hTPM, &tspContext)))
 		return result;
 
 	if (!fForcedClear) {	/*  TPM_OwnerClear */
@@ -150,12 +141,11 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 			return result;
 
 		/* hashDigest now has the hash result */
-		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerClear,
-						      hPolicy, &hashDigest,
-						      &auth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerClear, hPolicy,
+						      &hashDigest, &auth)))
 			return result;
 
-		if ((result = TCSP_OwnerClear(tcsContext, &auth)))
+		if ((result = TCSP_OwnerClear(tspContext, &auth)))
 			return result;
 
 		/* validate auth */
@@ -168,7 +158,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 	} else {
-		if ((result = TCSP_ForceClear(tcsContext)))
+		if ((result = TCSP_ForceClear(tspContext)))
 			return result;
 	}
 

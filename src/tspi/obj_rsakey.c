@@ -897,25 +897,6 @@ obj_rsakey_is_volatile(TSS_HKEY hKey)
 }
 
 TSS_RESULT
-obj_rsakey_is_connected(TSS_HKEY hKey, TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	if (obj->tcsContext == NULL_HCONTEXT)
-		result = TSPERR(TSS_E_NO_CONNECTION);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&rsakey_list);
-
-	return result;
-}
-
-TSS_RESULT
 obj_rsakey_get_tsp_context(TSS_HKEY hKey, TSS_HCONTEXT *tspContext)
 {
 	struct tsp_object *obj;

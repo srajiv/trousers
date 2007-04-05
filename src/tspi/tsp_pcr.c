@@ -93,13 +93,13 @@ pcrs_calc_composite(TPM_PCR_SELECTION *select, TPM_PCRVALUE *arrayOfPcrs, TPM_DI
 }
 
 TSS_RESULT
-pcrs_sanity_check_selection(TCS_CONTEXT_HANDLE tcsContext,
+pcrs_sanity_check_selection(TSS_HCONTEXT tspContext,
 			    struct tr_pcrs_obj *pcrs,
 			    TPM_PCR_SELECTION *select)
 {
 	UINT16 num_pcrs, bytes_to_hold;
 
-	if ((num_pcrs = get_num_pcrs(tcsContext)) == 0)
+	if ((num_pcrs = get_num_pcrs(tspContext)) == 0)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	bytes_to_hold = num_pcrs / 8;

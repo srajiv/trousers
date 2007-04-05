@@ -40,15 +40,13 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/* out */
 TSS_RESULT
 Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_RESULT result;
 
-	/* Get the TCS context, if we're connected */
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
+	if (!obj_is_context(tspContext))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/* Have the TCS do its thing */
-	TCS_CloseContext(tcsContext);
+	result = TCS_CloseContext(tspContext);
 
 	/* Note: Memory that was returned to the app that was alloc'd by this
 	 * context isn't free'd here.  Any memory that the app doesn't explicitly
@@ -69,20 +67,10 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 		     UNICODE *wszDestination)	/* in */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsHandle;
 	BYTE *machine_name = NULL;
-	TSS_HPOLICY hPolicy;
 	TSS_HOBJECT hTpm;
 	UINT32 string_len = 0;
 
-	/* see if we've already called connect with this context */
-	if ((result = obj_context_is_connected(tspContext, &tcsHandle)) == TSS_SUCCESS) {
-		LogError("attempted to call %s on an already connected "
-			 "context!", __FUNCTION__);
-		return TSPERR(TSS_E_CONNECTION_FAILED);
-	} else if (result != TSPERR(TSS_E_NO_CONNECTION)) {
-		return result;
-	}
 
 	if (wszDestination == NULL) {
 		if ((result = obj_context_get_machine_name(tspContext,
@@ -90,7 +78,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 							   &machine_name)))
 			return result;
 
-		if ((result = TCS_OpenContext_RPC(machine_name, &tcsHandle,
+		if ((result = TCS_OpenContext_RPC(tspContext, machine_name,
 						  CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 	} else {
@@ -100,7 +88,7 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
-		if ((result = TCS_OpenContext_RPC(machine_name, &tcsHandle,
+		if ((result = TCS_OpenContext_RPC(tspContext, machine_name,
 						CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 
@@ -109,16 +97,8 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 			return result;
 	}
 
-        /* Assign an empty policy to this new object */
-        if ((obj_policy_add(tspContext, TSS_POLICY_USAGE, &hPolicy)))
-                return TSPERR(TSS_E_INTERNAL_ERROR);
-
-        obj_context_set_policy(tspContext, hPolicy);
-
         if ((obj_tpm_add(tspContext, &hTpm)))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
-
-        obj_connectContext(tspContext, tcsHandle);
 
 	return TSS_SUCCESS;
 }

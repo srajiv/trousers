@@ -25,15 +25,17 @@
 
 
 TSS_RESULT
-secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
-			TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest,
+secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
+			UINT32 ulPendingFn,
+			TSS_HPOLICY hPolicy,
+			TCPA_DIGEST *hashDigest,
 			TPM_AUTH *auth)
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_BOOL bExpired;
 	UINT32 mode;
 	TCPA_SECRET secret;
+	TSS_HCONTEXT tspContext;
 
 	/* This validates that the secret can be used */
 	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
@@ -42,17 +44,17 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	if (bExpired == TRUE)
 		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	if ((result = obj_policy_get_tcs_context(hPolicy, &tcsContext)))
+	if ((result = obj_policy_get_tsp_context(hPolicy, &tspContext)))
 		return result;
 
 	if ((result = obj_policy_get_mode(hPolicy, &mode)))
 		return result;
 
-	if ((result = Init_AuthNonce(tcsContext, auth)))
+	if ((result = Init_AuthNonce(tspContext, auth)))
 		return result;
 
 	/* added retry logic */
-	if ((result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven))) {
+	if ((result = TCSP_OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven))) {
 		if (result == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
@@ -61,7 +63,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 
 				nanosleep(&t, NULL);
 
-				result = TCSP_OIAP(tcsContext, &auth->AuthHandle, &auth->NonceEven);
+				result = TCSP_OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven);
 			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
@@ -98,7 +100,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	}
 
 	if (result) {
-		TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
+		TCSP_TerminateHandle(tspContext, auth->AuthHandle);
 		return result;
 	}
 
@@ -117,9 +119,9 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	TCPA_SECRET usageSecret;
 	TCPA_SECRET migSecret;
 	UINT32 keyMode, usageMode, migMode;
-
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
+
 
 	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
 		return result;
@@ -139,7 +141,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	if (bExpired == TRUE)
 		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	if ((result = obj_policy_get_tcs_context(hPolicy, &tcsContext)))
+	if ((result = obj_policy_get_tsp_context(hPolicy, &tspContext)))
 		return result;
 
 	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
@@ -171,7 +173,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 						    &migSecret)))
 			return result;
 
-		if ((result = OSAP_Calc(tcsContext, osapType, osapData,
+		if ((result = OSAP_Calc(tspContext, osapType, osapData,
 					keySecret.authdata, usageSecret.authdata,
 					migSecret.authdata, encAuthUsage,
 					encAuthMig, sharedSecret, auth)))
@@ -181,7 +183,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		 * because there are commands such as CreateKey, which require an auth
 		 * session even when creating no-auth keys. A secret of all 0's will be
 		 * used in this case. */
-		if ((result = TCSP_OSAP(tcsContext, osapType, osapData,
+		if ((result = TCSP_OSAP(tspContext, osapType, osapData,
 					auth->NonceOdd,	&auth->AuthHandle,
 					&auth->NonceEven, nonceEvenOSAP)))
 			return result;
@@ -193,7 +195,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 						auth->NonceOdd.nonce, 20,
 						encAuthUsage->authdata,
 						encAuthMig->authdata))) {
-			TCSP_TerminateHandle(tcsContext, auth->AuthHandle);
+			TCSP_TerminateHandle(tspContext, auth->AuthHandle);
 			return result;
 		}
 	}
@@ -310,12 +312,12 @@ secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 }
 
 TSS_RESULT
-Init_AuthNonce(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTH * auth)
+Init_AuthNonce(TSS_HCONTEXT tspContext, TPM_AUTH * auth)
 {
 	TSS_RESULT result;
 
 	auth->fContinueAuthSession = 0x00;
-	if ((result = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
+	if ((result = internal_GetRandomNonce(tspContext, &auth->NonceOdd))) {
 		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -350,7 +352,7 @@ HMAC_Auth(BYTE * secret, BYTE * Digest, TPM_AUTH * auth)
 }
 
 TSS_RESULT
-OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
+OSAP_Calc(TSS_HCONTEXT tspContext, UINT16 EntityType, UINT32 EntityValue,
 	  BYTE * authSecret, BYTE * usageSecret, BYTE * migSecret,
 	  TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
 	  BYTE * sharedSecret, TPM_AUTH * auth)
@@ -365,13 +367,13 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 	BYTE xorMigAuth[20];
 	UINT32 i;
 
-	if ((rc = internal_GetRandomNonce(tcsContext, &auth->NonceOdd))) {
+	if ((rc = internal_GetRandomNonce(tspContext, &auth->NonceOdd))) {
 		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	auth->fContinueAuthSession = 0x00;
 
-	if ((rc = TCSP_OSAP(tcsContext, EntityType, EntityValue, auth->NonceOdd,
+	if ((rc = TCSP_OSAP(tspContext, EntityType, EntityValue, auth->NonceOdd,
 					&auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP))) {
 		if (rc == TCPA_E_RESOURCES) {
 			int retry = 0;
@@ -381,7 +383,7 @@ OSAP_Calc(TCS_CONTEXT_HANDLE tcsContext, UINT16 EntityType, UINT32 EntityValue,
 
 				nanosleep(&t, NULL);
 
-				rc = TCSP_OSAP(tcsContext, EntityType, EntityValue, auth->NonceOdd,
+				rc = TCSP_OSAP(tspContext, EntityType, EntityValue, auth->NonceOdd,
 						&auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP);
 			} while (rc == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}

@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_Seal_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TCPA_ENCAUTH encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
@@ -42,9 +42,9 @@ TCSP_Seal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	initData(&hte->comm, 8);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_SEAL;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -99,7 +99,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_Unseal_TP(struct host_table_entry *hte,
 			   TCS_KEY_HANDLE parentHandle,	/* in */
 			   UINT32 SealedDataSize,	/* in */
 			   BYTE * SealedData,	/* in */
@@ -109,16 +109,12 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 			   BYTE ** Data	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 6);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_UNSEAL;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -158,14 +154,14 @@ TCSP_Unseal_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 			goto done;
 		}
 
-		*Data = (BYTE *) calloc_tspi(tspContext, *DataSize);
+		*Data = (BYTE *) calloc_tspi(hte->tspContext, *DataSize);
 		if (*Data == NULL) {
 			LogError("malloc of %u bytes failed.", *DataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, *Data, *DataSize, &hte->comm)) {
-			free_tspi(tspContext, *Data);
+			free_tspi(hte->tspContext, *Data);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

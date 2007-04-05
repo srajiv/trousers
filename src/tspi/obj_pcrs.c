@@ -375,7 +375,7 @@ obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 			break;
 	}
 
-	if ((result = pcrs_sanity_check_selection(obj->tcsContext, pcrs, select)))
+	if ((result = pcrs_sanity_check_selection(obj->tspContext, pcrs, select)))
 		goto done;
 
 	result = pcrs_calc_composite(select, pcrs->pcrs, comp);

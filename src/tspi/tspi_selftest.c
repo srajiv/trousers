@@ -26,12 +26,12 @@ TSS_RESULT
 Tspi_TPM_SelfTestFull(TSS_HTPM hTPM)	/*  in */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	return TCSP_SelfTestFull(tcsContext);
+	return TCSP_SelfTestFull(tspContext);
 }
 
 TSS_RESULT
@@ -39,8 +39,6 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 			 TSS_HKEY hKey,				/* in */
 			 TSS_VALIDATION *pValidationData)	/* in, out */
 {
-
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	TPM_AUTH keyAuth;
 	UINT64 offset = 0;
@@ -62,9 +60,6 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
-
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
 					    &hPolicy, &useAuth)))
 		return result;
@@ -73,7 +68,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
+		if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
 			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -105,12 +100,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		pKeyAuth = NULL;
 	}
 
-	if ((result = TCSP_CertifySelfTest(tcsContext,
-					  keyTCSKeyHandle,
-					  antiReplay,
-					  pKeyAuth,
-					  &outDataSize,
-					  &outData)))
+	if ((result = TCSP_CertifySelfTest(tspContext, keyTCSKeyHandle, antiReplay, pKeyAuth,
+					   &outDataSize, &outData)))
 		return result;
 
 	/* validate auth */
@@ -192,15 +183,15 @@ Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
 		       UINT32 * pulTestResultLength,	/* out */
 		       BYTE ** prgbTestResult)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 
 	if (pulTestResultLength == NULL || prgbTestResult == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	return TCSP_GetTestResult(tcsContext, pulTestResultLength, prgbTestResult);
+	return TCSP_GetTestResult(tspContext, pulTestResultLength, prgbTestResult);
 }
 

@@ -36,7 +36,6 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 {
 	TSS_RESULT result;
 	TSS_UUID parentUUID;
-	TCS_CONTEXT_HANDLE tcsContext;
 	UINT32 keyBlobSize, parentPSType;
 	BYTE *keyBlob = NULL;
 	TCS_KEY_HANDLE tcsKeyHandle;
@@ -46,18 +45,14 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	if (phKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	/* Loading a key always requires us to be connected to a TCS */
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
+	if ((!obj_is_context(tspContext)))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/* This key is in the System Persistant storage */
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
 		memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
 
-		result = TCSP_LoadKeyByUUID(tcsContext,
-					    uuidData,
-					    &info,
-					    &tcsKeyHandle);
+		result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info, &tcsKeyHandle);
 
 		if (TSS_ERROR_CODE(result) == TCS_E_KM_LOADFAILED) {
 			TSS_HKEY keyHandle;
@@ -85,15 +80,13 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 						    &info.authData))
 				return result;
 
-			if ((result = TCSP_LoadKeyByUUID(tcsContext, uuidData,
-							 &info, &tcsKeyHandle)))
+			if ((result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info,
+							 &tcsKeyHandle)))
 				return result;
 		} else if (result)
 			return result;
 
-		if ((result = TCS_GetRegisteredKeyBlob(tcsContext,
-						       uuidData,
-						       &keyBlobSize,
+		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -145,16 +138,11 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 	UINT32 keyBlobSize;
 	TSS_RESULT result;
 	TSS_BOOL answer;
-	TCS_CONTEXT_HANDLE tcsContext;
 
 	if (!obj_is_context(tspContext) || !obj_is_rsakey(hKey))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		/* make sure we're connected to a TCS */
-		if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-			return result;
-
 		if (persistentStorageTypeParent == TSS_PS_TYPE_USER) {
 			return TSPERR(TSS_E_NOTIMPL);
 		} else if (persistentStorageTypeParent == TSS_PS_TYPE_SYSTEM) {
@@ -162,13 +150,10 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 							  &keyBlob)))
 				return result;
 
-			if ((result = TCS_RegisterKey(tcsContext,
-						     uuidParentKey,
-						     uuidKey,
-						     keyBlobSize,
-						     keyBlob,
-						     strlen(PACKAGE_STRING) + 1,
-						     (BYTE *)PACKAGE_STRING)))
+			if ((result = TCS_RegisterKey(tspContext, uuidParentKey, uuidKey,
+						      keyBlobSize, keyBlob,
+						      strlen(PACKAGE_STRING) + 1,
+						      (BYTE *)PACKAGE_STRING)))
 				return result;
 		} else {
 			return TSPERR(TSS_E_BAD_PARAMETER);
@@ -203,7 +188,6 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 			   TSS_UUID uuidKey,			/* in */
 			   TSS_HKEY *phKey)			/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	BYTE *keyBlob = NULL;
 	UINT32 keyBlobSize;
 	TSS_RESULT result;
@@ -211,14 +195,13 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 	if (phKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		/* make sure we're connected to a TCS first */
-		if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-			return result;
+	if ((!obj_is_context(tspContext)))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
 		/* get the key first, so it doesn't disappear when we
 		 * unregister it */
-		if ((result = TCS_GetRegisteredKeyBlob(tcsContext, uuidKey, &keyBlobSize,
+		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidKey, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -231,12 +214,9 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 		free(keyBlob);
 
 		/* now unregister it */
-		if ((result = TCSP_UnregisterKey(tcsContext, uuidKey)))
+		if ((result = TCSP_UnregisterKey(tspContext, uuidKey)))
 			return result;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-		if (!obj_is_context(tspContext))
-			return TSPERR(TSS_E_INVALID_HANDLE);
-
 		/* get the key first, so it doesn't disappear when we
 		 * unregister it */
 		if ((result = ps_get_key_by_uuid(tspContext, &uuidKey, phKey)))
@@ -261,18 +241,15 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	TCPA_RESULT result;
 	UINT32 keyBlobSize = 0;
 	BYTE *keyBlob = NULL;
-	TCS_CONTEXT_HANDLE tcsContext;
 
 	if (phKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		/* make sure we're connected to a TCS first */
-		if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-			return result;
+	if ((!obj_is_context(tspContext)))
+		return TSPERR(TSS_E_INVALID_HANDLE);
 
-		if ((result = TCS_GetRegisteredKeyBlob(tcsContext, uuidData,
-						       &keyBlobSize,
+	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -303,7 +280,6 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 				BYTE * rgbPublicInfo,		/* in */
 				TSS_HKEY * phKey)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ALGORITHM_ID tcsAlgID;
 	UINT32 keyBlobSize;
 	BYTE *keyBlob;
@@ -329,16 +305,9 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 	}
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		/* make sure we're connected to a TCS */
-		if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-			return result;
-
-		if ((result = TCSP_GetRegisteredKeyByPublicInfo(tcsContext,
-								tcsAlgID,
-								ulPublicInfoLength,
-								rgbPublicInfo,
-								&keyBlobSize,
-								&keyBlob)))
+		if ((result = TCSP_GetRegisteredKeyByPublicInfo(tspContext, tcsAlgID,
+								ulPublicInfoLength, rgbPublicInfo,
+								&keyBlobSize, &keyBlob)))
 			return result;
 
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
@@ -438,7 +407,6 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 				     TSS_KM_KEYINFO ** ppKeyHierarchy)	/* out */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_KM_KEYINFO *tcsHier, *tspHier;
 	UINT32 tcsHierSize, tspHierSize;
 	TSS_UUID tcs_uuid;
@@ -449,13 +417,9 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 	if (!obj_is_context(tspContext))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	/* make sure we're connected to a TCS */
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
-
 	if (pUuidData) {
 		if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-			if ((result = TCS_EnumRegisteredKeys(tcsContext, pUuidData,
+			if ((result = TCS_EnumRegisteredKeys(tspContext, pUuidData,
 							     pulKeyHierarchySize,
 							     ppKeyHierarchy)))
 				return result;
@@ -464,7 +428,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 							     &tspHierSize, &tspHier)))
 				return result;
 
-			if ((result = TCS_EnumRegisteredKeys(tcsContext, &tcs_uuid, &tcsHierSize,
+			if ((result = TCS_EnumRegisteredKeys(tspContext, &tcs_uuid, &tcsHierSize,
 							     &tcsHier))) {
 				free(tspHier);
 				return result;
@@ -478,7 +442,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	} else {
-		if ((result = TCS_EnumRegisteredKeys(tcsContext, pUuidData, &tcsHierSize,
+		if ((result = TCS_EnumRegisteredKeys(tspContext, pUuidData, &tcsHierSize,
 						     &tcsHier)))
 			return result;
 

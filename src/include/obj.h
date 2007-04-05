@@ -30,7 +30,6 @@
 struct tsp_object {
 	UINT32 handle;
 	UINT32 tspContext;
-	UINT32 tcsContext;
 	TSS_FLAG flags;
 	void *data;
 	struct tsp_object *next;
@@ -50,7 +49,6 @@ TSS_RESULT	   obj_list_add(struct obj_list *, UINT32, TSS_FLAG, void *, TSS_HOBJ
 TSS_RESULT	   obj_list_remove(struct obj_list *, TSS_HOBJECT, TSS_HCONTEXT);
 void		   obj_list_put(struct obj_list *);
 struct tsp_object *obj_list_get_obj(struct obj_list *, UINT32);
-TSS_HCONTEXT       obj_lookupTspContext(TCS_CONTEXT_HANDLE);
 struct tsp_object *obj_list_get_tspcontext(struct obj_list *, UINT32);
 void		   obj_connectContext(TSS_HCONTEXT, TCS_CONTEXT_HANDLE);
 void		   obj_close_context(TSS_HCONTEXT);

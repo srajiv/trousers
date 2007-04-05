@@ -32,7 +32,6 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	TSS_HPOLICY hPolicy;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
 	TSS_HCONTEXT tspContext;
@@ -44,9 +43,6 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_hash_get_tsp_context(hHash, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, &usesAuth)))
@@ -75,9 +71,8 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Sign(tcsContext, tcsKeyHandle,
-			       ulDataLen, data,
-			       pPrivAuth, pulSignatureLength, prgbSignature)))
+	if ((result = TCSP_Sign(tspContext, tcsKeyHandle, ulDataLen, data, pPrivAuth,
+				pulSignatureLength, prgbSignature)))
 		goto done;
 
 	if (usesAuth) {

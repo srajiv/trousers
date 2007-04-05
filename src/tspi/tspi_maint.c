@@ -31,7 +31,7 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 				  BYTE ** prgbArchiveData)		/* out */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hOwnerPolicy;
 	TPM_AUTH ownerAuth;
 	TCPA_DIGEST digest;
@@ -44,7 +44,7 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 	    (pulRndNumberLength == NULL || prgbRndNumber == NULL))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy)))
@@ -61,7 +61,7 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 					      &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_CreateMaintenanceArchive(tcsContext, fGenerateRndNumber, &ownerAuth,
+	if ((result = TCSP_CreateMaintenanceArchive(tspContext, fGenerateRndNumber, &ownerAuth,
 						    pulRndNumberLength, prgbRndNumber,
 						    pulArchiveDataLength, prgbArchiveData)))
 		return result;
@@ -86,13 +86,13 @@ TSS_RESULT
 Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hOwnerPolicy;
 	TPM_AUTH ownerAuth;
 	TCPA_DIGEST digest;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_policy(hTPM, &tspContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy)))
@@ -109,7 +109,7 @@ Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 					      &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_KillMaintenanceFeature(tcsContext, &ownerAuth)))
+	if ((result = TCSP_KillMaintenanceFeature(tspContext, &ownerAuth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -130,7 +130,6 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 			       TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	TCPA_DIGEST checkSum, digest;
 	TCPA_NONCE nonce;
@@ -138,14 +137,11 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	UINT32 pubBlobSize;
 	BYTE hashBlob[512], *pubBlob;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
-
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
+		if ((result = internal_GetRandomNonce(tspContext, &nonce)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))
@@ -157,7 +153,7 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
 		return result;
 
-	if ((result = TCSP_LoadManuMaintPub(tcsContext, nonce, pubBlobSize, pubBlob, &checkSum)))
+	if ((result = TCSP_LoadManuMaintPub(tspContext, nonce, pubBlobSize, pubBlob, &checkSum)))
 		return result;
 
 	offset = 0;
@@ -199,7 +195,6 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 				TSS_VALIDATION * pValidationData)	/* in, out */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	TCPA_DIGEST checkSum, digest;
 	TCPA_NONCE nonce;
@@ -210,14 +205,11 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	if ((pValidationData && hMaintenanceKey) || (!pValidationData && !hMaintenanceKey))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
-
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tcsContext, &nonce)))
+		if ((result = internal_GetRandomNonce(tspContext, &nonce)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))
@@ -226,7 +218,7 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		memcpy(&nonce.nonce, pValidationData->rgbExternalData, sizeof(nonce.nonce));
 	}
 
-	if ((result = TCSP_ReadManuMaintPub(tcsContext, nonce, &checkSum)))
+	if ((result = TCSP_ReadManuMaintPub(tspContext, nonce, &checkSum)))
 		return result;
 
 	if (pValidationData == NULL) {

@@ -37,7 +37,6 @@ TSS_RESULT obj_encdata_get_pcr_atrelease(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_pcr_selection(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_policy(TSS_HENCDATA, UINT32, TSS_HPOLICY *);
 TSS_RESULT obj_encdata_set_pcr_info(TSS_HENCDATA, BYTE *);
-TSS_RESULT obj_encdata_is_connected(TSS_HENCDATA, TCS_CONTEXT_HANDLE *);
 
 #define ENCDATA_LIST_DECLARE		struct obj_list encdata_list
 #define ENCDATA_LIST_DECLARE_EXTERN	extern struct obj_list encdata_list

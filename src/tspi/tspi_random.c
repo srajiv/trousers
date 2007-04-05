@@ -27,19 +27,19 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
 		   UINT32 ulRandomDataLength,	/* in */
 		   BYTE ** prgbRandomData)	/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TSS_RESULT result;
 
 	if (prgbRandomData == NULL || ulRandomDataLength > 4096)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if (ulRandomDataLength == 0)
 		return TSS_SUCCESS;
 
-	if ((result = TCSP_GetRandom(tcsContext, ulRandomDataLength, prgbRandomData)))
+	if ((result = TCSP_GetRandom(tspContext, ulRandomDataLength, prgbRandomData)))
 		return result;
 
 	return TSS_SUCCESS;
@@ -51,15 +51,15 @@ Tspi_TPM_StirRandom(TSS_HTPM hTPM,		/* in */
 		    BYTE * rgbEntropyData)	/* in */
 {
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 
 	if (ulEntropyDataLength > 0 && rgbEntropyData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCSP_StirRandom(tcsContext, ulEntropyDataLength, rgbEntropyData)))
+	if ((result = TCSP_StirRandom(tspContext, ulEntropyDataLength, rgbEntropyData)))
 		return result;
 
 	return TSS_SUCCESS;

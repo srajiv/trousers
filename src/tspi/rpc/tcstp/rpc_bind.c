@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_UnBind_TP(struct host_table_entry *hte,
 			   TCS_KEY_HANDLE keyHandle,	/* in */
 			   UINT32 inDataSize,	/* in */
 			   BYTE * inData,	/* in */
@@ -36,16 +36,12 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
     ) {
 	TSS_RESULT result;
 	int i;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 5);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_UNBIND;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -77,14 +73,14 @@ TCSP_UnBind_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in 
 			goto done;
 		}
 
-		*outData = (BYTE *) calloc_tspi(tspContext, *outDataSize);
+		*outData = (BYTE *) calloc_tspi(hte->tspContext, *outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
-			free_tspi(tspContext, *outData);
+			free_tspi(hte->tspContext, *outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

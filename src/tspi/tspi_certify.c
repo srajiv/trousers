@@ -28,8 +28,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		    TSS_HKEY hCertifyingKey,		/* in */
 		    TSS_VALIDATION * pValidationData)	/* in, out */
 {
-
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	TPM_AUTH certAuth;
 	TPM_AUTH keyAuth;
@@ -58,9 +56,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
-
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
 					    &hPolicy, &useAuthKey)))
 		return result;
@@ -77,7 +72,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 
 	if (pValidationData == NULL) {
 		LogDebug("Internal Verify");
-		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
+		if ((result = internal_GetRandomNonce(tspContext, &antiReplay)))
 			return result;
 	} else {
 		LogDebug("External Verify");
@@ -117,22 +112,10 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	} else
 		pCertAuth = NULL;
 
-	if ((result = TCSP_CertifyKey(tcsContext,
-				     certifyTCSKeyHandle,
-				     keyTCSKeyHandle,
-				     antiReplay,
-				     pCertAuth,
-				     pKeyAuth,
-				     &CertifyInfoSize,
-				     &CertifyInfo,
-				     &outDataSize,
-				     &outData))) {
-		if (useAuthKey)
-			TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-		if (useAuthCert)
-			TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
+	if ((result = TCSP_CertifyKey(tspContext, certifyTCSKeyHandle, keyTCSKeyHandle, antiReplay,
+				      pCertAuth, pKeyAuth, &CertifyInfoSize, &CertifyInfo,
+				      &outDataSize, &outData)))
 		return result;
-	}
 
 	/* Validate auth */
 	if (useAuthCert || useAuthKey) {
@@ -143,32 +126,18 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			return result;
 
-		if (useAuthKey) {
-			if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &keyAuth))) {
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-				if (useAuthCert)
-					TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
+		if (useAuthKey)
+			if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &keyAuth)))
 				return result;
-			}
-		}
-		if (useAuthCert) {
-			if ((result = obj_policy_validate_auth_oiap(hCertPolicy, &digest, &certAuth))) {
-				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
-				if (useAuthKey)
-					TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
+
+		if (useAuthCert)
+			if ((result = obj_policy_validate_auth_oiap(hCertPolicy, &digest,
+								    &certAuth)))
 				return result;
-			}
-		}
 	}
 
 	if (pValidationData == NULL) {
-		if ((result = obj_rsakey_get_blob(hCertifyingKey,
-							&keyDataSize, &keyData))) {
-			if (useAuthKey)
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-			if (useAuthCert)
-				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
-
+		if ((result = obj_rsakey_get_blob(hCertifyingKey, &keyDataSize, &keyData))) {
 			LogError("Error in calling GetAttribData internally");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -189,11 +158,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 					   keyContainer.pubKey.key,
 					   keyContainer.pubKey.keyLength,
 					   outData, outDataSize))) {
-			if (useAuthKey)
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-			if (useAuthCert)
-				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
-
 			free_key_refs(&keyContainer);
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
@@ -203,11 +167,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		pValidationData->rgbData = calloc_tspi(tspContext, CertifyInfoSize);
 		if (pValidationData->rgbData == NULL) {
 			LogError("malloc of %d bytes failed.", CertifyInfoSize);
-			if (useAuthKey)
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-			if (useAuthCert)
-				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
-
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(pValidationData->rgbData, CertifyInfo, CertifyInfoSize);
@@ -215,20 +174,10 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
 		if (pValidationData->rgbValidationData == NULL) {
 			LogError("malloc of %d bytes failed.", outDataSize);
-			if (useAuthKey)
-				TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-			if (useAuthCert)
-				TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
-
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
 	}
-
-	if (useAuthKey)
-		TCSP_TerminateHandle(tcsContext, keyAuth.AuthHandle);
-	if (useAuthCert)
-		TCSP_TerminateHandle(tcsContext, certAuth.AuthHandle);
 
 	return TSS_SUCCESS;
 }

@@ -39,19 +39,15 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	UINT64 offset;
 	TCPA_SECRET ownerSecret;
 	TCPA_SECRET srkSecret;
-	//BYTE hashblob[1024];
 	TCPA_DIGEST digest;
 	TSS_HPOLICY hSrkPolicy;
 	TSS_HPOLICY hOwnerPolicy;
 	UINT32 srkKeyBlobLength;
 	BYTE *srkKeyBlob;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	UINT32 ownerMode, srkMode;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_get_tcs_context(hTPM, &tcsContext)))
-		return result;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;

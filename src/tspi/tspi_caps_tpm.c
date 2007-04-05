@@ -30,7 +30,6 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		       UINT32 * pulRespDataLength,	/* out */
 		       BYTE ** prgbRespData)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HCONTEXT tspContext;
 	TCPA_CAPABILITY_AREA tcsCapArea;
 	UINT32 tcsSubCap = 0;
@@ -43,9 +42,6 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -116,7 +112,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 
 	if (fOwnerAuth) {
 		/* do an owner authorized get capability call */
-		if ((result = get_tpm_flags(tcsContext, hTPM, &volFlags, &nonVolFlags)))
+		if ((result = get_tpm_flags(tspContext, hTPM, &volFlags, &nonVolFlags)))
 			return result;
 
 		respLen = 2 * sizeof(UINT32);
@@ -138,7 +134,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 
 	tcsSubCap = endian32(tcsSubCap);
 
-	if ((result = TCSP_GetCapability(tcsContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
+	if ((result = TCSP_GetCapability(tspContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
 					 &respLen, &respData)))
 		return result;
 

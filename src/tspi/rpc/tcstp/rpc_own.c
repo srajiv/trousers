@@ -26,23 +26,25 @@
 
 
 TSS_RESULT
-TCSP_TakeOwnership_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-				  UINT16 protocolID,	/* in */
-				  UINT32 encOwnerAuthSize,	/* in */
-				  BYTE * encOwnerAuth,	/* in */
-				  UINT32 encSrkAuthSize,	/* in */
-				  BYTE * encSrkAuth,	/* in */
-				  UINT32 srkInfoSize,	/* in */
-				  BYTE * srkInfo,	/* in */
-				  TPM_AUTH * ownerAuth,	/* in, out */
-				  UINT32 * srkKeySize, BYTE ** srkKey) {
+TCSP_TakeOwnership_TP(struct host_table_entry *hte,
+		      UINT16 protocolID,	/* in */
+		      UINT32 encOwnerAuthSize,	/* in */
+		      BYTE * encOwnerAuth,	/* in */
+		      UINT32 encSrkAuthSize,	/* in */
+		      BYTE * encSrkAuth,	/* in */
+		      UINT32 srkInfoSize,	/* in */
+		      BYTE * srkInfo,	/* in */
+		      TPM_AUTH * ownerAuth,	/* in, out */
+		      UINT32 * srkKeySize,
+		      BYTE ** srkKey)
+{
 	TSS_RESULT result;
 
 	initData(&hte->comm, 9);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_TAKEOWNERSHIP;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -94,16 +96,16 @@ done:
 
 
 TSS_RESULT
-TCSP_OwnerClear_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
-			       TPM_AUTH * ownerAuth	/* in, out */
-    ) {
+TCSP_OwnerClear_TP(struct host_table_entry *hte,
+		   TPM_AUTH * ownerAuth)	/* in, out */
+{
         TSS_RESULT result;
 
 	initData(&hte->comm, 2);
         hte->comm.hdr.u.ordinal = TCSD_ORD_OWNERCLEAR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
 
         if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))

@@ -33,16 +33,15 @@ TSC_PhysicalPresence_TP(UINT16 physPres)
 
 TSS_RESULT
 TCSP_SetOwnerInstall_TP(struct host_table_entry *hte,
-			TCS_CONTEXT_HANDLE hContext,	/* in */
 			TSS_BOOL state)	/* in */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_SETOWNERINSTALL;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -57,16 +56,15 @@ TCSP_SetOwnerInstall_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_DisableOwnerClear_TP(struct host_table_entry *hte,
-			  TCS_CONTEXT_HANDLE hContext,	/* in */
 			  TPM_AUTH * ownerAuth)	/* in, out */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DISABLEOWNERCLEAR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
@@ -86,16 +84,15 @@ TCSP_DisableOwnerClear_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ForceClear_TP(struct host_table_entry *hte,
-		   TCS_CONTEXT_HANDLE hContext)	/* in */
+TCSP_ForceClear_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_FORCECLEAR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -107,16 +104,15 @@ TCSP_ForceClear_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_DisableForceClear_TP(struct host_table_entry *hte,
-			  TCS_CONTEXT_HANDLE hContext)	/* in */
+TCSP_DisableForceClear_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DISABLEFORCECLEAR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -128,16 +124,15 @@ TCSP_DisableForceClear_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PhysicalDisable_TP(struct host_table_entry *hte,
-			TCS_CONTEXT_HANDLE hContext)	/* in */
+TCSP_PhysicalDisable_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_PHYSICALDISABLE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -149,16 +144,15 @@ TCSP_PhysicalDisable_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PhysicalEnable_TP(struct host_table_entry *hte,
-		       TCS_CONTEXT_HANDLE hContext)	/* in */
+TCSP_PhysicalEnable_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_PHYSICALENABLE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -171,7 +165,6 @@ TCSP_PhysicalEnable_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
-			TCS_CONTEXT_HANDLE hContext,   /*  in */
 			TSS_BOOL disableState,     /*  in */
 			TPM_AUTH * ownerAuth)   /*  in, out */
 {
@@ -179,9 +172,9 @@ TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
 
 	initData(&hte->comm, 3);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_OWNERSETDISABLE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_BOOL, 1, &disableState, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -203,16 +196,15 @@ TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
-			       TCS_CONTEXT_HANDLE hContext,	/* in */
 			       TSS_BOOL state)	/* in */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_PHYSICALSETDEACTIVATED;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_BOOL, 1, &state, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -227,16 +219,15 @@ TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_PhysicalPresence_TP(struct host_table_entry *hte,
-			 TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TCPA_PHYSICAL_PRESENCE fPhysicalPresence)	/* in */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_PHYSICALPRESENCE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &fPhysicalPresence, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -250,16 +241,15 @@ TCSP_PhysicalPresence_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_SetTempDeactivated_TP(struct host_table_entry *hte,
-			   TCS_CONTEXT_HANDLE hContext)	/* in */
+TCSP_SetTempDeactivated_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 1);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_SETTEMPDEACTIVATED;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -272,7 +262,6 @@ TCSP_SetTempDeactivated_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_FieldUpgrade_TP(struct host_table_entry *hte,
-		     TCS_CONTEXT_HANDLE hContext,	/* in */
 		     UINT32 dataInSize,	/* in */
 		     BYTE * dataIn,	/* in */
 		     UINT32 * dataOutSize,	/* out */
@@ -284,7 +273,6 @@ TCSP_FieldUpgrade_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_SetRedirection_TP(struct host_table_entry *hte,
-		       TCS_CONTEXT_HANDLE hContext,	/* in */
 		       TCS_KEY_HANDLE keyHandle,	/* in */
 		       UINT32 c1,	/* in */
 		       UINT32 c2,	/* in */
@@ -296,16 +284,15 @@ TCSP_SetRedirection_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_ResetLockValue_TP(struct host_table_entry *hte,
-		       TCS_CONTEXT_HANDLE hContext,   /* in */
 		       TPM_AUTH * ownerAuth)   /* in, out */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_RESETLOCKVALUE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

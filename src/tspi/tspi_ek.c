@@ -27,7 +27,6 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 			      TSS_HKEY hKey,			/* in */
 			      TSS_VALIDATION * pValidationData)	/* in, out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_NONCE antiReplay;
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
@@ -36,7 +35,6 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	TCPA_KEY dummyKey;
 	UINT64 offset;
 	TCPA_DIGEST hash;
-	//BYTE hashBlob[1024];
 	UINT32 newEKSize;
 	BYTE *newEK;
 	TSS_HCONTEXT tspContext;
@@ -47,9 +45,6 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	memset(&dummyKey, 0, sizeof(TCPA_KEY));
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_blob(hKey, &ekSize, &ek)))
@@ -65,7 +60,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	ekSize = offset;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
+		if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
 			LogError("Failed to create random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -77,8 +72,8 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		       sizeof(antiReplay.nonce));
 	}
 
-	if ((result = TCSP_CreateEndorsementKeyPair(tcsContext, antiReplay,
-						   ekSize, ek, &newEKSize, &newEK, &digest)))
+	if ((result = TCSP_CreateEndorsementKeyPair(tspContext, antiReplay, ekSize, ek, &newEKSize,
+						    &newEK, &digest)))
 		return result;
 
 	if (pValidationData == NULL) {
@@ -138,7 +133,6 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 {
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TPM_AUTH ownerAuth;
 	UINT64 offset;
 	TSS_HPOLICY hPolicy;
@@ -155,9 +149,6 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	if (phEndorsementPubKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -176,7 +167,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 						      &ownerAuth)))
 			return result;
 
-		if ((result = TCSP_OwnerReadPubek(tcsContext, &ownerAuth, &pubEKSize, &pubEK)))
+		if ((result = TCSP_OwnerReadPubek(tspContext, &ownerAuth, &pubEKSize, &pubEK)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -190,7 +181,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			goto done;
 	} else {
 		if (pValidationData == NULL) {
-			if ((result = internal_GetRandomNonce(tcsContext, &antiReplay))) {
+			if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
 				LogDebug("Failed to generate random nonce");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
@@ -203,7 +194,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		}
 
 		/* call down to the TPM */
-		if ((result = TCSP_ReadPubek(tcsContext, antiReplay, &pubEKSize, &pubEK, &checkSum)))
+		if ((result = TCSP_ReadPubek(tspContext, antiReplay, &pubEKSize, &pubEK,
+					     &checkSum)))
 			return result;
 
 		/* validate the returned hash, or set up the return so that the user can */

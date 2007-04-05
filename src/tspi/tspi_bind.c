@@ -144,12 +144,9 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 	TCPA_RESULT result;
 	TPM_AUTH privAuth;
 	TCPA_DIGEST digest;
-	//UINT64 offset;
 	TSS_HPOLICY hPolicy;
 	BYTE *encData;
 	UINT32 encDataSize;
-	TCS_CONTEXT_HANDLE tcsContext;
-	//BYTE hashBlob[1024];
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pPrivAuth;
@@ -160,9 +157,6 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_encdata_get_tsp_context(hEncData, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, &usesAuth)))
@@ -193,9 +187,8 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_UnBind(tcsContext, tcsKeyHandle, encDataSize,
-				 encData, pPrivAuth, pulUnboundDataLength,
-				 prgbUnboundData)))
+	if ((result = TCSP_UnBind(tspContext, tcsKeyHandle, encDataSize, encData, pPrivAuth,
+				  pulUnboundDataLength, prgbUnboundData)))
 		return result;
 
 	if (usesAuth) {

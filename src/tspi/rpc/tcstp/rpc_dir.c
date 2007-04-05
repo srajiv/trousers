@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_DirWriteAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_DirWriteAuth_TP(struct host_table_entry *hte,
 				 TCPA_DIRINDEX dirIndex,	/* in */
 				 TCPA_DIRVALUE newContents,	/* in */
 				 TPM_AUTH * ownerAuth	/* in, out */
@@ -35,9 +35,9 @@ TCSP_DirWriteAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DIRWRITEAUTH;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &dirIndex, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -60,7 +60,7 @@ TCSP_DirWriteAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	
 }
 
 TSS_RESULT
-TCSP_DirRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_DirRead_TP(struct host_table_entry *hte,
 			    TCPA_DIRINDEX dirIndex,	/* in */
 			    TCPA_DIRVALUE * dirValue	/* out */
     ) {
@@ -68,9 +68,9 @@ TCSP_DirRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DIRREAD;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &dirIndex, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

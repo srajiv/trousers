@@ -27,7 +27,6 @@
 
 TSS_RESULT
 TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
-		      TCS_CONTEXT_HANDLE hContext,	/* in */
 		      TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 		      UINT32 cWrappedKeyBlobSize,	/* in */
 		      BYTE * rgbWrappedKeyBlob,	/* in */
@@ -38,11 +37,11 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
 	TSS_RESULT result;
 	int i;
 
-	initData(&hte->comm, 4);
+	initData(&hte->comm, 5);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_LOADKEYBYBLOB;
-	LogDebugFn("IN: TCS Context: 0x%x", hContext);
+	LogDebugFn("IN: TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hUnwrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -81,16 +80,15 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_EvictKey_TP(struct host_table_entry *hte,
-		 TCS_CONTEXT_HANDLE hContext,	/* in */
 		 TCS_KEY_HANDLE hKey)	/* in */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_EVICTKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -105,7 +103,6 @@ TCSP_EvictKey_TP(struct host_table_entry *hte,
 
 TSS_RESULT
 TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
-		      TCS_CONTEXT_HANDLE hContext,	/* in */
 		      TCS_KEY_HANDLE hWrappingKey,	/* in */
 		      TCPA_ENCAUTH KeyUsageAuth,	/* in */
 		      TCPA_ENCAUTH KeyMigrationAuth,	/* in */
@@ -119,9 +116,9 @@ TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
 
 	initData(&hte->comm, 7);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEWRAPKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hWrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -170,7 +167,6 @@ done:
 
 TSS_RESULT
 TCSP_GetPubKey_TP(struct host_table_entry *hte,
-		  TCS_CONTEXT_HANDLE hContext,	/* in */
 		  TCS_KEY_HANDLE hKey,	/* in */
 		  TPM_AUTH * pAuth,	/* in, out */
 		  UINT32 * pcPubKeySize,	/* out */
@@ -178,16 +174,12 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte,
 {
 	TSS_RESULT result;
 	int i;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 3);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETPUBKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -214,7 +206,7 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*prgbPubKey = (BYTE *) calloc_tspi(tspContext, *pcPubKeySize);
+		*prgbPubKey = (BYTE *) calloc_tspi(hte->tspContext, *pcPubKeySize);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pcPubKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -232,16 +224,15 @@ done:
 
 TSS_RESULT
 TCSP_TerminateHandle_TP(struct host_table_entry *hte,
-			TCS_CONTEXT_HANDLE hContext,	/* in */
 			TCS_AUTHHANDLE handle)	/* in */
 {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_TERMINATEHANDLE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

@@ -19,6 +19,7 @@
 
 struct host_table_entry {
 	struct host_table_entry *next;
+	TSS_HCONTEXT tspContext;
 	TCS_CONTEXT_HANDLE tcsContext;
 	BYTE *hostname;
 	int type;
@@ -35,7 +36,7 @@ struct host_table {
 extern struct host_table *ht;
 struct host_table_entry *get_table_entry(TCS_CONTEXT_HANDLE);
 void put_table_entry(struct host_table_entry *);
-TSS_RESULT add_table_entry(struct host_table_entry *, TCS_CONTEXT_HANDLE);
+TSS_RESULT add_table_entry(TSS_HCONTEXT, BYTE *, int, struct host_table_entry **);
 void remove_table_entry(TCS_CONTEXT_HANDLE);
 
 

@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte,
 					     TCPA_NONCE antiReplay,	/* in */
 					     UINT32 endorsementKeyInfoSize,	/* in */
 					     BYTE * endorsementKeyInfo,	/* in */
@@ -39,9 +39,9 @@ TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEENDORSEMENTKEYPAIR;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -83,7 +83,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ReadPubek_TP(struct host_table_entry *hte,
 			      TCPA_NONCE antiReplay,	/* in */
 			      UINT32 * pubEndorsementKeySize,	/* out */
 			      BYTE ** pubEndorsementKey,	/* out */
@@ -93,10 +93,10 @@ TCSP_ReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* 
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_READPUBEK;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 	/*      &hte->comm.numParms = 2; */
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -133,16 +133,16 @@ done:
 }
 
 TSS_RESULT
-TCSP_DisablePubekRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_DisablePubekRead_TP(struct host_table_entry *hte,
 				     TPM_AUTH * ownerAuth	/* in, out */
     ) {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DISABLEPUBEKREAD;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
@@ -162,7 +162,7 @@ TCSP_DisablePubekRead_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 }
 
 TSS_RESULT
-TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_OwnerReadPubek_TP(struct host_table_entry *hte,
 				   TPM_AUTH * ownerAuth,	/* in, out */
 				   UINT32 * pubEndorsementKeySize,	/* out */
 				   BYTE ** pubEndorsementKey	/* out */
@@ -172,9 +172,9 @@ TCSP_OwnerReadPubek_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext
 
 	initData(&hte->comm, 2);
         hte->comm.hdr.u.ordinal = TCSD_ORD_OWNERREADPUBEK;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+        if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);
         if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
                 return TSPERR(TSS_E_INTERNAL_ERROR);

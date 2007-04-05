@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_DaaJoin_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
+TCSP_DaaJoin_TP(struct host_table_entry *hte,
 		TPM_HANDLE handle, // in
 		BYTE stage, // in
 		UINT32 inputSize0, // in
@@ -43,8 +43,8 @@ TCSP_DaaJoin_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 	LogDebugFn("stage=%d", stage);
 	initData(&hte->comm, 8);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DAAJOIN;
-	LogDebugFn("TCS Context: 0x%x", hContext);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -104,7 +104,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_DaaSign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
+TCSP_DaaSign_TP(struct host_table_entry *hte,
 		TPM_HANDLE handle, // in
 		BYTE stage, // in
 		UINT32 inputSize0, // in
@@ -121,8 +121,8 @@ TCSP_DaaSign_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext, // in
 	LogDebugFn("stage=%d", stage);
 	initData(&hte->comm, 8);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_DAASIGN;
-	LogDebugFn("TCS Context: 0x%x", hContext);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &handle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

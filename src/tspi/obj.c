@@ -112,26 +112,6 @@ obj_list_get_tspcontext(struct obj_list *list, UINT32 tspContext)
 	return obj;
 }
 
-/* search through the provided list for an object with TCS context
- * matching @tcsContext. If found, return a pointer to the object
- * with the list locked, else return NULL.  To release the lock,
- * caller should call obj_list_put() after manipulating the object.
- */
-struct tsp_object *
-obj_list_get_tcscontext(struct obj_list *list, UINT32 tcsContext)
-{
-	struct tsp_object *obj;
-
-	MUTEX_LOCK(list->lock);
-
-	for (obj = list->head; obj; obj = obj->next) {
-		if (obj->tcsContext == tcsContext)
-			break;
-	}
-
-	return obj;
-}
-
 /* release a list whose handle was returned by obj_list_get_obj() */
 void
 obj_list_put(struct obj_list *list)
@@ -155,13 +135,10 @@ obj_list_add(struct obj_list *list, UINT32 tsp_context, TSS_FLAG flags, void *da
 	new_obj->flags = flags;
         new_obj->data = data;
 
-	if (list == &context_list) {
+	if (list == &context_list)
 		new_obj->tspContext = new_obj->handle;
-		new_obj->tcsContext = 0;
-	} else {
+	else
 		new_obj->tspContext = tsp_context;
-		obj_context_get_tcs_context(tsp_context, &new_obj->tcsContext);
-	}
 
         MUTEX_LOCK(list->lock);
 
@@ -257,55 +234,3 @@ obj_close_context(TSS_HCONTEXT tspContext)
 	ENCDATA_LIST_CLOSE(tspContext);
 	DAA_LIST_CLOSE(tspContext);
 }
-
-/* Some TSP context object will have a reference to this TCS context handle
- * if it is valid, so there's no need to search every list */
-TSS_HCONTEXT
-obj_lookupTspContext(TCS_CONTEXT_HANDLE tcsContext)
-{
-	struct tsp_object *obj;
-	TSS_HCONTEXT hContext;
-
-	if ((obj = obj_list_get_tcscontext(&context_list, tcsContext)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	hContext = obj->tspContext;
-
-	obj_list_put(&context_list);
-
-	return hContext;
-}
-
-/* go through the object list and mark all objects with TSP handle tspContext
- * as being connected to the TCS with handle tcsContext
- */
-void
-obj_connectContext_list(struct obj_list *list, TSS_HCONTEXT tspContext,
-			TCS_CONTEXT_HANDLE tcsContext)
-{
-	struct tsp_object *tmp;
-
-	MUTEX_LOCK(list->lock);
-
-	for (tmp = list->head; tmp; tmp = tmp->next) {
-		if (tmp->tspContext == tspContext) {
-			tmp->tcsContext = tcsContext;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
-}
-
-void
-obj_connectContext(TSS_HCONTEXT tspContext, TCS_CONTEXT_HANDLE tcsContext)
-{
-        TPM_LIST_CONNECT(tspContext, tcsContext);
-        CONTEXT_LIST_CONNECT(tspContext, tcsContext);
-        HASH_LIST_CONNECT(tspContext, tcsContext);
-        PCRS_LIST_CONNECT(tspContext, tcsContext);
-        POLICY_LIST_CONNECT(tspContext, tcsContext);
-        RSAKEY_LIST_CONNECT(tspContext, tcsContext);
-        ENCDATA_LIST_CONNECT(tspContext, tcsContext);
-        DAA_LIST_CONNECT(tspContext, tcsContext);
-}
-

@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ChangeAuth_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE parentHandle,	/* in */
 			       TCPA_PROTOCOL_ID protocolID,	/* in */
 			       TCPA_ENCAUTH newAuth,	/* in */
@@ -42,9 +42,9 @@ TCSP_ChangeAuth_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 
 	initData(&hte->comm, 9);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CHANGEAUTH;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -99,7 +99,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte,
 				    TCPA_PROTOCOL_ID protocolID,	/* in */
 				    TCPA_ENCAUTH newAuth,	/* in */
 				    TCPA_ENTITY_TYPE entityType,	/* in */
@@ -109,9 +109,9 @@ TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 
 	initData(&hte->comm, 5);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CHANGEAUTHOWNER;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -136,7 +136,7 @@ TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContex
 }
 
 TSS_RESULT
-TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE idHandle,	/* in */
 					TCPA_NONCE antiReplay,	/* in */
 					UINT32 KeySizeIn,	/* in */
@@ -154,7 +154,7 @@ TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 }
 
 TSS_RESULT
-TCSP_ChangeAuthAsymFinish_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ChangeAuthAsymFinish_TP(struct host_table_entry *hte,
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 TCS_KEY_HANDLE ephHandle,	/* in */
 					 TCPA_ENTITY_TYPE entityType,	/* in */

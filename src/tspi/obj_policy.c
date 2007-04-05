@@ -124,22 +124,6 @@ obj_policy_get_tsp_context(TSS_HPOLICY hPolicy, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
-obj_policy_get_tcs_context(TSS_HPOLICY hPolicy,
-			   TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
 obj_policy_do_hmac(TSS_HPOLICY hPolicy, TSS_HOBJECT hAuthorizedObject,
 		   TSS_BOOL returnOrVerify, UINT32 ulPendingFunction,
 		   TSS_BOOL continueUse, UINT32 ulSizeNonces,

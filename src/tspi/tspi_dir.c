@@ -28,12 +28,10 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 		  UINT32 ulDirDataLength,	/* in */
 		  BYTE * rgbDirData)		/* in */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
+	TSS_HCONTEXT tspContext;
 	TCPA_RESULT result;
 	TPM_AUTH auth;
 	TCPA_DIGEST hashDigest;
-	//UINT64 offset;
-	//BYTE hashBlob[32];
 	TSS_HPOLICY hPolicy;
 	TCPA_DIRVALUE dirValue = { { 0 } };
 	Trspi_HashCtx hashCtx;
@@ -44,7 +42,7 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	if (ulDirDataLength > (UINT32)sizeof(TCPA_DIRVALUE))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
@@ -60,16 +58,13 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
 		return result;
 
-	/*  hashDigest now has the hash result       */
+	/* hashDigest now has the hash result */
 	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DirWriteAuth,
 					      hPolicy, &hashDigest,
 					      &auth)))
 		return result;
 
-	if ((result = TCSP_DirWriteAuth(tcsContext,
-				       ulDirIndex,
-				       dirValue,
-				       &auth)))
+	if ((result = TCSP_DirWriteAuth(tspContext, ulDirIndex, dirValue, &auth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -87,7 +82,6 @@ Tspi_TPM_DirRead(TSS_HTPM hTPM,			/* in */
 		 UINT32 * pulDirDataLength,	/* out */
 		 BYTE ** prgbDirData)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_DIRVALUE dirValue;
 	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
@@ -98,12 +92,7 @@ Tspi_TPM_DirRead(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
-
-	if ((result = TCSP_DirRead(tcsContext,
-				  ulDirIndex,
-				  &dirValue)))
+	if ((result = TCSP_DirRead(tspContext, ulDirIndex, &dirValue)))
 		return result;
 
 	*pulDirDataLength = 20;

@@ -32,9 +32,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	TPM_AUTH privAuth;
 	TPM_AUTH *pPrivAuth = &privAuth;
 	UINT64 offset;
-	//BYTE hashBlob[1000];
 	TCPA_DIGEST digest, composite;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HPOLICY hPolicy;
 	TCPA_NONCE antiReplay;
@@ -56,9 +54,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
-
 	if (hPcrComposite && !obj_is_pcrs(hPcrComposite))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
@@ -71,7 +66,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tcsContext, &antiReplay)))
+		if ((result = internal_GetRandomNonce(tspContext, &antiReplay)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
@@ -114,7 +109,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Quote(tcsContext, tcsKeyHandle, antiReplay, pcrDataSize, pcrData,
+	if ((result = TCSP_Quote(tspContext, tcsKeyHandle, antiReplay, pcrDataSize, pcrData,
 				 pPrivAuth, &pcrDataOutSize, &pcrDataOut, &validationLength,
 				 &validationData)))
 		return result;

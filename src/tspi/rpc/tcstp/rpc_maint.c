@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 					     TSS_BOOL generateRandom,	/* in */
 					     TPM_AUTH * ownerAuth,	/* in, out */
 					     UINT32 * randomSize,	/* out */
@@ -35,16 +35,12 @@ TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 					     BYTE ** archive	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 3);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEMAINTENANCEARCHIVE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_BOOL, 1, &generateRandom, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -63,7 +59,7 @@ TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		if (*randomSize > 0) {
-			*random = calloc_tspi(tspContext, *randomSize);
+			*random = calloc_tspi(hte->tspContext, *randomSize);
 			if (*random == NULL) {
 				LogError("malloc of %u bytes failed.", *randomSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -71,7 +67,7 @@ TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 			}
 
 			if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *random, *randomSize, &hte->comm)) {
-				free_tspi(tspContext, *random);
+				free_tspi(hte->tspContext, *random);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -84,7 +80,7 @@ TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		if (*archiveSize > 0) {
-			*archive = calloc_tspi(tspContext, *archiveSize);
+			*archive = calloc_tspi(hte->tspContext, *archiveSize);
 			if (*archive == NULL) {
 				LogError("malloc of %u bytes failed.", *archiveSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -92,8 +88,8 @@ TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDL
 			}
 
 			if (getData(TCSD_PACKET_TYPE_PBYTE, 4, *archive, *archiveSize, &hte->comm)) {
-				free_tspi(tspContext, *random);
-				free_tspi(tspContext, *archive);
+				free_tspi(hte->tspContext, *random);
+				free_tspi(hte->tspContext, *archive);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -106,7 +102,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *hte,
 					   UINT32 dataInSize,	/* in */
 					   BYTE * dataIn,	/* in */
 					   TPM_AUTH * ownerAuth,	/* in, out */
@@ -117,9 +113,9 @@ TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE 
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_LOADMAINTENANCEARCHIVE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &dataInSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -161,16 +157,16 @@ done:
 }
 
 TSS_RESULT
-TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte,
 					   TPM_AUTH * ownerAuth	/* in , out */
     ) {
 	TSS_RESULT result;
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_KILLMAINTENANCEFEATURE;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_AUTH, 1, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -189,7 +185,7 @@ TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE 
 }
 
 TSS_RESULT
-TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte,
 				     TCPA_NONCE antiReplay,	/* in */
 				     UINT32 PubKeySize,	/* in */
 				     BYTE * PubKey,	/* in */
@@ -199,9 +195,9 @@ TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 
 	initData(&hte->comm, 4);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_LOADMANUFACTURERMAINTENANCEPUB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -224,7 +220,7 @@ TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 }
 
 TSS_RESULT
-TCSP_ReadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ReadManuMaintPub_TP(struct host_table_entry *hte,
 				     TCPA_NONCE antiReplay,	/* in */
 				     TCPA_DIGEST * checksum	/* out */
     ) {
@@ -232,9 +228,9 @@ TCSP_ReadManuMaintPub_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hConte
 
 	initData(&hte->comm, 2);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_READMANUFACTURERMAINTENANCEPUB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

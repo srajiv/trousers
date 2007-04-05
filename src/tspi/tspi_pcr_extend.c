@@ -31,7 +31,6 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 		   UINT32 * pulPcrValueLength,	/* out */
 		   BYTE ** prgbPcrValue)	/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_PCRVALUE outDigest;
 	TSS_RESULT result;
 	BYTE *extendData;
@@ -47,9 +46,6 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
-		return result;
-
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	if (pPcrEvent) {
@@ -71,12 +67,12 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 		extendData = pbPcrData;
 	}
 
-	if ((result = TCSP_Extend(tcsContext, ulPcrIndex, *(TPM_DIGEST *)extendData, &outDigest)))
+	if ((result = TCSP_Extend(tspContext, ulPcrIndex, *(TPM_DIGEST *)extendData, &outDigest)))
 		return result;
 
 	/* log the event structure if its passed in */
 	if (pPcrEvent) {
-		if ((result = TCS_LogPcrEvent(tcsContext, *pPcrEvent, &number)))
+		if ((result = TCS_LogPcrEvent(tspContext, *pPcrEvent, &number)))
 			return result;
 
 		if ((pPcrEvent->rgbPcrValue = calloc_tspi(tspContext,
@@ -107,7 +103,6 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 		 UINT32 *pulPcrValueLength,	/* out */
 		 BYTE **prgbPcrValue)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_PCRVALUE outDigest;
 	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
@@ -118,10 +113,7 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
-
-	if ((result = TCSP_PcrRead(tcsContext, ulPcrIndex, &outDigest)))
+	if ((result = TCSP_PcrRead(tspContext, ulPcrIndex, &outDigest)))
 		return result;
 
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));

@@ -33,7 +33,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				UINT32 * pulTcpaIdentityReqLength,	/* out */
 				BYTE ** prgbTcpaIdentityReq)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_ENCAUTH encAuthUsage;
 	TCPA_ENCAUTH encAuthMig;
 	BYTE sharedSecret[20];
@@ -86,10 +85,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		free_tspi(tspContext, cb);
 		cb = NULL;
 	}
-
-	/* Get and verify the context */
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
-		return result;
 
 	/* Get Policies */
 	if ((result = obj_rsakey_get_policy(hKeySRK, TSS_POLICY_USAGE,
@@ -225,23 +220,12 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					      &nonceEvenOSAP)))
 		return result;
 
-	if ((result = TCSP_MakeIdentity(tcsContext,
-				       encAuthUsage,
-				       chosenIDHash,
-				       idKeySize,
-				       idKey,
-				       pSrkAuth,
-				       &ownerAuth,
-				       &idKeySize,
-				       &newIdKey,
-				       &pcIdentityBindingSize,
-				       &prgbIdentityBinding,
-				       &pcEndorsementCredentialSize,
-				       &prgbEndorsementCredential,
-				       &pcPlatformCredentialSize,
-				       &prgbPlatformCredential,
-				       &pcConformanceCredentialSize,
-				       &prgbConformanceCredential)))
+	if ((result = TCSP_MakeIdentity(tspContext, encAuthUsage, chosenIDHash, idKeySize, idKey,
+					pSrkAuth, &ownerAuth, &idKeySize, &newIdKey,
+					&pcIdentityBindingSize, &prgbIdentityBinding,
+					&pcEndorsementCredentialSize, &prgbEndorsementCredential,
+					&pcPlatformCredentialSize, &prgbPlatformCredential,
+					&pcConformanceCredentialSize, &prgbConformanceCredential)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -393,7 +377,6 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	TPM_AUTH idKeyAuth;
 	TPM_AUTH ownerAuth;
 	TSS_HCONTEXT tspContext;
-	TCS_CONTEXT_HANDLE tcsContext;
 	TSS_HPOLICY hIDPolicy, hTPMPolicy;
 	UINT64 offset;
 	BYTE credBlob[0x1000];
@@ -410,9 +393,6 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
-		return result;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -461,14 +441,9 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 					      &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_ActivateTPMIdentity(tcsContext,
-					      tcsKeyHandle,
-					      ulAsymCAContentsBlobLength,
-					      rgbAsymCAContentsBlob,
-					      pIDKeyAuth,
-					      &ownerAuth,
-					      &symKeyBlobLen,
-					      &symKeyBlob)))
+	if ((result = TCSP_ActivateTPMIdentity(tspContext, tcsKeyHandle, ulAsymCAContentsBlobLength,
+					       rgbAsymCAContentsBlob, pIDKeyAuth, &ownerAuth,
+					       &symKeyBlobLen, &symKeyBlob)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

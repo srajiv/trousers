@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE parentHandle,	/* in */
 					TSS_MIGRATE_SCHEME migrationType,	/* in */
 					UINT32 MigrationKeyAuthSize,	/* in */
@@ -41,21 +41,17 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 					BYTE ** outData	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
 	TPM_AUTH null_auth;
 	UINT32 i;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 9);
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CREATEMIGRATIONBLOB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
 	i = 0;
-	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -102,14 +98,14 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 		}
 
 		if (*randomSize > 0) {
-			*random = (BYTE *)calloc_tspi(tspContext, *randomSize);
+			*random = (BYTE *)calloc_tspi(hte->tspContext, *randomSize);
 			if (*random == NULL) {
 				LogError("malloc of %u bytes failed.", *randomSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *random, *randomSize, &hte->comm)) {
-				free_tspi(tspContext, *random);
+				free_tspi(hte->tspContext, *random);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -117,23 +113,23 @@ TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hCo
 
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, &hte->comm)) {
 			if (*randomSize > 0)
-				free_tspi(tspContext, *random);
+				free_tspi(hte->tspContext, *random);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 
-		*outData = (BYTE *)calloc_tspi(tspContext, *outDataSize);
+		*outData = (BYTE *)calloc_tspi(hte->tspContext, *outDataSize);
 		if (*outData == NULL) {
 			if (*randomSize > 0)
-				free_tspi(tspContext, *random);
+				free_tspi(hte->tspContext, *random);
 			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
 			if (*randomSize > 0)
-				free_tspi(tspContext, *random);
-			free_tspi(tspContext, *outData);
+				free_tspi(hte->tspContext, *random);
+			free_tspi(hte->tspContext, *outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -144,7 +140,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte,
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 UINT32 inDataSize,	/* in */
 					 BYTE * inData,	/* in */
@@ -159,9 +155,9 @@ TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hC
 
 	initData(&hte->comm, 6);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CONVERTMIGRATIONBLOB;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -215,7 +211,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte,
 					  TSS_MIGRATE_SCHEME migrateScheme,	/* in */
 					  UINT32 MigrationKeySize,	/* in */
 					  BYTE * MigrationKey,	/* in */
@@ -224,16 +220,12 @@ TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE h
 					  BYTE ** MigrationKeyAuth	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 5);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_AUTHORIZEMIGRATIONKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &migrateScheme, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -259,7 +251,7 @@ TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE h
 			goto done;
 		}
 
-		*MigrationKeyAuth = (BYTE *)calloc_tspi(tspContext, *MigrationKeyAuthSize);
+		*MigrationKeyAuth = (BYTE *)calloc_tspi(hte->tspContext, *MigrationKeyAuthSize);
 		if (*MigrationKeyAuth == NULL) {
 			LogError("malloc of %u bytes failed.", *MigrationKeyAuthSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);

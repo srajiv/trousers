@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_CertifyKey_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE certHandle,	/* in */
 			       TCS_KEY_HANDLE keyHandle,	/* in */
 			       TCPA_NONCE antiReplay,	/* in */
@@ -38,20 +38,16 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE hContext,	/*
 			       BYTE ** outData	/* out */
     ) {
 	TSS_RESULT result;
-	TSS_HCONTEXT tspContext;
 	TPM_AUTH null_auth;
 	int i;
-
-	if ((tspContext = obj_lookupTspContext(hContext)) == NULL_HCONTEXT)
-		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	initData(&hte->comm, 6);
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CERTIFYKEY;
-	LogDebugFn("TCS Context: 0x%x", hContext);
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &certHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

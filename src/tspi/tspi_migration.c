@@ -29,7 +29,6 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 				  UINT32 * pulMigTicketLength,		/* out */
 				  BYTE ** prgbMigTicket)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	UINT64 offset;
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
@@ -48,9 +47,6 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
-		return result;
-
-	if ((result = obj_tpm_is_connected(hTPM, &tcsContext)))
 		return result;
 
 	/*  get the tpm Policy */
@@ -107,7 +103,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	/* Send command */
-	if ((result = TCSP_AuthorizeMigrationKey(tcsContext, migrationScheme, pubKeySize,
+	if ((result = TCSP_AuthorizeMigrationKey(tspContext, migrationScheme, pubKeySize,
 						 pubKeyBlob, &ownerAuth, pulMigTicketLength,
 						 prgbMigTicket)))
 		return result;
@@ -138,7 +134,6 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 			     UINT32 * pulMigrationBlobLength,	/* out */
 			     BYTE ** prgbMigrationBlob)		/* out */
 {
-	TCS_CONTEXT_HANDLE tcsContext;
 	TPM_AUTH parentAuth, entityAuth;
 	TPM_AUTH *pParentAuth;
 	TCPA_RESULT result;
@@ -169,9 +164,6 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if ((result = obj_rsakey_get_blob(hParentKey, &parentKeySize, &parentKeyBlob)))
@@ -241,7 +233,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hParentKey, &parentHandle)))
 		return result;
 
-	if ((result = TCSP_CreateMigrationBlob(tcsContext, parentHandle, migAuth.migrationScheme,
+	if ((result = TCSP_CreateMigrationBlob(tspContext, parentHandle, migAuth.migrationScheme,
 					       ulMigTicketLength, rgbMigTicket, tcpaKey.encSize,
 					       tcpaKey.encData, pParentAuth, &entityAuth,
 					       pulRandomLength, prgbRandom, pulMigrationBlobLength,
@@ -321,8 +313,6 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 			      UINT32 ulMigrationBlobLength,	/* in */
 			      BYTE * rgbMigrationBlob)		/* in */
 {
-
-	TCS_CONTEXT_HANDLE tcsContext;
 	TCPA_RESULT result;
 	UINT32 outDataSize;
 	BYTE *outData;
@@ -336,9 +326,6 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	Trspi_HashCtx hashCtx;
 
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
-		return result;
-
-	if ((result = obj_context_is_connected(tspContext, &tcsContext)))
 		return result;
 
 	if (!obj_is_rsakey(hParentKey))
@@ -374,7 +361,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		pParentAuth = NULL;
 	}
 
-	if ((result = TCSP_ConvertMigrationBlob(tcsContext, parentHandle, ulMigrationBlobLength,
+	if ((result = TCSP_ConvertMigrationBlob(tspContext, parentHandle, ulMigrationBlobLength,
 				     rgbMigrationBlob, ulRandomLength, rgbRandom, pParentAuth,
 				     &outDataSize, &outData)))
 		return result;
