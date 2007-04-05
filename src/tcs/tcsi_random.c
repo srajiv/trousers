@@ -104,19 +104,22 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	LogDebug("Entering stir random");
 
+	if (inDataSize > 255) {
+		LogDebugFn("inData is too large! (%u bytes)", inDataSize);
+		return TCSERR(TSS_E_BAD_PARAMETER);
+	}
+
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, inDataSize, txBlob);
 	LoadBlob(&offset, inDataSize, txBlob, inData);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_StirRandom,
-			txBlob);
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_StirRandom, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Stir random", result);
 	return result;
