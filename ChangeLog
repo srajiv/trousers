@@ -1,4 +1,6 @@
 
+- Fixed bug when 2 TCSD's return the same context number.
+- Added a check for the size of Tcsi_StirRandom's entropy data.
 - Added support for TSS 1.2 style keys and PCR info long and
   short structures.
 - Added support for TPM_Save/LoadAuthContext.
