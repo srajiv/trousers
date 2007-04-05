@@ -22,21 +22,6 @@
 #include "tsplog.h"
 #include "obj.h"
 
-TSS_RESULT
-obj_context_get_tcs_context(TSS_HCONTEXT hContext,
-			    TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-
-	if ((obj = obj_list_get_obj(&context_list, hContext)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&context_list);
-
-	return TSS_SUCCESS;
-}
 
 TSS_RESULT
 obj_context_add(TSS_HOBJECT *phObject)
@@ -71,6 +56,12 @@ obj_context_add(TSS_HOBJECT *phObject)
 		return result;
 	}
 
+	/* Add the default policy */
+	if ((result = obj_policy_add(*phObject, TSS_POLICY_USAGE, &context->policy))) {
+		obj_list_remove(&context_list, *phObject, *phObject);
+		return result;
+	}
+
 	return TSS_SUCCESS;
 }
 
@@ -85,25 +76,6 @@ obj_is_context(TSS_HOBJECT hObject)
 	}
 
 	return answer;
-}
-
-TSS_RESULT
-obj_context_is_connected(TSS_HCONTEXT tspContext, TCS_CONTEXT_HANDLE *tcsContext)
-{
-	struct tsp_object *obj;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	if (obj->tcsContext == NULL_HCONTEXT)
-		result = TSPERR(TSS_E_NO_CONNECTION);
-
-	*tcsContext = obj->tcsContext;
-
-	obj_list_put(&context_list);
-
-	return result;
 }
 
 TSS_RESULT
