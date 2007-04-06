@@ -39,6 +39,11 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
+	if ((result = obj_context_get_policy(tspContext, &rsakey->usagePolicy))) {
+		free(rsakey);
+		return result;
+	}
+
 	if ((initFlags & TSS_KEY_STRUCT_BITMASK) == TSS_KEY_STRUCT_DEFAULT) {
 		/* Its not set, go with the context's default */
 		if ((result = obj_context_get_connection_version(tspContext, &ctx_ver))) {
@@ -75,19 +80,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 			break;
 	}
 
-	/* add usage policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
-		free(rsakey);
-		return result;
-	}
-
-	/* add migration policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_MIGRATION, &rsakey->migPolicy))) {
-		obj_policy_remove(rsakey->usagePolicy, tspContext);
-		free(rsakey);
-		return result;
-	}
-
 	if (initFlags & TSS_KEY_EMPTY_KEY)
 		goto add_key;
 
@@ -99,8 +91,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	rsakey->key.algorithmParms.parms = calloc(1, sizeof(TCPA_RSA_KEY_PARMS));
 	if (rsakey->key.algorithmParms.parms == NULL) {
 		LogError("calloc of %u bytes failed.", rsakey->key.algorithmParms.parmSize);
-		obj_policy_remove(rsakey->usagePolicy, tspContext);
-		obj_policy_remove(rsakey->migPolicy, tspContext);
 		free(rsakey);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -174,8 +164,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 
 add_key:
 	if ((result = obj_list_add(&rsakey_list, tspContext, flags, rsakey, phObject))) {
-		obj_policy_remove(rsakey->usagePolicy, tspContext);
-		obj_policy_remove(rsakey->migPolicy, tspContext);
 		free(rsakey->key.algorithmParms.parms);
 		free(rsakey);
 		return result;
@@ -206,28 +194,17 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FL
 		return result;
 	}
 
+	flags |= TSS_OBJ_FLAG_KEY_SET;
 	if (rsakey->key.authDataUsage)
 		flags |= TSS_OBJ_FLAG_USAGEAUTH;
 
-	/* add usage policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
-		free_key_refs((TCPA_KEY *)&rsakey->key);
-		free(rsakey);
-		return result;
-	}
-
-	/* add migration policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_MIGRATION, &rsakey->migPolicy))) {
-		free_key_refs((TCPA_KEY *)&rsakey->key);
-		obj_policy_remove(rsakey->usagePolicy, tspContext);
+	if ((result = obj_context_get_policy(tspContext, &rsakey->usagePolicy))) {
 		free(rsakey);
 		return result;
 	}
 
 	if ((result = obj_list_add(&rsakey_list, tspContext, flags, rsakey, phKey))) {
 		free_key_refs((TCPA_KEY *)&rsakey->key);
-		obj_policy_remove(rsakey->usagePolicy, tspContext);
-		obj_policy_remove(rsakey->migPolicy, tspContext);
 		free(rsakey);
 		return result;
 	}
@@ -253,16 +230,22 @@ obj_rsakey_set_flags(TSS_HKEY hKey, UINT32 flags)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	rsakey->key.keyFlags = flags;
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -270,16 +253,22 @@ obj_rsakey_set_size(TSS_HKEY hKey, UINT32 len)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	rsakey->key.pubKey.keyLength = len/8;
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -291,6 +280,11 @@ obj_rsakey_set_key_parms(TSS_HKEY hKey, TCPA_KEY_PARMS *parms)
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -427,6 +421,11 @@ obj_rsakey_set_usage(TSS_HKEY hKey, UINT32 usage)
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	switch (usage) {
@@ -452,7 +451,7 @@ obj_rsakey_set_usage(TSS_HKEY hKey, UINT32 usage)
 			result = TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 			break;
 	}
-
+done:
 	obj_list_put(&rsakey_list);
 
 	return result;
@@ -463,19 +462,25 @@ obj_rsakey_set_migratable(TSS_HKEY hKey, UINT32 mig)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (mig)
 		rsakey->key.keyFlags |= migratable;
 	else
 		rsakey->key.keyFlags &= (~migratable);
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -483,19 +488,25 @@ obj_rsakey_set_redirected(TSS_HKEY hKey, UINT32 redir)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (redir)
 		rsakey->key.keyFlags |= redirection;
 	else
 		rsakey->key.keyFlags &= (~redirection);
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -503,19 +514,25 @@ obj_rsakey_set_volatile(TSS_HKEY hKey, UINT32 vol)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (vol)
 		rsakey->key.keyFlags |= volatileKey;
 	else
 		rsakey->key.keyFlags &= (~volatileKey);
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -540,9 +557,15 @@ obj_rsakey_set_authdata_usage(TSS_HKEY hKey, UINT32 usage)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -551,10 +574,10 @@ obj_rsakey_set_authdata_usage(TSS_HKEY hKey, UINT32 usage)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 	else
 		obj->flags &= ~TSS_OBJ_FLAG_USAGEAUTH;
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -587,9 +610,15 @@ obj_rsakey_set_alg(TSS_HKEY hKey, UINT32 alg)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	switch (alg) {
@@ -600,10 +629,10 @@ obj_rsakey_set_alg(TSS_HKEY hKey, UINT32 alg)
 			rsakey->key.algorithmParms.algorithmID = alg;
 			break;
 	}
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -643,9 +672,15 @@ obj_rsakey_set_es(TSS_HKEY hKey, UINT32 es)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -664,10 +699,10 @@ obj_rsakey_set_es(TSS_HKEY hKey, UINT32 es)
 			rsakey->key.algorithmParms.encScheme = es;
 			break;
 	}
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -708,9 +743,15 @@ obj_rsakey_set_ss(TSS_HKEY hKey, UINT32 ss)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -729,10 +770,10 @@ obj_rsakey_set_ss(TSS_HKEY hKey, UINT32 ss)
 			rsakey->key.algorithmParms.sigScheme = ss;
 			break;
 	}
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -740,16 +781,22 @@ obj_rsakey_set_num_primes(TSS_HKEY hKey, UINT32 num)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	UINT32ToArray(num, &rsakey->key.algorithmParms.parms[4]);
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -917,6 +964,7 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -932,6 +980,11 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 				*auth = FALSE;
 		}
 	} else {
+		if (!rsakey->migPolicy) {
+			result = TSPERR(TSS_E_KEY_NO_MIGRATION_POLICY);
+			goto done;
+		}
+
 		*phPolicy = rsakey->migPolicy;
 		if (auth != NULL) {
 			if (obj->flags & TSS_OBJ_FLAG_MIGAUTH)
@@ -940,10 +993,10 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 				*auth = FALSE;
 		}
 	}
-
+done:
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -1067,6 +1120,11 @@ obj_rsakey_set_modulus(TSS_HKEY hKey, UINT32 size, BYTE *data)
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -1232,6 +1290,11 @@ obj_rsakey_set_exponent(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	parms = (TCPA_RSA_KEY_PARMS *)rsakey->key.algorithmParms.parms;
 
@@ -1382,6 +1445,8 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 	else
 		obj->flags &= ~TSS_OBJ_FLAG_USAGEAUTH;
+
+	obj->flags |= TSS_OBJ_FLAG_KEY_SET;
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1539,6 +1604,11 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	free(rsakey->key.pubKey.key);
@@ -1546,7 +1616,7 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
 
 	memcpy(&rsakey->key.pubKey, &pub.pubKey, sizeof(TCPA_STORE_PUBKEY));
 	memcpy(&rsakey->key.algorithmParms, &pub.algorithmParms, sizeof(TCPA_KEY_PARMS));
-
+done:
 	obj_list_put(&rsakey_list);
 
 	return result;
@@ -1562,6 +1632,11 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
@@ -1601,6 +1676,11 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 #endif
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 #if 0
@@ -1769,3 +1849,28 @@ done:
 
 	return result;
 }
+
+void
+obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
+{
+	struct tsp_object *obj, *prev = NULL;
+	struct obj_list *list = &rsakey_list;
+	struct tr_rsakey_obj *rsakey;
+
+	pthread_mutex_lock(&list->lock);
+
+	for (obj = list->head; obj; prev = obj, obj = obj->next) {
+		if (obj->tspContext != tspContext)
+			continue;
+
+		rsakey = (struct tr_rsakey_obj *)obj->data;
+		if (rsakey->usagePolicy == hPolicy)
+			rsakey->usagePolicy = NULL_HPOLICY;
+
+		if (rsakey->migPolicy == hPolicy)
+			rsakey->migPolicy = NULL_HPOLICY;
+	}
+
+	pthread_mutex_unlock(&list->lock);
+}
+

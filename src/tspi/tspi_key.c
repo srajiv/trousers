@@ -205,7 +205,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	TSS_HPOLICY hUsagePolicy;
-	TSS_HPOLICY hMigPolicy;
+	TSS_HPOLICY hMigPolicy = NULL_HPOLICY;
 	TSS_HPOLICY hWrapPolicy;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
 	BYTE *keyBlob = NULL;
@@ -224,8 +224,10 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 					    &hUsagePolicy, &usesAuth)))
 		return result;
 
-	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_MIGRATION, &hMigPolicy, NULL)))
-		return result;
+	if (obj_rsakey_is_migratable(hKey)) {
+		if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_MIGRATION, &hMigPolicy, NULL)))
+			return result;
+	}
 
 	if ((result = obj_rsakey_get_policy(hWrappingKey, TSS_POLICY_USAGE, &hWrapPolicy, NULL)))
 		return result;

@@ -58,7 +58,14 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 TSS_RESULT
 obj_policy_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-	return obj_list_remove(&policy_list, hObject, tspContext);
+        TSS_RESULT result;
+
+        if ((result = obj_list_remove(&policy_list, hObject, tspContext)))
+                return result;
+
+        obj_lists_remove_policy_refs(hObject, tspContext);
+
+        return TSS_SUCCESS;
 }
 
 TSS_BOOL

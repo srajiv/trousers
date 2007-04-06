@@ -35,15 +35,7 @@ obj_encdata_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 	}
 
 	/* add usage policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_USAGE,
-					&encdata->usagePolicy))) {
-		free(encdata);
-		return result;
-	}
-
-	/* add migration policy */
-	if ((result = obj_policy_add(tspContext, TSS_POLICY_MIGRATION,
-					&encdata->migPolicy))) {
+	if ((result = obj_context_get_policy(tspContext, &encdata->usagePolicy))) {
 		free(encdata);
 		return result;
 	}
@@ -97,10 +89,7 @@ obj_encdata_get_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY *phPolicy
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	if (type == TSS_POLICY_USAGE)
-		*phPolicy = encdata->usagePolicy;
-	else
-		*phPolicy = encdata->migPolicy;
+	*phPolicy = encdata->usagePolicy;
 
 	obj_list_put(&encdata_list);
 
@@ -108,7 +97,7 @@ obj_encdata_get_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY *phPolicy
 }
 
 TSS_RESULT
-obj_encdata_set_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY hPolicy)
+obj_encdata_set_policy(TSS_HENCDATA hEncData, TSS_HPOLICY hPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
@@ -118,10 +107,7 @@ obj_encdata_set_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY hPolicy)
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	if (type == TSS_POLICY_USAGE)
-		encdata->usagePolicy = hPolicy;
-	else
-		encdata->migPolicy = hPolicy;
+	encdata->usagePolicy = hPolicy;
 
 	obj_list_put(&encdata_list);
 
@@ -385,3 +371,25 @@ obj_list_encdata_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 
 	MUTEX_UNLOCK(list->lock);
 }
+
+void
+obj_encdata_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
+{
+	struct tsp_object *obj, *prev = NULL;
+	struct obj_list *list = &encdata_list;
+	struct tr_encdata_obj *encdata;
+
+	pthread_mutex_lock(&list->lock);
+
+	for (obj = list->head; obj; prev = obj, obj = obj->next) {
+		if (obj->tspContext != tspContext)
+			continue;
+
+		encdata = (struct tr_encdata_obj *)obj->data;
+		if (encdata->usagePolicy == hPolicy)
+			encdata->usagePolicy = NULL_HPOLICY;
+	}
+
+	pthread_mutex_unlock(&list->lock);
+}
+

@@ -44,19 +44,27 @@ Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 		result = obj_rsakey_get_policy(hObject, policyType, phPolicy, NULL);
 #endif
 	} else if (obj_is_tpm(hObject)) {
-		result = obj_tpm_get_policy(hObject, phPolicy);
-	} else if (obj_is_context(hObject)) {
-		result = obj_context_get_policy(hObject, phPolicy);
+		if (policyType == TSS_POLICY_MIGRATION)
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = obj_tpm_get_policy(hObject, phPolicy);
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST
-		result = obj_encdata_get_policy(hObject, policyType, phPolicy);
+		if (policyType == TSS_POLICY_MIGRATION)
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = obj_encdata_get_policy(hObject, policyType, phPolicy);
 #endif
 	} else {
-		if (obj_is_policy(hObject) || obj_is_hash(hObject) || obj_is_pcrs(hObject))
+		if (obj_is_policy(hObject) || obj_is_hash(hObject) ||
+		    obj_is_pcrs(hObject) || obj_is_context(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
+
+	if (result == TSS_SUCCESS && *phPolicy == NULL_HPOLICY)
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 	return result;
 }
@@ -106,7 +114,10 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/* in */
 			result = obj_tpm_set_policy(hObject, hPolicy);
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST
-		result = obj_encdata_set_policy(hObject, type, hPolicy);
+		if (type != TSS_POLICY_USAGE)
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = obj_encdata_set_policy(hObject, hPolicy);
 #endif
 	} else {
 		result = TSPERR(TSS_E_BAD_PARAMETER);

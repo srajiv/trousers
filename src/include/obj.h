@@ -25,6 +25,8 @@
 #define TSS_OBJ_FLAG_USER_PS	0x00000008
 /* When TRUE, the object has previously been registered in SYSTEM PS */
 #define TSS_OBJ_FLAG_SYSTEM_PS	0x00000010
+/* When TRUE, the key has been created and cannot be altered */
+#define TSS_OBJ_FLAG_KEY_SET	0x00000020
 
 /* structures */
 struct tsp_object {
@@ -52,6 +54,7 @@ struct tsp_object *obj_list_get_obj(struct obj_list *, UINT32);
 struct tsp_object *obj_list_get_tspcontext(struct obj_list *, UINT32);
 void		   obj_connectContext(TSS_HCONTEXT, TCS_CONTEXT_HANDLE);
 void		   obj_close_context(TSS_HCONTEXT);
+void               obj_lists_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 
 #include "obj_tpm.h"
 #include "obj_context.h"

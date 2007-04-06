@@ -288,3 +288,25 @@ done:
 	return result;
 }
 #endif
+
+void
+obj_tpm_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
+{
+	struct tsp_object *obj, *prev = NULL;
+	struct obj_list *list = &tpm_list;
+	struct tr_tpm_obj *tpm;
+
+	pthread_mutex_lock(&list->lock);
+
+	for (obj = list->head; obj; prev = obj, obj = obj->next) {
+		if (obj->tspContext != tspContext)
+			continue;
+
+		tpm = (struct tr_tpm_obj *)obj->data;
+		if (tpm->policy == hPolicy)
+			tpm->policy = NULL_HPOLICY;
+	}
+
+	pthread_mutex_unlock(&list->lock);
+}
+

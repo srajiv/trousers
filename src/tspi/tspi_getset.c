@@ -70,6 +70,8 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 
 					result = obj_rsakey_set_volatile(hObject, ulAttrib);
 					break;
+				case TSS_TSPATTRIB_KEYINFO_AUTHUSAGE:
+					/* fall through */
 				case TSS_TSPATTRIB_KEYINFO_AUTHDATAUSAGE:
 					if (ulAttrib != TRUE && ulAttrib != FALSE)
 						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);

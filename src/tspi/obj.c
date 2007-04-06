@@ -234,3 +234,15 @@ obj_close_context(TSS_HCONTEXT tspContext)
 	ENCDATA_LIST_CLOSE(tspContext);
 	DAA_LIST_CLOSE(tspContext);
 }
+
+/* When a policy object is closed, all references to it must be removed. This function
+ * calls the object specific routines for each working object type to remove all refs to the
+ * policy */
+void
+obj_lists_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
+{
+	obj_rsakey_remove_policy_refs(hPolicy, tspContext);
+	obj_encdata_remove_policy_refs(hPolicy, tspContext);
+	obj_tpm_remove_policy_refs(hPolicy, tspContext);
+}
+

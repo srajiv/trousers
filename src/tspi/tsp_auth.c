@@ -117,8 +117,8 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	TSS_BOOL bExpired;
 	TCPA_SECRET keySecret;
 	TCPA_SECRET usageSecret;
-	TCPA_SECRET migSecret;
-	UINT32 keyMode, usageMode, migMode;
+	TCPA_SECRET migSecret = { { 0, } };
+	UINT32 keyMode, usageMode, migMode = 0;
 	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
 
@@ -135,11 +135,16 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	if (bExpired == TRUE)
 		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
-	if ((result = obj_policy_has_expired(hMigrationPolicy, &bExpired)))
-		return result;
+	if (hMigrationPolicy) {
+		if ((result = obj_policy_has_expired(hMigrationPolicy, &bExpired)))
+			return result;
 
-	if (bExpired == TRUE)
-		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		if (bExpired == TRUE)
+			return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+		if ((result = obj_policy_get_mode(hMigrationPolicy, &migMode)))
+			return result;
+	}
 
 	if ((result = obj_policy_get_tsp_context(hPolicy, &tspContext)))
 		return result;
@@ -150,15 +155,12 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
 		return result;
 
-	if ((result = obj_policy_get_mode(hMigrationPolicy, &migMode)))
-		return result;
-
 	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
 	    usageMode == TSS_SECRET_MODE_CALLBACK ||
-	    migMode == TSS_SECRET_MODE_CALLBACK) {
+	    (hMigrationPolicy && migMode == TSS_SECRET_MODE_CALLBACK)) {
 		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
 		    usageMode != TSS_SECRET_MODE_CALLBACK ||
-		    migMode != TSS_SECRET_MODE_CALLBACK)
+		    (hMigrationPolicy && migMode != TSS_SECRET_MODE_CALLBACK))
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
@@ -169,9 +171,11 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		if ((result = obj_policy_get_secret(hUsagePolicy, TR_SECRET_CTX_NEW, &usageSecret)))
 			return result;
 
-		if ((result = obj_policy_get_secret(hMigrationPolicy, TR_SECRET_CTX_NEW,
-						    &migSecret)))
-			return result;
+		if (hMigrationPolicy) {
+			if ((result = obj_policy_get_secret(hMigrationPolicy, TR_SECRET_CTX_NEW,
+							&migSecret)))
+				return result;
+		}
 
 		if ((result = OSAP_Calc(tspContext, osapType, osapData,
 					keySecret.authdata, usageSecret.authdata,
@@ -211,7 +215,7 @@ secret_PerformAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 			TCPA_NONCE *nonceEvenOSAP)
 {
 	TSS_RESULT result;
-	UINT32 keyMode, usageMode, migMode;
+	UINT32 keyMode, usageMode, migMode = 0;
 
 	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
 		return result;
@@ -219,17 +223,19 @@ secret_PerformAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
 		return result;
 
-	if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
-		return result;
+	if (hMigPolicy) {
+		if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
+			return result;
+	}
 
 	/* ---  If any of them is a callback */
 	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
 	    usageMode == TSS_SECRET_MODE_CALLBACK ||
-	    migMode == TSS_SECRET_MODE_CALLBACK) {
+	    (hMigPolicy && migMode == TSS_SECRET_MODE_CALLBACK)) {
 		/* ---  And they're not all callback */
 		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
 		    usageMode != TSS_SECRET_MODE_CALLBACK ||
-		    migMode != TSS_SECRET_MODE_CALLBACK)
+		    (hMigPolicy && migMode != TSS_SECRET_MODE_CALLBACK))
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
@@ -255,8 +261,10 @@ secret_PerformAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	if ((result = obj_policy_dec_counter(hUsagePolicy)))
 		return result;
 
-	if ((result = obj_policy_dec_counter(hMigPolicy)))
-		return result;
+	if (hMigPolicy) {
+		if ((result = obj_policy_dec_counter(hMigPolicy)))
+			return result;
+	}
 
 	return TSS_SUCCESS;
 }
@@ -269,7 +277,7 @@ secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 			 TCPA_NONCE *nonceEvenOSAP)
 {
 	TSS_RESULT result;
-	UINT32 keyMode, usageMode, migMode;
+	UINT32 keyMode, usageMode, migMode = 0;
 
 	if ((result = obj_policy_get_mode(hPolicy, &keyMode)))
 		return result;
@@ -277,17 +285,19 @@ secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 	if ((result = obj_policy_get_mode(hUsagePolicy, &usageMode)))
 		return result;
 
-	if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
-		return result;
+	if (hMigPolicy) {
+		if ((result = obj_policy_get_mode(hMigPolicy, &migMode)))
+			return result;
+	}
 
 	/* ---  If any of them is a callback */
 	if (keyMode == TSS_SECRET_MODE_CALLBACK ||
 	    usageMode == TSS_SECRET_MODE_CALLBACK ||
-	    migMode == TSS_SECRET_MODE_CALLBACK) {
+	    (hMigPolicy && migMode == TSS_SECRET_MODE_CALLBACK)) {
 		/* ---  And they're not all callback */
 		if (keyMode != TSS_SECRET_MODE_CALLBACK ||
 		    usageMode != TSS_SECRET_MODE_CALLBACK ||
-		    migMode != TSS_SECRET_MODE_CALLBACK)
+		    (hMigPolicy && migMode != TSS_SECRET_MODE_CALLBACK))
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 

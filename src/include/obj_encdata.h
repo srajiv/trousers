@@ -25,7 +25,7 @@ struct tr_encdata_obj {
 
 /* obj_encdata.c */
 TSS_BOOL   obj_is_encdata(TSS_HOBJECT);
-TSS_RESULT obj_encdata_set_policy(TSS_HKEY, UINT32, TSS_HPOLICY);
+TSS_RESULT obj_encdata_set_policy(TSS_HKEY, TSS_HPOLICY);
 TSS_RESULT obj_encdata_set_data(TSS_HENCDATA, UINT32, BYTE *);
 TSS_RESULT obj_encdata_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_encdata_get_tsp_context(TSS_HENCDATA, TSS_HCONTEXT *);
@@ -37,6 +37,8 @@ TSS_RESULT obj_encdata_get_pcr_atrelease(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_pcr_selection(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_policy(TSS_HENCDATA, UINT32, TSS_HPOLICY *);
 TSS_RESULT obj_encdata_set_pcr_info(TSS_HENCDATA, BYTE *);
+void       obj_encdata_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
+
 
 #define ENCDATA_LIST_DECLARE		struct obj_list encdata_list
 #define ENCDATA_LIST_DECLARE_EXTERN	extern struct obj_list encdata_list
