@@ -1598,18 +1598,22 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
 	UINT64 offset = 0;
 	TCPA_PUBKEY pub;
 
-	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, data, &pub)))
-		return result;
-
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	/* Another SRK workaround. For all keys that aren't the SRK, disallow the setting of their
+	 * pub key after creation. Since the SRK's pub isn't stored anywhere, allow its value to be
+	 * set */
+	if (rsakey->tcsHandle != TPM_KEYHND_SRK &&
+	    obj->flags & TSS_OBJ_FLAG_KEY_SET) {
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
 
-	rsakey = (struct tr_rsakey_obj *)obj->data;
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, data, &pub)))
+		return result;
 
 	free(rsakey->key.pubKey.key);
 	free(rsakey->key.algorithmParms.parms);
