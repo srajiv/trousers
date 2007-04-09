@@ -124,7 +124,6 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		   UINT32 * pulPubKeyLength,	/* out */
 		   BYTE ** prgbPubKey)		/* out */
 {
-
 	TPM_AUTH auth;
 	TPM_AUTH *pAuth;
 	TCPA_DIGEST digest;
@@ -133,7 +132,6 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 	TSS_HPOLICY hPolicy;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_BOOL usesAuth;
-	TCPA_PUBKEY pubKey;
 	Trspi_HashCtx hashCtx;
 
 	if (pulPubKeyLength == NULL || prgbPubKey == NULL)
@@ -167,27 +165,25 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 	if ((result = TCSP_GetPubKey(tspContext, tcsKeyHandle, pAuth, pulPubKeyLength, prgbPubKey)))
 		return result;
 
-	memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
-
 	if (usesAuth) {
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, result);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_GetPubKey);
 		result |= Trspi_HashUpdate(&hashCtx, *pulPubKeyLength, *prgbPubKey);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+			goto error;
 
 		/* goto error here since prgbPubKey has been set */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth)))
 			goto error;
 	}
 
-	if ((result = obj_rsakey_set_pubkey(hKey, *prgbPubKey)))
-		goto error;
+	/* This will fail in every case but the SRK, but that's ok */
+	obj_rsakey_set_pubkey(hKey, *prgbPubKey);
 
 	return TSS_SUCCESS;
 error:
-	free(*prgbPubKey);
+	free_tspi(tspContext, *prgbPubKey);
 	*prgbPubKey = NULL;
 	*pulPubKeyLength = 0;
 	return result;
