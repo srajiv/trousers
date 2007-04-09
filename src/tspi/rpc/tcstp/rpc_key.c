@@ -213,7 +213,7 @@ TCSP_GetPubKey_TP(struct host_table_entry *hte,
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPubKey, *pcPubKeySize, &hte->comm)) {
-			free(*prgbPubKey);
+			free_tspi(hte->tspContext, *prgbPubKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
