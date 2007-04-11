@@ -60,7 +60,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	TSS_HCONTEXT tspContext;
 	UINT32 encSymKeySize = 256, tmp;
 	BYTE encSymKey[256], *cb_var;
-	TSS_HPOLICY hIDMigPolicy;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
 	TCPA_IDENTITY_REQ rgbTcpaIdentityReq;
@@ -100,10 +99,6 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	if ((result = obj_rsakey_get_policy(hIdentityKey, TSS_POLICY_USAGE,
 					   &hIDPolicy, NULL)))
-		return result;
-
-	if ((result = obj_rsakey_get_policy(hIdentityKey, TSS_POLICY_MIGRATION,
-					   &hIDMigPolicy, NULL)))
 		return result;
 
 	/* setup the symmetric key's parms. */
@@ -185,11 +180,10 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result = Trspi_UnloadBlob_KEY_PARMS(&offset, chosenIDBlob, &asymParms)))
 		return result;
 
-	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy,
-					     hIDMigPolicy, hTPM, TCPA_ET_OWNER,
-					     TPM_KEYHND_SRK, &encAuthUsage,
-					     &encAuthMig, sharedSecret,
-					     &ownerAuth, &nonceEvenOSAP)))
+	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, NULL_HPOLICY, hTPM,
+					     TCPA_ET_OWNER, TPM_KEYHND_SRK, &encAuthUsage,
+					     &encAuthMig, sharedSecret, &ownerAuth,
+					     &nonceEvenOSAP)))
 		return result;
 
 	/* Hash the Auth data */
@@ -213,10 +207,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		pSrkAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OSAP(hTPM, TPM_ORD_MakeIdentity,
-					      hTPMPolicy, hIDPolicy,
-					      hIDMigPolicy, sharedSecret,
-					      &ownerAuth, digest.digest,
+	if ((result = secret_PerformAuth_OSAP(hTPM, TPM_ORD_MakeIdentity, hTPMPolicy, hIDPolicy,
+					      NULL_HPOLICY, sharedSecret, &ownerAuth, digest.digest,
 					      &nonceEvenOSAP)))
 		return result;
 
@@ -237,11 +229,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_ValidateAuth_OSAP(hTPM, TPM_ORD_MakeIdentity,
-					       hTPMPolicy, hIDPolicy,
-					       hIDMigPolicy, sharedSecret,
-					       &ownerAuth, digest.digest,
-					       &nonceEvenOSAP)))
+	if ((result = secret_ValidateAuth_OSAP(hTPM, TPM_ORD_MakeIdentity, hTPMPolicy, hIDPolicy,
+					       NULL_HPOLICY, sharedSecret, &ownerAuth,
+					       digest.digest, &nonceEvenOSAP)))
 		goto error;
 
 	if (usesAuth == TRUE) {
