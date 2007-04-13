@@ -92,7 +92,7 @@ Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 	TCPA_DIGEST digest;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_get_policy(hTPM, &tspContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy)))
