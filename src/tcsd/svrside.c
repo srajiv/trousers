@@ -130,6 +130,11 @@ tcsd_startup()
 {
 	TSS_RESULT result;
 
+#ifdef TSS_DEBUG
+	/* Set stdout to be unbuffered to match stderr and interleave output correctly */
+	setvbuf(stdout, (char *)NULL, _IONBF, 0);
+#endif
+
 	if ((result = signals_init()))
 		return result;
 
