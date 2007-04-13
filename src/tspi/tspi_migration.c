@@ -382,7 +382,7 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		}
 	}
 
-	result = obj_rsakey_set_privkey(hKeyToMigrate, outDataSize, outData);
+	result = obj_rsakey_set_privkey(hKeyToMigrate, TRUE, outDataSize, outData);
 	free(outData);
 
 	return result;

@@ -111,7 +111,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		memcpy(pValidationData->rgbValidationData, digest.digest, TCPA_SHA1_160_HASH_LEN);
 	}
 
-	if ((result = obj_rsakey_set_pubkey(hKey, newEK)) && pValidationData) {
+	if ((result = obj_rsakey_set_pubkey(hKey, FALSE, newEK)) && pValidationData) {
 		free_tspi(tspContext, pValidationData->rgbValidationData);
 		free_tspi(tspContext, pValidationData->rgbData);
 		pValidationData->rgbData = NULL;
@@ -267,7 +267,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_rsakey_add(tspContext, TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY, &retKey)))
 		return result;
 
-	if ((result = obj_rsakey_set_pubkey(retKey, pubEK)))
+	if ((result = obj_rsakey_set_pubkey(retKey, FALSE, pubEK)))
 		goto done;
 
 	*phEndorsementPubKey = retKey;

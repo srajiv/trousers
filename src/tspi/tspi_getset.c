@@ -370,10 +370,10 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 								rgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
 				/* A TCPA_PUBKEY structure, in blob form */
-				result = obj_rsakey_set_pubkey(hObject, rgbAttribData);
+				result = obj_rsakey_set_pubkey(hObject, FALSE, rgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {
 				/* A blob, either encrypted or unencrypted */
-				result = obj_rsakey_set_privkey(hObject, ulAttribDataSize,
+				result = obj_rsakey_set_privkey(hObject, FALSE, ulAttribDataSize,
 								rgbAttribData);
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);

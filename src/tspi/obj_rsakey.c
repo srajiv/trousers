@@ -1590,7 +1590,7 @@ done:
 
 /* Expect a TPM_PUBKEY as is explained in the portable data section of the spec */
 TSS_RESULT
-obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
+obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 force, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
@@ -1606,8 +1606,7 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, BYTE *data)
 	/* Another SRK workaround. For all keys that aren't the SRK, disallow the setting of their
 	 * pub key after creation. Since the SRK's pub isn't stored anywhere, allow its value to be
 	 * set */
-	if (rsakey->tcsHandle != TPM_KEYHND_SRK &&
-	    obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+	if (!force && (obj->flags & TSS_OBJ_FLAG_KEY_SET)) {
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
@@ -1627,7 +1626,7 @@ done:
 }
 
 TSS_RESULT
-obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
+obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 force, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
@@ -1637,7 +1636,7 @@ obj_rsakey_set_privkey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+	if (!force && (obj->flags & TSS_OBJ_FLAG_KEY_SET)) {
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
@@ -1669,15 +1668,7 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-#if 0
-	TCPA_PCR_SELECTION pcrSelect;
-	TCPA_PCRVALUE pcrComposite;
-	BYTE pcrBlob[1024];
-	UINT64 offset;
-	void *to_free;
 
-	memset(pcrBlob, 0, sizeof(pcrBlob));
-#endif
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
@@ -1687,37 +1678,10 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	}
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-#if 0
-	to_free = rsakey->key.PCRInfo;
 
-	if ((result = obj_pcrs_get_composite(hPcrComposite, &pcrComposite)))
-		goto done;
-
-	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
-		goto done;
-
-	offset = 0;
-	Trspi_LoadBlob_PCR_SELECTION(&offset, pcrBlob, &pcrSelect);
-	memcpy(&pcrBlob[offset], &pcrComposite.digest, TCPA_SHA1_160_HASH_LEN);
-	offset += TCPA_SHA1_160_HASH_LEN * 2; // skip over digestAtRelease
-
-	/* Stuff it into the key container */
-	rsakey->tcpaKey.PCRInfo = calloc(1, offset);
-	if (rsakey->tcpaKey.PCRInfo == NULL) {
-		rsakey->tcpaKey.PCRInfo = to_free; // restore
-		LogError("malloc of %" PRIu64 " bytes failed.", offset);
-		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
-	/* free the info that may already be set */
-	free(to_free);
-	rsakey->tcpaKey.PCRInfoSize = offset;
-	memcpy(rsakey->tcpaKey.PCRInfo, pcrBlob, offset);
-#else
 	if ((result = obj_pcrs_create_info(hPcrComposite, &rsakey->key.PCRInfoSize,
 					   &rsakey->key.PCRInfo)))
 		goto done;
-#endif
 
 done:
 	obj_list_put(&rsakey_list);

@@ -178,8 +178,8 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 			goto error;
 	}
 
-	/* This will fail in every case but the SRK, but that's ok */
-	obj_rsakey_set_pubkey(hKey, *prgbPubKey);
+	if (tcsKeyHandle == TPM_KEYHND_SRK)
+		obj_rsakey_set_pubkey(hKey, TRUE, *prgbPubKey);
 
 	return TSS_SUCCESS;
 error:
@@ -394,7 +394,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 		goto done;
 
 	/* set the new encrypted private key in the wrapped key object */
-	if ((result = obj_rsakey_set_privkey(hKey, encPrivKeyLen, encPrivKey)))
+	if ((result = obj_rsakey_set_privkey(hKey, FALSE, encPrivKeyLen, encPrivKey)))
 		goto done;
 
 done:
