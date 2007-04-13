@@ -156,7 +156,7 @@ obj_pcrs_get_selection(TSS_HPCRS hPcrs, TPM_PCR_SELECTION *pcrSelect)
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
-	switch(pcrs->type) {
+	switch (pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
 			select = &pcrs->info.info11.pcrSelection;
 			break;
@@ -464,7 +464,7 @@ done:
 	return result;
 }
 
-/* Create a PCR info struct based on the hPcrs object. def is the default style for this context */
+/* Create a PCR info struct based on the hPcrs object */
 TSS_RESULT
 obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 {
@@ -504,6 +504,9 @@ obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 			goto done;
 			break;
 	}
+
+	if ((result = pcrs_calc_composite(select, pcrs->pcrs, (TPM_DIGEST *)creation_digest)))
+		goto done;
 
 	if ((ret = calloc(1, ret_size)) == NULL) {
 		result = TSPERR(TSS_E_OUTOFMEMORY);
