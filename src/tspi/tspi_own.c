@@ -44,8 +44,9 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	TSS_HKEY hPubEK;
 	Trspi_HashCtx hashCtx;
 
-	/* The first step is to get context and to get the SRK Key Blob.
-	 * If these succeed, then the auth should be init'd. */
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
 
 	if (hEndorsementPubKey == NULL_HKEY) {
 		if ((result = Tspi_TPM_GetPubEndorsementKey(hTPM, FALSE, NULL, &hPubEK))) {
@@ -54,9 +55,6 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	} else {
 		hPubEK = hEndorsementPubKey;
 	}
-
-	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
-		return result;
 
 	/* Get the srkKeyData */
 	if ((result = obj_rsakey_get_blob(hKeySRK, &srkKeyBlobLength, &srkKeyBlob)))
