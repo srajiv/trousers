@@ -72,8 +72,8 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 
 	/* log the event structure if its passed in */
 	if (pPcrEvent) {
-		if ((result = TCS_LogPcrEvent(tspContext, *pPcrEvent, &number)))
-			return result;
+		/* Set the PCR index in the event struct */
+		pPcrEvent->ulPcrIndex = ulPcrIndex;
 
 		if ((pPcrEvent->rgbPcrValue = calloc_tspi(tspContext,
 							  TPM_SHA1_160_HASH_LEN)) == NULL) {
@@ -83,6 +83,12 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 
 		memcpy(pPcrEvent->rgbPcrValue, (BYTE *)&digest.digest, TPM_SHA1_160_HASH_LEN);
 		pPcrEvent->ulPcrValueLength = TPM_SHA1_160_HASH_LEN;
+
+		/* Set the version info in the event struct */
+		memcpy(&pPcrEvent->versionInfo, &VERSION_1_1, sizeof(TCPA_VERSION));
+
+		if ((result = TCS_LogPcrEvent(tspContext, *pPcrEvent, &number)))
+			return result;
 	}
 
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TPM_PCRVALUE));
