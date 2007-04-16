@@ -380,6 +380,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	TCPA_SYMMETRIC_KEY symKey;
 	TSS_CALLBACK *cb;
 	Trspi_HashCtx hashCtx;
+	TPM_SYM_CA_ATTESTATION symCAAttestation;
 
 	if (pulCredentialLength == NULL || prgbCredential == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -457,6 +458,13 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		return result;
 	}
 
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_SYM_CA_ATTESTATION(&offset, rgbSymCAAttestationBlob,
+							  &symCAAttestation))) {
+		LogDebugFn("Error unloading CA's attestation blob.");
+		return result;
+	}
+
 	if (cb && cb->callback) {
 		/* alloc the space for the callback to copy into */
 		credCallback = calloc(1, ulSymCAAttestationBlobLength);
@@ -470,14 +478,17 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 
 		if ((result = ((TSS_RESULT (*)(PVOID, UINT32, BYTE *, UINT32, BYTE *, UINT32 *,
 			       BYTE *))cb->callback)(cb->appData, symKeyBlobLen, symKeyBlob,
-						     ulSymCAAttestationBlobLength,
-						     rgbSymCAAttestationBlob,
+						     symCAAttestation.credSize,
+						     symCAAttestation.credential,
 						     &credLen, credCallback))) {
 			LogDebug("ActivateIdentity callback returned error 0x%x", result);
+			free(symCAAttestation.credential);
 			free(symKeyBlob);
 			free_tspi(tspContext, cb);
+			free(credCallback);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
+		free(symCAAttestation.credential);
 		free_tspi(tspContext, cb);
 		free(symKeyBlob);
 
@@ -496,17 +507,20 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 	/* decrypt the symmetric blob using the recovered symmetric key */
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_SYMMETRIC_KEY(&offset, symKeyBlob, &symKey))) {
+		free(symCAAttestation.credential);
 		free(symKeyBlob);
 		return result;
 	}
 	free(symKeyBlob);
 
 	if ((result = Trspi_SymDecrypt(symKey.algId, symKey.encScheme, symKey.data, NULL,
-				       rgbSymCAAttestationBlob, ulSymCAAttestationBlobLength,
+				       symCAAttestation.credential, symCAAttestation.credSize,
 				       credBlob, &credLen))) {
+		free(symCAAttestation.credential);
 		free(symKey.data);
 		return result;
 	}
+	free(symCAAttestation.credential);
 
 	if ((*prgbCredential = calloc_tspi(tspContext, credLen)) == NULL) {
 		free(symKey.data);
