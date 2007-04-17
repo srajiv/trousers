@@ -85,3 +85,29 @@ TCSP_PcrRead_TP(struct host_table_entry *hte,
 
 	return result;
 }
+
+TSS_RESULT
+TCSP_PcrReset_TP(struct host_table_entry *hte,
+		 UINT32 pcrDataSizeIn,		 /* in */
+		 BYTE * pcrDataIn)		 /* in */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_PCRRESET;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &pcrDataSizeIn, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 2, pcrDataIn, pcrDataSizeIn, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	return result;
+}

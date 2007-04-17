@@ -861,6 +861,30 @@ TSS_RESULT TCSP_PcrRead(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCSP_PcrReset(TSS_HCONTEXT tspContext,	/* in */
+			 UINT32 pcrDataSizeIn,		/* in */
+			 BYTE * pcrDataIn)		/* in */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_PcrReset_TP(entry, pcrDataSizeIn, pcrDataIn);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+
 TSS_RESULT TCSP_Quote(TSS_HCONTEXT tspContext,	/* in */
 		      TCS_KEY_HANDLE keyHandle,	/* in */
 		      TCPA_NONCE antiReplay,	/* in */

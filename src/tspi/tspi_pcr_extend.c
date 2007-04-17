@@ -5,6 +5,7 @@
  * trousers - An open source TCG Software Stack
  *
  * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Christian Kummer 2007
  *
  */
 
@@ -132,3 +133,25 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+Tspi_TPM_PcrReset(TSS_HTPM hTPM,                 /* in */
+		  TSS_HPCRS hPcrComposite)       /* in */
+{
+	TSS_RESULT result;
+	TSS_HCONTEXT tspContext;
+	UINT32 pcrDataSize;
+	BYTE pcrData[16];
+
+	if (!hPcrComposite)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrDataSize, pcrData)))
+		return result;
+
+	return TCSP_PcrReset(tspContext, pcrDataSize, pcrData);
+}
+

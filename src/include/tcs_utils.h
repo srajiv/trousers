@@ -463,6 +463,11 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					  TCPA_PCRVALUE * outDigest	/* out */
 	    );
 
+	TSS_RESULT TCSP_PcrReset_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+					  UINT32 pcrDataSizeIn,	/* in */
+					  BYTE * pcrData	/* in */
+	    );
+
 	TSS_RESULT TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					TCS_KEY_HANDLE keyHandle,	/* in */
 					TCPA_NONCE antiReplay,	/* in */

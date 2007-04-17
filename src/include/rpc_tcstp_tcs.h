@@ -61,9 +61,11 @@ DECLARE_TCSTP_FUNC(CreateWrapKey);
 #ifdef TSS_BUILD_PCR_EXTEND
 DECLARE_TCSTP_FUNC(Extend);
 DECLARE_TCSTP_FUNC(PcrRead);
+DECLARE_TCSTP_FUNC(PcrReset);
 #else
 #define tcs_wrap_Extend		tcs_wrap_Error
 #define tcs_wrap_PcrRead	tcs_wrap_Error
+#define tcs_wrap_PcrReset	tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_CAPS

@@ -5,6 +5,7 @@
  * trousers - An open source TCG Software Stack
  *
  * (C) Copyright International Business Machines Corp. 2004
+ * (C) Christian Kummer 2007
  *
  */
 
@@ -110,5 +111,34 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, outDigest->digest);
 	}
 	LogResult("PCR Read", result);
+	return result;
+}
+
+TSS_RESULT
+TCSP_PcrReset_Internal(TCS_CONTEXT_HANDLE hContext,      /* in */
+		       UINT32 pcrDataSizeIn,             /* in */
+		       BYTE * pcrDataIn)                 /* in */
+{
+	UINT64 offset;
+	TSS_RESULT result;
+	UINT32 paramSize;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	LogDebug("Entering PCRReset");
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	offset = 10;
+	LoadBlob(&offset, pcrDataSizeIn, txBlob, pcrDataIn);
+
+	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_PCR_Reset, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	offset = 10;
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	LogResult("PCR Reset", result);
 	return result;
 }

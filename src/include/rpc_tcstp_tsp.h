@@ -142,9 +142,11 @@ TSS_RESULT TCSP_ChangeAuthAsymFinish_TP(struct host_table_entry *,TCS_KEY_HANDLE
 #ifdef TSS_BUILD_PCR_EXTEND
 TSS_RESULT TCSP_Extend_TP(struct host_table_entry *,TCPA_PCRINDEX,TCPA_DIGEST,TCPA_PCRVALUE *);
 TSS_RESULT TCSP_PcrRead_TP(struct host_table_entry *,TCPA_PCRINDEX,TCPA_PCRVALUE *);
+TSS_RESULT TCSP_PcrReset_TP(struct host_table_entry *,UINT32,BYTE *);
 #else
 #define TCSP_Extend_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_PcrRead_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_PcrReset_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_QUOTE

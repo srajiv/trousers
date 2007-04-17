@@ -97,3 +97,43 @@ tcs_wrap_PcrRead(struct tcsd_thread_data *data)
 	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_PcrReset(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 pcrDataSizeIn;
+	BYTE *pcrDataIn;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrDataSizeIn, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	pcrDataIn = (BYTE *)malloc(pcrDataSizeIn);
+	if (pcrDataIn == NULL) {
+		LogError("malloc of %u bytes failed.", pcrDataSizeIn);
+		return TCSERR(TSS_E_OUTOFMEMORY);
+	}
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 2, pcrDataIn, pcrDataSizeIn, &data->comm)) {
+		free(pcrDataIn);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_PcrReset_Internal(hContext, pcrDataSizeIn, pcrDataIn);
+
+	MUTEX_UNLOCK(tcsp_lock);
+	free(pcrDataIn);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
+
+	return result;
+}
+
