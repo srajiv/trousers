@@ -69,8 +69,7 @@ create_tcs_context()
 
 	if (ret != NULL) {
 		ret->handle = getNextHandle();
-		if (!tpm_metrics.authctx_swap)
-			COND_INIT(ret->cond);
+		COND_INIT(ret->cond);
 	}
 	return ret;
 }
