@@ -26,7 +26,7 @@ struct auth_map
  * default relatively large and let the TPM return
  * TCPA_RESOURCES to tell us when we cross the line.
  */
-#define AUTH_TABLE_SIZE			16
+#define TSS_DEFAULT_AUTH_TABLE_SIZE	16
 #define TSS_DEFAULT_OVERFLOW_AUTHS	16
 
 struct _auth_mgr
@@ -37,7 +37,8 @@ struct _auth_mgr
 	COND_VAR **overflow;	/* queue of TCS contexts waiting for an auth session to become
 				 * available */
 	int of_head, of_tail;	/* head and tail of the overflow queue */
-	struct auth_map auth_mapper[AUTH_TABLE_SIZE]; /* table of currently loaded auth sessions */
+	struct auth_map *auth_mapper; /* table of currently tracked auth sessions */
+	UINT32 auth_mapper_size;
 } auth_mgr;
 
 MUTEX_DECLARE_INIT(auth_mgr_lock);

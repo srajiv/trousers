@@ -47,7 +47,13 @@ auth_mgr_init()
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 
-	MUTEX_INIT(auth_mgr_lock);
+	auth_mgr.auth_mapper = calloc(TSS_DEFAULT_AUTH_TABLE_SIZE, sizeof(struct auth_map));
+	if (auth_mgr.auth_mapper == NULL) {
+		LogError("malloc of %zd bytes failed",
+			 (TSS_DEFAULT_AUTH_TABLE_SIZE * sizeof(struct auth_map)));
+		return TCSERR(TSS_E_OUTOFMEMORY);
+	}
+	auth_mgr.auth_mapper_size = TSS_DEFAULT_AUTH_TABLE_SIZE;
 
 	return TSS_SUCCESS;
 }
@@ -57,8 +63,6 @@ auth_mgr_final()
 {
 	int i;
 
-	MUTEX_LOCK(auth_mgr_lock);
-
 	/* wake up any sleeping threads, so they can be joined */
 	for (i = 0; i < TSS_DEFAULT_OVERFLOW_AUTHS; i++) {
 		if (auth_mgr.overflow[i] != NULL)
@@ -66,27 +70,18 @@ auth_mgr_final()
 	}
 
 	free(auth_mgr.overflow);
-
-	MUTEX_UNLOCK(auth_mgr_lock);
+	free(auth_mgr.auth_mapper);
 
 	return TSS_SUCCESS;
-}
-
-/* We will lazily only load a saved auth context when it is needed by an incoming command,
- * in auth_mgr_check() */
-void
-auth_mgr_load_ctx()
-{
-	return;
 }
 
 TSS_RESULT
 auth_mgr_save_ctx(TCS_CONTEXT_HANDLE hContext)
 {
 	TSS_RESULT result;
-	int i;
+	UINT32 i;
 
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].swap == NULL &&
 		    auth_mgr.auth_mapper[i].tcs_ctx != hContext) {
@@ -98,7 +93,7 @@ auth_mgr_save_ctx(TCS_CONTEXT_HANDLE hContext)
 			if ((result = TPM_SaveAuthContext(auth_mgr.auth_mapper[i].tpm_handle,
 							  &auth_mgr.auth_mapper[i].swap_size,
 							  &auth_mgr.auth_mapper[i].swap))) {
-				LogDebug("TPM_SaveAuthContext failed: %x", result);
+				LogDebug("TPM_SaveAuthContext failed: 0x%x", result);
 				return result;
 			}
 		}
@@ -111,18 +106,15 @@ auth_mgr_save_ctx(TCS_CONTEXT_HANDLE hContext)
 void
 auth_mgr_swap_in()
 {
-	if (tpm_metrics.authctx_swap)
-		return auth_mgr_load_ctx();
-
 	if (auth_mgr.overflow[auth_mgr.of_tail] != NULL) {
 		LogDebug("waking up thread %zd, auth slot has opened", THREAD_ID);
 		/* wake up the next sleeping thread in order and increment tail */
 		COND_SIGNAL(auth_mgr.overflow[auth_mgr.of_tail]);
 		auth_mgr.overflow[auth_mgr.of_tail] = NULL;
 		auth_mgr.of_tail = (auth_mgr.of_tail + 1) % TSS_DEFAULT_OVERFLOW_AUTHS;
-	}
-	/* else nobody needs to be swapped in, so continue */
-	LogDebug("no threads need to be signaled.");
+	} else
+		/* else nobody needs to be swapped in, so continue */
+		LogDebug("no threads need to be signaled.");
 }
 
 /* we need to swap out an auth context or add a waiting context to the overflow queue */
@@ -131,8 +123,9 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 {
 	COND_VAR *cond;
 
-	if (tpm_metrics.authctx_swap)
-		return auth_mgr_save_ctx(hContext);
+	/* If the TPM can do swapping and it succeeds, return, else cond wait below */
+	if (tpm_metrics.authctx_swap && !auth_mgr_save_ctx(hContext))
+		return TSS_SUCCESS;
 
 	if ((cond = ctx_get_cond_var(hContext)) == NULL) {
 		LogError("Auth swap variable not found for TCS context 0x%x", hContext);
@@ -155,9 +148,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 		/* go to sleep */
 		LogDebug("thread %zd going to sleep until auth slot opens", THREAD_ID);
 		auth_mgr.sleeping_threads++;
-		MUTEX_UNLOCK(tcsp_lock);
-		COND_WAIT(cond, &auth_mgr_lock);
-		MUTEX_LOCK(tcsp_lock);
+		COND_WAIT(cond, &tcsp_lock);
 		auth_mgr.sleeping_threads--;
 	} else {
 		LogError("auth mgr queue is full! There are currently %d "
@@ -173,12 +164,10 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 TSS_RESULT
 auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 {
-	int i;
+	UINT32 i;
 	TSS_RESULT result;
 
-	MUTEX_LOCK(auth_mgr_lock);
-
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcs_handle) {
 			result = internal_TerminateHandle(auth_mgr.auth_mapper[i].tpm_handle);
@@ -195,8 +184,6 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 			auth_mgr_swap_in();
 		}
 	}
-
-	MUTEX_UNLOCK(auth_mgr_lock);
 
 	return TSS_SUCCESS;
 }
@@ -218,12 +205,10 @@ TSS_RESULT
 auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE tcs_handle,
 			     TSS_BOOL cont)
 {
-	int i;
+	UINT32 i;
 	TSS_RESULT result = TSS_SUCCESS;
 
-	MUTEX_LOCK(auth_mgr_lock);
-
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].tpm_handle == tpm_auth_handle &&
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcs_handle) {
@@ -246,20 +231,16 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE 
 		}
 	}
 
-	MUTEX_UNLOCK(auth_mgr_lock);
-
 	return result;
 }
 
 TSS_RESULT
 auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTHHANDLE *tpm_auth_handle)
 {
-	int i;
+	UINT32 i;
 	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
 
-	MUTEX_LOCK(auth_mgr_lock);
-
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].tpm_handle == *tpm_auth_handle &&
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcsContext) {
@@ -283,7 +264,7 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTHHANDLE *tpm_auth_handle)
 
 					auth_mgr.auth_mapper[i].tpm_handle = *tpm_auth_handle;
 				} else {
-					LogDebug("TPM_LoadAuthContext failed: %x.", result);
+					LogDebug("TPM_LoadAuthContext failed: 0x%x.", result);
 				}
 			}
 
@@ -291,7 +272,6 @@ auth_mgr_check(TCS_CONTEXT_HANDLE tcsContext, TPM_AUTHHANDLE *tpm_auth_handle)
 		}
 	}
 
-	MUTEX_UNLOCK(auth_mgr_lock);
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR)) {
 		LogDebug("no auth in table for TCS handle 0x%x", tcsContext);
 	}
@@ -302,9 +282,9 @@ TSS_RESULT
 auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 {
 	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
-	int i;
+	UINT32 i;
 
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == FALSE) {
 			auth_mgr.auth_mapper[i].tpm_handle = tpm_auth_handle;
 			auth_mgr.auth_mapper[i].tcs_ctx = tcsContext;
@@ -314,27 +294,27 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 			LogDebug("added auth for TCS %x TPM %x", tcsContext, tpm_auth_handle);
 			break;
 		}
-#if 0
-		/* I believe this code introduces a "race" to free the resources another thread
-		 * should free in auth_mgr_release_auth_handle anyway, so I'm commenting this
-		 * code out. Nothing would break by leaving this code in, but its probably
-		 * redundant. - KEY */
-		else {
-			/* sanity check */
-			if (auth_mgr.auth_mapper[i].tpm_handle == tpm_auth_handle) {
-				LogDebug("***************************** "
-					 "UNCLEAN AUTH MAPPER TABLE");
-				auth_mgr.auth_mapper[i].full = FALSE;
-				auth_mgr.open_auth_sessions--;
-				i--;
-				LogDebug("CLEANED TABLE");
-			}
-		}
-#endif
 	}
 
-	if (result == TCSERR(TSS_E_INTERNAL_ERROR))
-		LogError("auth_mapper table is full!!");
+	if (result == TCSERR(TSS_E_INTERNAL_ERROR)) {
+		struct auth_map *tmp = auth_mgr.auth_mapper;
+
+		LogDebugFn("Thread %x growing the auth table to %u entries", THREAD_ID,
+			   auth_mgr.auth_mapper_size + TSS_DEFAULT_AUTH_TABLE_SIZE);
+
+		auth_mgr.auth_mapper = calloc(auth_mgr.auth_mapper_size +
+					      TSS_DEFAULT_AUTH_TABLE_SIZE, sizeof(struct auth_map));
+		if (auth_mgr.auth_mapper == NULL) {
+			auth_mgr.auth_mapper = tmp;
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+		} else {
+			memcpy(auth_mgr.auth_mapper, tmp,
+			       auth_mgr.auth_mapper_size * sizeof(struct auth_map));
+			auth_mgr.auth_mapper_size += TSS_DEFAULT_AUTH_TABLE_SIZE;
+			result = TSS_SUCCESS;
+			LogDebugFn("Success.");
+		}
+	}
 
 	return result;
 }
@@ -346,9 +326,9 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 TSS_BOOL
 auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 {
-	int i, opened = 0;
+	UINT32 i, opened = 0;
 
-	for (i = 0; i < AUTH_TABLE_SIZE; i++) {
+	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].tcs_ctx  == hContext) {
 			opened++;
@@ -356,7 +336,7 @@ auth_mgr_req_new(TCS_CONTEXT_HANDLE hContext)
 	}
 
 	/* If this TSP has already opened its max open auth handles, deny another open */
-	if (opened >= MAX(2, auth_mgr.max_auth_sessions/2)) {
+	if (opened >= MAX(2, (UINT32)auth_mgr.max_auth_sessions/2)) {
 		LogDebug("Max opened auth handles already opened.");
 		return FALSE;
 	}
@@ -381,8 +361,6 @@ auth_mgr_oiap(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 
-	MUTEX_LOCK(auth_mgr_lock);
-
 	/* are the maximum number of auth sessions open? */
 	if (auth_mgr_req_new(hContext) == FALSE) {
 		if ((result = auth_mgr_swap_out(hContext)))
@@ -395,8 +373,6 @@ auth_mgr_oiap(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* success, add an entry to the table */
 	result = auth_mgr_add(hContext, *authHandle);
 done:
-	MUTEX_UNLOCK(auth_mgr_lock);
-
 	return result;
 }
 
@@ -420,8 +396,6 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 		newEntValue = entityValue;
 	}
 
-	MUTEX_LOCK(auth_mgr_lock);
-
 	/* are the maximum number of auth sessions open? */
 	if (auth_mgr_req_new(hContext) == FALSE) {
 		if ((result = auth_mgr_swap_out(hContext)))
@@ -435,8 +409,6 @@ auth_mgr_osap(TCS_CONTEXT_HANDLE hContext,	/* in */
 	/* success, add an entry to the table */
 	result = auth_mgr_add(hContext, *authHandle);
 done:
-	MUTEX_UNLOCK(auth_mgr_lock);
-
 	return result;
 }
 
