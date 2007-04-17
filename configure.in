@@ -208,7 +208,7 @@ if test "x$API" == "x1.1" || test "x$API" == "x1.2"; then
 	AM_CONDITIONAL(TSS_BUILD_MIGRATION, true)
 	# Tspi_Context_LoadKeyByBlob,Key_LoadKey,UnloadKey,CreateKey,WrapKey,GetPubKey
 	AM_CONDITIONAL(TSS_BUILD_KEY, true)
-	# Tspi_TPM_PcrExtend,PcrRead
+	# Tspi_TPM_PcrExtend,PcrRead,PcrReset
 	AM_CONDITIONAL(TSS_BUILD_PCR_EXTEND, true)
 	# Tspi_TPM_SelfTestFull,CertifySelfTest,GetTestResult
 	AM_CONDITIONAL(TSS_BUILD_SELFTEST, true)
