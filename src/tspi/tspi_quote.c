@@ -38,7 +38,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	TCPA_NONCE antiReplay;
 	UINT32 pcrDataSize;
 	BYTE pcrData[128];
-	TCPA_PCR_SELECTION pcrSelect;
 	UINT32 validationLength = 0;
 	BYTE *validationData = NULL;
 	UINT32 pcrDataOutSize;
@@ -84,12 +83,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		if ((result = obj_pcrs_get_composite(hPcrComposite, &composite)))
 			return result;
 
-		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
+		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrDataSize, pcrData)))
 			return result;
-
-		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
-		pcrDataSize = offset;
-		free(pcrSelect.pcrSelect);
 	}
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

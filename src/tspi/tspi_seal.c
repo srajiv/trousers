@@ -39,13 +39,12 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	BYTE *encData = NULL;
 	UINT32 encDataSize;
-	UINT32 pcrDataSize;
+	UINT32 pcrDataSize, pcrSelectSize;
 	BYTE pcrData[256];
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TCPA_NONCE nonceEvenOSAP;
 	TCPA_DIGEST digAtCreation;
 	TSS_HCONTEXT tspContext;
-	TCPA_PCR_SELECTION pcrSelect = { 0, NULL };
 	Trspi_HashCtx hashCtx;
 
 	if (rgbDataToSeal == NULL)
@@ -71,19 +70,16 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 		if ((result = obj_pcrs_get_composite(hPcrComposite, &digAtCreation)))
 			return result;
 
-		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelect)))
+		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelectSize, pcrData)))
 			return result;
 
 		LogDebug("Digest at Creation:");
 		LogDebugData(sizeof(digAtCreation), (BYTE *)&digAtCreation);
 
-		offset = 0;
-		Trspi_LoadBlob_PCR_SELECTION(&offset, pcrData, &pcrSelect);
-		free(pcrSelect.pcrSelect);
+		offset = pcrSelectSize;
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
 		/* XXX */
 		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
-		pcrDataSize = offset;
 	}
 
 	if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy, hEncKey,
