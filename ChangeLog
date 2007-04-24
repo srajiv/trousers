@@ -1,4 +1,10 @@
 
+- Added new TSS 1.2 return codes for bad EK checksum and
+invalid resource passed to Tspi_Context_FreeMemory.
+- Added Christian Kummer's implementation of PCR reset
+- In PcrExtend, set up the event struct fully before sending
+to the TCS.
+- Fixed bug in ActivateIdentity's use of rgbSymCAAttestation.
 - updated policy handling to match the latest spec.
 - Fixed bug when 2 TCSD's return the same context number.
 - Added a check for the size of Tcsi_StirRandom's entropy data.
