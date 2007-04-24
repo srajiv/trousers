@@ -85,7 +85,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 		if (memcmp(hash.digest, digest.digest, TCPA_SHA1_160_HASH_LEN)) {
 			LogError("Internal verification failed");
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			return TSPERR(TSS_E_EK_CHECKSUM);
 		}
 	} else {
 		pValidationData->rgbData = calloc_tspi(tspContext, newEKSize);
@@ -227,7 +227,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 					return result;
 
 				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
-					result = TSPERR(TSS_E_VALIDATION_FAILED);
+					result = TSPERR(TSS_E_EK_CHECKSUM);
 					goto done;
 				}
 			}
