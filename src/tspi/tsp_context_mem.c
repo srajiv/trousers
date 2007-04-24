@@ -126,12 +126,10 @@ freeEntry(struct memTable *table, void *pointer)
 			free(pointer);
 			free(toKill);
 			return TSS_SUCCESS;
-
 		}
-
 	}
-	LogError("Internal error: pointer to allocated memory not found.");
-	return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	return TSPERR(TSS_E_INVALID_RESOURCE);
 }
 
 TSS_RESULT
