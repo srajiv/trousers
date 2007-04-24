@@ -112,9 +112,10 @@ auth_mgr_swap_in()
 		COND_SIGNAL(auth_mgr.overflow[auth_mgr.of_tail]);
 		auth_mgr.overflow[auth_mgr.of_tail] = NULL;
 		auth_mgr.of_tail = (auth_mgr.of_tail + 1) % TSS_DEFAULT_OVERFLOW_AUTHS;
-	} else
+	} else {
 		/* else nobody needs to be swapped in, so continue */
 		LogDebug("no threads need to be signaled.");
+	}
 }
 
 /* we need to swap out an auth context or add a waiting context to the overflow queue */
