@@ -78,9 +78,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
 		offset = 0;
-		/* calling get_composite first forces the TSP to call the TCS
-		 * to make sure the pcr selection structure is correct */
-		if ((result = obj_pcrs_get_composite(hPcrComposite, &composite)))
+		if ((result = obj_pcrs_get_digest_at_creation(hPcrComposite, &composite)))
 			return result;
 
 		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrDataSize, pcrData)))

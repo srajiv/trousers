@@ -67,7 +67,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	/* If PCR's are of interest */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
-		if ((result = obj_pcrs_get_composite(hPcrComposite, &digAtCreation)))
+		if ((result = obj_pcrs_get_digest_at_creation(hPcrComposite, &digAtCreation)))
 			return result;
 
 		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelectSize, pcrData)))
