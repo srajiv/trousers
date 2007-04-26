@@ -51,7 +51,8 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 				pcrs->type = TSS_PCRS_STRUCT_INFO;
 				break;
 		}
-	}
+	} else
+		pcrs->type = type;
 
 	if ((result = obj_list_add(&pcrs_list, tspContext, 0, pcrs, phObject))) {
 		free(pcrs);
@@ -332,15 +333,12 @@ done:
 	return result;
 }
 
-/* This should only be called through paths with a verified connected
- * TCS context */
 TSS_RESULT
-obj_pcrs_get_composite(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
+obj_pcrs_get_digest_at_creation(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
 {
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
-	//UINT16 num_pcrs, bytes_to_hold;
 	TPM_PCR_SELECTION *select;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
@@ -377,6 +375,50 @@ done:
 }
 
 TSS_RESULT
+obj_pcrs_get_digest_at_release(TSS_HPCRS hPcrs, UINT32 *size, BYTE **out)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	BYTE *digest;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			digest = (BYTE *)&pcrs->info.infoshort.digestAtRelease;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			digest = (BYTE *)&pcrs->info.infolong.digestAtRelease;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	if ((*out = calloc_tspi(obj->tspContext, sizeof(TPM_COMPOSITE_HASH))) == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(TPM_COMPOSITE_HASH));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	memcpy(*out, digest, sizeof(TPM_COMPOSITE_HASH));
+	*size = sizeof(TPM_COMPOSITE_HASH);
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
+TSS_RESULT
 obj_pcrs_select_index(TSS_HPCRS hPcrs, UINT32 idx)
 {
 	struct tsp_object *obj;
@@ -395,10 +437,93 @@ obj_pcrs_select_index(TSS_HPCRS hPcrs, UINT32 idx)
 			select = &pcrs->info.info11.pcrSelection;
 			break;
 		case TSS_PCRS_STRUCT_INFO_SHORT:
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	/* allocate the selection structure */
+	if (select->pcrSelect == NULL) {
+		if ((select->pcrSelect = malloc(bytes_to_hold)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		select->sizeOfSelect = bytes_to_hold;
+		memset(select->pcrSelect, 0, bytes_to_hold);
+
+		/* alloc the pcrs array */
+		if ((pcrs->pcrs = malloc(bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold * 8 *
+				 TCPA_SHA1_160_HASH_LEN);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+	} else if (select->sizeOfSelect < bytes_to_hold) {
+		if ((select->pcrSelect = realloc(select->pcrSelect, bytes_to_hold)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		/* set the newly allocated bytes to 0 */
+		memset(&select->pcrSelect[select->sizeOfSelect], 0,
+		       bytes_to_hold - select->sizeOfSelect);
+		select->sizeOfSelect = bytes_to_hold;
+
+		/* realloc the pcrs array */
+		if ((pcrs->pcrs = realloc(pcrs->pcrs,
+					  bytes_to_hold * 8 * TCPA_SHA1_160_HASH_LEN)) == NULL) {
+			LogError("malloc of %d bytes failed.", bytes_to_hold * 8 *
+				 TCPA_SHA1_160_HASH_LEN);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+	}
+
+	/* set the bit in the selection structure */
+	select->pcrSelect[idx / 8] |= (1 << (idx % 8));
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_pcrs_select_index_ex(TSS_HPCRS hPcrs, UINT32 dir, UINT32 idx)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *select;
+	UINT16 bytes_to_hold = (idx / 8) + 1;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			if (dir == TSS_PCRS_DIRECTION_CREATION) {
+				result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+				goto done;
+			}
 			select = &pcrs->info.infoshort.pcrSelection;
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
-			select = &pcrs->info.infolong.creationPCRSelection;
+			if (dir == TSS_PCRS_DIRECTION_CREATION)
+				select = &pcrs->info.infolong.creationPCRSelection;
+			else
+				select = &pcrs->info.infolong.releasePCRSelection;
 			break;
 		default:
 			LogDebugFn("Undefined type of PCRs object");
@@ -534,3 +659,78 @@ done:
 
 	return result;
 }
+
+TSS_RESULT
+obj_pcrs_get_locality(TSS_HPCRS hPcrs, UINT32 *out)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	BYTE *locality;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			locality = &pcrs->info.infoshort.localityAtRelease;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			locality = &pcrs->info.infolong.localityAtRelease;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+	}
+
+	*out = (UINT32)*locality;
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_pcrs_set_locality(TSS_HPCRS hPcrs, UINT32 locality)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	BYTE *loc;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	switch(pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			loc = &pcrs->info.infoshort.localityAtRelease;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			loc = &pcrs->info.infolong.localityAtRelease;
+			break;
+		default:
+			LogDebugFn("Undefined type of PCRs object");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+	}
+
+	*loc = locality;
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
