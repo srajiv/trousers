@@ -1,4 +1,6 @@
 
+- Added the Tspi_PcrComposite APIs: GetPcrLocality,
+SetPcrLocality, SelectPcrIndexEx and GetCompositeHash.
 - Added new TSS 1.2 return codes for bad EK checksum and
 invalid resource passed to Tspi_Context_FreeMemory.
 - Added Christian Kummer's implementation of PCR reset
