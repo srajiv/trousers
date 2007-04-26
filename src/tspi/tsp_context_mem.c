@@ -224,7 +224,9 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 
 	if ((index = getTable(tspContext)) == NULL) {
 		MUTEX_UNLOCK(memtable_lock);
-		return TSPERR(TSS_E_INVALID_HANDLE);
+		/* Tspi_Context_FreeMemory checks that the TSP context is good before calling us,
+		 * so we can be sure that the problem is with memPointer */
+		return TSPERR(TSS_E_INVALID_RESOURCE);
 	}
 
 	/* just free one entry */
