@@ -40,6 +40,9 @@ if TSS_BUILD_TSS12
 # features/options such as Tspi_TPM_SetStatus
 libtspi_la_CFLAGS+=-DTSS_BUILD_TSS12
 endif
+if TSS_BUILD_PCR_COMP12
+libtspi_la_SOURCES+=tspi_pcr_comp12.c
+endif
 if TSS_BUILD_AUTH
 libtspi_la_SOURCES+=tsp_auth.c rpc/@RPC@/rpc_auth.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_AUTH
