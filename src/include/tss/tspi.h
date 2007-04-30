@@ -312,6 +312,13 @@ TSPICALL Tspi_TPM_GetPubEndorsementKey
     TSS_HKEY*           phEndorsementPubKey            // out
 );
 
+TSPICALL Tspi_TPM_OwnerGetSRKPubKey
+(
+    TSS_HTPM            hTPM,                          // in
+    UINT32*             pulPubKeyLength,               // out
+    BYTE**              prgbPubKey                     // out
+);
+
 TSPICALL Tspi_TPM_TakeOwnership
 (
     TSS_HTPM            hTPM,                          // in
@@ -1138,12 +1145,11 @@ typedef TSS_RESULT (*Tspicb_ActivateIdentity)
    BYTE*            rgbCredential                 // out
 );
 
-#if 0
 
 typedef TSS_RESULT (*Tspicb_DAA_Sign)
 (
     PVOID                        lpAppData,                 // in
-    TSS_HDAA_DATA                daaPublicKey,              // in
+    TSS_HDAA_ISSUER_KEY          daaPublicKey,              // in
     UINT32                       gammasLength,              // in
     BYTE**                       gammas,                    // in
     UINT32                       attributesLength,          // in
@@ -1166,7 +1172,7 @@ typedef TSS_RESULT (*Tspicb_DAA_VerifySignature)
     UINT32                       challengeLength,           // in
     BYTE*                        challenge,                 // in
     TSS_DAA_SIGN_CALLBACK*       additionalProof,           // in
-    TSS_HDAA_DATA                daaPublicKey,              // in
+    TSS_HDAA_ISSUER_KEY          daaPublicKey,              // in
     UINT32                       gammasLength,              // in
     BYTE**                       gammas,                    // in
     UINT32                       sAttributesLength,         // in
@@ -1183,7 +1189,6 @@ typedef TSS_RESULT (*Tspicb_DAA_VerifySignature)
     TSS_BOOL*                    isCorrect                  // out
 );
 
-#endif
 
 #if defined ( __cplusplus )
 }
