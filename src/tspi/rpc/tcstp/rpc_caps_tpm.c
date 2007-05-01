@@ -27,11 +27,11 @@
 
 TSS_RESULT
 TCSP_GetCapability_TP(struct host_table_entry *hte,
-				  TCPA_CAPABILITY_AREA capArea,	/* in */
-				  UINT32 subCapSize,	/* in */
-				  BYTE * subCap,	/* in */
-				  UINT32 * respSize,	/* out */
-				  BYTE ** resp)	/* out */
+		      TCPA_CAPABILITY_AREA capArea,	/* in */
+		      UINT32 subCapSize,		/* in */
+		      BYTE * subCap,			/* in */
+		      UINT32 * respSize,		/* out */
+		      BYTE ** resp)			/* out */
 {
 	TSS_RESULT result;
 
