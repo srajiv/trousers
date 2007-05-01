@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -268,4 +268,19 @@ TSS_RESULT TCSP_DaaSign_TP(struct host_table_entry *,TSS_HDAA,BYTE,UINT32,BYTE *
 #define TCSP_DaaJoin_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_DaaSign_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
+
+#ifdef TSS_BUILD_COUNTER
+TSS_RESULT TCSP_ReadCounter_TP(struct host_table_entry *,TSS_COUNTER_ID,TPM_COUNTER_VALUE *);
+TSS_RESULT TCSP_CreateCounter_TP(struct host_table_entry *,UINT32,BYTE *,TPM_ENCAUTH,TPM_AUTH *,TSS_COUNTER_ID *,TPM_COUNTER_VALUE *);
+TSS_RESULT TCSP_IncrementCounter_TP(struct host_table_entry *,TSS_COUNTER_ID,TPM_AUTH *,TPM_COUNTER_VALUE *);
+TSS_RESULT TCSP_ReleaseCounter_TP(struct host_table_entry *,TSS_COUNTER_ID,TPM_AUTH *);
+TSS_RESULT TCSP_ReleaseCounterOwner_TP(struct host_table_entry *,TSS_COUNTER_ID,TPM_AUTH *);
+#else
+#define TCSP_ReadCounter_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_CreateCounter_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_IncrementCounter_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ReleaseCounter_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ReleaseCounterOwner_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif
