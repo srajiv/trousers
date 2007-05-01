@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -29,7 +29,8 @@ enum TCSP_PACKET_TYPE {
 	/*2004-05-12 Seiji Munetoh added */
 	TCSD_PACKET_TYPE_KM_KEYINFO,
 	TCSD_PACKET_TYPE_LOADKEY_INFO,
-	TCSD_PACKET_TYPE_PCR_EVENT
+	TCSD_PACKET_TYPE_PCR_EVENT,
+	TCSD_PACKET_TYPE_COUNTER_VALUE
 };
 
 enum TCSD_ORD {
@@ -124,8 +125,13 @@ enum TCSD_ORD {
 	TCSD_ORD_RESETLOCKVALUE = 77,
 
 	TCSD_ORD_PCRRESET = 78,
+	TCSD_ORD_READCOUNTER = 79,
+	TCSD_ORD_CREATECOUNTER = 80,
+	TCSD_ORD_INCREMENTCOUNTER = 81,
+	TCSD_ORD_RELEASECOUNTER = 82,
+	TCSD_ORD_RELEASECOUNTEROWNER = 83,
 	/* Last */
-	TCSD_LAST_ORD = 79
+	TCSD_LAST_ORD = 84
 
 };
 #define TCSD_MAX_NUM_ORDS TCSD_LAST_ORD
