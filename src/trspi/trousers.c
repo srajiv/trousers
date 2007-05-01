@@ -1420,3 +1420,19 @@ Trspi_Hash_BOUND_DATA(Trspi_HashCtx *c, TCPA_BOUND_DATA *bd, UINT32 payloadLengt
 	return result;
 }
 
+void
+Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr)
+{
+	Trspi_UnloadBlob_UINT16(offset, &ctr->tag, blob);
+	Trspi_UnloadBlob(offset, 4, blob, (BYTE *)&ctr->label);
+	Trspi_UnloadBlob_UINT32(offset, &ctr->counter, blob);
+}
+
+void
+Trspi_LoadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr)
+{
+	Trspi_LoadBlob_UINT16(offset, ctr->tag, blob);
+	Trspi_LoadBlob(offset, 4, blob, (BYTE *)&ctr->label);
+	Trspi_LoadBlob_UINT32(offset, ctr->counter, blob);
+}
+
