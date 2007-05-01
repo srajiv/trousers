@@ -92,6 +92,9 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			Trspi_LoadBlob_PCR_EVENT(offset, blob, ((TSS_PCR_EVENT *)data));
 			break;
+		case TCSD_PACKET_TYPE_COUNTER_VALUE:
+			Trspi_LoadBlob_COUNTER_VALUE(offset, blob, ((TPM_COUNTER_VALUE *)data));
+			break;
 		default:
 			LogError("TCSD packet type unknown! (0x%x)", data_type & 0xff);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -210,6 +213,10 @@ getData(TCSD_PACKET_TYPE dataType,
 			break;
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			Trspi_UnloadBlob_PCR_EVENT(&offset, comm->buf, ((TSS_PCR_EVENT *)theData));
+			break;
+		case TCSD_PACKET_TYPE_COUNTER_VALUE:
+			Trspi_UnloadBlob_COUNTER_VALUE(&offset, comm->buf,
+						       ((TPM_COUNTER_VALUE *)theData));
 			break;
 		default:
 			LogError("unknown data type (%d) in TCSD packet!", dataType);
