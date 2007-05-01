@@ -99,6 +99,14 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 			correct_endianess = 1;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
 			tcsSubCap = TPM_CAP_PROP_MANUFACTURER;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_COUNTERS) {
+			tcsSubCap = TPM_CAP_PROP_COUNTERS;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXCOUNTERS) {
+			tcsSubCap = TPM_CAP_PROP_MAX_COUNTERS;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MIN_COUNTER) {
+			tcsSubCap = TPM_CAP_PROP_MIN_COUNTER;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_ACTIVECOUNTER) {
+			tcsSubCap = TPM_CAP_PROP_ACTIVE_COUNTER;
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
