@@ -13,6 +13,10 @@ libtcs_a_SOURCES=log.c \
 		 tcsi_caps_tpm.c rpc/@RPC@/rpc_caps_tpm.c \
 		 tcs_auth_mgr.c tcsi_auth.c rpc/@RPC@/rpc_auth.c
 
+if TSS_BUILD_COUNTER
+libtcs_a_SOURCES+=tcsi_counter.c tcs_counter.c rpc/@RPC@/rpc_counter.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_COUNTER
+endif
 if TSS_BUILD_RANDOM
 libtcs_a_SOURCES+=tcsi_random.c rpc/@RPC@/rpc_random.c
 libtcs_a_CFLAGS+=-DTSS_BUILD_RANDOM
