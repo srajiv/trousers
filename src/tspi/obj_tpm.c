@@ -41,6 +41,9 @@ obj_tpm_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 		return result;
 	}
 
+	/* initialize the default ctr_id to inactive until we query the TPM */
+	tpm->ctr_id = 0xffffffff;
+
 	if ((result = obj_list_add(&tpm_list, tspContext, 0, tpm, phObject))) {
 		free(tpm);
 		return result;
@@ -310,3 +313,47 @@ obj_tpm_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
+TSS_RESULT
+obj_tpm_get_current_counter(TSS_HTPM hTPM, TSS_COUNTER_ID *ctr_id)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT32 respLen, subCap = endian32(TPM_CAP_PROP_ACTIVE_COUNTER);
+	BYTE *resp;
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTPM)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	if (tpm->ctr_id != 0xffffffff) {
+		*ctr_id = tpm->ctr_id;
+		goto done;
+	}
+
+	/* No counter has yet been associated with the TPM object, so let the TPM object lock
+	 * protect us here and get a counter ID */
+	if ((result = TCSP_GetCapability(obj->tspContext, TPM_CAP_PROPERTY, sizeof(UINT32),
+					 (BYTE *)&subCap, &respLen, &resp)))
+		goto done;
+
+	if (respLen != sizeof(UINT32)) {
+		LogDebug("TPM GetCap response size isn't sizeof(UINT32)!");
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto done;
+	}
+
+	memcpy(&tpm->ctr_id, resp, respLen);
+	free(resp);
+
+	if (tpm->ctr_id == 0xffffffff) {
+		result = TSPERR(TSS_E_NO_ACTIVE_COUNTER);
+		goto done;
+	}
+	*ctr_id = tpm->ctr_id;
+done:
+	obj_list_put(&tpm_list);
+
+	return result;
+}
