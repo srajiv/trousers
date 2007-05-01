@@ -236,6 +236,20 @@ DECLARE_TCSTP_FUNC(DaaSign);
 #define tcs_wrap_DaaSign	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_COUNTER
+DECLARE_TCSTP_FUNC(ReadCounter);
+DECLARE_TCSTP_FUNC(CreateCounter);
+DECLARE_TCSTP_FUNC(IncrementCounter);
+DECLARE_TCSTP_FUNC(ReleaseCounter);
+DECLARE_TCSTP_FUNC(ReleaseCounterOwner);
+#else
+#define tcs_wrap_ReadCounter		tcs_wrap_Error
+#define tcs_wrap_CreateCounter		tcs_wrap_Error
+#define tcs_wrap_IncrementCounter	tcs_wrap_Error
+#define tcs_wrap_ReleaseCounter		tcs_wrap_Error
+#define tcs_wrap_ReleaseCounterOwner	tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);

@@ -552,7 +552,12 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
         {tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
 	{tcs_wrap_SetCapability,"SetCapability"},
 	{tcs_wrap_ResetLockValue,"ResetLockValue"},
-	{tcs_wrap_PcrReset,"PcrReset"}
+	{tcs_wrap_PcrReset,"PcrReset"},
+	{tcs_wrap_ReadCounter,"ReadCounter"},
+	{tcs_wrap_CreateCounter,"CreateCounter"}, /* 80 */
+	{tcs_wrap_IncrementCounter,"IncrementCounter"},
+	{tcs_wrap_ReleaseCounter,"ReleaseCounter"},
+	{tcs_wrap_ReleaseCounterOwner,"ReleaseCounterOwner"}
 };
 
 int

@@ -2061,3 +2061,129 @@ TCSP_DaaSign(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT
+TCSP_ReadCounter(TSS_HCONTEXT       tspContext,		/* in */
+		 TSS_COUNTER_ID     idCounter,		/* in */
+		 TPM_COUNTER_VALUE* counterValue)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ReadCounter_TP(entry, idCounter, counterValue);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_CreateCounter(TSS_HCONTEXT       tspContext,	/* in */
+		   UINT32             LabelSize,	/* in (=4) */
+		   BYTE*              pLabel,		/* in */
+		   TPM_ENCAUTH        CounterAuth,	/* in */
+		   TPM_AUTH*          pOwnerAuth,	/* in, out */
+		   TSS_COUNTER_ID*    idCounter,	/* out */
+		   TPM_COUNTER_VALUE* counterValue)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_CreateCounter_TP(entry, LabelSize, pLabel, CounterAuth,
+						       pOwnerAuth, idCounter, counterValue);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_IncrementCounter(TSS_HCONTEXT       tspContext,	/* in */
+		      TSS_COUNTER_ID     idCounter,	/* in */
+		      TPM_AUTH*          pCounterAuth,	/* in, out */
+		      TPM_COUNTER_VALUE* counterValue)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_IncrementCounter_TP(entry, idCounter, pCounterAuth,
+							  counterValue);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_ReleaseCounter(TSS_HCONTEXT   tspContext,		/* in */
+		    TSS_COUNTER_ID idCounter,		/* in */
+		    TPM_AUTH*      pCounterAuth)	/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ReleaseCounter_TP(entry, idCounter, pCounterAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_ReleaseCounterOwner(TSS_HCONTEXT   tspContext,	/* in */
+			 TSS_COUNTER_ID idCounter,	/* in */
+			 TPM_AUTH*      pOwnerAuth)	/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ReleaseCounterOwner_TP(entry, idCounter, pOwnerAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}

@@ -211,6 +211,8 @@ TSS_RESULT UnloadBlob_CERTIFY_INFO(UINT64 *, BYTE *, TCPA_CERTIFY_INFO *);
 TSS_RESULT UnloadBlob_KEY_HANDLE_LIST(UINT64 *, BYTE *, TCPA_KEY_HANDLE_LIST *);
 void LoadBlob_UUID(UINT64 *, BYTE *, TSS_UUID);
 void UnloadBlob_UUID(UINT64 *, BYTE *, TSS_UUID *);
+void LoadBlob_COUNTER_VALUE(UINT64 *, BYTE *, TPM_COUNTER_VALUE *);
+void UnloadBlob_COUNTER_VALUE(UINT64 *, BYTE *, TPM_COUNTER_VALUE *);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 void free_external_events(UINT32, TSS_PCR_EVENT *);
@@ -771,5 +773,36 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					 UINT32 *outputSize, /* out */
 					 BYTE **outputData  /* out */
 	    );
+
+
+	TSS_RESULT TCSP_ReadCounter_Internal(TCS_CONTEXT_HANDLE    hContext,
+					     TSS_COUNTER_ID        idCounter,
+					     TPM_COUNTER_VALUE*    counterValue
+	);
+
+	TSS_RESULT TCSP_CreateCounter_Internal(TCS_CONTEXT_HANDLE    hContext,
+					       UINT32                LabelSize,
+					       BYTE*                 pLabel,
+					       TPM_ENCAUTH           CounterAuth,
+					       TPM_AUTH*             pOwnerAuth,
+					       TSS_COUNTER_ID*       idCounter,
+					       TPM_COUNTER_VALUE*    counterValue
+	);
+
+	TSS_RESULT TCSP_IncrementCounter_Internal(TCS_CONTEXT_HANDLE    hContext,
+						  TSS_COUNTER_ID        idCounter,
+						  TPM_AUTH*             pCounterAuth,
+						  TPM_COUNTER_VALUE*    counterValue
+	);
+
+	TSS_RESULT TCSP_ReleaseCounter_Internal(TCS_CONTEXT_HANDLE    hContext,
+						TSS_COUNTER_ID        idCounter,
+						TPM_AUTH*             pCounterAuth
+	);
+
+	TSS_RESULT TCSP_ReleaseCounterOwner_Internal(TCS_CONTEXT_HANDLE    hContext,
+						     TSS_COUNTER_ID        idCounter,
+						     TPM_AUTH*             pOwnerAuth
+	);
 
 #endif /*_TCS_UTILS_H_ */
