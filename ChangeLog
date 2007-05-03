@@ -1,4 +1,6 @@
 
+- Added tick stamping APIs
+- Added monotonic counter APIs
 - Added the Tspi_PcrComposite APIs: GetPcrLocality,
 SetPcrLocality, SelectPcrIndexEx and GetCompositeHash.
 - Added new TSS 1.2 return codes for bad EK checksum and
