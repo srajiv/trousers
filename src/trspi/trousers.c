@@ -113,6 +113,14 @@ Trspi_UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE *blob)
 }
 
 void
+Trspi_LoadBlob_UINT64(UINT64 *offset, UINT64 in, BYTE *blob)
+{
+	if (blob)
+		UINT64ToArray(in, &blob[*offset]);
+	*offset += sizeof(UINT64);
+}
+
+void
 Trspi_LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE *blob)
 {
 	if (blob)
@@ -126,6 +134,13 @@ Trspi_LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE *blob)
 	if (blob)
 		UINT16ToArray(in, &blob[*offset]);
 	*offset += sizeof(UINT16);
+}
+
+void
+Trspi_UnloadBlob_UINT64(UINT64 *offset, UINT64 *out, BYTE *blob)
+{
+	*out = Decode_UINT64(&blob[*offset]);
+	*offset += sizeof(UINT64);
 }
 
 void
@@ -1436,3 +1451,11 @@ Trspi_LoadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr)
 	Trspi_LoadBlob_UINT32(offset, ctr->counter, blob);
 }
 
+void
+Trspi_UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *blob, TPM_CURRENT_TICKS *ticks)
+{
+	Trspi_UnloadBlob_UINT16(offset, &ticks->tag, blob);
+	Trspi_UnloadBlob_UINT64(offset, &ticks->currentTicks, blob);
+	Trspi_UnloadBlob_UINT16(offset, &ticks->tickRate, blob);
+	Trspi_UnloadBlob(offset, sizeof(TPM_NONCE), blob, (BYTE *)&ticks->tickNonce);
+}
