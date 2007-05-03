@@ -65,10 +65,40 @@ UINT32ToArray(UINT32 i, BYTE * out)
 }
 
 void
+UINT64ToArray(UINT64 i, BYTE *out)
+{
+	out[0] = (BYTE) ((i >> 56) & 0xFF);
+	out[1] = (BYTE) ((i >> 48) & 0xFF);
+	out[2] = (BYTE) ((i >> 40) & 0xFF);
+	out[3] = (BYTE) ((i >> 32) & 0xFF);
+	out[4] = (BYTE) ((i >> 24) & 0xFF);
+	out[5] = (BYTE) ((i >> 16) & 0xFF);
+	out[6] = (BYTE) ((i >> 8) & 0xFF);
+	out[7] = (BYTE) i & 0xFF;
+}
+
+void
 UINT16ToArray(UINT16 i, BYTE * out)
 {
 	out[0] = ((i >> 8) & 0xFF);
 	out[1] = i & 0xFF;
+}
+
+UINT64
+Decode_UINT64(BYTE *y)
+{
+	UINT64 x = 0;
+
+	x = y[0];
+	x = ((x << 8) | (y[1] & 0xFF));
+	x = ((x << 8) | (y[2] & 0xFF));
+	x = ((x << 8) | (y[3] & 0xFF));
+	x = ((x << 8) | (y[4] & 0xFF));
+	x = ((x << 8) | (y[5] & 0xFF));
+	x = ((x << 8) | (y[6] & 0xFF));
+	x = ((x << 8) | (y[7] & 0xFF));
+
+	return x;
 }
 
 UINT32
