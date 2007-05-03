@@ -283,4 +283,12 @@ TSS_RESULT TCSP_ReleaseCounterOwner_TP(struct host_table_entry *,TSS_COUNTER_ID,
 #define TCSP_ReleaseCounterOwner_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_TICK
+TSS_RESULT TCSP_ReadCurrentTicks_TP(struct host_table_entry *,UINT32 *,BYTE **);
+TSS_RESULT TCSP_TickStampBlob_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_NONCE *,TPM_DIGEST *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **);
+#else
+#define TCSP_ReadCurrentTicks_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_TickStampBlob_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif

@@ -2187,3 +2187,61 @@ TCSP_ReleaseCounterOwner(TSS_HCONTEXT   tspContext,	/* in */
 
 	return result;
 }
+
+TSS_RESULT
+TCSP_ReadCurrentTicks(TSS_HCONTEXT tspContext,		/* in */
+		      UINT32*      pulCurrentTime,	/* out */
+		      BYTE**       prgbCurrentTime)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ReadCurrentTicks_TP(entry, pulCurrentTime, prgbCurrentTime);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_TickStampBlob(TSS_HCONTEXT   tspContext,		/* in */
+		   TCS_KEY_HANDLE hKey,			/* in */
+		   TPM_NONCE*     antiReplay,		/* in */
+		   TPM_DIGEST*    digestToStamp,	/* in */
+		   TPM_AUTH*      privAuth,		/* in, out */
+		   UINT32*        pulSignatureLength,	/* out */
+		   BYTE**         prgbSignature,	/* out */
+		   UINT32*        pulTickCountLength,	/* out */
+		   BYTE**         prgbTickCount)	/* out */
+
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_TickStampBlob_TP(entry, hKey, antiReplay, digestToStamp,
+						       privAuth, pulSignatureLength,
+						       prgbSignature, pulTickCountLength,
+						       prgbTickCount);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}

@@ -250,6 +250,14 @@ DECLARE_TCSTP_FUNC(ReleaseCounterOwner);
 #define tcs_wrap_ReleaseCounterOwner	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_TICK
+DECLARE_TCSTP_FUNC(ReadCurrentTicks);
+DECLARE_TCSTP_FUNC(TickStampBlob);
+#else
+#define tcs_wrap_ReadCurrentTicks	tcs_wrap_Error
+#define tcs_wrap_TickStampBlob		tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
