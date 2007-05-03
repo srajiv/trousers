@@ -804,5 +804,19 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						     TSS_COUNTER_ID        idCounter,
 						     TPM_AUTH*             pOwnerAuth
 	);
+	TSS_RESULT TCSP_ReadCurrentTicks_Internal(TCS_CONTEXT_HANDLE hContext,
+						  UINT32*            pulCurrentTime,
+						  BYTE**	     prgbCurrentTime
+	);
+	TSS_RESULT TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
+					       TCS_KEY_HANDLE     hKey,
+					       TPM_NONCE          antiReplay,
+					       TPM_DIGEST         digestToStamp,
+					       TPM_AUTH*          privAuth,
+					       UINT32*            pulSignatureLength,
+					       BYTE**             prgbSignature,
+					       UINT32*            pulTickCountLength,
+					       BYTE**             prgbTickCount
+	);
 
 #endif /*_TCS_UTILS_H_ */
