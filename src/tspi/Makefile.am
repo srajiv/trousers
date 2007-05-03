@@ -40,6 +40,10 @@ if TSS_BUILD_TSS12
 # features/options such as Tspi_TPM_SetStatus
 libtspi_la_CFLAGS+=-DTSS_BUILD_TSS12
 endif
+if TSS_BUILD_TICK
+libtspi_la_SOURCES+=tspi_tick.c rpc/@RPC@/rpc_tick.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_TICK
+endif
 if TSS_BUILD_COUNTER
 libtspi_la_SOURCES+=tspi_counter.c rpc/@RPC@/rpc_counter.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_COUNTER
