@@ -51,6 +51,7 @@ TSS_RESULT Trspi_UnloadBlob_ASYM_CA_CONTENTS(UINT64 *offset, BYTE *blob, TCPA_AS
 TSS_RESULT Trspi_UnloadBlob_IDENTITY_REQ(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req);
 TSS_RESULT Trspi_UnloadBlob_IDENTITY_PROOF(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_PROOF *proof);
 void	   Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr);
+void	   Trspi_UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *blob, TPM_CURRENT_TICKS *ticks);
 
 /* Blob loading functions */
 void Trspi_LoadBlob_BOUND_DATA(UINT64 *, TCPA_BOUND_DATA, UINT32, BYTE *);
