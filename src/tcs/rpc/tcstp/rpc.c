@@ -557,7 +557,9 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_CreateCounter,"CreateCounter"}, /* 80 */
 	{tcs_wrap_IncrementCounter,"IncrementCounter"},
 	{tcs_wrap_ReleaseCounter,"ReleaseCounter"},
-	{tcs_wrap_ReleaseCounterOwner,"ReleaseCounterOwner"}
+	{tcs_wrap_ReleaseCounterOwner,"ReleaseCounterOwner"},
+	{tcs_wrap_ReadCurrentTicks,"ReadCurrentTicks"},
+	{tcs_wrap_TickStampBlob,"TicksStampBlob"} /* 85 */
 };
 
 int
