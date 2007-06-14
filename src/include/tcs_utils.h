@@ -138,6 +138,8 @@ TSS_RESULT addContextForAuth(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE);
 TSS_RESULT ctx_verify_context(TCS_CONTEXT_HANDLE);
 COND_VAR *ctx_get_cond_var(TCS_CONTEXT_HANDLE);
 TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
+TSS_RESULT ctx_remove_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
+TSS_BOOL ctx_has_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 void       ctx_ref_count_keys(struct tcs_context *);
 struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
 
