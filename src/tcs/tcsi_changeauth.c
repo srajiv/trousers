@@ -106,7 +106,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			LogDebug("tcsKeyHandle being evicted is %.8X", tcsKeyHandleToEvict);
 			/*---	If it was found in knowledge, replace it */
 			if (tcsKeyHandleToEvict != 0) {
-				key_mgr_evict(contextHandle, tcsKeyHandleToEvict);
+				internal_EvictByKeySlot(keySlot);
 				mc_update_encdata(encData, *outData);
 			}
 
