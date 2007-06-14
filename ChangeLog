@@ -1,4 +1,5 @@
 
+- Added ASN.1 blob encoding and decoding APIs.
 - Added tick stamping APIs
 - Added monotonic counter APIs
 - Added the Tspi_PcrComposite APIs: GetPcrLocality,
