@@ -20,6 +20,8 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_Data_Seal.3 \
 	    Tspi_Data_Unbind.3 \
 	    Tspi_Data_Unseal.3 \
+	    Tspi_DecodeBER_TssBlob.3 \
+	    Tspi_EncodeDER_TssBlob.3 \
 	    Tspi_GetAttribData.3 \
 	    Tspi_GetAttribUint32.3 \
 	    Tspi_GetPolicyObject.3 \
