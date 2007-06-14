@@ -158,6 +158,9 @@ ensureKeyIsLoaded(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE keyHandle, TCPA_KE
 
 	LogDebugFn("0x%x", keyHandle);
 
+	if (!ctx_has_key_loaded(hContext, keyHandle))
+		return TCSERR(TCS_E_INVALID_KEY);
+
 	MUTEX_LOCK(mem_cache_lock);
 
 	*keySlot = mc_get_slot_by_handle(keyHandle);
@@ -571,13 +574,15 @@ mc_set_slot_by_handle(TCS_KEY_HANDLE tcs_handle, TCPA_KEY_HANDLE tpm_handle)
 TSS_RESULT
 key_mgr_evict(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hKey)
 {
-	TSS_RESULT result;
+	TSS_RESULT result = TCS_SUCCESS;
 
-	MUTEX_LOCK(mem_cache_lock);
+	if ((result = ctx_remove_key_loaded(hContext, hKey)))
+		return result;
 
-	result = TCSP_EvictKey_Internal(hContext, hKey);
+	if ((result = key_mgr_dec_ref_count(hKey)))
+		return result;
 
-	MUTEX_UNLOCK(mem_cache_lock);
+	key_mgr_ref_count();
 
 	return result;
 }
@@ -658,6 +663,10 @@ key_mgr_ref_count()
 
 	for (cur = key_mem_cache_head; cur;) {
 		if (cur->ref_cnt == 0) {
+			if (cur->tpm_handle != NULL_TPM_HANDLE) {
+				LogDebugFn("Key 0x%x being freed from TPM", cur->tpm_handle);
+				internal_EvictByKeySlot(cur->tpm_handle);
+			}
 			LogDebugFn("Key 0x%x being freed", cur->tcs_handle);
 			destroy_key_refs(cur->blob);
 			free(cur->blob);
