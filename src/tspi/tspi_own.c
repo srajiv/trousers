@@ -125,7 +125,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 	TSS_HPOLICY hPolicy;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_get_policy(hTPM, &tspContext)))
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
 	if (!fForcedClear) {	/*  TPM_OwnerClear */
