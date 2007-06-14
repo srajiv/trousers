@@ -45,6 +45,72 @@ ctx_ref_count_keys(struct tcs_context *c)
 		prev = cur;
 	}
 }
+/* Traverse loaded keys list and if matching key handle is found return TRUE else return FALSE
+ */
+TSS_BOOL
+ctx_has_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
+{
+	struct tcs_context *c;
+	struct keys_loaded *k = NULL;
+
+	MUTEX_LOCK(tcs_ctx_lock);
+
+	c = get_context(ctx_handle);
+	if(c == NULL) {
+		MUTEX_UNLOCK(tcs_ctx_lock);
+		return FALSE;
+	}
+	k = c->keys;
+	while (k != NULL) {
+		if (k->key_handle == key_handle) {
+			MUTEX_UNLOCK(tcs_ctx_lock);
+			return TRUE;
+		}
+		k = k->next;
+	}
+
+	MUTEX_UNLOCK(tcs_ctx_lock);
+	return FALSE;
+}
+
+/* Traverse loaded keys list and if matching key handle is found remove it 
+ */
+TSS_RESULT
+ctx_remove_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
+{
+	struct tcs_context *c;
+	struct keys_loaded *cur, *head, *prev;
+
+	MUTEX_LOCK(tcs_ctx_lock);
+
+	c = get_context(ctx_handle);
+	if (c == NULL) {
+		MUTEX_UNLOCK(tcs_ctx_lock);
+		return TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
+	}
+	for (cur = head = c->keys; cur;) {
+		if (cur == NULL) {
+			MUTEX_UNLOCK(tcs_ctx_lock);
+			return TCSERR(TCS_E_INVALID_KEY);
+		} else if (cur->key_handle == key_handle) {
+			if (cur == head) {
+				c->keys = cur->next;
+				free(cur);
+				MUTEX_UNLOCK(tcs_ctx_lock);
+				return TCS_SUCCESS;
+			}
+			prev->next = cur->next;
+			free(cur);
+			MUTEX_UNLOCK(tcs_ctx_lock);
+			return TCS_SUCCESS;
+		}
+		prev = cur;
+		cur = cur->next;
+	}
+
+	MUTEX_UNLOCK(tcs_ctx_lock);
+	return TCSERR(TCS_E_INVALID_KEY);
+}
 
 /* make a new entry in the per-context list of loaded keys. If the list already
  * contains a pointer to the key in memory, just return success.
