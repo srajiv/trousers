@@ -1,4 +1,7 @@
 
+- Patched the TCS key loading infrastructure to return
+TCS_E_INVALID_KEY when a handle is used by a context that doesn't
+have a reference to the key in its keys_loaded list.
 - Added ASN.1 blob encoding and decoding APIs.
 - Added tick stamping APIs
 - Added monotonic counter APIs
