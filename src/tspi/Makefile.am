@@ -185,6 +185,10 @@ if TSS_BUILD_RSAKEY_LIST
 libtspi_la_SOURCES+=obj_rsakey.c tsp_key.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_RSAKEY_LIST
 endif
+if TSS_BUILD_ASN1
+libtspi_la_SOURCES+=tspi_asn1.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_ASN1
+endif
 
 if HAVE_GTK
 libtspi_la_CFLAGS+=@GTK_CFLAGS@
