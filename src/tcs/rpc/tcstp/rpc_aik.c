@@ -238,3 +238,55 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_GetCredentials(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	UINT32 pcECSize;
+	BYTE *prgbEC = NULL;
+	UINT32 pcPlatCredSize;
+	BYTE *prgbPlatCred = NULL;
+	UINT32 pcConfCredSize;
+	BYTE *prgbConfCred = NULL;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	result = TCS_GetCredentials_Internal(hContext, &pcECSize, &prgbEC, &pcPlatCredSize,
+					     &prgbPlatCred, &pcConfCredSize, &prgbConfCred);
+
+	if (result == TSS_SUCCESS) {
+		initData(&data->comm, 6);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pcECSize, 0, &data->comm))
+			goto internal_error;
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 1, prgbEC, pcECSize, &data->comm))
+			goto internal_error;
+		if (setData(TCSD_PACKET_TYPE_UINT32, 2, &pcPlatCredSize, 0, &data->comm))
+			goto internal_error;
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 3, prgbPlatCred, pcPlatCredSize, &data->comm))
+			goto internal_error;
+		if (setData(TCSD_PACKET_TYPE_UINT32, 4, &pcConfCredSize, 0, &data->comm))
+			goto internal_error;
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 5, prgbConfCred, pcConfCredSize, &data->comm))
+			goto internal_error;
+
+		free(prgbEC);
+		free(prgbPlatCred);
+		free(prgbConfCred);
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+
+internal_error:
+	free(prgbEC);
+	free(prgbPlatCred);
+	free(prgbConfCred);
+	return TCSERR(TSS_E_INTERNAL_ERROR);
+}

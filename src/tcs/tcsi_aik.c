@@ -222,3 +222,27 @@ done:
 	return result;
 }
 
+TSS_RESULT
+TCS_GetCredentials_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
+		    UINT32 * pcEndorsementCredentialSize,	/* out */
+		    BYTE ** prgbEndorsementCredential,		/* out */
+		    UINT32 * pcPlatformCredentialSize,		/* out */
+		    BYTE ** prgbPlatformCredential,		/* out */
+		    UINT32 * pcConformanceCredentialSize,	/* out */
+		    BYTE ** prgbConformanceCredential)		/* out */
+{
+	TSS_RESULT result;
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	get_credential(TR_PLATFORM_CREDENTIAL, pcPlatformCredentialSize,
+		       prgbPlatformCredential);
+	get_credential(TR_CONFORMANCE_CREDENTIAL, pcConformanceCredentialSize,
+		       prgbConformanceCredential);
+	get_credential(TR_ENDORSEMENT_CREDENTIAL, pcEndorsementCredentialSize,
+		       prgbEndorsementCredential);
+	
+	return TCS_SUCCESS;
+}
+

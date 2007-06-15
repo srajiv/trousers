@@ -520,6 +520,39 @@ TSS_RESULT TCSP_MakeIdentity(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCS_GetCredentials(TSS_HCONTEXT tspContext,	/* in */
+			      UINT32 * pcEndorsementCredentialSize,	/* out */
+			      BYTE ** prgbEndorsementCredential,	/* out */
+			      UINT32 * pcPlatformCredentialSize,	/* out */
+			      BYTE ** prgbPlatformCredential,		/* out */
+			      UINT32 * pcConformanceCredentialSize,	/* out */
+			      BYTE ** prgbConformanceCredential)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCS_GetCredentials_TP(entry,
+						       pcEndorsementCredentialSize,
+						       prgbEndorsementCredential,
+						       pcPlatformCredentialSize,
+						       prgbPlatformCredential,
+						       pcConformanceCredentialSize,
+						       prgbConformanceCredential);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT TCSP_SetOwnerInstall(TSS_HCONTEXT tspContext,	/* in */
 				TSS_BOOL state)	/* in */
 {

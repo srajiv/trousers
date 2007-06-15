@@ -361,9 +361,19 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE ** prgbConformanceCredential	/* out */
 	    );
 
-	TSS_RESULT TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-						  TSS_BOOL state	/* in  */
+	TSS_RESULT TCS_GetCredentials_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
+					       UINT32 * pcEndorsementCredentialSize,	/* out */
+					       BYTE ** prgbEndorsementCredential,	/* out */
+					       UINT32 * pcPlatformCredentialSize,	/* out */
+					       BYTE ** prgbPlatformCredential,	/* out */
+					       UINT32 * pcConformanceCredentialSize,	/* out */
+					       BYTE ** prgbConformanceCredential	/* out */
 	    );
+
+	TSS_RESULT TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,   /* in */
+						 TSS_BOOL state        /* in  */
+	    );
+
 	TSS_RESULT TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						UINT16 protocolID,	/* in */
 						UINT32 encOwnerAuthSize,	/* in  */
