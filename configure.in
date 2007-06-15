@@ -222,6 +222,7 @@ if test "x$API" == "x1.2"; then
 	AM_CONDITIONAL(TSS_BUILD_COUNTER, true)
 	AM_CONDITIONAL(TSS_BUILD_TICK, true)
 	AM_CONDITIONAL(TSS_BUILD_ASN1, true)
+	AM_CONDITIONAL(TSS_BUILD_NV, true)
 else
 	AM_CONDITIONAL(TSS_BUILD_TSS12, false)
 	AM_CONDITIONAL(TSS_BUILD_DAA, false)
@@ -229,12 +230,15 @@ else
 	AM_CONDITIONAL(TSS_BUILD_COUNTER, false)
 	AM_CONDITIONAL(TSS_BUILD_TICK, false)
 	AM_CONDITIONAL(TSS_BUILD_ASN1, false)
+	AM_CONDITIONAL(TSS_BUILD_NV, false)
 fi
 
 #
 # There's no need to edit anything below, these conditionals control the building
 # of files that support the files above, which all contain TSS APIs
 #
+AM_CONDITIONAL(TSS_BUILD_NV_LIST, test -z $TSS_BUILD_NV_TRUE)
+AM_CONDITIONAL(TSS_BUILD_NV_SUPPORT, test -z $TSS_BUILD_NV_TRUE)
 AM_CONDITIONAL(TSS_BUILD_GET_FLAGS, test -z $TSS_BUILD_ADMIN_TRUE || \
 				    test -z $TSS_BUILD_CAPS_TPM_TRUE)
 AM_CONDITIONAL(TSS_BUILD_PCRS_LIST, test -z $TSS_BUILD_SEAL_TRUE || \
