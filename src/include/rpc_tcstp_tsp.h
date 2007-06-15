@@ -293,4 +293,18 @@ TSS_RESULT TCSP_TickStampBlob_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_NO
 #define TCSP_TickStampBlob_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_NV
+TSS_RESULT TCSP_NV_DefineOrReleaseSpace_TP(struct host_table_entry *hte, UINT32, BYTE *, TCPA_ENCAUTH, TPM_AUTH *);
+TSS_RESULT TCSP_NV_WriteValue_TP(struct host_table_entry *hte, TSS_NV_INDEX, UINT32, UINT32, BYTE *, TPM_AUTH *);
+TSS_RESULT TCSP_NV_WriteValueAuth_TP(struct host_table_entry *hte, TSS_NV_INDEX, UINT32, UINT32, BYTE *, TPM_AUTH *);
+TSS_RESULT TCSP_NV_ReadValue_TP(struct host_table_entry *hte, TSS_NV_INDEX, UINT32, UINT32 *, TPM_AUTH *, BYTE **);
+TSS_RESULT TCSP_NV_ReadValueAuth_TP(struct host_table_entry *hte, TSS_NV_INDEX, UINT32, UINT32 *, TPM_AUTH *, BYTE **);
+#else
+#define TCSP_NV_DefineOrReleaseSpace_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_NV_WriteValue_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_NV_WriteValueAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_NV_ReadValue_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_NV_ReadValueAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif

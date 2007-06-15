@@ -64,6 +64,8 @@ void               obj_lists_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 #include "obj_rsakey.h"
 #include "obj_encdata.h"
 #include "obj_daa.h"
+#include "obj_nv.h"
+
 
 TPM_LIST_DECLARE_EXTERN;
 CONTEXT_LIST_DECLARE_EXTERN;
@@ -73,5 +75,6 @@ POLICY_LIST_DECLARE_EXTERN;
 RSAKEY_LIST_DECLARE_EXTERN;
 ENCDATA_LIST_DECLARE_EXTERN;
 DAA_LIST_DECLARE_EXTERN;
+NVSTORE_LIST_DECLARE_EXTERN;
 
 #endif

@@ -831,4 +831,43 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE**             prgbTickCount
 	);
 
+	TSS_RESULT TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE	hContext, 	/* in */
+							 UINT32			cPubInfoSize,	/* in */
+							 BYTE* 			pPubInfo,	/* in */
+							 TPM_ENCAUTH 		encAuth, 	/* in */
+							 TPM_AUTH* 		pAuth	/* in, out */
+	);
+
+	TSS_RESULT TCSP_NV_WriteValue_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+					       TSS_NV_INDEX		hNVStore,	/* in */
+					       UINT32 			offset,		/* in */
+					       UINT32 			ulDataLength,	/* in */
+					       BYTE* 			rgbDataToWrite,	/* in */
+					       TPM_AUTH* 		privAuth	/* in, out */
+	);
+
+	TSS_RESULT TCSP_NV_WriteValueAuth_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+						   TSS_NV_INDEX 	hNVStore,	/* in */
+						   UINT32 		offset,		/* in */
+						   UINT32		ulDataLength,	/* in */
+						   BYTE*		rgbDataToWrite,	/* in */
+						   TPM_AUTH*		NVAuth	/* in, out */
+	);
+
+	TSS_RESULT TCSP_NV_ReadValue_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+					      TSS_NV_INDEX hNVStore,	/* in */
+					      UINT32 offset,		/* in */
+					      UINT32* pulDataLength,	/* in, out */
+					      TPM_AUTH* privAuth,	/* in, out */
+					      BYTE** rgbDataRead 	/* out */
+	);
+
+	TSS_RESULT TCSP_NV_ReadValueAuth_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+					          TSS_NV_INDEX		hNVStore,	/* in */
+						  UINT32		offset,		/* in */
+						  UINT32*		pulDataLength,	/* in, out */
+						  TPM_AUTH*		NVAuth,		/* in, out */
+						  BYTE**		rgbDataRead	/* out */
+	);
+
 #endif /*_TCS_UTILS_H_ */

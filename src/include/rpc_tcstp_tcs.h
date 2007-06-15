@@ -238,6 +238,20 @@ DECLARE_TCSTP_FUNC(DaaSign);
 #define tcs_wrap_DaaSign	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_NV
+DECLARE_TCSTP_FUNC(NV_DefineOrReleaseSpace);
+DECLARE_TCSTP_FUNC(NV_WriteValue);
+DECLARE_TCSTP_FUNC(NV_WriteValueAuth);
+DECLARE_TCSTP_FUNC(NV_ReadValue);
+DECLARE_TCSTP_FUNC(NV_ReadValueAuth);
+#else
+#define tcs_wrap_NV_DefineOrReleaseSpace      tcs_wrap_Error
+#define tcs_wrap_NV_WriteValue                tcs_wrap_Error
+#define tcs_wrap_NV_WriteValueAuth            tcs_wrap_Error
+#define tcs_wrap_NV_ReadValue                 tcs_wrap_Error
+#define tcs_wrap_NV_ReadValueAuth             tcs_wrap_Error
+#endif
+
 #ifdef TSS_BUILD_COUNTER
 DECLARE_TCSTP_FUNC(ReadCounter);
 DECLARE_TCSTP_FUNC(CreateCounter);
