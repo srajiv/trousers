@@ -1,4 +1,5 @@
 
+- Added NVRAM APIs, donated by James Xu, and others from Intel.
 - Added TCS GetCredentials functions
 - Patched the TCS key loading infrastructure to return
 TCS_E_INVALID_KEY when a handle is used by a context that doesn't
