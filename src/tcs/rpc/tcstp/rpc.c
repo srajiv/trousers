@@ -560,7 +560,12 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_ReleaseCounterOwner,"ReleaseCounterOwner"},
 	{tcs_wrap_ReadCurrentTicks,"ReadCurrentTicks"},
 	{tcs_wrap_TickStampBlob,"TicksStampBlob"}, /* 85 */
-	{tcs_wrap_GetCredentials,"GetCredentials"}
+	{tcs_wrap_GetCredentials,"GetCredentials"},
+	{tcs_wrap_NV_DefineOrReleaseSpace,"NVDefineOrReleaseSpace"},
+	{tcs_wrap_NV_WriteValue,"NVWriteValue"},
+	{tcs_wrap_NV_WriteValueAuth,"NVWriteValueAuth"},
+	{tcs_wrap_NV_ReadValue,"NVReadValue"}, /* 90 */
+	{tcs_wrap_NV_ReadValueAuth,"NVReadValueAuth"}
 };
 
 int

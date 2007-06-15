@@ -43,6 +43,10 @@ Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 #ifdef TSS_BUILD_RSAKEY_LIST
 		result = obj_rsakey_get_policy(hObject, policyType, phPolicy, NULL);
 #endif
+#ifdef TSS_BUILD_NV
+	} else if (obj_is_nvstore(hObject)) {
+		result = obj_nvstore_get_policy(hObject, phPolicy);
+#endif
 	} else if (obj_is_tpm(hObject)) {
 		if (policyType == TSS_POLICY_MIGRATION)
 			result = TSPERR(TSS_E_BAD_PARAMETER);
@@ -106,6 +110,13 @@ Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/* in */
 	if (obj_is_rsakey(hObject)) {
 #ifdef TSS_BUILD_RSAKEY_LIST
 		result = obj_rsakey_set_policy(hObject, type, hPolicy);
+#endif
+#ifdef TSS_BUILD_NV
+	} else if (obj_is_nvstore(hObject)) {
+		if (type != TSS_POLICY_USAGE)
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+		else
+			result = obj_nvstore_set_policy(hObject, hPolicy);
 #endif
 	} else if (obj_is_tpm(hObject)) {
 		if (type != TSS_POLICY_USAGE)

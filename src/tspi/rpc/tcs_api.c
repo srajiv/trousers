@@ -2278,3 +2278,147 @@ TCSP_TickStampBlob(TSS_HCONTEXT   tspContext,		/* in */
 
 	return result;
 }
+
+TSS_RESULT
+TCSP_NV_DefineOrReleaseSpace(TSS_HCONTEXT hContext,	/* in */
+			     UINT32 cPubInfoSize,	/* in */
+			     BYTE* pPubInfo,		/* in */
+			     TCPA_ENCAUTH encAuth,	/* in */
+			     TPM_AUTH* pAuth)		/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_NV_DefineOrReleaseSpace_TP(entry, cPubInfoSize,
+								 pPubInfo, encAuth, pAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_NV_WriteValue(TSS_HCONTEXT hContext,	/* in */
+		   TSS_NV_INDEX hNVStore,	/* in */
+		   UINT32 offset,		/* in */
+		   UINT32 ulDataLength,		/* in */
+		   BYTE* rgbDataToWrite,	/* in */
+		   TPM_AUTH* privAuth)		/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_NV_WriteValue_TP(entry, hNVStore, offset,
+						       ulDataLength, rgbDataToWrite, privAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+
+TSS_RESULT
+TCSP_NV_WriteValueAuth(TSS_HCONTEXT hContext,	/* in */
+		       TSS_NV_INDEX hNVStore,		/* in */
+		       UINT32 offset,			/* in */
+		       UINT32 ulDataLength,		/* in */
+		       BYTE* rgbDataToWrite,		/* in */
+		       TPM_AUTH* NVAuth)		/* in, out */
+{
+
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_NV_WriteValueAuth_TP(entry, hNVStore, offset,
+							   ulDataLength, rgbDataToWrite, NVAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+
+TSS_RESULT
+TCSP_NV_ReadValue(TSS_HCONTEXT hContext,	/* in */
+		  TSS_NV_INDEX hNVStore,	/* in */
+		  UINT32 offset,		/* in */
+		  UINT32* pulDataLength,	/* in, out */
+		  TPM_AUTH* privAuth,		/* in, out */
+		  BYTE** rgbDataRead)		/* out */
+{
+
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_NV_ReadValue_TP(entry, hNVStore, offset,
+						      pulDataLength, privAuth, rgbDataRead);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
+		      TSS_NV_INDEX hNVStore,    /* in */
+		      UINT32 offset,		/* in */
+		      UINT32* pulDataLength,    /* in, out */
+		      TPM_AUTH* NVAuth,		/* in, out */
+		      BYTE** rgbDataRead)       /* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_NV_ReadValueAuth_TP(entry, hNVStore, offset,
+							  pulDataLength, NVAuth, rgbDataRead);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+

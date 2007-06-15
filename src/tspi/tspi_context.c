@@ -270,6 +270,15 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		result = obj_daa_add(tspContext, phObject);
 		break;
 #endif
+#ifdef TSS_BUILD_NV
+	case TSS_OBJECT_TYPE_NV:
+		/* There are no valid flags for a NV object */
+		if (initFlags & ~(0UL))
+			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+	
+		result = obj_nvstore_add(tspContext, phObject);
+		break;
+#endif
 	default:
 		LogDebug("Invalid Object type");
 		return TSPERR(TSS_E_INVALID_OBJECT_TYPE);

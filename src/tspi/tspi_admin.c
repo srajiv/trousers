@@ -253,6 +253,11 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
 		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_LOCK);
 		break;
+#ifdef TSS_BUILD_NV
+	case TSS_TPMSTATUS_NV_LOCK:
+		*pfTpmState = BOOL(volFlags & TPM_PF_NV_LOCKED);
+		break;
+#endif
 #ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
 		break;

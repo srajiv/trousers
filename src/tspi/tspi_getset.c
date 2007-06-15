@@ -114,6 +114,26 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
+#ifdef TSS_BUILD_NV
+	} else if (obj_is_nvstore(hObject)) {
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_NV_INDEX:
+				if ((result = obj_nvstore_set_index(hObject, ulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_NV_DATASIZE:
+				if ((result = obj_nvstore_set_datasize(hObject, ulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_NV_PERMISSIONS:
+				if ((result = obj_nvstore_set_permission(hObject, ulAttrib)))
+					return result;
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+				break;
+		}
+#endif
 	} else if (obj_is_policy(hObject)) {
 		switch (attribFlag) {
 			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
@@ -269,6 +289,67 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			}
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+#endif
+#ifdef TSS_BUILD_NV
+	} else if (obj_is_nvstore(hObject)) {
+		switch (attribFlag) {
+			case TSS_TSPATTRIB_NV_INDEX:
+				if ((result = obj_nvstore_get_index(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_NV_DATASIZE:
+				if ((result = obj_nvstore_get_datasize(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_NV_PERMISSIONS:
+				if ((result = obj_nvstore_get_permission(hObject, pulAttrib)))
+					return result;
+				break;
+			case TSS_TSPATTRIB_NV_STATE:
+				switch (subFlag) {
+					case TSS_TSPATTRIB_NVSTATE_READSTCLEAR:
+						if ((result =
+						     obj_nvstore_get_state_readstclear(hObject,
+										       pulAttrib)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVSTATE_WRITEDEFINE:
+						if ((result =
+						     obj_nvstore_get_state_writedefine(hObject,
+										       pulAttrib)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVSTATE_WRITESTCLEAR:
+						if ((result =
+						     obj_nvstore_get_state_writestclear(hObject,
+											pulAttrib)))
+							return result;
+						break;
+					default:
+						return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+					}
+				break;
+			case TSS_TSPATTRIB_NV_PCR:
+				switch (subFlag) {
+					case TSS_TSPATTRIB_NVPCR_READLOCALITYATRELEASE:
+						if ((result =
+						     obj_nvstore_get_readlocalityatrelease(hObject,
+											   pulAttrib)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVPCR_WRITELOCALITYATRELEASE:
+						if ((result =
+						     obj_nvstore_get_writelocalityatrelease(hObject,
+											    pulAttrib)))
+							return result;
+						break;
+					default:
+						return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+					}
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		}
 #endif
 	} else if (obj_is_policy(hObject)) {
 		switch (attribFlag) {
@@ -453,6 +534,10 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 	} else {
 		if (obj_is_pcrs(hObject) || obj_is_context(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
+#ifdef TSS_BUILD_NV
+		else if (obj_is_nvstore(hObject))
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+#endif
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
@@ -529,6 +614,40 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+#endif
+#ifdef TSS_BUILD_NV
+		} else if (obj_is_nvstore(hObject)) {
+			if (attribFlag == TSS_TSPATTRIB_NV_PCR){
+				switch (subFlag) {
+					case TSS_TSPATTRIB_NVPCR_READDIGESTATRELEASE:
+						if ((result =
+						     obj_nvstore_get_readdigestatrelease(hObject,
+								pulAttribDataSize, prgbAttribData)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVPCR_READPCRSELECTION:
+						if ((result =
+						     obj_nvstore_get_readpcrselection(hObject,
+								pulAttribDataSize, prgbAttribData)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVPCR_WRITEDIGESTATRELEASE:
+						if ((result =
+						     obj_nvstore_get_writedigestatrelease(hObject,
+								pulAttribDataSize, prgbAttribData)))
+							return result;
+						break;
+					case TSS_TSPATTRIB_NVPCR_WRITEPCRSELECTION:
+						if ((result =
+						     obj_nvstore_get_writepcrselection(hObject,
+								pulAttribDataSize, prgbAttribData)))
+							return result;
+						break;
+					default:
+						return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+					}
+			} else
+				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST

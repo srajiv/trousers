@@ -81,6 +81,18 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 				break;
 		}
 		break;
+#ifdef TSS_BUILD_NV
+	case TSS_TPMCAP_NV_LIST:
+		tcsCapArea = TPM_CAP_NV_LIST;
+		break;
+	case TSS_TPMCAP_NV_INDEX:
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		tcsCapArea = TPM_CAP_NV_INDEX;
+		tcsSubCap = *(UINT32 *)rgbSubCap;
+		break;
+#endif
 	case TSS_TPMCAP_PROPERTY:	/* Determines a physical property of the TPM. */
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
@@ -112,6 +124,9 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		break;
 	case TSS_TPMCAP_VERSION:	/* Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
+		break;
+	case TSS_TPMCAP_VERSION_VAL:	/* Queries the current TPM version for 1.2 TPM device. */
+		tcsCapArea = TPM_CAP_VERSION_VAL;
 		break;
 	default:
 		return TSPERR(TSS_E_BAD_PARAMETER);

@@ -33,6 +33,7 @@ POLICY_LIST_DECLARE;
 RSAKEY_LIST_DECLARE;
 ENCDATA_LIST_DECLARE;
 DAA_LIST_DECLARE;
+NVSTORE_LIST_DECLARE;
 
 void
 list_init(struct obj_list *list)
@@ -52,6 +53,7 @@ obj_list_init()
 	RSAKEY_LIST_INIT();
 	ENCDATA_LIST_INIT();
 	DAA_LIST_INIT();
+	NVSTORE_LIST_INIT();
 }
 
 TSS_HOBJECT
@@ -233,6 +235,7 @@ obj_close_context(TSS_HCONTEXT tspContext)
 	RSAKEY_LIST_CLOSE(tspContext);
 	ENCDATA_LIST_CLOSE(tspContext);
 	DAA_LIST_CLOSE(tspContext);
+	NVSTORE_LIST_CLOSE(tspContext);
 }
 
 /* When a policy object is closed, all references to it must be removed. This function
