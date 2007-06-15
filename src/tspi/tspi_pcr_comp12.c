@@ -23,16 +23,9 @@ TSS_RESULT
 Tspi_PcrComposite_SetPcrLocality(TSS_HPCRS hPcrComposite,	/* in */
 				 UINT32    LocalityValue)	/* in */
 {
-	switch (LocalityValue) {
-		case TPM_LOC_FOUR:
-		case TPM_LOC_THREE:
-		case TPM_LOC_TWO:
-		case TPM_LOC_ONE:
-		case TPM_LOC_ZERO:
-			break;
-		default:
-			return TSPERR(TSS_E_BAD_PARAMETER);
-	}
+	/* LocalityValue must be some combination of locality values logically or'd together */
+	if (LocalityValue && (LocalityValue & (~TSS_LOCALITY_ALL)))
+		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	return obj_pcrs_set_locality(hPcrComposite, LocalityValue);
 }
