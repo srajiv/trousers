@@ -415,6 +415,7 @@ TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     TPM_AUTH * ownerAuth)	/* in, out */
 {
 	UINT64 offset;
+	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -433,7 +434,7 @@ TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	offset = 10;
-
+	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result)
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 
