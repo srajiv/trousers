@@ -553,6 +553,35 @@ TSS_RESULT TCS_GetCredentials(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCS_GetCredential(TSS_HCONTEXT tspContext,	/* in */
+			     UINT32 ulCredentialType,          /* in */
+			     UINT32 ulCredentialAccessMode,    /* in */
+			     UINT32 * pulCredentialSize,       /* out */
+			     BYTE ** prgbCredentialData)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCS_GetCredential_TP(entry,
+						      ulCredentialType,
+						      ulCredentialAccessMode,
+						      pulCredentialSize,
+						      prgbCredentialData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT TCSP_SetOwnerInstall(TSS_HCONTEXT tspContext,	/* in */
 				TSS_BOOL state)	/* in */
 {

@@ -84,10 +84,12 @@ TSS_RESULT TCSP_TerminateHandle_TP(struct host_table_entry *,TCS_AUTHHANDLE);
 #ifdef TSS_BUILD_AIK
 TSS_RESULT TCSP_MakeIdentity_TP(struct host_table_entry *,TCPA_ENCAUTH,TCPA_CHOSENID_HASH,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
 TSS_RESULT TCS_GetCredentials_TP(struct host_table_entry *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
+TSS_RESULT TCS_GetCredential_TP(struct host_table_entry *,UINT32 ,UINT32 ,UINT32 *,BYTE **);
 TSS_RESULT TCSP_ActivateTPMIdentity_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **);
 #else
 #define TCSP_MakeIdentity_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCS_GetCredentials_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCS_GetCredential_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_ActivateTPMIdentity_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 

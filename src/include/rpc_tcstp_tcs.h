@@ -199,10 +199,12 @@ DECLARE_TCSTP_FUNC(CertifyKey);
 #ifdef TSS_BUILD_AIK
 DECLARE_TCSTP_FUNC(MakeIdentity);
 DECLARE_TCSTP_FUNC(GetCredentials);
+DECLARE_TCSTP_FUNC(GetCredential);
 DECLARE_TCSTP_FUNC(ActivateIdentity);
 #else
 #define tcs_wrap_MakeIdentity		tcs_wrap_Error
 #define tcs_wrap_GetCredentials		tcs_wrap_Error
+#define tcs_wrap_GetCredential		tcs_wrap_Error
 #define tcs_wrap_ActivateIdentity	tcs_wrap_Error
 #endif
 

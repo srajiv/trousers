@@ -293,6 +293,48 @@ done:
 }
 
 TSS_RESULT
+TCS_GetCredential_TP(struct host_table_entry *hte,
+		     UINT32 ulCredentialType,          /* in */
+		     UINT32 ulCredentialAccessMode,    /* in */
+		     UINT32 * pulCredentialSize,       /* out */
+		     BYTE ** prgbCredentialData)       /* out */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_GETCREDENTIAL;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &ulCredentialType, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &ulCredentialAccessMode, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pulCredentialSize, 0, &hte->comm)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			return result;
+		}
+
+		*prgbCredentialData = (BYTE *) malloc(*pulCredentialSize);
+		if (*prgbCredentialData == NULL) {
+			LogError("malloc of %u bytes failed.", *pulCredentialSize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			return result;
+		}
+
+	}
+	return result;
+}
+
+TSS_RESULT
 TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE idKey,	/* in */
 					UINT32 blobSize,	/* in */

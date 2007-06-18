@@ -370,6 +370,13 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE ** prgbConformanceCredential	/* out */
 	    );
 
+	TSS_RESULT TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
+					      UINT32 ulCredentialType,		/* in */
+					      UINT32 ulCredentialAccessMode,	/* in */
+					      UINT32 * pulCredentialSize,	/* out */
+					      BYTE ** prgbCredentialData	/* out */
+	    );
+
 	TSS_RESULT TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,   /* in */
 						 TSS_BOOL state        /* in  */
 	    );
