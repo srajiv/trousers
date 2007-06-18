@@ -24,6 +24,7 @@
 #include <tss/tss_error.h>
 
 #include <tss/tddlapi_error.h>
+#include <tss/tcs_defines.h>
 #include <tss/tss_defines.h>
 #include <tss/tddli.h>
 #include <tss/tspi.h>
