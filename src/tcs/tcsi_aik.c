@@ -115,11 +115,11 @@ TCSP_MakeIdentity_Internal(TCS_CONTEXT_HANDLE hContext,			/* in  */
 		UnloadBlob(&offset, *pcIdentityBindingSize, txBlob, *prgbIdentityBinding);
 
 		/* If an error occurs, these will return NULL */
-		get_credential(TR_PLATFORM_CREDENTIAL, pcPlatformCredentialSize,
+		get_credential(TSS_TCS_CREDENTIAL_PLATFORMCERT, pcPlatformCredentialSize,
 			       prgbPlatformCredential);
-		get_credential(TR_CONFORMANCE_CREDENTIAL, pcConformanceCredentialSize,
+		get_credential(TSS_TCS_CREDENTIAL_TPM_CC, pcConformanceCredentialSize,
 			       prgbConformanceCredential);
-		get_credential(TR_ENDORSEMENT_CREDENTIAL, pcEndorsementCredentialSize,
+		get_credential(TSS_TCS_CREDENTIAL_EKCERT, pcEndorsementCredentialSize,
 			       prgbEndorsementCredential);
 
 		if (pSrkAuth != NULL)
@@ -236,13 +236,41 @@ TCS_GetCredentials_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	get_credential(TR_PLATFORM_CREDENTIAL, pcPlatformCredentialSize,
+	get_credential(TSS_TCS_CREDENTIAL_PLATFORMCERT, pcPlatformCredentialSize,
 		       prgbPlatformCredential);
-	get_credential(TR_CONFORMANCE_CREDENTIAL, pcConformanceCredentialSize,
+	get_credential(TSS_TCS_CREDENTIAL_TPM_CC, pcConformanceCredentialSize,
 		       prgbConformanceCredential);
-	get_credential(TR_ENDORSEMENT_CREDENTIAL, pcEndorsementCredentialSize,
+	get_credential(TSS_TCS_CREDENTIAL_EKCERT, pcEndorsementCredentialSize,
 		       prgbEndorsementCredential);
-	
+
 	return TCS_SUCCESS;
 }
 
+TSS_RESULT
+TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,		/* in  */
+			   UINT32 ulCredentialType,		/* in */
+			   UINT32 ulCredentialAccessMode,	/* in */
+			   UINT32 * pulCredentialSize,		/* out */
+			   BYTE ** prgbCredentialData)		/* out */
+{
+	TSS_RESULT result;
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if ((ulCredentialType != TSS_TCS_CREDENTIAL_EKCERT) &&
+	    (ulCredentialType != TSS_TCS_CREDENTIAL_TPM_CC) &&
+	    (ulCredentialType != TSS_TCS_CREDENTIAL_PLATFORMCERT)) {
+		LogError("GetCredential - Unsupported Credential Type");
+		return TCSERR(TSS_E_BAD_PARAMETER);
+	}
+
+	if (ulCredentialAccessMode == TSS_TCS_CERT_ACCESS_AUTO) {
+		get_credential(ulCredentialType, pulCredentialSize, prgbCredentialData);
+	} else {
+		LogError("GetCredential - Unsupported Credential Access Mode");
+		return TCSERR(TSS_E_FAIL);
+	}
+
+	return TCS_SUCCESS;
+}

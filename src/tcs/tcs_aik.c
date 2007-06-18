@@ -81,7 +81,7 @@ UnloadBlob_SYMMETRIC_KEY(UINT64 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key)
 }
 
 void
-get_credential(int type, UINT32 *size, BYTE **cred)
+get_credential(UINT32 type, UINT32 *size, BYTE **cred)
 {
 	int rc, fd;
 	char *path = NULL;
@@ -90,13 +90,13 @@ get_credential(int type, UINT32 *size, BYTE **cred)
 	size_t file_size;
 
 	switch (type) {
-		case TR_PLATFORM_CREDENTIAL:
+		case TSS_TCS_CREDENTIAL_PLATFORMCERT:
 			path = tcsd_options.platform_cred;
 			break;
-		case TR_CONFORMANCE_CREDENTIAL:
+		case TSS_TCS_CREDENTIAL_TPM_CC:
 			path = tcsd_options.conformance_cred;
 			break;
-		case TR_ENDORSEMENT_CREDENTIAL:
+		case TSS_TCS_CREDENTIAL_EKCERT:
 			path = tcsd_options.endorsement_cred;
 			break;
 		default:
