@@ -20,12 +20,13 @@
 #include "tsplog.h"
 #include "obj.h"
 
+
 TSS_RESULT
 Tspi_PcrComposite_SetPcrLocality(TSS_HPCRS hPcrComposite,	/* in */
 				 UINT32    LocalityValue)	/* in */
 {
-	/* LocalityValue must be some combination of locality values logically or'd together */
-	if (LocalityValue && (LocalityValue & (~TSS_LOCALITY_ALL)))
+	/* LocalityValue must be some combination of TPM_LOC_* values logically or'd together */
+	if (!LocalityValue || (LocalityValue & (~TSS_LOCALITY_ALL)))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	return obj_pcrs_set_locality(hPcrComposite, LocalityValue);
