@@ -223,30 +223,6 @@ done:
 }
 
 TSS_RESULT
-TCS_GetCredentials_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
-		    UINT32 * pcEndorsementCredentialSize,	/* out */
-		    BYTE ** prgbEndorsementCredential,		/* out */
-		    UINT32 * pcPlatformCredentialSize,		/* out */
-		    BYTE ** prgbPlatformCredential,		/* out */
-		    UINT32 * pcConformanceCredentialSize,	/* out */
-		    BYTE ** prgbConformanceCredential)		/* out */
-{
-	TSS_RESULT result;
-
-	if ((result = ctx_verify_context(hContext)))
-		return result;
-
-	get_credential(TSS_TCS_CREDENTIAL_PLATFORMCERT, pcPlatformCredentialSize,
-		       prgbPlatformCredential);
-	get_credential(TSS_TCS_CREDENTIAL_TPM_CC, pcConformanceCredentialSize,
-		       prgbConformanceCredential);
-	get_credential(TSS_TCS_CREDENTIAL_EKCERT, pcEndorsementCredentialSize,
-		       prgbEndorsementCredential);
-
-	return TCS_SUCCESS;
-}
-
-TSS_RESULT
 TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,		/* in  */
 			   UINT32 ulCredentialType,		/* in */
 			   UINT32 ulCredentialAccessMode,	/* in */

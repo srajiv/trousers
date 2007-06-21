@@ -361,15 +361,6 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE ** prgbConformanceCredential	/* out */
 	    );
 
-	TSS_RESULT TCS_GetCredentials_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
-					       UINT32 * pcEndorsementCredentialSize,	/* out */
-					       BYTE ** prgbEndorsementCredential,	/* out */
-					       UINT32 * pcPlatformCredentialSize,	/* out */
-					       BYTE ** prgbPlatformCredential,	/* out */
-					       UINT32 * pcConformanceCredentialSize,	/* out */
-					       BYTE ** prgbConformanceCredential	/* out */
-	    );
-
 	TSS_RESULT TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 					      UINT32 ulCredentialType,		/* in */
 					      UINT32 ulCredentialAccessMode,	/* in */
