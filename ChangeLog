@@ -1,4 +1,7 @@
 
+- Removed TCS GetCredentials APIs -- the TSSWG verified that these
+had accidentally been left in the spec.
+- Added TCS GetCredential API.
 - Added NVRAM APIs, donated by James Xu, and others from Intel.
 - Added TCS GetCredentials functions
 - Patched the TCS key loading infrastructure to return
