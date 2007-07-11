@@ -1120,6 +1120,15 @@ Trspi_Hash_UINT32(Trspi_HashCtx *c, UINT32 i)
 }
 
 TSS_RESULT
+Trspi_Hash_UINT64(Trspi_HashCtx *c, UINT64 i)
+{
+	BYTE bytes[sizeof(UINT64)];
+
+	UINT64ToArray(i, bytes);
+	return Trspi_HashUpdate(c, sizeof(UINT64), bytes);
+}
+
+TSS_RESULT
 Trspi_Hash_BYTE(Trspi_HashCtx *c, BYTE data)
 {
 	return Trspi_HashUpdate(c, sizeof(BYTE), &data);
@@ -1435,10 +1444,74 @@ Trspi_Hash_BOUND_DATA(Trspi_HashCtx *c, TCPA_BOUND_DATA *bd, UINT32 payloadLengt
 	return result;
 }
 
+TSS_RESULT
+Trspi_Hash_TRANSPORT_AUTH(Trspi_HashCtx *c, TPM_TRANSPORT_AUTH *a)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, a->tag);
+	result |= Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, a->authData.authdata);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_TRANSPORT_LOG_IN(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_IN *l)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, l->tag);
+	result |= Trspi_Hash_DIGEST(c, l->parameters.digest);
+	result |= Trspi_Hash_DIGEST(c, l->pubKeyHash.digest);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_TRANSPORT_LOG_OUT(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_OUT *l)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, l->tag);
+	result |= Trspi_Hash_CURRENT_TICKS(c, &l->currentTicks);
+	result |= Trspi_Hash_DIGEST(c, l->parameters.digest);
+	result |= Trspi_Hash_UINT32(c, l->locality);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_CURRENT_TICKS(Trspi_HashCtx *c, TPM_CURRENT_TICKS *t)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, t->tag);
+	result |= Trspi_Hash_UINT64(c, t->currentTicks);
+	result |= Trspi_Hash_UINT16(c, t->tickRate);
+	result |= Trspi_Hash_NONCE(c, t->tickNonce.nonce);
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_SIGN_INFO(Trspi_HashCtx *c, TPM_SIGN_INFO *s)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, s->tag);
+	result |= Trspi_HashUpdate(c, 4, s->fixed);
+	result |= Trspi_Hash_NONCE(c, s->replay.nonce);
+	result |= Trspi_Hash_UINT32(c, s->dataLen);
+	result |= Trspi_HashUpdate(c, s->dataLen, s->data);
+
+	return result;
+}
+
 void
 Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr)
 {
 	Trspi_UnloadBlob_UINT16(offset, &ctr->tag, blob);
+	/* '4' is hard-coded in the spec */
 	Trspi_UnloadBlob(offset, 4, blob, (BYTE *)&ctr->label);
 	Trspi_UnloadBlob_UINT32(offset, &ctr->counter, blob);
 }
@@ -1459,3 +1532,39 @@ Trspi_UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *blob, TPM_CURRENT_TICKS *ti
 	Trspi_UnloadBlob_UINT16(offset, &ticks->tickRate, blob);
 	Trspi_UnloadBlob(offset, sizeof(TPM_NONCE), blob, (BYTE *)&ticks->tickNonce);
 }
+
+void
+Trspi_UnloadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t)
+{
+	Trspi_UnloadBlob_UINT16(offset, &t->tag, blob);
+	Trspi_UnloadBlob_UINT32(offset, &t->transAttributes, blob);
+	Trspi_UnloadBlob_UINT32(offset, &t->algId, blob);
+	Trspi_UnloadBlob_UINT16(offset, &t->encScheme, blob);
+}
+
+void
+Trspi_LoadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t)
+{
+	Trspi_LoadBlob_UINT16(offset, t->tag, blob);
+	Trspi_LoadBlob_UINT32(offset, t->transAttributes, blob);
+	Trspi_LoadBlob_UINT32(offset, t->algId, blob);
+	Trspi_LoadBlob_UINT16(offset, t->encScheme, blob);
+}
+
+void
+Trspi_LoadBlob_TRANSPORT_AUTH(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_AUTH *t)
+{
+	Trspi_LoadBlob_UINT16(offset, t->tag, blob);
+	Trspi_LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, t->authData.authdata);
+}
+
+void
+Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s)
+{
+	Trspi_LoadBlob_UINT16(offset, s->tag, blob);
+	Trspi_LoadBlob(offset, 4, blob, s->fixed);
+	Trspi_LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, s->replay.nonce);
+	Trspi_LoadBlob_UINT32(offset, s->dataLen, blob);
+	Trspi_LoadBlob(offset, s->dataLen, blob, s->data);
+}
+
