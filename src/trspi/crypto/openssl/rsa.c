@@ -28,6 +28,16 @@
 #include "spi_utils.h"
 #include "tsplog.h"
 
+#ifdef TSS_DEBUG
+#define DEBUG_print_openssl_errors() \
+	do { \
+		ERR_load_crypto_strings(); \
+		ERR_print_errors_fp(stderr); \
+	} while (0)
+#else
+#define DEBUG_print_openssl_errors()
+#endif
+
 
 /*
  * Hopefully this will make the code clearer since
