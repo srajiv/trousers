@@ -28,6 +28,17 @@
 #include "tsplog.h"
 
 
+#ifdef TSS_DEBUG
+#define DEBUG_print_openssl_errors() \
+	do { \
+		ERR_load_crypto_strings(); \
+		ERR_print_errors_fp(stderr); \
+	} while (0)
+#else
+#define DEBUG_print_openssl_errors()
+#endif
+
+
 /*
  * Hopefully this will make the code clearer since
  * OpenSSL returns 1 on success
@@ -123,8 +134,122 @@ done:
 	return result;
 }
 
+EVP_CIPHER *
+get_openssl_cipher(UINT16 alg, UINT16 mode)
+{
+	EVP_CIPHER *cipher = NULL;
+
+	switch (alg) {
+		case TSS_ALG_AES:
+		case TCPA_ALG_AES:
+			switch (mode) {
+				case TPM_ES_NONE:
+				case TSS_ES_NONE:
+				case TPM_ES_SYM_CBC_PKCS5PAD:
+					LogDebug("XXX Make sure this is really PKCS5 padded");
+				case TR_SYM_MODE_CBC:
+					cipher = (EVP_CIPHER *)EVP_aes_128_cbc();
+					break;
+				case TPM_ES_SYM_OFB:
+					cipher = (EVP_CIPHER *)EVP_aes_128_ofb();
+					break;
+				case TPM_ES_SYM_CNT:
+					LogDebug("XXX AES128 in CTR mode unsupp by openssl EVP");
+				default:
+					LogDebug("Invalid mode in doing symmetric encryption");
+					break;
+			}
+			break;
+		case TSS_ALG_DES:
+		case TCPA_ALG_DES:
+			switch (mode) {
+				case TPM_ES_NONE:
+				case TSS_ES_NONE:
+				case TPM_ES_SYM_CBC_PKCS5PAD:
+					LogDebug("XXX Make sure this is really PKCS5 padded");
+				case TR_SYM_MODE_CBC:
+					cipher = (EVP_CIPHER *)EVP_des_cbc();
+					break;
+				case TPM_ES_SYM_OFB:
+					cipher = (EVP_CIPHER *)EVP_des_ofb();
+					break;
+				case TPM_ES_SYM_CNT:
+					LogDebug("XXX DES in CTR mode unsupp by openssl EVP");
+				default:
+					LogDebug("Invalid mode in doing symmetric encryption");
+					break;
+			}
+			break;
+		case TSS_ALG_3DES:
+		case TCPA_ALG_3DES:
+			switch (mode) {
+				case TPM_ES_NONE:
+				case TSS_ES_NONE:
+				case TPM_ES_SYM_CBC_PKCS5PAD:
+					LogDebug("XXX Make sure this is really PKCS5 padded");
+				case TR_SYM_MODE_CBC:
+					cipher = (EVP_CIPHER *)EVP_des_ede3_cbc();
+					break;
+				case TPM_ES_SYM_OFB:
+					cipher = (EVP_CIPHER *)EVP_des_ede3_ofb();
+					break;
+				case TPM_ES_SYM_CNT:
+					LogDebug("XXX 3DES in CTR mode unsupp by openssl EVP");
+				default:
+					LogDebug("Invalid mode in doing symmetric encryption");
+					break;
+			}
+			break;
+		case TPM_ALG_AES192:
+		case TSS_ALG_AES192:
+			switch (mode) {
+				case TPM_ES_NONE:
+				case TSS_ES_NONE:
+				case TPM_ES_SYM_CBC_PKCS5PAD:
+					LogDebug("XXX Make sure this is really PKCS5 padded");
+				case TR_SYM_MODE_CBC:
+					cipher = (EVP_CIPHER *)EVP_aes_192_cbc();
+					break;
+				case TPM_ES_SYM_OFB:
+					cipher = (EVP_CIPHER *)EVP_aes_192_ofb();
+					break;
+				case TPM_ES_SYM_CNT:
+					LogDebug("XXX AES192 in CTR mode unsupp by openssl EVP");
+				default:
+					LogDebug("Invalid mode in doing symmetric encryption");
+					break;
+			}
+			break;
+		case TPM_ALG_AES256:
+		case TSS_ALG_AES256:
+			switch (mode) {
+				case TPM_ES_NONE:
+				case TSS_ES_NONE:
+				case TPM_ES_SYM_CBC_PKCS5PAD:
+					LogDebug("XXX Make sure this is really PKCS5 padded");
+				case TR_SYM_MODE_CBC:
+					cipher = (EVP_CIPHER *)EVP_aes_256_cbc();
+					break;
+				case TPM_ES_SYM_OFB:
+					cipher = (EVP_CIPHER *)EVP_aes_256_ofb();
+					break;
+				case TPM_ES_SYM_CNT:
+					LogDebug("XXX AES256 in CTR mode unsupp by openssl EVP");
+				default:
+					LogDebug("Invalid mode in doing symmetric encryption");
+					break;
+			}
+			break;
+		default:
+			LogDebug("Invalid algorithm in doing symmetric encryption");
+			break;
+	}
+
+	return cipher;
+}
+
 TSS_RESULT
-Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
+Trspi_SymEncrypt(UINT16 alg, UINT16 mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
 		 UINT32 *out_len)
 {
 	TSS_RESULT result = TSS_SUCCESS;
@@ -139,34 +264,8 @@ Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	else
 		outiv_len = *(int *)out_len;
 
-	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
-	switch (mode) {
-		case TR_SYM_MODE_CBC:
-		case TCPA_ES_NONE:
-		case TSS_ES_NONE:
-			break;
-		default:
-			LogDebug("Invalid mode in doing symmetric decryption");
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	switch (alg) {
-		case TSS_ALG_AES:
-		case TCPA_ALG_AES:
-			cipher = (EVP_CIPHER *)EVP_aes_128_cbc();
-			break;
-		case TSS_ALG_DES:
-		case TCPA_ALG_DES:
-			cipher = (EVP_CIPHER *)EVP_des_cbc();
-			break;
-		case TSS_ALG_3DES:
-		case TCPA_ALG_3DES:
-			cipher = (EVP_CIPHER *)EVP_des_ede3_cbc();
-			break;
-		default:
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-			break;
-	}
+	if ((cipher = get_openssl_cipher(alg, mode)) == NULL)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	EVP_CIPHER_CTX_init(&ctx);
 
@@ -224,7 +323,7 @@ done:
 }
 
 TSS_RESULT
-Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
+Trspi_SymDecrypt(UINT16 alg, UINT16 mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len, BYTE *out,
 		 UINT32 *out_len)
 {
 	TSS_RESULT result = TSS_SUCCESS;
@@ -237,34 +336,8 @@ Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in
 	if (in_len > INT_MAX)
 		return TSS_E_BAD_PARAMETER;
 
-	/* TPM 1.1 had no defines for symmetric encryption modes, must use CBC */
-	switch (mode) {
-		case TR_SYM_MODE_CBC:
-		case TCPA_ES_NONE:
-		case TSS_ES_NONE:
-			break;
-		default:
-			LogDebug("Invalid mode in doing symmetric decryption");
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	switch (alg) {
-		case TSS_ALG_AES:
-		case TCPA_ALG_AES:
-			cipher = (EVP_CIPHER *)EVP_aes_128_cbc();
-			break;
-		case TSS_ALG_DES:
-		case TCPA_ALG_DES:
-			cipher = (EVP_CIPHER *)EVP_des_cbc();
-			break;
-		case TSS_ALG_3DES:
-		case TCPA_ALG_3DES:
-			cipher = (EVP_CIPHER *)EVP_des_ede3_cbc();
-			break;
-		default:
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-			break;
-	}
+	if ((cipher = get_openssl_cipher(alg, mode)) == NULL)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	EVP_CIPHER_CTX_init(&ctx);
 
