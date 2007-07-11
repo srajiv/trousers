@@ -27,6 +27,7 @@ extern "C" {
 void       Trspi_UnloadBlob(UINT64 *offset, size_t size, BYTE *container, BYTE *object);
 void       Trspi_UnloadBlob_BYTE(UINT64 *offset, BYTE *dataOut, BYTE *blob);
 void       Trspi_UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE *blob);
+void       Trspi_UnloadBlob_UINT64(UINT64 *offset, UINT64 *out, BYTE *blob);
 void       Trspi_UnloadBlob_UINT32(UINT64 *offset, UINT32 *out, BYTE *blob);
 void       Trspi_UnloadBlob_UINT16(UINT64 *offset, UINT16 *out, BYTE *blob);
 void       Trspi_UnloadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION *out);
@@ -52,6 +53,7 @@ TSS_RESULT Trspi_UnloadBlob_IDENTITY_REQ(UINT64 *offset, BYTE *blob, TCPA_IDENTI
 TSS_RESULT Trspi_UnloadBlob_IDENTITY_PROOF(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_PROOF *proof);
 void	   Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr);
 void	   Trspi_UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *blob, TPM_CURRENT_TICKS *ticks);
+void	   Trspi_UnloadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t);
 
 /* Blob loading functions */
 void Trspi_LoadBlob_BOUND_DATA(UINT64 *, TCPA_BOUND_DATA, UINT32, BYTE *);
@@ -82,6 +84,9 @@ void Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT64 *offset, BYTE *blob, TCPA_SYM_CA_A
 void Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT64 *offset, BYTE *blob, TCPA_ASYM_CA_CONTENTS *asym);
 void Trspi_LoadBlob_IDENTITY_REQ(UINT64 *offset, BYTE *blob, TCPA_IDENTITY_REQ *req);
 void Trspi_LoadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr);
+void Trspi_LoadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t);
+void Trspi_LoadBlob_TRANSPORT_AUTH(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_AUTH *t);
+void Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s);
 
 /* Cryptographic Functions */
 
@@ -100,6 +105,7 @@ TSS_RESULT Trspi_HashFinal(Trspi_HashCtx *c, BYTE *out_digest);
 /* Functions to support incremental hashing */
 TSS_RESULT Trspi_Hash_UINT16(Trspi_HashCtx *c, UINT16 i);
 TSS_RESULT Trspi_Hash_UINT32(Trspi_HashCtx *c, UINT32 i);
+TSS_RESULT Trspi_Hash_UINT64(Trspi_HashCtx *c, UINT64 i);
 TSS_RESULT Trspi_Hash_DAA_PK(Trspi_HashCtx *c, TSS_DAA_PK *pk);
 TSS_RESULT Trspi_Hash_PUBKEY(Trspi_HashCtx *c, TCPA_PUBKEY *pubKey);
 TSS_RESULT Trspi_Hash_BYTE(Trspi_HashCtx *c, BYTE data);
@@ -121,6 +127,14 @@ TSS_RESULT Trspi_Hash_CHANGEAUTH_VALIDATE(Trspi_HashCtx *c, TPM_CHANGEAUTH_VALID
 TSS_RESULT Trspi_Hash_SYM_CA_ATTESTATION(Trspi_HashCtx *c, TCPA_SYM_CA_ATTESTATION *sym);
 TSS_RESULT Trspi_Hash_ASYM_CA_CONTENTS(Trspi_HashCtx *c, TCPA_ASYM_CA_CONTENTS *asym);
 TSS_RESULT Trspi_Hash_BOUND_DATA(Trspi_HashCtx *c, TCPA_BOUND_DATA *bd, UINT32 payloadLength);
+TSS_RESULT Trspi_Hash_TRANSPORT_AUTH(Trspi_HashCtx *c, TPM_TRANSPORT_AUTH *a);
+TSS_RESULT Trspi_Hash_TRANSPORT_LOG_IN(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_IN *l);
+TSS_RESULT Trspi_Hash_TRANSPORT_LOG_OUT(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_OUT *l);
+TSS_RESULT Trspi_Hash_CURRENT_TICKS(Trspi_HashCtx *c, TPM_CURRENT_TICKS *t);
+TSS_RESULT Trspi_Hash_SIGN_INFO(Trspi_HashCtx *c, TPM_SIGN_INFO *s);
+
+#define Trspi_Hash_DIGEST(c, d)	Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
+#define Trspi_Hash_NONCE(c, d)	Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 
 
 UINT32 Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE*Secret, UINT32 BufSize, BYTE*Buf, BYTE*hmacOut);
@@ -171,10 +185,12 @@ TSS_RESULT Trspi_Decrypt_ECB(UINT16 alg, BYTE *key, BYTE *in, UINT32 in_len,
 #define TR_SYM_MODE_CTR	3
 #define TR_SYM_MODE_OFB	4
 
-TSS_RESULT Trspi_SymEncrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len,
+TSS_RESULT Trspi_SymEncrypt(UINT16 alg, UINT16 mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len,
 			    BYTE *out, UINT32 *out_len);
-TSS_RESULT Trspi_SymDecrypt(UINT16 alg, BYTE mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len,
+TSS_RESULT Trspi_SymDecrypt(UINT16 alg, UINT16 mode, BYTE *key, BYTE *iv, BYTE *in, UINT32 in_len,
 			    BYTE *out, UINT32 *out_len);
+
+TSS_RESULT Trspi_MGF1(UINT32 alg, UINT32 seedLen, BYTE *seed, UINT32 outLen, BYTE *out);
 
 /* String Functions */
 
@@ -216,6 +232,6 @@ TSS_RESULT Trspi_Error_Code(TSS_RESULT);
 #define TSS_KEY_TYPE(x)		(x & TSS_KEY_TYPE_MASK)
 #define TSS_ENCDATA_TYPE(x)	(x & TSS_ENCDATA_TYPE_MASK)
 
-#define TSS_LOCALITY_ALL	(TPM_LOC_ZERO|TPM_LOC_ONE|TPM_LOC_TWO|TPM_LOC_THREE|TPM_LOC_FOUR)
+#define TSS_LOCALITY_ALL       (TPM_LOC_ZERO|TPM_LOC_ONE|TPM_LOC_TWO|TPM_LOC_THREE|TPM_LOC_FOUR)
 
 #endif
