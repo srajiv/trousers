@@ -28,6 +28,15 @@
 #include "spi_utils.h"
 #include "tsplog.h"
 
+#ifdef TSS_DEBUG
+#define DEBUG_print_openssl_errors() \
+	do { \
+		ERR_load_crypto_strings(); \
+		ERR_print_errors_fp(stderr); \
+	} while (0)
+#else
+#define DEBUG_print_openssl_errors()
+#endif
 
 /*
  * Hopefully this will make the code clearer since
@@ -114,6 +123,12 @@ Trspi_HashUpdate(Trspi_HashCtx *ctx, UINT32 size, BYTE *data)
 
 	if (ctx == NULL || ctx->ctx == NULL)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	if (data == NULL && size)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if (!size)
+		return TSS_SUCCESS;
 
 	rv = EVP_DigestUpdate(ctx->ctx, data, size);
 	if (rv != EVP_SUCCESS) {
