@@ -1842,3 +1842,25 @@ obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
+TSS_RESULT
+obj_rsakey_get_transport_attribs(TSS_HKEY hKey, TCS_KEY_HANDLE *hTCSKey, TPM_DIGEST *pubDigest)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result;
+	Trspi_HashCtx hashCtx;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	*hTCSKey = rsakey->tcsHandle;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_STORE_PUBKEY(&hashCtx, &rsakey->key.pubKey);
+	result |= Trspi_HashFinal(&hashCtx, pubDigest->digest);
+
+	obj_list_put(&rsakey_list);
+
+	return result;
+}

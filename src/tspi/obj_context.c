@@ -13,9 +13,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
+#include "tcs_tsp.h"
 #include "spi_internal_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
@@ -381,3 +383,824 @@ obj_context_set_connection_policy(TSS_HCONTEXT tspContext, UINT32 policy)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+obj_context_set_transport_key(TSS_HCONTEXT tspContext, TSS_HKEY hKey)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	context->transKey = hKey;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_context_transport_get_mode(TSS_HCONTEXT tspContext, UINT32 value, UINT32 *out)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (value) {
+		case TSS_TSPATTRIB_TRANSPORT_NO_DEFAULT_ENCRYPTION:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT ?
+			       FALSE : TRUE;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_DEFAULT_ENCRYPTION:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT ?
+			       TRUE : FALSE;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_AUTHENTIC_CHANNEL:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC ?
+			       TRUE : FALSE;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_EXCLUSIVE:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_EXCLUSIVE ?
+			       TRUE : FALSE;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_STATIC_AUTH:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_STATIC_AUTH ?
+			       TRUE : FALSE;
+			break;
+		default:
+			LogError("Invalid attribute subflag: 0x%x", value);
+			result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_transport_get_control(TSS_HCONTEXT tspContext, UINT32 value, UINT32 *out)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (value) {
+		case TSS_TSPATTRIB_DISABLE_TRANSPORT:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED ? FALSE : TRUE;
+			break;
+		case TSS_TSPATTRIB_ENABLE_TRANSPORT:
+			*out = context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED ? TRUE : FALSE;
+			break;
+		default:
+			LogError("Invalid attribute subflag: 0x%x", value);
+			result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_transport_set_control(TSS_HCONTEXT tspContext, UINT32 value)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (value) {
+		case TSS_TSPATTRIB_ENABLE_TRANSPORT:
+			context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED;
+			break;
+		case TSS_TSPATTRIB_DISABLE_TRANSPORT:
+			context->flags &= ~TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED;
+			break;
+		default:
+			LogError("Invalid attribute subflag: 0x%x", value);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_transport_set_mode(TSS_HCONTEXT tspContext, UINT32 value)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (value) {
+		case TSS_TSPATTRIB_TRANSPORT_NO_DEFAULT_ENCRYPTION:
+			context->flags &= ~TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_DEFAULT_ENCRYPTION:
+			context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_AUTHENTIC_CHANNEL:
+			context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_EXCLUSIVE:
+			context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_EXCLUSIVE;
+			break;
+		case TSS_TSPATTRIB_TRANSPORT_STATIC_AUTH:
+			context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_STATIC_AUTH;
+			break;
+		default:
+			LogError("Invalid attribute subflag: 0x%x", value);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+get_trans_props(TSS_HCONTEXT tspContext, UINT32 *alg, UINT16 *enc)
+{
+	TSS_RESULT result;
+	UINT32 algs[] = { TPM_ALG_AES128, TPM_ALG_3DES, TPM_ALG_MGF1, 0 }, a;
+	UINT16 encs[] = { TPM_ES_SYM_OFB, TPM_ES_SYM_CNT, TPM_ES_SYM_CBC_PKCS5PAD, 0 }, e;
+	BYTE *respData;
+	UINT32 respLen, tcsSubCap32;
+	UINT16 tcsSubCap16;
+
+	if (*alg)
+		goto check_es;
+
+	for (a = 0; algs[a]; a++) {
+		tcsSubCap32 = endian32(algs[a]);
+
+		if ((result = TCSP_GetCapability(tspContext, TPM_CAP_TRANS_ALG, sizeof(UINT32),
+						 (BYTE *)&tcsSubCap32, &respLen, &respData)))
+		                return result;
+
+		if (*(TSS_BOOL *)respData == TRUE) {
+			free(respData);
+			break;
+		}
+		free(respData);
+	}
+
+	if (!algs[a]) {
+		LogError("TPM reports no usable sym algorithms for transport session");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+check_es:
+	if (*enc || algs[a] == TPM_ALG_MGF1)
+		goto done;
+
+	for (e = 0; encs[e]; e++) {
+		tcsSubCap16 = endian16(encs[e]);
+
+		if ((result = TCSP_GetCapability(tspContext, TPM_CAP_TRANS_ES, sizeof(UINT16),
+						 (BYTE *)&tcsSubCap16, &respLen, &respData)))
+		                return result;
+
+		if (*(TSS_BOOL *)respData == TRUE) {
+			free(respData);
+			break;
+		}
+		free(respData);
+	}
+
+	if (!encs[e]) {
+		LogError("TPM reports no usable sym modes for transport session");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	*alg = algs[a];
+	*enc = encs[e];
+done:
+	return TSS_SUCCESS;
+}
+
+/* called before each TCSP_ExecuteTransport call */
+TSS_RESULT
+obj_context_transport_init(TSS_HCONTEXT tspContext)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	/* return immediately if we're not in a transport session */
+	if (!(context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED)) {
+		result = TSS_TSPATTRIB_DISABLE_TRANSPORT;
+		goto done;
+	}
+
+	/* if the session is not yet established, setup and call EstablishTransport */
+	if (!(context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ESTABLISHED)) {
+		if ((result = obj_context_transport_establish(tspContext, context)))
+			goto done;
+	}
+
+	result = TSS_TSPATTRIB_ENABLE_TRANSPORT;
+done:
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_transport_establish(TSS_HCONTEXT tspContext, struct tr_context_obj *context)
+{
+	TSS_RESULT result;
+	UINT32 tickLen, secretLen, transPubLen, exclusive = TSS_TCSATTRIB_TRANSPORT_DEFAULT;
+	BYTE *ticks, *secret;
+	UINT64 offset;
+	Trspi_HashCtx hashCtx;
+	TPM_DIGEST digest;
+	TSS_HPOLICY hTransKeyPolicy;
+	TPM_AUTH auth, *pAuth, *pTransAuth;
+	TCS_KEY_HANDLE tcsTransKey;
+	TSS_BOOL usesAuth = FALSE;
+	UINT32 encKeyLen;
+	BYTE encKey[256];
+	BYTE transPubBlob[sizeof(TPM_TRANSPORT_PUBLIC)];
+	BYTE transAuthBlob[sizeof(TPM_TRANSPORT_AUTH)];
+
+
+	context->transPub.tag = TPM_TAG_TRANSPORT_PUBLIC;
+	context->transSecret.tag = TPM_TAG_TRANSPORT_AUTH;
+
+	if ((result = get_local_random(tspContext, FALSE, TPM_SHA1_160_HASH_LEN,
+				       (BYTE **)context->transSecret.authData.authdata)))
+		return result;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_STATIC_AUTH)
+		context->transKey = TPM_KH_TRANSPORT;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC)
+		context->transPub.transAttributes |= TPM_TRANSPORT_LOG;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_EXCLUSIVE) {
+		context->transPub.transAttributes |= TPM_TRANSPORT_EXCLUSIVE;
+		exclusive = TSS_TCSATTRIB_TRANSPORT_EXCLUSIVE;
+	}
+
+	/* XXX test alg, encScheme to see if they've been manually set by an app first */
+	if ((result = get_trans_props(tspContext, &context->transPub.algId,
+				      &context->transPub.encScheme)))
+		return result;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+		context->transPub.transAttributes = TPM_TRANSPORT_ENCRYPT;
+
+		if (context->transKey == TPM_KH_TRANSPORT) {
+			LogError("No transport key handle has been set yet. Use "
+				 "Tspi_Context_SetTransEncryptionKey to set this handle");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+
+	if (context->transKey == TPM_KH_TRANSPORT) {
+		secret = context->transSecret.authData.authdata;
+		secretLen = TPM_SHA1_160_HASH_LEN;
+	} else {
+		offset = 0;
+		Trspi_LoadBlob_TRANSPORT_AUTH(&offset, transAuthBlob, &context->transSecret);
+		secretLen = offset;
+
+		/* encrypt the sym key with the wrapping RSA key */
+		encKeyLen = sizeof(encKey);
+		if ((result = rsa_encrypt(context->transKey, secretLen, transAuthBlob, &encKeyLen,
+					  encKey)))
+			return result;
+
+		secret = encKey;
+		secretLen = encKeyLen;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_TRANSPORT_PUBLIC(&offset, transPubBlob, &context->transPub);
+	transPubLen = offset;
+
+	if (context->transKey != TPM_KH_TRANSPORT) {
+		if ((result = obj_rsakey_get_tcs_handle(context->transKey, &tcsTransKey)))
+			return result;
+
+		if ((result = obj_rsakey_get_policy(context->transKey, TSS_POLICY_USAGE,
+						    &hTransKeyPolicy, &usesAuth)))
+			return result;
+
+		if (!usesAuth) {
+			LogError("Key used to establish a transport session must use auth");
+			return TSPERR(TSS_E_TSP_TRANS_AUTHREQUIRED);
+		}
+	} else
+		tcsTransKey = TPM_KH_TRANSPORT;
+
+	/* If logging is on, do TPM commands spec rev106 step 8.a */
+	memset(context->transLogDigest.digest, 0, sizeof(TPM_DIGEST));
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		context->transLogIn.tag = TPM_TAG_TRANSPORT_LOG_IN;
+
+		/* step 8.a, i */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_EstablishTransport);
+		result |= Trspi_HashUpdate(&hashCtx, transPubLen, transPubBlob);
+		result |= Trspi_Hash_UINT32(&hashCtx, secretLen);
+		result |= Trspi_HashUpdate(&hashCtx, secretLen, secret);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogIn.parameters.digest)))
+			return result;
+
+		/* step 8.a, ii */
+		memset(context->transLogIn.pubKeyHash.digest, 0, sizeof(TPM_DIGEST));
+
+		/* step 8.a, iii */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
+		result |= Trspi_Hash_TRANSPORT_LOG_IN(&hashCtx, &context->transLogIn);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
+			return result;
+	}
+
+	if (usesAuth) {
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_EstablishTransport);
+		result |= Trspi_HashUpdate(&hashCtx, (UINT32)offset, (BYTE *)transPubBlob);
+		result |= Trspi_Hash_UINT32(&hashCtx, secretLen);
+		result |= Trspi_HashUpdate(&hashCtx, secretLen, secret);
+		if ((result |= Trspi_HashFinal(&hashCtx, (BYTE *)&digest)))
+			return result;
+
+		/* open OIAP session with continueAuthSession = TRUE */
+		if ((result = secret_PerformAuth_OIAP(context->transKey, TPM_ORD_EstablishTransport,
+						      hTransKeyPolicy, TRUE, &digest, &auth)))
+			return result;
+
+		pAuth = &auth;
+	} else
+		pAuth = NULL;
+
+	result = TCSP_EstablishTransport(tspContext, exclusive, tcsTransKey, transPubLen,
+					 transPubBlob, secretLen, secret, pAuth, &context->transMod,
+					 &context->transAuth.AuthHandle, &tickLen, &ticks,
+					 &context->transAuth.NonceEven);
+	if (result) {
+		LogError("Establish Transport command failed: %s", Trspi_Error_String(result));
+		return result;
+	}
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_EstablishTransport);
+	result |= Trspi_Hash_UINT32(&hashCtx, context->transMod);
+	result |= Trspi_HashUpdate(&hashCtx, tickLen, ticks);
+	result |= Trspi_Hash_NONCE(&hashCtx, context->transAuth.NonceEven.nonce);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		return result;
+
+	if (usesAuth) {
+		if ((result = obj_policy_validate_auth_oiap(hTransKeyPolicy, &digest, pAuth)))
+			return result;
+	}
+
+	/* step 8.b iii */
+	offset = 0;
+	Trspi_UnloadBlob_CURRENT_TICKS(&offset, ticks, &context->transLogOut.currentTicks);
+	free(ticks);
+
+	/* If logging is on, do TPM commands spec rev106 step 8.b */
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		context->transLogOut.tag = TPM_TAG_TRANSPORT_LOG_OUT;
+
+		/* step 8.b i */
+		memcpy(context->transLogOut.parameters.digest, digest.digest, sizeof(TPM_DIGEST));
+
+		/* step 8.b ii */
+		context->transLogOut.locality = context->transMod;
+
+		/* step 8.b iii was done above */
+		/* step 8.b iv */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
+		result |= Trspi_Hash_TRANSPORT_LOG_OUT(&hashCtx, &context->transLogOut);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
+			return result;
+	}
+
+	LogDebug("Transport session established successfully");
+
+	pTransAuth = &context->transAuth;
+	pTransAuth->fContinueAuthSession = TRUE;
+	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+				       (BYTE **)pTransAuth->NonceOdd.nonce))) {
+		LogError("Failed creating random nonce");
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_context_transport_execute(TSS_HCONTEXT     tspContext,
+			      TPM_COMMAND_CODE ordinal,
+			      UINT32           ulDataLen,
+			      BYTE*            rgbData,
+			      TPM_DIGEST*      pubKeyHash,
+			      UINT32*          handlesLen,
+			      TCS_HANDLE**     handles,
+			      TPM_AUTH*        pAuth1,
+			      TPM_AUTH*        pAuth2,
+			      UINT32*          outLen,
+			      BYTE**           out)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+	UINT32 encLen, ulWrappedDataLen = 0;
+	BYTE *enc = NULL, *pEnc, *rgbWrappedData = NULL;
+	BYTE iv[TSS_MAX_SYM_BLOCK_SIZE];
+	TPM_RESULT tpmResult;
+	Trspi_HashCtx hashCtx;
+	TPM_DIGEST etDigest, wDigest;
+	TPM_AUTH *pTransAuth;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	pTransAuth = &context->transAuth;
+
+	/* TPM Commands spec rev106 step 6 */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+	result |= Trspi_HashUpdate(&hashCtx, ulDataLen, rgbData);
+	if ((result |= Trspi_HashFinal(&hashCtx, wDigest.digest)))
+		goto done;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		/* TPM Commands spec rev106 spec 10.b */
+		memcpy(context->transLogIn.parameters.digest, wDigest.digest, sizeof(TPM_DIGEST));
+		/* TPM Commands spec rev106 spec 10.c, d or e, calculated by the caller */
+		memcpy(context->transLogIn.pubKeyHash.digest, pubKeyHash->digest,
+		       sizeof(TPM_DIGEST));
+
+		/* TPM Commands spec rev106 spec 10.f */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
+		result |= Trspi_Hash_TRANSPORT_LOG_IN(&hashCtx, &context->transLogIn);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
+			goto done;
+	}
+
+	/* encrypt the data if necessary */
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+		BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("in")];
+
+		if ((enc = malloc(ulDataLen + TSS_MAX_SYM_BLOCK_SIZE)) == NULL) {
+			LogError("malloc of %u bytes failed", ulDataLen + TSS_MAX_SYM_BLOCK_SIZE);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		encLen = ulDataLen + TSS_MAX_SYM_BLOCK_SIZE;
+
+		/* calculate the initial vector */
+		memcpy(seed, pTransAuth->NonceEven.nonce, sizeof(TPM_NONCE));
+		memcpy(&seed[sizeof(TPM_NONCE)], pTransAuth->NonceOdd.nonce, sizeof(TPM_NONCE));
+		memcpy(&seed[2 * sizeof(TPM_NONCE)], "in", strlen("in"));
+		if ((result = Trspi_MGF1(TSS_HASH_SHA1, sizeof(seed), seed, sizeof(iv), iv)))
+			goto done;
+
+		if ((result = Trspi_SymEncrypt((UINT16)context->transPub.algId,
+					       context->transPub.encScheme,
+					       context->transSecret.authData.authdata, iv, rgbData,
+					       ulDataLen, enc, &encLen)))
+			goto done;
+
+		pEnc = enc;
+	} else {
+		encLen = ulDataLen;
+		pEnc = rgbData;
+	}
+
+	/* TPM Commands spec rev106 step 7.a */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
+	result |= Trspi_Hash_UINT32(&hashCtx, encLen + TSS_TPM_TXBLOB_HDR_LEN
+						     + (*handlesLen * sizeof(UINT32))
+						     + (pAuth1 ? TPM_AUTH_RQU_SIZE : 0)
+						     + (pAuth2 ? TPM_AUTH_RQU_SIZE : 0));
+	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
+		goto done;
+
+	/* TPM Commands spec rev106 step 7.b */
+	HMAC_Auth(context->transSecret.authData.authdata, etDigest.digest, pTransAuth);
+
+	if ((result = TCSP_ExecuteTransport(tspContext, ordinal, encLen, pEnc, handlesLen, handles,
+					    pAuth1, pAuth2, pTransAuth,
+					    &context->transLogOut.currentTicks.currentTicks,
+					    &context->transMod, &tpmResult, &ulWrappedDataLen,
+					    &rgbWrappedData))) {
+		LogDebugFn("Execute Transport failed: %s", Trspi_Error_String(result));
+		goto done;
+	}
+
+	if (tpmResult) {
+		LogDebug("Wrapped command ordinal 0x%x failed with result: 0x%x", ordinal,
+			 tpmResult);
+		result = tpmResult;
+		goto done;
+	}
+
+	/* decrypt the returned wrapped data if necessary */
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+		if ((*out = malloc(ulWrappedDataLen)) == NULL) {
+			LogError("malloc of %u bytes failed", ulWrappedDataLen);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		*outLen = ulWrappedDataLen;
+
+		if ((result = Trspi_SymDecrypt((UINT16)context->transPub.algId,
+					       context->transPub.encScheme,
+					       context->transSecret.authData.authdata, iv,
+					       rgbWrappedData, ulWrappedDataLen, *out, outLen))) {
+			free(*out);
+			*out = NULL;
+			*outLen = 0;
+			goto done;
+		}
+	} else {
+		*outLen = ulWrappedDataLen;
+		*out = rgbWrappedData;
+	}
+
+	/* TPM Commands spec rev106 step 14 */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, tpmResult);
+	result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+	result |= Trspi_HashUpdate(&hashCtx, *outLen, *out);
+	if ((result |= Trspi_HashFinal(&hashCtx, wDigest.digest)))
+		goto done;
+
+	/* TPM Commands spec rev106 step 15 */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
+	result |= Trspi_Hash_UINT64(&hashCtx, context->transLogOut.currentTicks.currentTicks);
+	result |= Trspi_Hash_UINT32(&hashCtx, context->transMod);
+	result |= Trspi_Hash_UINT32(&hashCtx, *outLen + TSS_TPM_TXBLOB_HDR_LEN
+						      + (*handlesLen * sizeof(UINT32))
+						      + (pAuth1 ? TPM_AUTH_RSP_SIZE : 0)
+						      + (pAuth2 ? TPM_AUTH_RSP_SIZE : 0));
+	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
+		goto done;
+
+	if ((result = validateReturnAuth(context->transSecret.authData.authdata, etDigest.digest,
+					 pTransAuth))) {
+		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+		goto done;
+	}
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		/* TPM Commands spec rev106 step 16.b */
+		memcpy(context->transLogOut.parameters.digest, wDigest.digest, sizeof(TPM_DIGEST));
+		/* TPM Commands spec rev106 step 16.c done above */
+		/* TPM Commands spec rev106 step 16.d */
+		context->transLogOut.locality = context->transMod;
+
+		/* TPM Commands spec rev106 step 16.d */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
+		result |= Trspi_Hash_TRANSPORT_LOG_OUT(&hashCtx, &context->transLogOut);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
+			goto done;
+	}
+
+done:
+	free(enc);
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+/* called to close a transport session */
+TSS_RESULT
+obj_context_transport_close(TSS_HCONTEXT   tspContext,
+			    TSS_HKEY       hKey,
+			    TSS_HPOLICY    hPolicy,
+			    TSS_BOOL       usesAuth,
+			    TPM_SIGN_INFO* signInfo,
+			    UINT32*        sigLen,
+			    BYTE**         sig)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+	Trspi_HashCtx hashCtx;
+	TPM_DIGEST digest;
+	TPM_AUTH auth, *pAuth;
+	TCS_KEY_HANDLE tcsKey;
+	BYTE *ticks = NULL;
+	UINT32 tickLen;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	/* return immediately if we're not in a transport session */
+	if (!(context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED)) {
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto done;
+	}
+
+	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKey)))
+		goto done;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ReleaseTransportSigned);
+	result |= Trspi_Hash_NONCE(&hashCtx, signInfo->replay.nonce);
+	if ((result |= Trspi_HashFinal(&hashCtx, (BYTE *)&digest)))
+		goto done;
+
+	if (usesAuth) {
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_ReleaseTransportSigned,
+						      hPolicy, FALSE, &digest, &auth)))
+			goto done;
+
+		pAuth = &auth;
+	} else
+		pAuth = NULL;
+
+	/* continue the auth session established in obj_context_transport_establish */
+	HMAC_Auth(context->transSecret.authData.authdata, digest.digest, &context->transAuth);
+
+	if ((result = TCSP_ReleaseTransportSigned(tspContext, tcsKey, &signInfo->replay, pAuth,
+						  &context->transAuth,
+						  &context->transLogOut.locality, &tickLen,
+						  &ticks, sigLen, sig)))
+		goto done;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ReleaseTransportSigned);
+	result |= Trspi_Hash_UINT32(&hashCtx, context->transLogOut.locality);
+	result |= Trspi_HashUpdate(&hashCtx, tickLen, ticks);
+	result |= Trspi_Hash_UINT32(&hashCtx, *sigLen);
+	result |= Trspi_HashUpdate(&hashCtx, *sigLen, *sig);
+	if ((result |= Trspi_HashFinal(&hashCtx, (BYTE *)&digest)))
+		goto done;
+
+	/* validate the return data using the key's auth */
+	if (pAuth) {
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, pAuth)))
+			goto done;
+	}
+
+	/* validate again using the transport session's auth */
+	if ((result = validateReturnAuth(context->transSecret.authData.authdata, digest.digest,
+					 &context->transAuth))) {
+		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+		goto done;
+	}
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		UINT64 offset;
+
+		/* TPM Commands Spec step 6.b */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ReleaseTransportSigned);
+		result |= Trspi_Hash_NONCE(&hashCtx, signInfo->replay.nonce);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogOut.parameters.digest)))
+			goto done;
+
+		/* TPM Commands Spec step 6.c */
+		offset = 0;
+		Trspi_UnloadBlob_CURRENT_TICKS(&offset, ticks, &context->transLogOut.currentTicks);
+		free(ticks);
+
+		/* TPM Commands Spec step 6.d was set above */
+		/* TPM Commands Spec step 6.e */
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
+		result |= Trspi_Hash_TRANSPORT_LOG_OUT(&hashCtx, &context->transLogOut);
+		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
+			goto done;
+	}
+
+	if ((signInfo->data = malloc(sizeof(TPM_DIGEST))) == NULL) {
+		LogError("malloc %zd bytes failed.", sizeof(TPM_DIGEST));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	memcpy(signInfo->data, context->transLogDigest.digest, sizeof(TPM_DIGEST));
+	signInfo->dataLen = sizeof(TPM_DIGEST);
+
+	/* destroy all transport session info, except the key handle */
+	memset(&context->transPub, 0, sizeof(TPM_TRANSPORT_PUBLIC));
+	memset(&context->transMod, 0, sizeof(TPM_MODIFIER_INDICATOR));
+	memset(&context->transSecret, 0, sizeof(TPM_TRANSPORT_AUTH));
+	memset(&context->transAuth, 0, sizeof(TPM_AUTH));
+	memset(&context->transLogIn, 0, sizeof(TPM_TRANSPORT_LOG_IN));
+	memset(&context->transLogOut, 0, sizeof(TPM_TRANSPORT_LOG_OUT));
+	memset(&context->transLogDigest, 0, sizeof(TPM_DIGEST));
+
+done:
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_set_tpm_version(TSS_HCONTEXT tspContext, UINT32 ver)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (ver) {
+		case 1:
+			context->flags &= ~TSS_CONTEXT_FLAGS_TPM_VERSION_MASK;
+			context->flags |= TSS_CONTEXT_FLAGS_TPM_VERSION_1;
+			break;
+		case 2:
+			context->flags &= ~TSS_CONTEXT_FLAGS_TPM_VERSION_MASK;
+			context->flags |= TSS_CONTEXT_FLAGS_TPM_VERSION_2;
+			break;
+		default:
+			LogError("Invalid TPM version set: %c", ver);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_context_get_loadkey_ordinal(TSS_HCONTEXT tspContext, TPM_COMMAND_CODE *ordinal)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	switch (context->flags & TSS_CONTEXT_FLAGS_TPM_VERSION_MASK) {
+		case TSS_CONTEXT_FLAGS_TPM_VERSION_2:
+			*ordinal = TPM_ORD_LoadKey2;
+			break;
+		default:
+			LogDebugFn("No TPM version set!");
+			/* fall through */
+		case TSS_CONTEXT_FLAGS_TPM_VERSION_1:
+			*ordinal = TPM_ORD_LoadKey;
+			break;
+	}
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
+}
+
