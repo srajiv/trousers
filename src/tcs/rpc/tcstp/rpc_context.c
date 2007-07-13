@@ -32,13 +32,17 @@ tcs_wrap_OpenContext(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TSS_RESULT result;
+	UINT32 tpm_version = tpm_metrics.version.minor;
 
 	LogDebugFn("thread %zd", THREAD_ID);
 
 	result = TCS_OpenContext_Internal(&hContext);
 	if (result == TSS_SUCCESS) {
-		initData(&data->comm, 1);
+		initData(&data->comm, 2);
 		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+
+		if (setData(TCSD_PACKET_TYPE_UINT32, 1, &tpm_version, 0, &data->comm))
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 
 		/* Set the context in the thread's object. Later, if something goes wrong
