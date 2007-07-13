@@ -24,7 +24,9 @@
 
 
 TSS_RESULT
-TCS_OpenContext_RPC_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE *tcsContext)
+TCS_OpenContext_RPC_TP(struct host_table_entry* hte,
+		       UINT32*                  tpm_version,
+		       TCS_CONTEXT_HANDLE*      tcsContext)
 {
 	TSS_RESULT result;
 
@@ -37,9 +39,12 @@ TCS_OpenContext_RPC_TP(struct host_table_entry *hte, TCS_CONTEXT_HANDLE *tcsCont
 
 	if (result == TSS_SUCCESS) {
 		if (getData(TCSD_PACKET_TYPE_UINT32, 0, tcsContext, 0, &hte->comm))
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 
 		LogDebugFn("Received TCS Context: 0x%x", *tcsContext);
+
+		if (getData(TCSD_PACKET_TYPE_UINT32, 1, tpm_version, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return result;
