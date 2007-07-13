@@ -249,7 +249,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
-							      hPolicy, &digest, &auth2)))
+							      hPolicy, FALSE, &digest, &auth2)))
 				return result;
 
 			if ((result = TCSP_ChangeAuth(tspContext, keyHandle, TCPA_PID_ADCP,
@@ -347,10 +347,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 		}
 
-		if ((result = secret_PerformAuth_OIAP(hObjectToChange,
-						      TPM_ORD_ChangeAuth,
-						      hPolicy, &digest,
-						      &auth2))) {
+		if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
+						      hPolicy, FALSE, &digest, &auth2))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
@@ -435,7 +433,6 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	UINT32 keyToChangeHandle;
 	TCPA_NONCE antiReplay;
 	UINT32 bytesRequested;
-	BYTE *randomBytes;
 	UINT64 tempSize;
 	BYTE tempKey[512];
 	TCPA_KEY_PARMS keyParms;
@@ -524,11 +521,9 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 
 			/*  generate antireplay nonce */
 			bytesRequested = 20;
-			if ((result = get_local_random(tspContext, bytesRequested,
-						       &randomBytes)))
+			if ((result = get_local_random(tspContext, FALSE, bytesRequested,
+						       (BYTE **)antiReplay.nonce)))
 				return result;
-			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
-			free_tspi(tspContext, randomBytes);
 
 			/* caluculate auth data */
 			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -542,7 +537,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			if (useAuth) {
 				if ((result = secret_PerformAuth_OIAP(hIdentKey,
 								      TPM_ORD_ChangeAuthAsymStart,
-								      hPolicy, &digest, &auth)))
+								      hPolicy, FALSE, &digest,
+								      &auth)))
 					return result;
 
 				pAuth = &auth;
@@ -576,32 +572,19 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			}
 
 			/*  generate random data for asymfinish */
-			bytesRequested = 20;
-			if ((result = get_local_random(tspContext, bytesRequested,
-						       &randomBytes)))
+			if ((result = get_local_random(tspContext, FALSE, bytesRequested,
+						       (BYTE **)&caValidate.n1.nonce)))
 				return result;
 
-			memcpy(caValidate.n1.nonce, randomBytes, bytesRequested);
-			free_tspi(tspContext, randomBytes);
-			bytesRequested = 20;
-
-			if ((result = get_local_random(tspContext, bytesRequested,
-						       &randomBytes)))
+			if ((result = get_local_random(tspContext, FALSE, bytesRequested,
+						       (BYTE **)&antiReplay.nonce)))
 				return result;
 
-			memcpy(antiReplay.nonce, randomBytes, bytesRequested);
-			free_tspi(tspContext, randomBytes);
-			bytesRequested = 20;
-
-			if ((result = get_local_random(tspContext, bytesRequested,
-						       &randomBytes)))
+			if ((result = get_local_random(tspContext, FALSE, bytesRequested,
+						       (BYTE **)&seed)))
 				return result;
 
-			memcpy(seed, randomBytes, 20);
-			free_tspi(tspContext, randomBytes);
-
-			if ((result = Tspi_GetPolicyObject(hObjectToChange,
-							  TSS_POLICY_USAGE,
+			if ((result = Tspi_GetPolicyObject(hObjectToChange, TSS_POLICY_USAGE,
 							  &hOldPolicy)))
 				return result;
 
@@ -699,9 +682,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			if (useAuth) {
 				if ((result = secret_PerformAuth_OIAP(hParentObject,
 								      TPM_ORD_ChangeAuthAsymFinish,
-								      hParentPolicy,
-								      &digest,
-								      &auth))) {
+								      hParentPolicy, FALSE,
+								      &digest, &auth))) {
 					free(encObject);
 					free_key_refs(&keyContainer);
 					return result;

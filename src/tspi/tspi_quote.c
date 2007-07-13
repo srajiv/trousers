@@ -65,7 +65,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tspContext, &antiReplay)))
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)antiReplay.nonce)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
@@ -93,8 +94,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_Quote, hPolicy, &digest,
-						      &privAuth))) {
+		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_Quote, hPolicy, FALSE,
+						      &digest, &privAuth))) {
 			return result;
 		}
 		pPrivAuth = &privAuth;

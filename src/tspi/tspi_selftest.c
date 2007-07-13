@@ -68,7 +68,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)antiReplay.nonce))) {
 			LogError("Failed creating random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -89,10 +90,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hKey,
-						      TPM_ORD_CertifySelfTest,
-						      hPolicy, &digest,
-						      &keyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_CertifySelfTest, hPolicy, FALSE,
+						      &digest, &keyAuth)))
 			return result;
 		pKeyAuth = &keyAuth;
 	} else {

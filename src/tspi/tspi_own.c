@@ -139,7 +139,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 			return result;
 
 		/* hashDigest now has the hash result */
-		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerClear, hPolicy,
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerClear, hPolicy, FALSE,
 						      &hashDigest, &auth)))
 			return result;
 

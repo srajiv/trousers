@@ -403,7 +403,8 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 
 				if ((result = secret_PerformAuth_OIAP(hNvstore,
 								      TPM_ORD_NV_WriteValue,
-								      hPolicy, &digest, &auth)))
+								      hPolicy, FALSE, &digest,
+								      &auth)))
 					return result;
 
 				if ((result = TCSP_NV_WriteValue(tspContext,nv_data_public.nvIndex,
@@ -433,7 +434,8 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 
 				if ((result = secret_PerformAuth_OIAP(hNvstore,
 								      TPM_ORD_NV_WriteValueAuth,
-								      hPolicy, &digest, &auth)))
+								      hPolicy, FALSE, &digest,
+								      &auth)))
 					return result;
 
 				if ((result = TCSP_NV_WriteValueAuth(tspContext,nv_data_public.nvIndex,
@@ -522,7 +524,8 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 
 				if ((result = secret_PerformAuth_OIAP(hNvstore,
 								      TPM_ORD_NV_ReadValue,
-								      hPolicy, &digest, &auth)))
+								      hPolicy, FALSE, &digest,
+								      &auth)))
 					return result;
 
 				if ((result = TCSP_NV_ReadValue(tspContext, nv_data_public.nvIndex,
@@ -553,7 +556,8 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 
 				if ((result = secret_PerformAuth_OIAP(hNvstore,
 								      TPM_ORD_NV_ReadValueAuth,
-								      hPolicy, &digest, &auth)))
+								      hPolicy, FALSE, &digest,
+								      &auth)))
 					return result;
 
 				if ((result = TCSP_NV_ReadValueAuth(tspContext,

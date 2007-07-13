@@ -72,7 +72,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 
 	if (pValidationData == NULL) {
 		LogDebug("Internal Verify");
-		if ((result = internal_GetRandomNonce(tspContext, &antiReplay)))
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)antiReplay.nonce)))
 			return result;
 	} else {
 		LogDebug("External Verify");
@@ -96,17 +97,15 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	}
 
 	if (useAuthKey) {
-		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_CertifyKey,
-						      hPolicy, &digest,
-						      &keyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_CertifyKey, hPolicy, FALSE,
+						      &digest, &keyAuth)))
 			return result;
 	} else
 		pKeyAuth = NULL;
 
 	if (useAuthCert) {
-		if ((result = secret_PerformAuth_OIAP(hCertifyingKey,
-						      TPM_ORD_CertifyKey,
-						      hCertPolicy, &digest,
+		if ((result = secret_PerformAuth_OIAP(hCertifyingKey, TPM_ORD_CertifyKey,
+						      hCertPolicy, FALSE, &digest,
 						      &certAuth)))
 			return result;
 	} else

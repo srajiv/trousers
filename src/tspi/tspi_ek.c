@@ -60,7 +60,8 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	ekSize = offset;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)antiReplay.nonce))) {
 			LogError("Failed to create random nonce");
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -162,9 +163,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerReadPubek,
-						      hPolicy, &digest,
-						      &ownerAuth)))
+		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerReadPubek, hPolicy, FALSE,
+						      &digest, &ownerAuth)))
 			return result;
 
 		if ((result = TCSP_OwnerReadPubek(tspContext, &ownerAuth, &pubEKSize, &pubEK)))
@@ -181,7 +181,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			goto done;
 	} else {
 		if (pValidationData == NULL) {
-			if ((result = internal_GetRandomNonce(tspContext, &antiReplay))) {
+			if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+						       (BYTE **)antiReplay.nonce))) {
 				LogDebug("Failed to generate random nonce");
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}

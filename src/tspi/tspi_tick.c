@@ -74,7 +74,7 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 		}
 
 		if ((result = secret_PerformAuth_OIAP(hIdentKey, TPM_ORD_TickStampBlob, hPolicy,
-						      &digest, &auth))) {
+						      FALSE, &digest, &auth))) {
 			free_tspi(tspContext, hash);
 			return result;
 		}

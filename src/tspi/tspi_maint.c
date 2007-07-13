@@ -56,9 +56,8 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_CreateMaintenanceArchive,
-					      hOwnerPolicy, &digest,
-					      &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_CreateMaintenanceArchive, hOwnerPolicy,
+					      FALSE, &digest, &ownerAuth)))
 		return result;
 
 	if ((result = TCSP_CreateMaintenanceArchive(tspContext, fGenerateRndNumber, &ownerAuth,
@@ -103,10 +102,8 @@ Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM,
-					      TPM_ORD_KillMaintenanceFeature,
-					      hOwnerPolicy, &digest,
-					      &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_KillMaintenanceFeature, hOwnerPolicy,
+					      FALSE, &digest, &ownerAuth)))
 		return result;
 
 	if ((result = TCSP_KillMaintenanceFeature(tspContext, &ownerAuth)))
@@ -141,7 +138,8 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tspContext, &nonce)))
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)nonce.nonce)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))
@@ -209,7 +207,8 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	if (pValidationData == NULL) {
-		if ((result = internal_GetRandomNonce(tspContext, &nonce)))
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)nonce.nonce)))
 			return result;
 	} else {
 		if (pValidationData->ulExternalDataLength < sizeof(nonce.nonce))

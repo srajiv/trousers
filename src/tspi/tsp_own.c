@@ -154,8 +154,8 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 		return result;
 
 	/* HMAC for the final digest */
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_TakeOwnership, hOwnerPolicy, &digest,
-					      auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_TakeOwnership, hOwnerPolicy, FALSE,
+					      &digest, auth)))
 		return result;
 
 	return TSS_SUCCESS;

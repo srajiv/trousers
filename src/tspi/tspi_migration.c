@@ -96,10 +96,8 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM,
-					      TPM_ORD_AuthorizeMigrationKey,
-					      hOwnerPolicy, &digest,
-					      &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_AuthorizeMigrationKey, hOwnerPolicy,
+					      FALSE, &digest, &ownerAuth)))
 		return result;
 
 	/* Send command */
@@ -210,9 +208,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		return result;
 
 	if (parentUsesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
-						      TPM_ORD_CreateMigrationBlob,
-						      hParentPolicy, &digest,
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy, TPM_ORD_CreateMigrationBlob,
+						      hParentPolicy, FALSE, &digest,
 						      &parentAuth))) {
 			free_key_refs(&tcpaKey);
 			return result;
@@ -222,10 +219,8 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		pParentAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hKeyToMigrate,
-					      TPM_ORD_CreateMigrationBlob,
-					      hMigratePolicy, &digest,
-					      &entityAuth))) {
+	if ((result = secret_PerformAuth_OIAP(hKeyToMigrate, TPM_ORD_CreateMigrationBlob,
+					      hMigratePolicy, FALSE, &digest, &entityAuth))) {
 		free_key_refs(&tcpaKey);
 		return result;
 	}
@@ -351,10 +346,8 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		return result;
 
 	if (useAuth) {
-		if ((result = secret_PerformAuth_OIAP(hParentPolicy,
-						      TPM_ORD_ConvertMigrationBlob,
-						      hParentPolicy, &digest,
-						      &parentAuth)))
+		if ((result = secret_PerformAuth_OIAP(hParentPolicy, TPM_ORD_ConvertMigrationBlob,
+						      hParentPolicy, FALSE, &digest, &parentAuth)))
 			return result;
 		pParentAuth = &parentAuth;
 	} else {

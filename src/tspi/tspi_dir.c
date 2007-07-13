@@ -59,9 +59,8 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 		return result;
 
 	/* hashDigest now has the hash result */
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DirWriteAuth,
-					      hPolicy, &hashDigest,
-					      &auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DirWriteAuth, hPolicy, FALSE,
+					      &hashDigest, &auth)))
 		return result;
 
 	if ((result = TCSP_DirWriteAuth(tspContext, ulDirIndex, dirValue, &auth)))
