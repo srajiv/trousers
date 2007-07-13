@@ -154,11 +154,9 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				}
 				break;
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
-					result = obj_policy_set_hash_mode(hObject, ulAttrib);
+				result = obj_policy_set_hash_mode(hObject, ulAttrib);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -175,11 +173,34 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				} else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
-#ifndef TSS_SPEC_COMPLIANCE
+			case TSS_TSPATTRIB_CONTEXT_TRANSPORT:
+				if (subFlag == TSS_TSPATTRIB_CONTEXTTRANS_CONTROL) {
+					if (ulAttrib != TSS_TSPATTRIB_DISABLE_TRANSPORT &&
+					    ulAttrib != TSS_TSPATTRIB_ENABLE_TRANSPORT)
+						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+					result = obj_context_transport_set_control(hObject,
+										   ulAttrib);
+				} else if (subFlag == TSS_TSPATTRIB_CONTEXTTRANS_MODE) {
+					switch (ulAttrib) {
+						case TSS_TSPATTRIB_TRANSPORT_NO_DEFAULT_ENCRYPTION:
+						case TSS_TSPATTRIB_TRANSPORT_DEFAULT_ENCRYPTION:
+						case TSS_TSPATTRIB_TRANSPORT_AUTHENTIC_CHANNEL:
+						case TSS_TSPATTRIB_TRANSPORT_EXCLUSIVE:
+						case TSS_TSPATTRIB_TRANSPORT_STATIC_AUTH:
+							break;
+						default:
+							return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+					}
+
+					result = obj_context_transport_set_mode(hObject, ulAttrib);
+				} else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+
+				break;
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
 				result = obj_context_set_hash_mode(hObject, ulAttrib);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -381,14 +402,12 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				} else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
 				if (subFlag == TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP)
 					result = obj_policy_get_hash_mode(hObject, pulAttrib);
 				else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -399,14 +418,28 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				if ((result = obj_context_get_mode(hObject, pulAttrib)))
 					return result;
 				break;
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
 				if (subFlag == TSS_TSPATTRIB_SECRET_HASH_MODE_POPUP)
 					result = obj_context_get_hash_mode(hObject, pulAttrib);
 				else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
-#endif
+			case TSS_TSPATTRIB_CONTEXT_TRANSPORT:
+				if (subFlag == TSS_TSPATTRIB_DISABLE_TRANSPORT ||
+				    subFlag == TSS_TSPATTRIB_ENABLE_TRANSPORT) {
+					result = obj_context_transport_get_control(hObject, subFlag,
+										   pulAttrib);
+				} else if (
+					subFlag == TSS_TSPATTRIB_TRANSPORT_NO_DEFAULT_ENCRYPTION ||
+					subFlag == TSS_TSPATTRIB_TRANSPORT_DEFAULT_ENCRYPTION ||
+					subFlag == TSS_TSPATTRIB_TRANSPORT_AUTHENTIC_CHANNEL ||
+					subFlag == TSS_TSPATTRIB_TRANSPORT_EXCLUSIVE ||
+					subFlag == TSS_TSPATTRIB_TRANSPORT_STATIC_AUTH) {
+					result = obj_context_transport_get_mode(hObject, subFlag,
+										pulAttrib);
+				} else
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				break;
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -459,7 +492,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
-#ifndef TSS_SPEC_COMPLIANCE
 		} else if (attribFlag == TSS_TSPATTRIB_RSAKEY_INFO) {
 			if (subFlag == TSS_TSPATTRIB_KEYINFO_RSA_EXPONENT) {
 				result = obj_rsakey_set_exponent(hObject, ulAttribDataSize,
@@ -470,7 +502,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
-#endif
 		} else {
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		}
@@ -495,7 +526,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 							       ulAttribDataSize,
 							       string);
 				break;
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
@@ -503,7 +533,6 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 				result = obj_policy_set_cb12(hObject, attribFlag,
 							     rgbAttribData);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -520,13 +549,11 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 #endif
 	} else if (obj_is_tpm(hObject)) {
 		switch (attribFlag) {
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
 			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
 				result = obj_tpm_set_cb12(hObject, attribFlag,
 							  rgbAttribData);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -688,7 +715,6 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			return result;
 	} else if (obj_is_policy(hObject)) {
 		switch (attribFlag) {
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_POLICY_CALLBACK_HMAC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
@@ -696,7 +722,6 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 				result = obj_policy_get_cb12(hObject, attribFlag,
 							     pulAttribDataSize, prgbAttribData);
 				break;
-#endif
 			case TSS_TSPATTRIB_POLICY_POPUPSTRING:
 				if ((result = obj_policy_get_string(hObject, pulAttribDataSize,
 								    prgbAttribData)))
@@ -708,13 +733,11 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 		}
 	} else if (obj_is_tpm(hObject)) {
 		switch (attribFlag) {
-#ifndef TSS_SPEC_COMPLIANCE
 			case TSS_TSPATTRIB_TPM_CALLBACK_COLLATEIDENTITY:
 			case TSS_TSPATTRIB_TPM_CALLBACK_ACTIVATEIDENTITY:
 				result = obj_tpm_get_cb12(hObject, attribFlag,
 							  pulAttribDataSize, prgbAttribData);
 				break;
-#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
