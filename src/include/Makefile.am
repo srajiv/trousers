@@ -3,6 +3,8 @@ trousersincludedir = $(includedir)/trousers
 
 tssinclude_HEADERS = tss/tcpa_error.h \
 		     tss/tcs_error.h \
+		     tss/tcs_defines.h \
+		     tss/tcs.h \
 		     tss/tddlapi_error.h \
 		     tss/tspi.h \
 		     tss/tss_error.h \
