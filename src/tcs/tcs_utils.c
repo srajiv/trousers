@@ -62,6 +62,19 @@ Decode_UINT16(BYTE * in)
 }
 
 void
+UINT64ToArray(UINT64 i, BYTE * out)
+{
+	out[0] = (BYTE) ((i >> 56) & 0xFF);
+	out[1] = (BYTE) ((i >> 48) & 0xFF);
+	out[2] = (BYTE) ((i >> 40) & 0xFF);
+	out[3] = (BYTE) ((i >> 32) & 0xFF);
+	out[4] = (BYTE) ((i >> 24) & 0xFF);
+	out[5] = (BYTE) ((i >> 16) & 0xFF);
+	out[6] = (BYTE) ((i >> 8) & 0xFF);
+	out[7] = (BYTE) (i & 0xFF);
+}
+
+void
 UINT32ToArray(UINT32 i, BYTE * out)
 {
 	out[0] = (BYTE) ((i >> 24) & 0xFF);
@@ -90,6 +103,31 @@ Decode_UINT32(BYTE * y)
 	return x;
 }
 
+UINT64
+Decode_UINT64(BYTE *y)
+{
+	UINT64 x = 0;
+
+	x = y[0];
+	x = ((x << 8) | (y[1] & 0xFF));
+	x = ((x << 8) | (y[2] & 0xFF));
+	x = ((x << 8) | (y[3] & 0xFF));
+	x = ((x << 8) | (y[4] & 0xFF));
+	x = ((x << 8) | (y[5] & 0xFF));
+	x = ((x << 8) | (y[6] & 0xFF));
+	x = ((x << 8) | (y[7] & 0xFF));
+
+	return x;
+}
+
+void
+LoadBlob_UINT64(UINT64 *offset, UINT64 in, BYTE * blob)
+{
+	if (blob)
+		UINT64ToArray(in, &blob[*offset]);
+	*offset += sizeof(UINT64);
+}
+
 void
 LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE * blob)
 {
@@ -107,16 +145,26 @@ LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE * blob)
 }
 
 void
+UnloadBlob_UINT64(UINT64 *offset, UINT64 * out, BYTE * blob)
+{
+	if (out)
+		*out = Decode_UINT64(&blob[*offset]);
+	*offset += sizeof(UINT64);
+}
+
+void
 UnloadBlob_UINT32(UINT64 *offset, UINT32 * out, BYTE * blob)
 {
-	*out = Decode_UINT32(&blob[*offset]);
+	if (out)
+		*out = Decode_UINT32(&blob[*offset]);
 	*offset += sizeof(UINT32);
 }
 
 void
 UnloadBlob_UINT16(UINT64 *offset, UINT16 * out, BYTE * blob)
 {
-	*out = Decode_UINT16(&blob[*offset]);
+	if (out)
+		*out = Decode_UINT16(&blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
@@ -131,7 +179,8 @@ LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE * blob)
 void
 UnloadBlob_BYTE(UINT64 *offset, BYTE * dataOut, BYTE * blob)
 {
-	*dataOut = blob[*offset];
+	if (dataOut)
+		*dataOut = blob[*offset];
 	(*offset)++;
 }
 
@@ -146,7 +195,8 @@ LoadBlob_BOOL(UINT64 *offset, TSS_BOOL data, BYTE * blob)
 void
 UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE * blob)
 {
-	*dataOut = blob[*offset];
+	if (dataOut)
+		*dataOut = blob[*offset];
 	(*offset)++;
 }
 
@@ -161,7 +211,8 @@ LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 void
 UnloadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
-	memcpy(object, &container[*offset], size);
+	if (object)
+		memcpy(object, &container[*offset], size);
 	(*offset) += (UINT64) size;
 }
 
