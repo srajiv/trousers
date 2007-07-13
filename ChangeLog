@@ -1,4 +1,10 @@
 
+- Added initial transport session support.
+- Rewrote TCSD key loading functions.
+- Added support for UINT64 loading/unloading everywhere.
+- Created an initial TCS parameter block generator in tcs_pbg.c.
+- Added support to get_local_random to either allocate a new
+buffer for the random number or write it to a given buffer.
 - Removed TCS GetCredentials APIs -- the TSSWG verified that these
 had accidentally been left in the spec.
 - Added TCS GetCredential API.
