@@ -48,7 +48,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 
 		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DisableOwnerClear, hPolicy,
-						      &hashDigest, &auth)))
+						      FALSE, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisableOwnerClear(tspContext, &auth)))
@@ -74,7 +74,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 
 		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerSetDisable, hPolicy,
-						      &hashDigest, &auth)))
+						      FALSE, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_OwnerSetDisable(tspContext, fTpmState, &auth)))
@@ -111,7 +111,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 
 		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_DisablePubekRead, hPolicy,
-						      &hashDigest, &auth)))
+						      FALSE, &hashDigest, &auth)))
 			return result;
 
 		if ((result = TCSP_DisablePubekRead(tspContext, &auth)))
@@ -144,7 +144,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 			return result;
 
 		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_ResetLockValue, hPolicy,
-						      &hashDigest, &auth)))
+						      FALSE, &hashDigest, &auth)))
 			return result;
 
 		result = TCSP_ResetLockValue(tspContext, &auth);

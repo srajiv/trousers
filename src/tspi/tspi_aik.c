@@ -197,10 +197,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* Do the Auth's */
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hKeySRK,
-						      TPM_ORD_MakeIdentity,
-						      hSRKPolicy, &digest,
-						      &srkAuth)))
+		if ((result = secret_PerformAuth_OIAP(hKeySRK, TPM_ORD_MakeIdentity, hSRKPolicy,
+						      FALSE, &digest, &srkAuth)))
 			return result;
 		pSrkAuth = &srkAuth;
 	} else {
@@ -297,7 +295,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		}
 	} else {
 		/* generate the symmetric key. */
-		if ((result = get_local_random(tspContext, symKey.size, &symKey.data)))
+		if ((result = get_local_random(tspContext, TRUE, symKey.size, &symKey.data)))
 			goto error;
 
 		/* No symmetric key encryption schemes existed in the 1.1 time frame */
@@ -416,20 +414,16 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	if (usesAuth) {
-		if ((result = secret_PerformAuth_OIAP(hIDPolicy,
-						      TPM_ORD_ActivateIdentity,
-						      hIDPolicy, &digest,
-						      &idKeyAuth)))
+		if ((result = secret_PerformAuth_OIAP(hIDPolicy, TPM_ORD_ActivateIdentity,
+						      hIDPolicy, FALSE, &digest, &idKeyAuth)))
 			return result;
 		pIDKeyAuth = &idKeyAuth;
 	} else {
 		pIDKeyAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OIAP(hTPM,
-					      TPM_ORD_ActivateIdentity,
-					      hTPMPolicy, &digest,
-					      &ownerAuth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_ActivateIdentity, hTPMPolicy, FALSE,
+					      &digest, &ownerAuth)))
 		return result;
 
 	if ((result = TCSP_ActivateTPMIdentity(tspContext, tcsKeyHandle, ulAsymCAContentsBlobLength,

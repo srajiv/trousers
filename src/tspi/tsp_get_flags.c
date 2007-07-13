@@ -46,8 +46,8 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM, UINT32 *volFlags, UI
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_GetCapabilityOwner,
-					      hPolicy, &digest, &auth)))
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_GetCapabilityOwner, hPolicy, FALSE,
+					      &digest, &auth)))
 		return result;
 
 	if ((result = TCSP_GetCapabilityOwner(tcsContext, &auth, &version, nonVolFlags, volFlags)))

@@ -51,7 +51,7 @@ TSP_SetCapability(TSS_HCONTEXT tspContext,
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_SetCapability, hTPMPolicy,
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_SetCapability, hTPMPolicy, FALSE,
 					      &digest, &auth)))
 		return result;
 

@@ -178,8 +178,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			return result;
 
-		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_UnBind,
-						      hPolicy, &digest,
+		if ((result = secret_PerformAuth_OIAP(hKey, TPM_ORD_UnBind, hPolicy, FALSE, &digest,
 						      &privAuth)))
 			return result;
 		pPrivAuth = &privAuth;
