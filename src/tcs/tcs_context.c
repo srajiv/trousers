@@ -208,3 +208,95 @@ ctx_get_cond_var(TCS_CONTEXT_HANDLE tcs_handle)
 
 	return ret;
 }
+
+/* the only transport flag at the TCS level is whether the session is exclusive or not. If the app
+ * is requesting an exclusive transport session, check that no other exclusive sessions exist and
+ * if not, flag this context as being the one. If so, return internal error. */
+TSS_RESULT
+ctx_req_exclusive_transport(TCS_CONTEXT_HANDLE tcsContext)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tcs_context *tmp, *self = NULL;
+
+	MUTEX_LOCK(tcs_ctx_lock);
+
+	tmp = tcs_context_table;
+	while (tmp) {
+		if (tmp->flags & TSS_CONTEXT_FLAG_TRANSPORT_EXCLUSIVE) {
+			result = TCSERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		if (tmp->handle == tcsContext)
+			self = tmp;
+
+		tmp = tmp->next;
+	}
+
+	if (self)
+		self->flags |= TSS_CONTEXT_FLAG_TRANSPORT_EXCLUSIVE;
+	else
+		result = TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
+done:
+	MUTEX_UNLOCK(tcs_ctx_lock);
+
+	return result;
+}
+
+TSS_RESULT
+ctx_set_transport_enabled(TCS_CONTEXT_HANDLE tcsContext, UINT32 encrypted)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tcs_context *tmp, *self = NULL;
+
+	MUTEX_LOCK(tcs_ctx_lock);
+
+	tmp = tcs_context_table;
+	while (tmp) {
+		if (tmp->handle == tcsContext) {
+			self = tmp;
+			break;
+		}
+
+		tmp = tmp->next;
+	}
+
+	if (self) {
+		self->flags |= TSS_CONTEXT_FLAG_TRANSPORT_ENABLED;
+		if (encrypted)
+			self->flags |= TSS_CONTEXT_FLAG_TRANSPORT_ENCRYPTED;
+	} else
+		result = TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
+
+	MUTEX_UNLOCK(tcs_ctx_lock);
+
+	return result;
+}
+
+TSS_RESULT
+ctx_transport_is_encrypted(TCS_CONTEXT_HANDLE tcsContext, UINT32 *encrypted)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct tcs_context *tmp, *self = NULL;
+
+	MUTEX_LOCK(tcs_ctx_lock);
+
+	tmp = tcs_context_table;
+	while (tmp) {
+		if (tmp->handle == tcsContext) {
+			self = tmp;
+			break;
+		}
+
+		tmp = tmp->next;
+	}
+
+	if (self) {
+		*encrypted = self->flags & TSS_CONTEXT_FLAG_TRANSPORT_ENCRYPTED ? TRUE : FALSE;
+	} else
+		result = TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
+
+	MUTEX_UNLOCK(tcs_ctx_lock);
+
+	return result;
+}
