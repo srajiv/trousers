@@ -11,8 +11,13 @@ libtcs_a_SOURCES=log.c \
 		 tcs_utils.c \
 		 rpc/@RPC@/rpc.c rpc/@RPC@/rpc_context.c \
 		 tcsi_caps_tpm.c rpc/@RPC@/rpc_caps_tpm.c \
-		 tcs_auth_mgr.c tcsi_auth.c rpc/@RPC@/rpc_auth.c
+		 tcs_auth_mgr.c tcsi_auth.c rpc/@RPC@/rpc_auth.c \
+		 tcs_pbg.c
 
+if TSS_BUILD_TRANSPORT
+libtcs_a_SOURCES+=tcsi_transport.c rpc/@RPC@/rpc_transport.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_TRANSPORT
+endif
 if TSS_BUILD_TICK
 libtcs_a_SOURCES+=tcsi_tick.c rpc/@RPC@/rpc_tick.c
 libtcs_a_CFLAGS+=-DTSS_BUILD_TICK
