@@ -363,6 +363,7 @@ typedef UINT16 TPM_ENC_SCHEME;                              /* 1.1b */
 #define TPM_ES_RSAESPKCSv15            ((UINT16)0x0002)     /* 1.1b */
 #define TPM_ES_RSAESOAEP_SHA1_MGF1     ((UINT16)0x0003)     /* 1.1b */
 #define TPM_ES_SYM_CNT                 ((UINT16)0x0004)
+#define TPM_ES_SYM_CTR                 TPM_ES_SYM_CNT
 #define TPM_ES_SYM_OFB                 ((UINT16)0x0005)
 #define TPM_ES_SYM_CBC_PKCS5PAD        ((UINT16)0x00ff)
 
