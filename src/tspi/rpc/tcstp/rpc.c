@@ -179,6 +179,9 @@ getData(TCSD_PACKET_TYPE dataType,
 		case TCSD_PACKET_TYPE_UINT32:
 			Trspi_UnloadBlob_UINT32(&offset, (UINT32 *)theData, comm->buf);
 			break;
+		case TCSD_PACKET_TYPE_UINT64:
+			Trspi_UnloadBlob_UINT64(&offset, (UINT64 *)theData, comm->buf);
+			break;
 		case TCSD_PACKET_TYPE_PBYTE:
 			Trspi_UnloadBlob(&offset, theDataSize, comm->buf, (BYTE *)theData);
 			break;
