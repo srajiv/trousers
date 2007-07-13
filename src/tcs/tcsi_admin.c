@@ -47,7 +47,6 @@ TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-	offset = 10;
 	LogResult("SetOwnerInstall", result);
 	return result;
 }
