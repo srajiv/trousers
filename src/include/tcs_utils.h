@@ -76,9 +76,10 @@ TSS_RESULT event_log_final();
 #define EVENT_LOG_final()
 #endif
 
-#define TSS_TPM_TXBLOB_SIZE	4096
-#define TSS_MAX_AUTHS_CAP	1024
-#define TSS_REQ_MGR_MAX_RETRIES	5
+#define TSS_TPM_TXBLOB_SIZE		(4096)
+#define TSS_TXBLOB_WRAPPEDCMD_OFFSET	(TSS_TPM_TXBLOB_HDR_LEN + sizeof(UINT32))
+#define TSS_MAX_AUTHS_CAP		(1024)
+#define TSS_REQ_MGR_MAX_RETRIES		(5)
 
 #define next( x ) x = x->next
 
@@ -142,8 +143,10 @@ TSS_RESULT ctx_remove_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 TSS_BOOL ctx_has_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 void       ctx_ref_count_keys(struct tcs_context *);
 struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
+TSS_RESULT ctx_req_exclusive_transport(TCS_CONTEXT_HANDLE);
+TSS_RESULT ctx_set_transport_enabled(TCS_CONTEXT_HANDLE, UINT32);
+TSS_RESULT ctx_transport_is_encrypted(TCS_CONTEXT_HANDLE, UINT32 *);
 
-//TSS_RESULT ctx_mark_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 #ifdef TSS_BUILD_KEY
 #define CTX_ref_count_keys(c)	ctx_ref_count_keys(c)
 #define KEY_MGR_ref_count()	key_mgr_ref_count()
@@ -168,12 +171,16 @@ TSS_RESULT internal_EvictByKeySlot(TCPA_KEY_HANDLE slot);
 TSS_RESULT clearKeysFromChip(TCS_CONTEXT_HANDLE hContext);
 TSS_RESULT clearUnknownKeys(TCS_CONTEXT_HANDLE, UINT32 *);
 
-UINT16 Decode_UINT16(BYTE *);
+void UINT64ToArray(UINT64, BYTE *);
 void UINT32ToArray(UINT32, BYTE *);
 void UINT16ToArray(UINT16, BYTE *);
+UINT64 Decode_UINT64(BYTE *);
 UINT32 Decode_UINT32(BYTE *);
+UINT16 Decode_UINT16(BYTE *);
+void LoadBlob_UINT64(UINT64 *, UINT64, BYTE *);
 void LoadBlob_UINT32(UINT64 *, UINT32, BYTE *);
 void LoadBlob_UINT16(UINT64 *, UINT16, BYTE *);
+void UnloadBlob_UINT64(UINT64 *, UINT64 *, BYTE *);
 void UnloadBlob_UINT32(UINT64 *, UINT32 *, BYTE *);
 void UnloadBlob_UINT16(UINT64 *, UINT16 *, BYTE *);
 void LoadBlob_BYTE(UINT64 *, BYTE, BYTE *);
@@ -220,12 +227,17 @@ TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 void free_external_events(UINT32, TSS_PCR_EVENT *);
 
 TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
-
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
-
 TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO *);
 char platform_get_runlevel();
+TSS_RESULT tpm_rsp_parse(TPM_COMMAND_CODE, BYTE *, UINT32, ...);
+TSS_RESULT tpm_rqu_build(TPM_COMMAND_CODE, UINT64 *, BYTE *, ...);
+TSS_RESULT tpm_preload_check(TCS_CONTEXT_HANDLE, TPM_COMMAND_CODE ordinal, ...);
 TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
+TSS_RESULT add_cache_entry(TCS_CONTEXT_HANDLE, BYTE *, TCS_KEY_HANDLE, TPM_KEY_HANDLE, TCS_KEY_HANDLE *);
+TSS_RESULT get_slot(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TPM_KEY_HANDLE *);
+TSS_RESULT load_key_init(TPM_COMMAND_CODE, TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE*, TSS_BOOL, TPM_AUTH*, TSS_BOOL*, UINT64*, BYTE*, TCS_KEY_HANDLE*, TPM_KEY_HANDLE*);
+TSS_RESULT load_key_final(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCS_KEY_HANDLE *, BYTE *, TPM_KEY_HANDLE);
 TSS_RESULT LoadKeyByBlob_Internal(UINT32,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,
 				  TCS_KEY_HANDLE *,TCS_KEY_HANDLE *);
 TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
@@ -827,6 +839,47 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE**             prgbSignature,
 					       UINT32*            pulTickCountLength,
 					       BYTE**             prgbTickCount
+	);
+	TSS_RESULT TCSP_EstablishTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
+						    UINT32                  ulTransControlFlags,
+						    TCS_KEY_HANDLE          hEncKey,
+						    UINT32                  ulTransSessionInfoSize,
+						    BYTE*                   rgbTransSessionInfo,
+						    UINT32                  ulSecretSize,
+						    BYTE*                   rgbSecret,
+						    TPM_AUTH*               pEncKeyAuth,
+						    TPM_MODIFIER_INDICATOR* pbLocality,
+						    TCS_HANDLE*             hTransSession,
+						    UINT32*                 ulCurrentTicksSize,
+						    BYTE**                  prgbCurrentTicks,
+						    TPM_NONCE*              pTransNonce
+	);
+
+	TSS_RESULT TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
+						  TPM_COMMAND_CODE        unWrappedCommandOrdinal,
+						  UINT32                  ulWrappedCmdParamInSize,
+						  BYTE*                   rgbWrappedCmdParamIn,
+						  UINT32*                 pulHandleListSize,
+						  TCS_HANDLE**            rghHandles,
+						  TPM_AUTH*               pWrappedCmdAuth1,
+						  TPM_AUTH*               pWrappedCmdAuth2,
+						  TPM_AUTH*               pTransAuth,
+						  UINT64*                 punCurrentTicks,
+						  TPM_MODIFIER_INDICATOR* pbLocality,
+						  TPM_RESULT*             pulWrappedCmdReturnCode,
+						  UINT32*                 ulWrappedCmdParamOutSize,
+						  BYTE**                  rgbWrappedCmdParamOut
+	);
+	TSS_RESULT TCSP_ReleaseTransportSigned_Internal(TCS_CONTEXT_HANDLE      hContext,
+							TCS_KEY_HANDLE          hSignatureKey,
+							TPM_NONCE*              AntiReplayNonce,
+							TPM_AUTH*               pKeyAuth,
+							TPM_AUTH*               pTransAuth,
+							TPM_MODIFIER_INDICATOR* pbLocality,
+							UINT32*                 pulCurrentTicksSize,
+							BYTE**                  prgbCurrentTicks,
+							UINT32*                 pulSignatureSize,
+							BYTE**                  prgbSignature
 	);
 
 	TSS_RESULT TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE	hContext, 	/* in */
