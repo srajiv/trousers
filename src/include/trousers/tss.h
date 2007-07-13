@@ -21,6 +21,7 @@
 #include <tss/tss_structs.h>
 #include <tss/tcs_structs.h>
 #include <tss/tcs_error.h>
+#include <tss/tcs.h>
 #include <tss/tss_error.h>
 
 #include <tss/tddlapi_error.h>
