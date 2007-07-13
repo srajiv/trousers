@@ -17,11 +17,187 @@
 #include "tcs_tsp.h"
 #include "tcslog.h"
 #include "tcs_utils.h"
+#include "tcs_int_literals.h"
 
 struct key_mem_cache *key_mem_cache_head = NULL;
 
 TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
+
+TSS_RESULT
+add_cache_entry(TCS_CONTEXT_HANDLE hContext,
+		BYTE*              blob,
+		TCS_KEY_HANDLE     hParent,
+		TPM_KEY_HANDLE     hSlot,
+		TCS_KEY_HANDLE*    new)
+{
+	UINT64 offset;
+	TSS_RESULT result;
+	TCS_KEY_HANDLE tcsHandle;
+	TPM_KEY key, *pKey;
+
+	if (!blob) {
+		pKey = NULL;
+	} else {
+		offset = 0;
+		if ((result = UnloadBlob_KEY(&offset, blob, &key)))
+			return result;
+
+		if ((tcsHandle = mc_get_handle_by_pub(&key.pubKey, hParent)) == NULL_TCS_HANDLE) {
+			pKey = &key;
+		} else {
+			mc_set_slot_by_handle(tcsHandle, hSlot);
+			*new = tcsHandle;
+			goto done;
+		}
+	}
+
+	LogDebugFn("No existing key handle for this key, creating new one...");
+	/* Get a new TCS Key Handle */
+	tcsHandle = getNextTcsKeyHandle();
+	LogDebugFn("calling mc_add_entry, TCS handle: 0x%x, TPM handle 0x%x", tcsHandle, hSlot);
+
+	if ((result = mc_add_entry(tcsHandle, hSlot, pKey)))
+		goto done;
+
+	LogDebugFn("ctx_mark_key_loaded");
+	if (ctx_mark_key_loaded(hContext, tcsHandle)) {
+		LogError("Error marking key as loaded");
+		result = TCSERR(TSS_E_INTERNAL_ERROR);
+		goto done;
+	}
+
+	if ((result = mc_set_parent_by_handle(tcsHandle, hParent))) {
+		LogError("mc_set_parent_by_handle failed.");
+		goto done;
+	}
+
+	*new = tcsHandle;
+done:
+	if (blob)
+		destroy_key_refs(&key);
+	return result;
+}
+
+/* Given a handle, get_slot searches the mem cache for a mapping to a TPM handle. If there is no
+ * mapping, it looks up the pub key of the handle and attempts to load it by finding its pub key
+ * in the persistent store. If that's not found, return error. */
+TSS_RESULT
+get_slot(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hKey, TPM_KEY_HANDLE *out)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	TPM_STORE_PUBKEY *pub = NULL;
+	TPM_KEY_HANDLE slot;
+
+        LogDebugFn("calling mc_get_slot_by_handle");
+        if ((slot = mc_get_slot_by_handle(hKey)) == NULL_TPM_HANDLE) {
+                LogDebugFn("calling mc_get_pub_by_slot");
+                if ((pub = mc_get_pub_by_slot(hKey)) == NULL)
+                        return TCSERR(TCS_E_KM_LOADFAILED);
+
+                LogDebugFn("calling LoadKeyShim");
+                /* Otherwise, try to load it using the shim */
+                result = LoadKeyShim(hContext, pub, NULL, &slot);
+        }
+
+	if (!result)
+		*out = slot;
+
+	return result;
+}
+
+/* load_key_init is the common entry point for all load key requests to the TCSD. These can come in
+ * as straight load or load2 requests, or through a transport session.
+ *
+ * We'll always attempt to load the key if
+ * A) It requires auth (load should fail if auth is bad, even when its already been loaded by
+ *    another thread)
+ * B) Its in a transport session (the key blob is encrypted)
+ *
+ * Otherwise if the key is already loaded by another thread and it doesn't require auth, then we
+ * will just set *load_key to FALSE, telling the caller that there's no need to send anything to
+ * the TPM.
+ */
+TSS_RESULT
+load_key_init(TPM_COMMAND_CODE   ord,
+	      TCS_CONTEXT_HANDLE hContext,
+	      TCS_KEY_HANDLE     parent_handle,
+	      UINT32             blob_size,
+	      BYTE*              blob,
+	      TSS_BOOL           encrypted,
+	      TPM_AUTH*          auth,
+	      TSS_BOOL*          load_key,
+	      UINT64*            out_len,
+	      BYTE*              out,
+	      TCS_KEY_HANDLE*    handle,
+	      TPM_KEY_HANDLE*    slot)
+{
+	TSS_RESULT result;
+	TPM_KEY key;
+	UINT64 offset;
+	TPM_KEY_HANDLE tpm_slot;
+	TCS_KEY_HANDLE tcs_handle;
+	TSS_BOOL canLoad;
+
+
+	if (!encrypted) {
+		offset = 0;
+		memset(&key, 0, sizeof(TPM_KEY));
+		if ((result = UnloadBlob_KEY(&offset, blob, &key)))
+			return result;
+	}
+
+	if (!auth && !encrypted) {
+		LogDebugFn("Checking if LoadKeyByBlob can be avoided by using existing key");
+
+		if ((tcs_handle = mc_get_handle_by_pub(&key.pubKey, parent_handle))) {
+			LogDebugFn("tcs key handle exists");
+
+			tpm_slot = mc_get_slot_by_handle(tcs_handle);
+			if (tpm_slot && (isKeyLoaded(tpm_slot) == TRUE)) {
+				LogDebugFn("Don't need to reload this key.");
+				*handle = tcs_handle;
+				*slot = tpm_slot;
+				*load_key = FALSE;
+				result = TSS_SUCCESS;
+				goto done;
+			}
+		}
+	}
+	*load_key = TRUE;
+
+	LogDebugFn("calling canILoadThisKey");
+	if (!encrypted) {
+		if ((result = canILoadThisKey(&(key.algorithmParms), &canLoad)))
+			goto error;
+
+		if (canLoad == FALSE) {
+			LogDebugFn("calling evictFirstKey");
+			/* Evict a key that isn't the parent */
+			if ((result = evictFirstKey(parent_handle)))
+				goto error;
+		}
+	}
+
+error:
+	if (!encrypted)
+		destroy_key_refs(&key);
+done:
+	return result;
+}
+
+TSS_RESULT
+load_key_final(TCS_CONTEXT_HANDLE hContext,
+	       TCS_KEY_HANDLE     parent_handle,
+	       TCS_KEY_HANDLE*    tcs_handle,
+	       BYTE*              blob,
+	       TPM_KEY_HANDLE     slot)
+{
+	if (*tcs_handle == NULL_TCS_HANDLE)
+		return add_cache_entry(hContext, blob, parent_handle, slot, tcs_handle);
+	else
+		return mc_set_slot_by_handle(*tcs_handle, slot);
+}
 
 TSS_RESULT
 canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *b)
