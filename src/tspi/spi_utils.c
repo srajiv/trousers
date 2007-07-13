@@ -31,21 +31,6 @@ TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 
 TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
 
-TSS_RESULT
-internal_GetRandomNonce(TSS_HCONTEXT tspContext, TCPA_NONCE * nonce)
-{
-	TSS_RESULT result;
-	BYTE *random;
-
-	if ((result = get_local_random(tspContext, sizeof(TCPA_NONCE), &random)))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
-
-	memcpy(nonce->nonce, random, sizeof(TCPA_NONCE));
-	free_tspi(tspContext, random);
-
-	return TSS_SUCCESS;
-}
-
 UINT16
 Decode_UINT16(BYTE * in)
 {
@@ -137,35 +122,39 @@ UnloadBlob_AUTH(UINT64 *offset, BYTE *blob, TPM_AUTH *auth)
 	Trspi_UnloadBlob(offset, 20, blob, (BYTE *)&auth->HMAC);
 }
 
+/* If alloc is true, we allocate a new buffer for the bytes and set *data to that.
+ * If alloc is false, data is really a BYTE*, so write the bytes directly to that buffer */
 TSS_RESULT
-get_local_random(TSS_HCONTEXT tspContext, UINT32 size, BYTE **data)
+get_local_random(TSS_HCONTEXT tspContext, TSS_BOOL alloc, UINT32 size, BYTE **data)
 {
 	FILE *f = NULL;
 	BYTE *buf = NULL;
 
 	f = fopen(TSS_LOCAL_RANDOM_DEVICE, "r");
 	if (f == NULL) {
-		LogError("open of %s failed: %s",
-			 TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
+		LogError("open of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	buf = calloc_tspi(tspContext, size);
-	if (buf == NULL) {
-		LogError("malloc of %u bytes failed", size);
-		fclose(f);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
+	if (alloc) {
+		buf = calloc_tspi(tspContext, size);
+		if (buf == NULL) {
+			LogError("malloc of %u bytes failed", size);
+			fclose(f);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+	} else
+		buf = (BYTE *)data;
 
 	if (fread(buf, size, 1, f) == 0) {
-		LogError("fread of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE,
-			 strerror(errno));
+		LogError("fread of %s failed: %s", TSS_LOCAL_RANDOM_DEVICE, strerror(errno));
 		fclose(f);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
+	if (alloc)
+		*data = buf;
 	fclose(f);
-	*data = buf;
 
 	return TSS_SUCCESS;
 }
