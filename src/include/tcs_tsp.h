@@ -87,4 +87,7 @@ struct key_disk_cache
 #define DBG_ASSERT(x)
 #endif
 
+/* needed by execute transport in the TSP */
+#define TSS_TPM_TXBLOB_HDR_LEN		(sizeof(UINT16) + (2 * sizeof(UINT32)))
+
 #endif
