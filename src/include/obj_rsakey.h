@@ -100,6 +100,7 @@ TSS_RESULT obj_rsakey_get_by_pub(UINT32, BYTE *, TSS_HKEY *);
 TSS_RESULT obj_rsakey_get_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE *);
 TSS_RESULT obj_rsakey_set_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE);
 void       obj_rsakey_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
+TSS_RESULT obj_rsakey_get_transport_attribs(TSS_HKEY, TCS_KEY_HANDLE *, TPM_DIGEST *);
 
 #define RSAKEY_LIST_DECLARE		struct obj_list rsakey_list
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list
