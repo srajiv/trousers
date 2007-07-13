@@ -243,3 +243,58 @@ merge_key_hierarchies(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO *
 	return TSS_SUCCESS;
 }
 
+#if 0
+TSS_RESULT
+load_from_system_ps(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TSS_HKEY *phKey)
+{
+	TCS_KEY_HANDLE tcsKeyHandle;
+	TCS_LOADKEY_INFO info;
+	BYTE *keyBlob = NULL;
+
+	memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
+
+	result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info, &tcsKeyHandle);
+
+	if (TSS_ERROR_CODE(result) == TCS_E_KM_LOADFAILED) {
+		TSS_HKEY keyHandle;
+		TSS_HPOLICY hPolicy;
+
+		/* load failed, due to some key in the chain needing auth
+		 * which doesn't yet exist at the TCS level. However, the
+		 * auth may already be set in policies at the TSP level.
+		 * To find out, get the key handle of the key requiring
+		 * auth. First, look at the list of keys in memory. */
+		if ((obj_rsakey_get_by_uuid(&info.parentKeyUUID, &keyHandle))) {
+			/* If that failed, look on disk, in User PS. */
+			if (ps_get_key_by_uuid(tspContext, &info.parentKeyUUID, &keyHandle))
+				return result;
+		}
+
+		if (obj_rsakey_get_policy(keyHandle, TSS_POLICY_USAGE, &hPolicy, NULL))
+			return result;
+
+		if (secret_PerformAuth_OIAP(keyHandle, TPM_ORD_LoadKey, hPolicy, &info.paramDigest,
+					    &info.authData))
+			return result;
+
+		if ((result = TCSP_LoadKeyByUUID(tspContext, *uuid, &info, &tcsKeyHandle)))
+			return result;
+	} else if (result)
+		return result;
+
+	if ((result = TCS_GetRegisteredKeyBlob(tspContext, *uuid, &keyBlobSize, &keyBlob)))
+		return result;
+
+	if ((result = obj_rsakey_add_by_key(tspContext, uuid, keyBlob, TSS_OBJ_FLAG_SYSTEM_PS,
+					    phKey))) {
+		free(keyBlob);
+		return result;
+	}
+
+	result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle);
+
+	free(keyBlob);
+
+	return result;
+}
+#endif
