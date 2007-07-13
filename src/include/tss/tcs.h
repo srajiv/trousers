@@ -2,6 +2,7 @@
 #define TCS_H
 #include <tss/platform.h>
 #include <tss/tss_structs.h>
+#include <tss/tcs_defines.h> /* XXX added by the trousers project */
 #include <tss/tcs_typedef.h>
 #include <tss/tcs_structs.h>
 #include <tss/tcs_error.h>
