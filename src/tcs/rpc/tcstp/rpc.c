@@ -121,6 +121,9 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_UINT32:
 			LoadBlob_UINT32(offset, *((UINT32 *) (data)), blob);
 			break;
+		case TCSD_PACKET_TYPE_UINT64:
+			LoadBlob_UINT64(offset, *((UINT64 *) (data)), blob);
+			break;
 		case TCSD_PACKET_TYPE_PBYTE:
 			LoadBlob(offset, data_size, blob, data);
 			break;
@@ -563,9 +566,12 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_GetCredential,"GetCredential"},
 	{tcs_wrap_NV_DefineOrReleaseSpace,"NVDefineOrReleaseSpace"},
 	{tcs_wrap_NV_WriteValue,"NVWriteValue"},
-	{tcs_wrap_NV_WriteValueAuth,"NVWriteValueAuth"}, /* 90 */
-	{tcs_wrap_NV_ReadValue,"NVReadValue"},
-	{tcs_wrap_NV_ReadValueAuth,"NVReadValueAuth"}
+	{tcs_wrap_NV_WriteValueAuth,"NVWriteValueAuth"},
+	{tcs_wrap_NV_ReadValue,"NVReadValue"}, /* 90 */
+	{tcs_wrap_NV_ReadValueAuth,"NVReadValueAuth"},
+	{tcs_wrap_EstablishTransport,"EstablishTransport"},
+	{tcs_wrap_ExecuteTransport,"ExecuteTransport"},
+	{tcs_wrap_ReleaseTransportSigned,"ReleaseTransportSigned"}
 };
 
 int
