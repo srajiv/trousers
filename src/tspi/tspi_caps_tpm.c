@@ -58,23 +58,30 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	case TSS_TPMCAP_FLAG:
 		fOwnerAuth = TRUE;
 		break;
-	case TSS_TPMCAP_ALG:	/*  Queries whether an algorithm is supported by the TPM. */
+	case TSS_TPMCAP_ALG:
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
-		tcsCapArea = TCPA_CAP_ALG;
+		tcsCapArea = TPM_CAP_ALG;
+
 		switch (*(UINT32 *)rgbSubCap) {
 			case TSS_ALG_RSA:
-				tcsSubCap = TCPA_ALG_RSA;
+				tcsSubCap = TPM_ALG_RSA;
 				break;
-			case TSS_ALG_AES:
-				tcsSubCap = TCPA_ALG_AES;
+			case TSS_ALG_AES128:
+				tcsSubCap = TPM_ALG_AES128;
+				break;
+			case TSS_ALG_AES192:
+				tcsSubCap = TPM_ALG_AES192;
+				break;
+			case TSS_ALG_AES256:
+				tcsSubCap = TPM_ALG_AES256;
 				break;
 			case TSS_ALG_3DES:
-				tcsSubCap = TCPA_ALG_3DES;
+				tcsSubCap = TPM_ALG_3DES;
 				break;
 			case TSS_ALG_DES:
-				tcsSubCap = TCPA_ALG_DES;
+				tcsSubCap = TPM_ALG_DES;
 				break;
 			default:
 				tcsSubCap = *(UINT32 *)rgbSubCap;
@@ -119,6 +126,14 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 			tcsSubCap = TPM_CAP_PROP_MIN_COUNTER;
 		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_ACTIVECOUNTER) {
 			tcsSubCap = TPM_CAP_PROP_ACTIVE_COUNTER;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_TRANSESSIONS) {
+			tcsSubCap = TPM_CAP_PROP_TRANSSESS;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXTRANSESSIONS) {
+			tcsSubCap = TPM_CAP_PROP_MAX_TRANSSESS;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SESSIONS) {
+			tcsSubCap = TPM_CAP_PROP_SESSIONS;
+		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXSESSIONS) {
+			tcsSubCap = TPM_CAP_PROP_MAX_SESSIONS;
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 		break;
