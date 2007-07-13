@@ -147,6 +147,24 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			return TCSERR(TSS_E_FAIL);
 		}
 		break;
+	case TSS_TCSCAP_TRANSPORT:
+		tcsSubCapContainer = Decode_UINT32(subCap);
+		/* A zero value here means the TSP is asking whether we support transport sessions
+		 * at all */
+		if (tcsSubCapContainer == TSS_TCSCAP_TRANS_EXCLUSIVE ||
+		    tcsSubCapContainer == 0) {
+			*respSize = sizeof(TSS_BOOL);
+			*resp = malloc(sizeof(TSS_BOOL));
+			if (*resp == NULL) {
+				LogError("malloc of %zd byte failed.", sizeof(TSS_BOOL));
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			*(TSS_BOOL *)(*resp) = TRUE;
+		} else {
+			LogDebugFn("Bad subcap");
+			return TCSERR(TSS_E_FAIL);
+		}
+		break;
 	default:
 		return TCSERR(TSS_E_FAIL);
 	}
