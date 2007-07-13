@@ -50,6 +50,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 
 	/* This key is in the System Persistant storage */
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+#if 1
 		memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
 
 		result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info, &tcsKeyHandle);
@@ -74,10 +75,8 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 						  &hPolicy, NULL))
 				return result;
 
-			if (secret_PerformAuth_OIAP(keyHandle,
-						    TPM_ORD_LoadKey,
-						    hPolicy, &info.paramDigest,
-						    &info.authData))
+			if (secret_PerformAuth_OIAP(keyHandle, TPM_ORD_LoadKey, hPolicy, FALSE,
+						    &info.paramDigest, &info.authData))
 				return result;
 
 			if ((result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info,
@@ -99,6 +98,10 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle);
 
 		free (keyBlob);
+#else
+		if ((result = load_from_system_ps(tspContext, &uuidData, phKey)))
+			return result;
+#endif
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		if ((result = ps_get_parent_uuid_by_uuid(&uuidData, &parentUUID)))
 			return result;
