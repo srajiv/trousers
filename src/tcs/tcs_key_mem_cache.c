@@ -56,7 +56,7 @@ getNextTcsKeyHandle()
 
 	do {
 		ret = NextTcsKeyHandle++;
-	} while (NextTcsKeyHandle == SRK_TPM_HANDLE);
+	} while (NextTcsKeyHandle == SRK_TPM_HANDLE || NextTcsKeyHandle == NULL_TCS_HANDLE);
 
 	MUTEX_UNLOCK(tcs_keyhandle_lock);
 
@@ -90,7 +90,7 @@ mc_get_pub_by_slot(TCPA_KEY_HANDLE tpm_handle)
 		LogDebugFn("TCSD mem_cached handle: 0x%x",
 			   tmp->tcs_handle);
 		if (tmp->tpm_handle == tpm_handle) {
-			ret = &tmp->blob->pubKey;
+			ret = tmp->blob ? &tmp->blob->pubKey : NULL;
 			return ret;
 		}
 	}
@@ -111,7 +111,7 @@ mc_get_pub_by_handle(TCS_KEY_HANDLE tcs_handle)
 		LogDebugFn("TCSD mem_cached handle: 0x%x",
 			 tmp->tcs_handle);
 		if (tmp->tcs_handle == tcs_handle) {
-			ret = &tmp->blob->pubKey;
+			ret = tmp->blob ? &tmp->blob->pubKey : NULL;
 			return ret;
 		}
 	}
@@ -203,7 +203,8 @@ mc_get_uuid_by_pub(TCPA_STORE_PUBKEY *pub)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (tmp->blob->pubKey.keyLength == pub->keyLength &&
+		if (tmp->blob &&
+		    tmp->blob->pubKey.keyLength == pub->keyLength &&
 		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			ret = &tmp->uuid;
 			return ret;
@@ -239,7 +240,7 @@ mc_get_handle_by_encdata(BYTE *encData)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (tmp->blob->encSize == 0)
+		if (!tmp->blob || tmp->blob->encSize == 0)
 			continue;
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
 			ret = tmp->tcs_handle;
@@ -261,7 +262,7 @@ mc_update_encdata(BYTE *encData, BYTE *newEncData)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (tmp->blob->encSize == 0)
+		if (!tmp->blob || tmp->blob->encSize == 0)
 			continue;
 		if (!memcmp(tmp->blob->encData, encData, tmp->blob->encSize)) {
 			tmp_enc_data = (BYTE *)malloc(tmp->blob->encSize);
@@ -314,6 +315,9 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 		entry->time_stamp = getNextTimeStamp();
 
 	entry->tpm_handle = tpm_handle;
+
+	if (!key_blob)
+		goto add;
 
 	/* allocate space for the blob */
 	entry->blob = calloc(1, sizeof(TCPA_KEY));
@@ -382,7 +386,7 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 		memcpy(entry->blob->encData, key_blob->encData, key_blob->encSize);
 	}
 	entry->blob->encSize = key_blob->encSize;
-
+add:
 	/* add to the front of the list */
 	entry->next = key_mem_cache_head;
 	if (key_mem_cache_head) {
@@ -411,8 +415,10 @@ mc_remove_entry(TCS_KEY_HANDLE tcs_handle)
 
 	for (cur = key_mem_cache_head; cur; cur = cur->next) {
 		if (cur->tcs_handle == tcs_handle) {
-			destroy_key_refs(cur->blob);
-			free(cur->blob);
+			if (cur->blob) {
+				destroy_key_refs(cur->blob);
+				free(cur->blob);
+			}
 
 			if (cur->prev != NULL)
 				cur->prev->next = cur->next;
@@ -596,13 +602,13 @@ key_mgr_load_by_blob(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hUnwrappingKey,
 
 	MUTEX_LOCK(mem_cache_lock);
 
-	if (phKeyHMAC) {
+	if (TPM_VERSION(1,2)) {
+		result = TCSP_LoadKey2ByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
+						      rgbWrappedKeyBlob, pAuth, phKeyTCSI);
+	} else {
 		result = TCSP_LoadKeyByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
 						     rgbWrappedKeyBlob, pAuth, phKeyTCSI,
 						     phKeyHMAC);
-	} else {
-		result = TCSP_LoadKey2ByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
-						      rgbWrappedKeyBlob, pAuth, phKeyTCSI);
 	}
 
 	MUTEX_UNLOCK(mem_cache_lock);
@@ -668,8 +674,10 @@ key_mgr_ref_count()
 				internal_EvictByKeySlot(cur->tpm_handle);
 			}
 			LogDebugFn("Key 0x%x being freed", cur->tcs_handle);
-			destroy_key_refs(cur->blob);
-			free(cur->blob);
+			if (cur->blob) {
+				destroy_key_refs(cur->blob);
+				free(cur->blob);
+			}
 			if (cur->prev != NULL)
 				cur->prev->next = cur->next;
 			if (cur->next != NULL)
@@ -739,7 +747,8 @@ mc_get_slot_by_pub(TCPA_STORE_PUBKEY *pub)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
+		if (tmp->blob &&
+		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			ret = tmp->tpm_handle;
 			return ret;
 		}
@@ -760,7 +769,8 @@ mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub, TCS_KEY_HANDLE parent)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (pub->keyLength == tmp->blob->pubKey.keyLength &&
+		if (tmp->blob &&
+		    pub->keyLength == tmp->blob->pubKey.keyLength &&
 		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			if (parent) {
 				if (!tmp->parent)
@@ -772,8 +782,8 @@ mc_get_handle_by_pub(TCPA_STORE_PUBKEY *pub, TCS_KEY_HANDLE parent)
 		}
 	}
 
-	LogDebugFn("returning NULL_TPM_HANDLE");
-	return NULL_TPM_HANDLE;
+	LogDebugFn("returning NULL_TCS_HANDLE");
+	return NULL_TCS_HANDLE;
 }
 
 /* only called from load key paths, so no locking */
@@ -789,7 +799,8 @@ mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 			LogDebugFn("skipping the SRK");
 			continue;
 		}
-		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
+		if (tmp->blob &&
+		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			if (tmp->parent && tmp->parent->blob) {
 				ret = &tmp->parent->blob->pubKey;
 				LogDebugFn("Success");
@@ -813,7 +824,8 @@ mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
-		if (!memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
+		if (tmp->blob &&
+		    !memcmp(tmp->blob->pubKey.key, pub->key, pub->keyLength)) {
 			*ret_key = tmp->blob;
 			return TSS_SUCCESS;
 		}
