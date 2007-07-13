@@ -28,6 +28,7 @@ TSS_RESULT
 secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 			UINT32 ulPendingFn,
 			TSS_HPOLICY hPolicy,
+			TSS_BOOL cas, /* continue auth session */
 			TCPA_DIGEST *hashDigest,
 			TPM_AUTH *auth)
 {
@@ -50,7 +51,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 	if ((result = obj_policy_get_mode(hPolicy, &mode)))
 		return result;
 
-	if ((result = Init_AuthNonce(tspContext, auth)))
+	if ((result = Init_AuthNonce(tspContext, cas, auth)))
 		return result;
 
 	/* added retry logic */
@@ -322,12 +323,13 @@ secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 }
 
 TSS_RESULT
-Init_AuthNonce(TSS_HCONTEXT tspContext, TPM_AUTH * auth)
+Init_AuthNonce(TSS_HCONTEXT tspContext, TSS_BOOL cas, TPM_AUTH * auth)
 {
 	TSS_RESULT result;
 
-	auth->fContinueAuthSession = 0x00;
-	if ((result = internal_GetRandomNonce(tspContext, &auth->NonceOdd))) {
+	auth->fContinueAuthSession = cas;
+	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+				       (BYTE **)auth->NonceOdd.nonce))) {
 		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -377,7 +379,8 @@ OSAP_Calc(TSS_HCONTEXT tspContext, UINT16 EntityType, UINT32 EntityValue,
 	BYTE xorMigAuth[20];
 	UINT32 i;
 
-	if ((rc = internal_GetRandomNonce(tspContext, &auth->NonceOdd))) {
+	if ((rc = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+				   (BYTE **)auth->NonceOdd.nonce))) {
 		LogError("Failed creating random nonce");
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
