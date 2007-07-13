@@ -19,8 +19,12 @@ struct keys_loaded
 	struct keys_loaded *next;
 };
 
+#define TSS_CONTEXT_FLAG_TRANSPORT_EXCLUSIVE	0x1
+#define TSS_CONTEXT_FLAG_TRANSPORT_ENCRYPTED	0x2
+#define TSS_CONTEXT_FLAG_TRANSPORT_ENABLED	0x4
 
 struct tcs_context {
+	TSS_FLAG flags;
 	TCS_CONTEXT_HANDLE handle;
 	COND_VAR cond; /* used in waiting for an auth ctx to become available */
 	struct keys_loaded *keys;

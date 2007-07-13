@@ -4,22 +4,42 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
 #ifndef _OBJ_CONTEXT_H_
 #define _OBJ_CONTEXT_H_
 
+#define TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED		0x01
+#define TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT	0x02
+#define TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC		0x04
+#define TSS_CONTEXT_FLAGS_TRANSPORT_EXCLUSIVE		0x08
+#define TSS_CONTEXT_FLAGS_TRANSPORT_STATIC_AUTH		0x10
+#define TSS_CONTEXT_FLAGS_TRANSPORT_ESTABLISHED		0x20
+#define TSS_CONTEXT_FLAGS_TRANSPORT_MASK		0x3f
+
+#define TSS_CONTEXT_FLAGS_TPM_VERSION_1			0x40
+#define TSS_CONTEXT_FLAGS_TPM_VERSION_2			0x80
+#define TSS_CONTEXT_FLAGS_TPM_VERSION_MASK		0xc0
+
 /* structures */
 struct tr_context_obj {
-	TSS_FLAG silentMode;
+	TSS_FLAG silentMode, flags;
 	UINT32 hashMode;
 	TSS_HPOLICY policy;
-	TCS_CONTEXT_HANDLE tcsHandle;
 	BYTE *machineName;
 	UINT32 machineNameLength;
 	UINT32 connection_policy, current_connection;
+	/* transport session support */
+	TSS_HKEY transKey;
+	TPM_TRANSPORT_PUBLIC transPub;
+	TPM_MODIFIER_INDICATOR transMod;
+	TPM_TRANSPORT_AUTH transSecret;
+	TPM_AUTH transAuth;
+	TPM_TRANSPORT_LOG_IN transLogIn;
+	TPM_TRANSPORT_LOG_OUT transLogOut;
+	TPM_DIGEST transLogDigest;
 };
 
 /* obj_context.c */
@@ -38,6 +58,20 @@ TSS_RESULT obj_context_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_set_hash_mode(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_context_get_connection_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_set_connection_policy(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_set_transport_key(TSS_HCONTEXT, TSS_HKEY);
+TSS_RESULT obj_context_transport_get_control(TSS_HCONTEXT, UINT32, UINT32 *);
+TSS_RESULT obj_context_transport_set_control(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_transport_get_mode(TSS_HCONTEXT, UINT32, UINT32 *);
+TSS_RESULT obj_context_transport_set_mode(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_transport_init(TSS_HCONTEXT);
+TSS_RESULT obj_context_transport_establish(TSS_HCONTEXT, struct tr_context_obj *);
+TSS_RESULT obj_context_transport_execute(TSS_HCONTEXT, TPM_COMMAND_CODE, UINT32, BYTE*, TPM_DIGEST*,
+					 UINT32*, TCS_HANDLE**, TPM_AUTH*, TPM_AUTH*, UINT32*,
+					 BYTE**);
+TSS_RESULT obj_context_transport_close(TSS_HCONTEXT, TSS_HKEY, TSS_HPOLICY, TSS_BOOL,
+				       TPM_SIGN_INFO*, UINT32*, BYTE**);
+TSS_RESULT obj_context_set_tpm_version(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
 
 #define CONTEXT_LIST_DECLARE		struct obj_list context_list
 #define CONTEXT_LIST_DECLARE_EXTERN	extern struct obj_list context_list

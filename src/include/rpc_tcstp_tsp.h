@@ -25,7 +25,7 @@ TSS_RESULT sendit(struct host_table_entry *);
 short get_port();
 
 /* Context commands always included */
-TSS_RESULT TCS_OpenContext_RPC_TP(struct host_table_entry *, TCS_CONTEXT_HANDLE *);
+TSS_RESULT TCS_OpenContext_RPC_TP(struct host_table_entry *, UINT32 *, TCS_CONTEXT_HANDLE *);
 TSS_RESULT TCS_CloseContext_TP(struct host_table_entry *);
 TSS_RESULT TCS_FreeMemory_TP(struct host_table_entry *,BYTE *);
 
@@ -291,6 +291,16 @@ TSS_RESULT TCSP_TickStampBlob_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_NO
 #else
 #define TCSP_ReadCurrentTicks_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_TickStampBlob_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT TCSP_EstablishTransport_TP(struct host_table_entry *, UINT32, TCS_KEY_HANDLE, UINT32, BYTE*, UINT32, BYTE*, TPM_AUTH*, TPM_MODIFIER_INDICATOR*, TCS_HANDLE*, UINT32*, BYTE**, TPM_NONCE*);
+TSS_RESULT TCSP_ExecuteTransport_TP(struct host_table_entry *,TPM_COMMAND_CODE, UINT32, BYTE*, UINT32*, TCS_HANDLE**, TPM_AUTH*, TPM_AUTH*, TPM_AUTH*, UINT64*, TPM_MODIFIER_INDICATOR*, TPM_RESULT*, UINT32*, BYTE**);
+TSS_RESULT TCSP_ReleaseTransportSigned_TP(struct host_table_entry *, TCS_KEY_HANDLE, TPM_NONCE *, TPM_AUTH*, TPM_AUTH*, TPM_MODIFIER_INDICATOR*, UINT32*, BYTE**, UINT32*, BYTE**);
+#else
+#define TCSP_EstablishTransport_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ExecuteTransport_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ReleaseTransportSigned_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_NV

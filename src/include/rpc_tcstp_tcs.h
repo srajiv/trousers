@@ -274,6 +274,16 @@ DECLARE_TCSTP_FUNC(TickStampBlob);
 #define tcs_wrap_TickStampBlob		tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_TRANSPORT
+DECLARE_TCSTP_FUNC(EstablishTransport);
+DECLARE_TCSTP_FUNC(ExecuteTransport);
+DECLARE_TCSTP_FUNC(ReleaseTransportSigned);
+#else
+#define tcs_wrap_EstablishTransport	tcs_wrap_Error
+#define tcs_wrap_ExecuteTransport	tcs_wrap_Error
+#define tcs_wrap_ReleaseTransportSigned	tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
