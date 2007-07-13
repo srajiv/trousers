@@ -20,6 +20,7 @@
 #include "hosttable.h"
 #include "tsplog.h"
 #include "rpc_tcstp_tsp.h"
+#include "obj_context.h"
 
 TSS_RESULT
 TCS_OpenContext_RPC(TSS_HCONTEXT tspContext, BYTE *hostname, int type)
@@ -27,6 +28,7 @@ TCS_OpenContext_RPC(TSS_HCONTEXT tspContext, BYTE *hostname, int type)
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE tcsContext;
 	struct host_table_entry *entry;
+	UINT32 tpm_version;
 
 	/* add_table_entry() will make sure an entry doesn't already exist for this tsp context */
 	if ((result = add_table_entry(tspContext, hostname, type, &entry)))
@@ -34,10 +36,15 @@ TCS_OpenContext_RPC(TSS_HCONTEXT tspContext, BYTE *hostname, int type)
 
 	switch (type) {
 		case CONNECTION_TYPE_TCP_PERSISTANT:
-			if ((result = TCS_OpenContext_RPC_TP(entry, &tcsContext)) == TSS_SUCCESS)
-				entry->tcsContext = tcsContext;
-			else
+			if ((result = TCS_OpenContext_RPC_TP(entry, &tpm_version, &tcsContext)))
 				remove_table_entry(tspContext);
+			else {
+				entry->tcsContext = tcsContext;
+				if (obj_context_set_tpm_version(tspContext, tpm_version)) {
+					remove_table_entry(tspContext);
+					result = TSPERR(TSS_E_INTERNAL_ERROR);
+				}
+			}
 			return result;
 		default:
 			break;
@@ -2275,6 +2282,126 @@ TCSP_TickStampBlob(TSS_HCONTEXT   tspContext,		/* in */
 	return result;
 }
 
+
+TSS_RESULT
+TCSP_EstablishTransport(TSS_HCONTEXT            tspContext,
+			UINT32                  ulTransControlFlags,
+			TCS_KEY_HANDLE          hEncKey,
+			UINT32                  ulTransSessionInfoSize,
+			BYTE*                   rgbTransSessionInfo,
+			UINT32                  ulSecretSize,
+			BYTE*                   rgbSecret,
+			TPM_AUTH*               pEncKeyAuth,		/* in, out */
+			TPM_MODIFIER_INDICATOR* pbLocality,
+			TCS_HANDLE*             hTransSession,
+			UINT32*                 ulCurrentTicksSize,
+			BYTE**                  prgbCurrentTicks,
+			TPM_NONCE*              pTransNonce)
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_EstablishTransport_TP(entry, ulTransControlFlags, hEncKey,
+							    ulTransSessionInfoSize,
+							    rgbTransSessionInfo, ulSecretSize,
+							    rgbSecret, pEncKeyAuth, pbLocality,
+							    hTransSession, ulCurrentTicksSize,
+							    prgbCurrentTicks, pTransNonce);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+
+TSS_RESULT
+TCSP_ExecuteTransport(TSS_HCONTEXT            tspContext,
+		      TPM_COMMAND_CODE        unWrappedCommandOrdinal,
+		      UINT32                  ulWrappedCmdParamInSize,
+		      BYTE*                   rgbWrappedCmdParamIn,
+		      UINT32*                 pulHandleListSize,	/* in, out */
+		      TCS_HANDLE**            rghHandles,		/* in, out */
+		      TPM_AUTH*               pWrappedCmdAuth1,		/* in, out */
+		      TPM_AUTH*               pWrappedCmdAuth2,		/* in, out */
+		      TPM_AUTH*               pTransAuth,		/* in, out */
+		      UINT64*                 punCurrentTicks,
+		      TPM_MODIFIER_INDICATOR* pbLocality,
+		      TPM_RESULT*             pulWrappedCmdReturnCode,
+		      UINT32*                 ulWrappedCmdParamOutSize,
+		      BYTE**                  rgbWrappedCmdParamOut)
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ExecuteTransport_TP(entry, unWrappedCommandOrdinal,
+							  ulWrappedCmdParamInSize,
+							  rgbWrappedCmdParamIn, pulHandleListSize,
+							  rghHandles, pWrappedCmdAuth1,
+							  pWrappedCmdAuth2, pTransAuth,
+							  punCurrentTicks, pbLocality,
+							  pulWrappedCmdReturnCode,
+							  ulWrappedCmdParamOutSize,
+							  rgbWrappedCmdParamOut);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_ReleaseTransportSigned(TSS_HCONTEXT            tspContext,
+			    TCS_KEY_HANDLE          hSignatureKey,
+			    TPM_NONCE*              AntiReplayNonce,
+			    TPM_AUTH*               pKeyAuth,		/* in, out */
+			    TPM_AUTH*               pTransAuth,		/* in, out */
+			    TPM_MODIFIER_INDICATOR* pbLocality,
+			    UINT32*                 pulCurrentTicksSize,
+			    BYTE**                  prgbCurrentTicks,
+			    UINT32*                 pulSignatureSize,
+			    BYTE**                  prgbSignature)
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_ReleaseTransportSigned_TP(entry, hSignatureKey,
+								AntiReplayNonce, pKeyAuth,
+								pTransAuth, pbLocality,
+								pulCurrentTicksSize,
+								prgbCurrentTicks, pulSignatureSize,
+								prgbSignature);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT
 TCSP_NV_DefineOrReleaseSpace(TSS_HCONTEXT hContext,	/* in */
 			     UINT32 cPubInfoSize,	/* in */
@@ -2417,4 +2544,3 @@ TCSP_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
-
