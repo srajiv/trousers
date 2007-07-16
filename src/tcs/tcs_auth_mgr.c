@@ -300,7 +300,7 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 	if (result == TCSERR(TSS_E_INTERNAL_ERROR)) {
 		struct auth_map *tmp = auth_mgr.auth_mapper;
 
-		LogDebugFn("Thread %x growing the auth table to %u entries", THREAD_ID,
+		LogDebugFn("Thread %zd growing the auth table to %u entries", THREAD_ID,
 			   auth_mgr.auth_mapper_size + TSS_DEFAULT_AUTH_TABLE_SIZE);
 
 		auth_mgr.auth_mapper = calloc(auth_mgr.auth_mapper_size +
