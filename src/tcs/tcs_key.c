@@ -132,7 +132,7 @@ load_key_init(TPM_COMMAND_CODE   ord,
 	      TCS_KEY_HANDLE*    handle,
 	      TPM_KEY_HANDLE*    slot)
 {
-	TSS_RESULT result;
+	TSS_RESULT result = TSS_SUCCESS;
 	TPM_KEY key;
 	UINT64 offset;
 	TPM_KEY_HANDLE tpm_slot;
@@ -159,7 +159,6 @@ load_key_init(TPM_COMMAND_CODE   ord,
 				*handle = tcs_handle;
 				*slot = tpm_slot;
 				*load_key = FALSE;
-				result = TSS_SUCCESS;
 				goto done;
 			}
 		}
