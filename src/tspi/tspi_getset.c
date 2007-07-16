@@ -23,6 +23,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "tsp_audit.h"
 
 
 TSS_RESULT
@@ -213,6 +214,12 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 							       ulAttrib)))
 					return result;
 				break;
+#ifdef TSS_BUILD_AUDIT
+			case TSS_TSPATTRIB_TPM_ORDINAL_AUDIT_STATUS:
+				result = audit_set_ordinal_audit_status(hObject, attribFlag,
+									subFlag, ulAttrib);
+				break;
+#endif
 			default:
 				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
