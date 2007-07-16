@@ -53,6 +53,7 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_TPM_CollateIdentityRequest.3 \
 	    Tspi_TPM_CreateEndorsementKey.3 \
 	    Tspi_TPM_CreateMaintenanceArchive.3 \
+	    Tspi_TPM_DirRead.3 \
 	    Tspi_TPM_DirWrite.3 \
 	    Tspi_TPM_GetCapability.3 \
 	    Tspi_TPM_GetEvent.3 \
@@ -80,5 +81,6 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_DAA_IssueSetup.3 \
 	    Tspi_TPM_DAA_JoinStoreCredential.3 \
 	    Tspi_DAA_VerifyInit.3 \
-	    Tspi_TPM_DAA_Sign.3
+	    Tspi_TPM_DAA_Sign.3 \
+	    Tspi_TPM_GetAuditDigest.3
 EXTRA_DIST = $(man3_MANS)
