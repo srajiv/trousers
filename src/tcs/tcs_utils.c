@@ -440,3 +440,27 @@ UnloadBlob_KEY_HANDLE_LIST(UINT64 *offset, BYTE *blob, TCPA_KEY_HANDLE_LIST *lis
 
 	return TSS_SUCCESS;
 }
+
+void
+LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest)
+{
+	LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, digest->digest);
+}
+
+void
+UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest)
+{
+	UnloadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, digest->digest);
+}
+
+void
+LoadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *nonce)
+{
+	LoadBlob(offset, TCPA_NONCE_SIZE, blob, nonce->nonce);
+}
+
+void
+UnloadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *nonce)
+{
+	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, nonce->nonce);
+}

@@ -15,6 +15,7 @@
 
 #include "threads.h"
 #include "tcs_context.h"
+#include "tcs_tsp.h"
 
 struct key_mem_cache
 {
@@ -222,6 +223,10 @@ void LoadBlob_UUID(UINT64 *, BYTE *, TSS_UUID);
 void UnloadBlob_UUID(UINT64 *, BYTE *, TSS_UUID *);
 void LoadBlob_COUNTER_VALUE(UINT64 *, BYTE *, TPM_COUNTER_VALUE *);
 void UnloadBlob_COUNTER_VALUE(UINT64 *, BYTE *, TPM_COUNTER_VALUE *);
+void LoadBlob_DIGEST(UINT64 *, BYTE *, TPM_DIGEST *);
+void UnloadBlob_DIGEST(UINT64 *, BYTE *, TPM_DIGEST *);
+void LoadBlob_NONCE(UINT64 *, BYTE *, TPM_NONCE *);
+void UnloadBlob_NONCE(UINT64 *, BYTE *, TPM_NONCE *);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 void free_external_events(UINT32, TSS_PCR_EVENT *);
@@ -919,6 +924,35 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						  UINT32*		pulDataLength,	/* in, out */
 						  TPM_AUTH*		NVAuth,		/* in, out */
 						  BYTE**		rgbDataRead	/* out */
+	);
+
+	TSS_RESULT TCSP_SetOrdinalAuditStatus_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+						       TPM_AUTH*		ownerAuth,	/* in, out */
+						       UINT32			ulOrdinal,	/* in */
+						       TSS_BOOL			bAuditState	/* in */
+	);
+
+	TSS_RESULT TCSP_GetAuditDigest_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						UINT32			startOrdinal,		/* in */
+						TPM_DIGEST*		auditDigest,		/* out */
+						UINT32*			counterValueSize,	/* out */
+						BYTE**			counterValue,		/* out */
+						TSS_BOOL*		more,			/* out */
+						UINT32*			ordSize,		/* out */
+						UINT32**		ordList			/* out */
+	);
+
+	TSS_RESULT TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						      TCS_KEY_HANDLE		keyHandle,		/* in */
+						      TSS_BOOL			closeAudit,		/* in */
+						      TPM_NONCE			antiReplay,		/* in */
+						      TPM_AUTH*			privAuth,		/* in, out */
+						      UINT32*			counterValueSize,	/* out */
+						      BYTE**			counterValue,		/* out */
+						      TPM_DIGEST*		auditDigest,		/* out */
+						      TPM_DIGEST*		ordinalDigest,		/* out */
+						      UINT32*			sigSize,		/* out */
+						      BYTE**			sig			/* out */
 	);
 
 #endif /*_TCS_UTILS_H_ */
