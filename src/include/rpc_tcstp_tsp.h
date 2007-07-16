@@ -317,4 +317,14 @@ TSS_RESULT TCSP_NV_ReadValueAuth_TP(struct host_table_entry *hte, TSS_NV_INDEX, 
 #define TCSP_NV_ReadValueAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_AUDIT
+TSS_RESULT TCSP_SetOrdinalAuditStatus_TP(struct host_table_entry *hte, TPM_AUTH *, UINT32, TSS_BOOL);
+TSS_RESULT TCSP_GetAuditDigest_TP(struct host_table_entry *hte, UINT32, TPM_DIGEST *, UINT32 *, BYTE **, TSS_BOOL *, UINT32 *, UINT32 **);
+TSS_RESULT TCSP_GetAuditDigestSigned_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TSS_BOOL, TPM_NONCE, TPM_AUTH *, UINT32 *, BYTE **, TPM_DIGEST *, TPM_DIGEST *, UINT32 *, BYTE **);
+#else
+#define TCSP_SetOrdinalAuditStatus_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TSS_RESULT TCSP_GetAuditDigest_TP(...)      TSPERR(TSS_E_INTERNAL_ERROR)
+#define TSS_RESULT TCSP_GetAuditDigestSigned_TP(...)      TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif

@@ -571,7 +571,10 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_NV_ReadValueAuth,"NVReadValueAuth"},
 	{tcs_wrap_EstablishTransport,"EstablishTransport"},
 	{tcs_wrap_ExecuteTransport,"ExecuteTransport"},
-	{tcs_wrap_ReleaseTransportSigned,"ReleaseTransportSigned"}
+	{tcs_wrap_ReleaseTransportSigned,"ReleaseTransportSigned"},
+	{tcs_wrap_SetOrdinalAuditStatus,"SetOrdinalAuditStatus"}, /* 95 */
+	{tcs_wrap_GetAuditDigest,"GetAuditDigest"},
+	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"}
 };
 
 int

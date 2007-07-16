@@ -284,6 +284,16 @@ DECLARE_TCSTP_FUNC(ReleaseTransportSigned);
 #define tcs_wrap_ReleaseTransportSigned	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_AUDIT
+DECLARE_TCSTP_FUNC(SetOrdinalAuditStatus);
+DECLARE_TCSTP_FUNC(GetAuditDigest);
+DECLARE_TCSTP_FUNC(GetAuditDigestSigned);
+#else
+#define tcs_wrap_SetOrdinalAuditStatus	tcs_wrap_Error
+#define tcs_wrap_GetAuditDigest		tcs_wrap_Error
+#define tcs_wrap_GetAuditDigestSigned	tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);

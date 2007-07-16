@@ -2544,3 +2544,99 @@ TCSP_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
+#ifdef TSS_BUILD_AUDIT
+TSS_RESULT
+TCSP_SetOrdinalAuditStatus(TCS_CONTEXT_HANDLE hContext,	/* in */
+			   TPM_AUTH *ownerAuth,		/* in/out */
+			   UINT32 ulOrdinal,		/* in */
+			   TSS_BOOL bAuditState)	/* in */
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_SetOrdinalAuditStatus_TP(entry, ownerAuth, ulOrdinal,
+								bAuditState);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_GetAuditDigest(TCS_CONTEXT_HANDLE hContext,	/* in */
+		    UINT32 startOrdinal,		/* in */
+		    TPM_DIGEST *auditDigest,		/* out */
+		    UINT32 *counterValueSize,		/* out */
+		    BYTE **counterValue,		/* out */
+		    TSS_BOOL *more,			/* out */
+		    UINT32 *ordSize,			/* out */
+		    UINT32 **ordList)			/* out */
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_GetAuditDigest_TP(entry, startOrdinal, auditDigest,
+							counterValueSize, counterValue, more,
+							ordSize, ordList);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_GetAuditDigestSigned(TCS_CONTEXT_HANDLE hContext,	/* in */
+			  TCS_KEY_HANDLE keyHandle,	/* in */
+			  TSS_BOOL closeAudit,		/* in */
+			  TPM_NONCE antiReplay,		/* in */
+			  TPM_AUTH *privAuth,		/* in/out */
+			  UINT32 *counterValueSize,	/* out */
+			  BYTE **counterValue,		/* out */
+			  TPM_DIGEST *auditDigest,	/* out */
+			  TPM_DIGEST *ordinalDigest,	/* out */
+			  UINT32 *sigSize,		/* out */
+			  BYTE **sig)			/* out */
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_GetAuditDigestSigned_TP(entry, keyHandle, closeAudit,
+								antiReplay, privAuth,
+								counterValueSize, counterValue,
+								auditDigest, ordinalDigest,
+								sigSize, sig);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+
+	return result;
+}
+#endif
