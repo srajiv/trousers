@@ -21,6 +21,9 @@ struct tr_encdata_obj {
 	BYTE encryptedData[512]; /* XXX get rid of hardcoded size */
 	TCPA_PCR_INFO pcrInfo; /* XXX use a link to a PCR object here */
 	UINT32 type;
+#ifdef TSS_BUILD_SEALX
+	UINT32 protectMode;
+#endif
 };
 
 /* obj_encdata.c */
@@ -38,6 +41,10 @@ TSS_RESULT obj_encdata_get_pcr_selection(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_policy(TSS_HENCDATA, UINT32, TSS_HPOLICY *);
 TSS_RESULT obj_encdata_set_pcr_info(TSS_HENCDATA, BYTE *);
 void       obj_encdata_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT obj_encdata_set_seal_protect_mode(TSS_HENCDATA, UINT32);
+TSS_RESULT obj_encdata_get_seal_protect_mode(TSS_HENCDATA, UINT32 *);
+#endif
 
 
 #define ENCDATA_LIST_DECLARE		struct obj_list encdata_list

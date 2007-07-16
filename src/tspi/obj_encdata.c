@@ -393,3 +393,41 @@ obj_encdata_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT
+obj_encdata_set_seal_protect_mode(TSS_HENCDATA hEncData, UINT32 protectMode)
+{
+	struct tsp_object *obj;
+	struct tr_encdata_obj *encdata;
+
+	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	encdata = (struct tr_encdata_obj *)obj->data;
+
+	encdata->protectMode = protectMode;
+
+	obj_list_put(&encdata_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_encdata_get_seal_protect_mode(TSS_HENCDATA hEncData, UINT32 *protectMode)
+{
+	struct tsp_object *obj;
+	struct tr_encdata_obj *encdata;
+
+	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	encdata = (struct tr_encdata_obj *)obj->data;
+
+	*protectMode = encdata->protectMode;
+
+	obj_list_put(&encdata_list);
+
+	return TSS_SUCCESS;
+}
+#endif
+
