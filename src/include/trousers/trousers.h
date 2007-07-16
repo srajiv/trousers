@@ -87,6 +87,7 @@ void Trspi_LoadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE 
 void Trspi_LoadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t);
 void Trspi_LoadBlob_TRANSPORT_AUTH(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_AUTH *t);
 void Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s);
+void Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest);
 
 /* Cryptographic Functions */
 

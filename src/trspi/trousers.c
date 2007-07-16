@@ -31,6 +31,12 @@
 
 
 void
+Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest)
+{
+	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
+}
+
+void
 Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest)
 {
 	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
