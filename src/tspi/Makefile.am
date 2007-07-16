@@ -196,6 +196,10 @@ if TSS_BUILD_ASN1
 libtspi_la_SOURCES+=tspi_asn1.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_ASN1
 endif
+if TSS_BUILD_AUDIT
+libtspi_la_SOURCES+=tspi_audit.c tsp_audit.c rpc/@RPC@/rpc_audit.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_AUDIT
+endif
 
 if HAVE_GTK
 libtspi_la_CFLAGS+=@GTK_CFLAGS@

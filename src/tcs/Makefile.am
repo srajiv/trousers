@@ -116,3 +116,7 @@ if TSS_BUILD_NV
 libtcs_a_SOURCES+=tcsi_nv.c rpc/@RPC@/rpc_nv.c
 libtcs_a_CFLAGS+=-DTSS_BUILD_NV
 endif
+if TSS_BUILD_AUDIT
+libtcs_a_SOURCES+=tcsi_audit.c rpc/@RPC@/rpc_audit.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_AUDIT
+endif
