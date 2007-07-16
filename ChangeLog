@@ -1,4 +1,5 @@
 
+- Added ordinal auditing support.
 - Added initial transport session support.
 - Rewrote TCSD key loading functions.
 - Added support for UINT64 loading/unloading everywhere.
