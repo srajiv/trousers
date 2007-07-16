@@ -225,6 +225,7 @@ if test "x$API" == "x1.2"; then
 	AM_CONDITIONAL(TSS_BUILD_ASN1, true)
 	AM_CONDITIONAL(TSS_BUILD_NV, true)
 	AM_CONDITIONAL(TSS_BUILD_AUDIT, true)
+	AM_CONDITIONAL(TSS_BUILD_SEALX, true)
 else
 	AM_CONDITIONAL(TSS_BUILD_TSS12, false)
 	AM_CONDITIONAL(TSS_BUILD_DAA, false)
@@ -235,6 +236,7 @@ else
 	AM_CONDITIONAL(TSS_BUILD_ASN1, false)
 	AM_CONDITIONAL(TSS_BUILD_NV, false)
 	AM_CONDITIONAL(TSS_BUILD_AUDIT, false)
+	AM_CONDITIONAL(TSS_BUILD_SEALX, false)
 fi
 
 #
@@ -248,11 +250,13 @@ AM_CONDITIONAL(TSS_BUILD_GET_FLAGS, test -z $TSS_BUILD_ADMIN_TRUE || \
 AM_CONDITIONAL(TSS_BUILD_PCRS_LIST, test -z $TSS_BUILD_SEAL_TRUE || \
 				    test -z $TSS_BUILD_QUOTE_TRUE || \
 				    test -z $TSS_BUILD_PCRS_TRUE || \
-				    test -z $TSS_BUILD_PCR_COMP_TRUE)
+				    test -z $TSS_BUILD_PCR_COMP_TRUE || \
+				    test -z $TSS_BUILD_SEALX_TRUE)
 AM_CONDITIONAL(TSS_BUILD_HASH_LIST, test -z $TSS_BUILD_SIGN_TRUE || test -z $TSS_BUILD_HASH_TRUE)
 AM_CONDITIONAL(TSS_BUILD_ENCDATA_LIST, test -z $TSS_BUILD_SEAL_TRUE || \
 				       test -z $TSS_BUILD_CHANGEAUTH_TRUE || \
-				       test -z $TSS_BUILD_BIND_TRUE)
+				       test -z $TSS_BUILD_BIND_TRUE || \
+				       test -z $TSS_BUILD_SEALX_TRUE)
 AM_CONDITIONAL(TSS_BUILD_RSAKEY_LIST, test -z $TSS_BUILD_ADMIN_TRUE || \
 				      test -z $TSS_BUILD_EK_TRUE || \
 				      test -z $TSS_BUILD_MIGRATION_TRUE || \
@@ -267,7 +271,8 @@ AM_CONDITIONAL(TSS_BUILD_RSAKEY_LIST, test -z $TSS_BUILD_ADMIN_TRUE || \
 				      test -z $TSS_BUILD_PS_TRUE || \
 				      test -z $TSS_BUILD_SEAL_TRUE || \
 				      test -z $TSS_BUILD_DAA_TRUE || \
-				      test -z $TSS_BUILD_KEY_TRUE)
+				      test -z $TSS_BUILD_KEY_TRUE || \
+				      test -z $TSS_BUILD_SEALX_TRUE)
 AM_CONDITIONAL(TSS_BUILD_AUTH, test -z $TSS_BUILD_HASH_TRUE || \
 			       test -z $TSS_BUILD_CAPS_TRUE || \
 			       test -z $TSS_BUILD_CAPS_TPM_TRUE || \
@@ -278,6 +283,7 @@ AM_CONDITIONAL(TSS_BUILD_AUTH, test -z $TSS_BUILD_HASH_TRUE || \
 			       test -z $TSS_BUILD_QUOTE_TRUE || \
 			       test -z $TSS_BUILD_PCR_COMP_TRUE || \
 			       test -z $TSS_BUILD_SEAL_TRUE || \
+			       test -z $TSS_BUILD_SEALX_TRUE || \
 			       test -z $TSS_BUILD_CHANGEAUTH_TRUE || \
 			       test -z $TSS_BUILD_BIND_TRUE || \
 			       test -z $TSS_BUILD_OWN_TRUE || \
@@ -303,7 +309,8 @@ AM_CONDITIONAL(TSS_BUILD_ASYM_CRYPTO, test -z $TSS_BUILD_AIK_TRUE || \
 				      test -z $TSS_BUILD_SIGN_TRUE || \
 				      test -z $TSS_BUILD_KEY_TRUE || \
 				      test -z $TSS_BUILD_DAA_TRUE)
-AM_CONDITIONAL(TSS_BUILD_SYM_CRYPTO, test -z $TSS_BUILD_AIK_TRUE)
+AM_CONDITIONAL(TSS_BUILD_SYM_CRYPTO, test -z $TSS_BUILD_AIK_TRUE || \
+				     test -z $TSS_BUILD_TRANSPORT_TRUE)
 
 #GETTEXT_PACKAGE=trousers
 #AC_SUBST(GETTEXT_PACKAGE)
