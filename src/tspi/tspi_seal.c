@@ -42,10 +42,16 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	UINT32 pcrDataSize, pcrSelectSize;
 	BYTE pcrData[256];
 	TCS_KEY_HANDLE tcsKeyHandle;
+	TCPA_NONCE nonceOddOSAP;
 	TCPA_NONCE nonceEvenOSAP;
 	TCPA_DIGEST digAtCreation;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
+	UINT32 sealOrdinal;
+	BYTE *sealData;
+#ifdef TSS_BUILD_SEALX
+	UINT32 protectMode;
+#endif
 
 	if (rgbDataToSeal == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -86,29 +92,79 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 					     TCPA_ET_KEYHANDLE, tcsKeyHandle, &encAuthUsage,
 					     &encAuthMig, sharedSecret, &auth, &nonceEvenOSAP)))
 		return result;
+	nonceOddOSAP = auth.NonceOdd;
+
+#ifdef TSS_BUILD_SEALX
+	/* Get the TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE attribute
+	   to determine the seal function to invoke */
+	if ((result = obj_encdata_get_seal_protect_mode(hEncData, &protectMode)))
+		return result;
+
+	if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT) {
+		sealOrdinal = TPM_ORD_Seal;
+		sealData = rgbDataToSeal;
+	} else if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_PROTECT) {
+		sealOrdinal = TPM_ORD_Sealx;
+
+		/* Mask the input data before sending it */
+		if ((result = obj_policy_do_sealx_mask(hEncPolicy, hEncKey, hEncData, &auth,
+						       &nonceEvenOSAP, &nonceOddOSAP,
+						       ulDataLength, rgbDataToSeal,
+						       &sealData)))
+			return result;
+	} else
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+#else
+	sealOrdinal = TPM_ORD_Seal;
+	sealData = rgbDataToSeal;
+#endif
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Seal);
+	result |= Trspi_Hash_UINT32(&hashCtx, sealOrdinal);
 	result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, encAuthUsage.authdata);
 	result |= Trspi_Hash_UINT32(&hashCtx, pcrDataSize);
 	result |= Trspi_HashUpdate(&hashCtx, pcrDataSize, pcrData);
 	result |= Trspi_Hash_UINT32(&hashCtx, ulDataLength);
-	result |= Trspi_HashUpdate(&hashCtx, ulDataLength, rgbDataToSeal);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	result |= Trspi_HashUpdate(&hashCtx, ulDataLength, sealData);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		if (sealData != rgbDataToSeal)
+			free(sealData);
 		return result;
+	}
 
 	if ((result = secret_PerformAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy, hEncPolicy,
 					      hEncPolicy, sharedSecret, &auth, digest.digest,
-					      &nonceEvenOSAP)))
+					      &nonceEvenOSAP))) {
+		if (sealData != rgbDataToSeal)
+			free(sealData);
 		return result;
+	}
 
+#ifdef TSS_BUILD_SEALX
+	if (sealOrdinal == TPM_ORD_Seal) {
+		if ((result = TCSP_Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
+					pcrData, ulDataLength, sealData, &auth,
+					&encDataSize, &encData)))
+			return result;
+	} else if (sealOrdinal == TPM_ORD_Sealx) {
+		result = TCSP_Sealx(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
+					 pcrData, ulDataLength, sealData, &auth,
+					 &encDataSize, &encData);
+		free(sealData);
+
+		if (result != TSS_SUCCESS)
+			return result;
+	} else
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+#else
 	if ((result = TCSP_Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize, pcrData,
-				ulDataLength, rgbDataToSeal, &auth, &encDataSize, &encData)))
+				ulDataLength, sealData, &auth, &encDataSize, &encData)))
 		return result;
+#endif
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
-	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Seal);
+	result |= Trspi_Hash_UINT32(&hashCtx, sealOrdinal);
 	result |= Trspi_HashUpdate(&hashCtx, encDataSize, encData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;

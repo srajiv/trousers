@@ -26,7 +26,8 @@
 
 
 TSS_RESULT
-TCSP_Seal_TP(struct host_table_entry *hte,
+common_Seal_TP(UINT32 sealOrdinal,
+			 struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TCPA_ENCAUTH encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
@@ -41,7 +42,7 @@ TCSP_Seal_TP(struct host_table_entry *hte,
 	int i = 0;
 
 	initData(&hte->comm, 8);
-	hte->comm.hdr.u.ordinal = TCSD_ORD_SEAL;
+	hte->comm.hdr.u.ordinal = sealOrdinal;
 	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hte->tcsContext, 0, &hte->comm))
@@ -97,6 +98,40 @@ TCSP_Seal_TP(struct host_table_entry *hte,
 done:
 	return result;
 }
+
+TSS_RESULT
+TCSP_Seal_TP(struct host_table_entry *hte,
+			 TCS_KEY_HANDLE keyHandle,	/* in */
+			 TCPA_ENCAUTH encAuth,	/* in */
+			 UINT32 pcrInfoSize,	/* in */
+			 BYTE * PcrInfo,	/* in */
+			 UINT32 inDataSize,	/* in */
+			 BYTE * inData,	/* in */
+			 TPM_AUTH * pubAuth,	/* in, out */
+			 UINT32 * SealedDataSize,	/* out */
+			 BYTE ** SealedData	/* out */
+    ) {
+	return common_Seal_TP(TCSD_ORD_SEAL, hte, keyHandle, encAuth, pcrInfoSize, PcrInfo,
+			      inDataSize, inData, pubAuth, SealedDataSize, SealedData);
+}
+
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT
+TCSP_Sealx_TP(struct host_table_entry *hte,
+			 TCS_KEY_HANDLE keyHandle,	/* in */
+			 TCPA_ENCAUTH encAuth,	/* in */
+			 UINT32 pcrInfoSize,	/* in */
+			 BYTE * PcrInfo,	/* in */
+			 UINT32 inDataSize,	/* in */
+			 BYTE * inData,	/* in */
+			 TPM_AUTH * pubAuth,	/* in, out */
+			 UINT32 * SealedDataSize,	/* out */
+			 BYTE ** SealedData	/* out */
+    ) {
+	return common_Seal_TP(TCSD_ORD_SEALX, hte, keyHandle, encAuth, pcrInfoSize, PcrInfo,
+			      inDataSize, inData, pubAuth, SealedDataSize, SealedData);
+}
+#endif
 
 TSS_RESULT
 TCSP_Unseal_TP(struct host_table_entry *hte,

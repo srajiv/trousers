@@ -27,7 +27,8 @@
 #include "tcsd.h"
 
 TSS_RESULT
-TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
+		   TCS_CONTEXT_HANDLE hContext,	/* in */
 		   TCS_KEY_HANDLE keyHandle,	/* in */
 		   TCPA_ENCAUTH encAuth,	/* in */
 		   UINT32 pcrInfoSize,	/* in */
@@ -72,7 +73,7 @@ TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LoadBlob(&offset, inDataSize, txBlob, inData);
 
 	LoadBlob_Auth(&offset, txBlob, pubAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_Seal, txBlob);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, sealOrdinal, txBlob);
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

@@ -574,7 +574,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_ReleaseTransportSigned,"ReleaseTransportSigned"},
 	{tcs_wrap_SetOrdinalAuditStatus,"SetOrdinalAuditStatus"}, /* 95 */
 	{tcs_wrap_GetAuditDigest,"GetAuditDigest"},
-	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"}
+	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"},
+	{tcs_wrap_Sealx,"Sealx"}
 };
 
 int

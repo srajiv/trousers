@@ -173,6 +173,12 @@ TSS_RESULT TCSP_Unseal_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *
 #define TCSP_Unseal_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT TCSP_Sealx_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
+#else
+#define TCSP_Sealx_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #ifdef TSS_BUILD_BIND
 TSS_RESULT TCSP_UnBind_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
 #else

@@ -21,6 +21,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "tsp_seal.h"
 
 TSS_RESULT
 obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
@@ -485,6 +486,23 @@ obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 			policy->changeauthAppData = cb->appData;
 			policy->changeauthAlg = cb->alg;
 			break;
+#ifdef TSS_BUILD_SEALX
+		case TSS_TSPATTRIB_POLICY_CALLBACK_SEALX_MASK:
+			if (!cb) {
+				policy->Tspicb_CallbackSealxMask = NULL;
+				policy->sealxAppData = NULL;
+				policy->sealxAlg = 0;
+				break;
+			}
+
+			policy->Tspicb_CallbackSealxMask =
+				(TSS_RESULT (*)(PVOID, TSS_HKEY, TSS_HENCDATA,
+				TSS_ALGORITHM_ID, UINT32, BYTE *, BYTE *, BYTE *, BYTE *,
+				UINT32, BYTE *, BYTE *))cb->callback;
+			policy->sealxAppData = cb->appData;
+			policy->sealxAlg = cb->alg;
+			break;
+#endif
 		default:
 			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 			break;
@@ -543,6 +561,15 @@ obj_policy_get_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, UINT32 *size, BYTE **out
 			*size = sizeof(TSS_CALLBACK);
 			*out = (BYTE *)cb;
 			break;
+#ifdef TSS_BUILD_SEALX
+		case TSS_TSPATTRIB_POLICY_CALLBACK_SEALX_MASK:
+			cb->callback = policy->Tspicb_CallbackSealxMask;
+			cb->appData = policy->sealxAppData;
+			cb->alg = policy->sealxAlg;
+			*size = sizeof(TSS_CALLBACK);
+			*out = (BYTE *)cb;
+			break;
+#endif
 		default:
 			free_tspi(obj->tspContext, cb);
 			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
@@ -951,3 +978,68 @@ obj_policy_set_hash_mode(TSS_HPOLICY hPolicy, UINT32 mode)
 	return TSS_SUCCESS;
 }
 #endif
+
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT
+obj_policy_do_sealx_mask(TSS_HPOLICY hPolicy, TSS_HKEY hKey, TSS_HENCDATA hEncData,
+			 TPM_AUTH *auth, TPM_NONCE *nonceEvenOSAP, TPM_NONCE *nonceOddOSAP,
+			 UINT32 ulDataLength, BYTE *rgbDataToMask, BYTE **rgbMaskedData)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result;
+
+	*rgbMaskedData = NULL;
+	if ((*rgbMaskedData = (BYTE *)calloc(1, ulDataLength)) == NULL) {
+		LogError("malloc of %zd bytes failed", ulDataLength);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL) {
+		result = TSPERR(TSS_E_INVALID_HANDLE);
+		goto done;
+	}
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->Tspicb_CallbackSealxMask) {
+		result = policy->Tspicb_CallbackSealxMask(policy->sealxAppData, hKey, hEncData,
+				policy->sealxAlg, sizeof(auth->NonceEven.nonce),
+				auth->NonceEven.nonce, auth->NonceOdd.nonce,
+				nonceEvenOSAP->nonce, nonceOddOSAP->nonce,
+				ulDataLength, rgbDataToMask, *rgbMaskedData);
+
+		obj_list_put(&policy_list);
+	} else {
+		TCPA_SECRET usageSecret;
+		UINT64 offset;
+		BYTE hmacBlob[0x200];
+		BYTE sharedSecret[20];
+
+		obj_list_put(&policy_list);
+
+		/* TODO: Should check that the OSAP session ET is using XOR algorithm */
+
+		if ((result = obj_policy_get_secret(hPolicy, TR_SECRET_CTX_NOT_NEW, &usageSecret)))
+			goto done;
+
+		offset = 0;
+		Trspi_LoadBlob(&offset, sizeof(nonceEvenOSAP->nonce), hmacBlob,
+			       nonceEvenOSAP->nonce);
+	        Trspi_LoadBlob(&offset, sizeof(nonceOddOSAP->nonce), hmacBlob, nonceOddOSAP->nonce);
+		Trspi_HMAC(TSS_HASH_SHA1, 20, usageSecret.authdata, offset, hmacBlob, sharedSecret);
+
+		result = sealx_mask_cb(sizeof(sharedSecret), sharedSecret,
+				sizeof(nonceEvenOSAP->nonce),
+				nonceEvenOSAP->nonce, nonceOddOSAP->nonce,
+				ulDataLength, rgbDataToMask, *rgbMaskedData);
+	}
+
+done:
+	if (result != TSS_SUCCESS)
+		free(*rgbMaskedData);
+
+	return result;
+}
+#endif
+

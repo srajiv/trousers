@@ -520,7 +520,10 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					  TCPA_DIRVALUE * dirValue	/* out */
 	    );
 
-	TSS_RESULT TCSP_Seal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+	/* Since only the ordinal differs between Seal and Sealx (from an API point of view),
+	   use a common Seal function specifying the ordinal to be sent to the TPM. */
+	TSS_RESULT TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
+				       TCS_CONTEXT_HANDLE hContext,	/* in */
 				       TCS_KEY_HANDLE keyHandle,	/* in */
 				       TCPA_ENCAUTH encAuth,	/* in */
 				       UINT32 pcrInfoSize,	/* in */

@@ -1033,6 +1033,38 @@ TSS_RESULT TCSP_Seal(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCSP_Sealx(TSS_HCONTEXT tspContext,	/* in */
+		      TCS_KEY_HANDLE keyHandle,	/* in */
+		      TCPA_ENCAUTH encAuth,	/* in */
+		      UINT32 pcrInfoSize,	/* in */
+		      BYTE * PcrInfo,	/* in */
+		      UINT32 inDataSize,	/* in */
+		      BYTE * inData,	/* in */
+		      TPM_AUTH * pubAuth,	/* in, out */
+		      UINT32 * SealedDataSize,	/* out */
+		      BYTE ** SealedData)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Sealx_TP(entry, keyHandle, encAuth, pcrInfoSize,
+					       PcrInfo, inDataSize, inData, pubAuth, SealedDataSize,
+					       SealedData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT TCSP_Unseal(TSS_HCONTEXT tspContext,	/* in */
 		       TCS_KEY_HANDLE parentHandle,	/* in */
 		       UINT32 SealedDataSize,	/* in */

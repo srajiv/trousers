@@ -200,6 +200,10 @@ if TSS_BUILD_AUDIT
 libtspi_la_SOURCES+=tspi_audit.c tsp_audit.c rpc/@RPC@/rpc_audit.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_AUDIT
 endif
+if TSS_BUILD_SEALX
+libtspi_la_SOURCES+=tsp_seal.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_SEALX
+endif
 
 if HAVE_GTK
 libtspi_la_CFLAGS+=@GTK_CFLAGS@

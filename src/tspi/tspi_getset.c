@@ -224,8 +224,21 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
+#ifdef TSS_BUILD_SEALX
+	} else if (obj_is_encdata(hObject)) {
+		if (attribFlag != TSS_TSPATTRIB_ENCDATA_SEAL)
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		if (subFlag == TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE) {
+			if (ulAttrib != TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT &&
+			    ulAttrib != TSS_TSPATTRIB_ENCDATASEAL_PROTECT)
+				return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+
+			result = obj_encdata_set_seal_protect_mode(hObject, ulAttrib);
+		} else
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+#endif
 	} else {
-		if (obj_is_hash(hObject) || obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
@@ -462,8 +475,17 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
+	} else if (obj_is_encdata(hObject)) {
+#ifdef TSS_BUILD_SEALX
+		if (attribFlag != TSS_TSPATTRIB_ENCDATA_SEAL)
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		if (subFlag == TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE)
+			result = obj_encdata_get_seal_protect_mode(hObject, pulAttrib);
+		else
+			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+#endif
 	} else {
-		if (obj_is_hash(hObject) || obj_is_pcrs(hObject) || obj_is_encdata(hObject))
+		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 		else
 			result = TSPERR(TSS_E_INVALID_HANDLE);
@@ -537,6 +559,9 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+#ifdef TSS_BUILD_SEALX
+			case TSS_TSPATTRIB_POLICY_CALLBACK_SEALX_MASK:
+#endif
 				result = obj_policy_set_cb12(hObject, attribFlag,
 							     rgbAttribData);
 				break;
@@ -726,6 +751,9 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			case TSS_TSPATTRIB_POLICY_CALLBACK_XOR_ENC:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_TAKEOWNERSHIP:
 			case TSS_TSPATTRIB_POLICY_CALLBACK_CHANGEAUTHASYM:
+#ifdef TSS_BUILD_SEALX
+			case TSS_TSPATTRIB_POLICY_CALLBACK_SEALX_MASK:
+#endif
 				result = obj_policy_get_cb12(hObject, attribFlag,
 							     pulAttribDataSize, prgbAttribData);
 				break;

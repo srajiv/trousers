@@ -29,11 +29,17 @@ struct tr_policy_obj {
 	TSS_ALGORITHM_ID xorAlg;
 	TSS_ALGORITHM_ID takeownerAlg;
 	TSS_ALGORITHM_ID changeauthAlg;
+#ifdef TSS_BUILD_SEALX
+	TSS_ALGORITHM_ID sealxAlg;
+#endif
 #endif
 	PVOID hmacAppData;
 	PVOID xorAppData;
 	PVOID takeownerAppData;
 	PVOID changeauthAppData;
+#ifdef TSS_BUILD_SEALX
+	PVOID sealxAppData;
+#endif
 	TSS_RESULT (*Tspicb_CallbackHMACAuth)(
 			PVOID lpAppData,
 			TSS_HOBJECT hAuthorizedObject,
@@ -75,6 +81,21 @@ struct tr_policy_obj {
 			UINT32 ulSizeAithLink,
 			BYTE *rgbEncAuth,
 			BYTE *rgbAuthLink);
+#ifdef TSS_BUILD_SEALX
+	TSS_RESULT (*Tspicb_CallbackSealxMask)(
+			PVOID lpAppData,
+			TSS_HKEY hKey,
+			TSS_HENCDATA hEncData,
+			TSS_ALGORITHM_ID algID,
+			UINT32 ulSizeNonces,
+			BYTE *rgbNonceEven,
+			BYTE *rgbNonceOdd,
+			BYTE *rgbNonceEvenOSAP,
+			BYTE *rgbNonceOddOSAP,
+			UINT32 ulDataLength,
+			BYTE *rgbDataToMask,
+			BYTE *rgbMaskedData);
+#endif
 };
 
 /* obj_policy.c */
@@ -120,6 +141,10 @@ TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, B
 TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
 TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT obj_policy_do_sealx_mask(TSS_HPOLICY, TSS_HKEY, TSS_HENCDATA, TPM_AUTH *,
+		TPM_NONCE *, TPM_NONCE *, UINT32, BYTE *, BYTE **);
+#endif
 
 #define POLICY_LIST_DECLARE		struct obj_list policy_list
 #define POLICY_LIST_DECLARE_EXTERN	extern struct obj_list policy_list

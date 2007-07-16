@@ -120,6 +120,12 @@ DECLARE_TCSTP_FUNC(UnSeal);
 #define tcs_wrap_UnSeal	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_SEALX
+DECLARE_TCSTP_FUNC(Sealx);
+#else
+#define tcs_wrap_Sealx	tcs_wrap_Error
+#endif
+
 #ifdef TSS_BUILD_BIND
 DECLARE_TCSTP_FUNC(UnBind);
 #else

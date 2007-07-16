@@ -28,7 +28,8 @@
 
 
 TSS_RESULT
-tcs_wrap_Seal(struct tcsd_thread_data *data)
+tcs_common_Seal(UINT32 sealOrdinal,
+		struct tcsd_thread_data *data)
 {
 	TSS_RESULT result;
 	TCS_CONTEXT_HANDLE hContext;
@@ -102,8 +103,8 @@ tcs_wrap_Seal(struct tcsd_thread_data *data)
 
 	MUTEX_LOCK(tcsp_lock);
 
-	result = TCSP_Seal_Internal(hContext, keyHandle, KeyUsageAuth, PCRInfoSize, PCRInfo,
-				    inDataSize, inData, pAuth, &outDataSize, &outData);
+	result = TCSP_Seal_Internal(sealOrdinal, hContext, keyHandle, KeyUsageAuth, PCRInfoSize,
+				    PCRInfo, inDataSize, inData, pAuth, &outDataSize, &outData);
 
 	MUTEX_UNLOCK(tcsp_lock);
 	free(inData);
@@ -134,6 +135,20 @@ tcs_wrap_Seal(struct tcsd_thread_data *data)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_Seal(struct tcsd_thread_data *data)
+{
+	return tcs_common_Seal(TPM_ORD_Seal, data);
+}
+
+#ifdef TSS_BUILD_SEALX
+TSS_RESULT
+tcs_wrap_Sealx(struct tcsd_thread_data *data)
+{
+	return tcs_common_Seal(TPM_ORD_Sealx, data);
+}
+#endif
 
 TSS_RESULT
 tcs_wrap_UnSeal(struct tcsd_thread_data *data)
