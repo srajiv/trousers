@@ -16,6 +16,10 @@
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 
+#ifndef TSS_BUILD_ASN1_OPENSSL
+#include <arpa/inet.h>
+#endif
+
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "spi_internal_types.h"
@@ -45,12 +49,11 @@ Tspi_EncodeDER_TssBlob(UINT32 rawBlobSize,		/* in */
 			UINT32 *derBlobSize,		/* in/out */
 			BYTE *derBlob)			/* out */
 {
+#ifdef TSS_BUILD_ASN1_OPENSSL
 	TSS_BLOB *tssBlob = NULL;
+#endif
 	BYTE *encBlob = NULL;
 	UINT32 encBlobLen;
-	UINT32 tempVal;
-	BYTE tempBuf[sizeof(UINT32)];
-	int i, j;
 
 	if ((rawBlobSize == 0) || (rawBlob == NULL))
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -61,6 +64,19 @@ Tspi_EncodeDER_TssBlob(UINT32 rawBlobSize,		/* in */
 	if ((*derBlobSize != 0) && (derBlob == NULL))
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
+	/* The TSS working group has stated that the ASN1 encoding will be done in a
+	 * specific way that generates an ASN1 encoding that is exactly 20 bytes
+	 * larger than the blob being encoded.
+	 *
+	 * OpenSSL uses the smallest number of bytes possible to encode and object
+	 * and as a result cannot be used to perform the encoding.  The encoding
+	 * must be done manually.
+	 *
+	 * The 20 byte fixed header will result in issues for objects greater than
+	 * 2^16 in size since some fields are now limited to 16-bit lengths.
+	 */
+
+#ifdef TSS_BUILD_ASN1_OPENSSL
 	tssBlob = TSS_BLOB_new();
 	if (!tssBlob)
 		return TSPERR(TSS_E_OUTOFMEMORY);
@@ -75,27 +91,10 @@ Tspi_EncodeDER_TssBlob(UINT32 rawBlobSize,		/* in */
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-	/* The TSS working group has stated that the ASN1_INTEGER representation should
-	 * be 4 bytes in length.  OpenSSL uses the shortest length possible so this hack
-	 * needs to be done in place of:
-	 *   ASN1_INTEGER_set(tssBlob->blobLength, rawBlobSize)
-	 */
-	tssBlob->blobLength->type = V_ASN1_INTEGER;
-	tssBlob->blobLength->length = sizeof(tempBuf);
-	tssBlob->blobLength->data = (unsigned char *)OPENSSL_malloc(sizeof(tempBuf) + 1);
-	if (!tssBlob->blobLength->data) {
+	if (ASN1_INTEGER_set(tssBlob->blobLength, rawBlobSize) == 0) {
 		TSS_BLOB_free(tssBlob);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
-	tempVal = rawBlobSize;
-	for (i = 0; i < (int)sizeof(tempBuf); i++) {
-		tempBuf[i] = tempVal & 0xff;
-		tempVal >>= 8;
-	}
-	for (i = sizeof(tempBuf) - 1, j = 0; i >= 0; i--, j++)
-		tssBlob->blobLength->data[j] = tempBuf[i];
-
-	/* end hack */
 
 	if (ASN1_OCTET_STRING_set(tssBlob->blob, rawBlob, rawBlobSize) == 0) {
 		TSS_BLOB_free(tssBlob);
@@ -123,6 +122,56 @@ Tspi_EncodeDER_TssBlob(UINT32 rawBlobSize,		/* in */
 
 	OPENSSL_free(encBlob);
 	TSS_BLOB_free(tssBlob);
+#else
+	if ((rawBlobSize + 16) > UINT16_MAX)
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	encBlobLen = rawBlobSize + 20;
+
+	if (*derBlobSize != 0) {
+		if (encBlobLen <= *derBlobSize) {
+			UINT16 *pShort;
+			UINT32 *pLong;
+
+			encBlob = derBlob;
+			encBlob[0] = 0x30;	/* Sequence tag */
+			encBlob[1] = 0x82;	/* Length in the two octets that follow */
+			encBlob += 2;
+			pShort = (UINT16 *)encBlob;
+			*pShort = htons(rawBlobSize + 16);
+			encBlob += sizeof(UINT16);
+
+			encBlob[0] = 0x02;	/* Integer tag */
+			encBlob[1] = 0x01;	/* Length is one */
+			encBlob[2] = (BYTE)TSS_BLOB_STRUCT_VERSION;
+			encBlob += 3;
+
+			encBlob[0] = 0x02;	/* Integer tag */
+			encBlob[1] = 0x01;	/* Length is one */
+			encBlob[2] = (BYTE)blobType;
+			encBlob += 3;
+
+			encBlob[0] = 0x02;	/* Integer tag */
+			encBlob[1] = 0x04;	/* Length is four */
+			encBlob += 2;
+			pLong = (UINT32 *)encBlob;
+			*pLong = htonl(rawBlobSize);
+			encBlob += sizeof(UINT32);
+
+			encBlob[0] = 0x04;	/* Octet string tag */
+			encBlob[1] = 0x82;	/* Length in the two octets that follow */
+			encBlob += 2;
+			pShort = (UINT16 *)encBlob;
+			*pShort = htons(rawBlobSize);
+			encBlob += sizeof(UINT16);
+			memcpy(encBlob, rawBlob, rawBlobSize);
+		}
+		else
+			return TSPERR(TSS_E_BAD_PARAMETER);
+	}
+
+	*derBlobSize = encBlobLen;
+#endif
 
 	return TSS_SUCCESS;
 }
