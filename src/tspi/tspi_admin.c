@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -37,7 +37,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	switch (statusFlag) {
@@ -66,6 +66,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
 		result = TCSP_DisableForceClear(tspContext);
 		break;
+	case TSS_TPMSTATUS_DISABLED:
 	case TSS_TPMSTATUS_OWNERSETDISABLE:
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerSetDisable);
@@ -95,6 +96,7 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		else
 			result = TCSP_PhysicalEnable(tspContext);
 		break;
+	case TSS_TPMSTATUS_DEACTIVATED:
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
 		result = TCSP_PhysicalSetDeactivated(tspContext, fTpmState);
 		break;
@@ -125,6 +127,15 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
+		break;
+	case TSS_TPMSTATUS_ALLOWMAINTENANCE:
+		/* Allow maintenance cannot be set to TRUE in the TPM */
+		if (fTpmState)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		/* The path to setting allow maintenance to FALSE is through
+		 * KillMaintenanceFeature */
+		return Tspi_TPM_KillMaintenanceFeature(hTPM);
 		break;
 #ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
@@ -212,54 +223,76 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 
 	switch (statusFlag) {
 	case TSS_TPMSTATUS_DISABLEOWNERCLEAR:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_OWNER_CLEARABLE);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_DISABLEOWNERCLEAR_BIT);
 		break;
 	case TSS_TPMSTATUS_DISABLEFORCECLEAR:
-		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_CLEARABLE);
+		*pfTpmState = BOOL(volFlags & TSS_TPM_SF_DISABLEFORCECLEAR_BIT);
 		break;
 	case TSS_TPMSTATUS_DISABLED:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_DISABLED);
+	case TSS_TPMSTATUS_OWNERSETDISABLE:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_DISABLE_BIT);
 		break;
+	case TSS_TPMSTATUS_DEACTIVATED:
 	case TSS_TPMSTATUS_PHYSICALSETDEACTIVATED:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_DEACTIVATED);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_DEACTIVATED_BIT);
 		break;
 	case TSS_TPMSTATUS_SETTEMPDEACTIVATED:
-		*pfTpmState = BOOL(volFlags & TPM11_VOL_TEMP_DEACTIVATED);
+		*pfTpmState = BOOL(volFlags & TSS_TPM_SF_DEACTIVATED_BIT);
 		break;
 	case TSS_TPMSTATUS_SETOWNERINSTALL:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_OWNABLE);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_OWNERSHIP_BIT);
 		break;
 	case TSS_TPMSTATUS_DISABLEPUBEKREAD:
-		*pfTpmState = INVBOOL(nonVolFlags & TPM11_NONVOL_READABLE_PUBEK);
+		*pfTpmState = INVBOOL(nonVolFlags & TSS_TPM_PF_READPUBEK_BIT);
 		break;
 	case TSS_TPMSTATUS_ALLOWMAINTENANCE:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_ALLOW_MAINT);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_ALLOWMAINTENANCE_BIT);
+		break;
+	case TSS_TPMSTATUS_MAINTENANCEUSED:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_MAINTENANCEDONE_BIT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LIFETIMELOCK:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_LIFETIME_LOCK);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_PHYSICALPRESENCELIFETIMELOCK_BIT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_HWENABLE:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_HW_PRES);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_PHYSICALPRESENCEHWENABLE_BIT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_CMDENABLE:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_CMD_PRES);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_PHYSICALPRESENCECMDENABLE_BIT);
 		break;
 	case TSS_TPMSTATUS_CEKP_USED:
-		*pfTpmState = BOOL(nonVolFlags & TPM11_NONVOL_CEKP_USED);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_CEKPUSED_BIT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRESENCE:
-		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES);
+		*pfTpmState = BOOL(volFlags & TSS_TPM_SF_PHYSICALPRESENCE_BIT);
 		break;
 	case TSS_TPMSTATUS_PHYSPRES_LOCK:
-		*pfTpmState = BOOL(volFlags & TPM11_VOL_PRES_LOCK);
+		*pfTpmState = BOOL(volFlags & TSS_TPM_SF_PHYSICALPRESENCELOCK_BIT);
 		break;
-#ifdef TSS_BUILD_NV
+	case TSS_TPMSTATUS_TPMPOST:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_TPMPOST_BIT);
+		break;
+	case TSS_TPMSTATUS_TPMPOSTLOCK:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_TPMPOSTLOCK_BIT);
+		break;
+	case TSS_TPMSTATUS_FIPS:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_FIPS_BIT);
+		break;
+	case TSS_TPMSTATUS_ENABLE_REVOKEEK:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_ENABLEREVOKEEK_BIT);
+		break;
+	case TSS_TPMSTATUS_TPM_ESTABLISHED:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_RESETESTABLISHMENTBIT_BIT);
+		break;
 	case TSS_TPMSTATUS_NV_LOCK:
-		*pfTpmState = BOOL(volFlags & TPM_PF_NV_LOCKED);
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_NV_LOCKED_BIT);
 		break;
-#endif
 #ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
+		*pfTpmState = INVBOOL(nonVolFlags & TSS_TPM_PF_READSRKPUB_BIT);
+		break;
+	case TSS_TPMSTATUS_OPERATORINSTALLED:
+		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_OPERATOR_BIT);
 		break;
 #endif
 	default:
