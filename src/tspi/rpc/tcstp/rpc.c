@@ -23,7 +23,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -94,6 +94,9 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 			break;
 		case TCSD_PACKET_TYPE_COUNTER_VALUE:
 			Trspi_LoadBlob_COUNTER_VALUE(offset, blob, ((TPM_COUNTER_VALUE *)data));
+			break;
+		case TCSD_PACKET_TYPE_SECRET:
+			Trspi_LoadBlob(offset, 20, blob, ((TCPA_SECRET *)data)->authdata);
 			break;
 		default:
 			LogError("TCSD packet type unknown! (0x%x)", data_type & 0xff);
@@ -200,7 +203,7 @@ getData(TCSD_PACKET_TYPE dataType,
 			Trspi_UnloadBlob_UUID(&offset, comm->buf, ((TSS_UUID *)theData));
 			break;
 		case TCSD_PACKET_TYPE_ENCAUTH:
-			Trspi_UnloadBlob(&offset, sizeof(TPM_AUTH), comm->buf,
+			Trspi_UnloadBlob(&offset, sizeof(TCPA_ENCAUTH), comm->buf,
 					 ((TCPA_ENCAUTH *)theData)->authdata);
 			break;
 		case TCSD_PACKET_TYPE_VERSION:
@@ -220,6 +223,10 @@ getData(TCSD_PACKET_TYPE dataType,
 		case TCSD_PACKET_TYPE_COUNTER_VALUE:
 			Trspi_UnloadBlob_COUNTER_VALUE(&offset, comm->buf,
 						       ((TPM_COUNTER_VALUE *)theData));
+			break;
+		case TCSD_PACKET_TYPE_SECRET:
+			Trspi_UnloadBlob(&offset, sizeof(TCPA_SECRET), comm->buf,
+					 ((TCPA_SECRET *)theData)->authdata);
 			break;
 		default:
 			LogError("unknown data type (%d) in TCSD packet!", dataType);
