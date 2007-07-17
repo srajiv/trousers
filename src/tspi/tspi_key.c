@@ -514,3 +514,63 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 
 	return obj_rsakey_set_tcs_handle(*phKey, myTCSKeyHandle);
 }
+
+TSS_RESULT
+Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
+			   UINT32 * pulPuKeyLength,	/* out */
+			   BYTE ** prgbPubKey)		/* out */
+{
+	TSS_RESULT result;
+	TSS_HPOLICY hPolicy;
+	TSS_HCONTEXT tspContext;
+	TCS_KEY_HANDLE hKey;
+	TPM_AUTH auth;
+	Trspi_HashCtx hashCtx;
+	TCPA_DIGEST digest;
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	hKey = TPM_KEYHND_SRK;
+
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+		return result;
+
+	/* do an owner authorized get capability call */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadInternalPub);
+	result |= Trspi_Hash_UINT32(&hashCtx, hKey);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		return result;
+
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerReadInternalPub,
+					      hPolicy, FALSE, &digest, &auth)))
+		return result;
+
+	if ((result = TCSP_OwnerReadInternalPub(tspContext, hKey, &auth, pulPuKeyLength,
+					      prgbPubKey)))
+		return result;
+
+	/* Validate return auth */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TSS_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadInternalPub);
+	result |= Trspi_HashUpdate(&hashCtx, *pulPuKeyLength, *prgbPubKey);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth)))
+		goto error;
+
+	obj_rsakey_set_pubkey(hKey, TRUE, *prgbPubKey);
+
+	if ((result = add_mem_entry(tspContext, *prgbPubKey)))
+		goto error;
+
+	return result;
+
+error:
+	free(*prgbPubKey);
+	pulPuKeyLength = 0;
+	return result;
+}
