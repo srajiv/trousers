@@ -300,6 +300,12 @@ DECLARE_TCSTP_FUNC(GetAuditDigestSigned);
 #define tcs_wrap_GetAuditDigestSigned	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_TSS12
+DECLARE_TCSTP_FUNC(SetOperatorAuth);
+#else
+#define tcs_wrap_SetOperatorAuth	tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);

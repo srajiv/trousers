@@ -958,4 +958,8 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						      BYTE**			sig			/* out */
 	);
 
+	TSS_RESULT TCSP_SetOperatorAuth_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						 TCPA_SECRET*           operatorAuth		/* in */
+	);
+
 #endif /*_TCS_UTILS_H_ */
