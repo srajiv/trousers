@@ -540,8 +540,8 @@ TSS_RESULT
 get_trans_props(TSS_HCONTEXT tspContext, UINT32 *alg, UINT16 *enc)
 {
 	TSS_RESULT result;
-	UINT32 algs[] = { TPM_ALG_AES128, TPM_ALG_3DES, TPM_ALG_MGF1, 0 }, a;
-	UINT16 encs[] = { TPM_ES_SYM_OFB, TPM_ES_SYM_CNT, TPM_ES_SYM_CBC_PKCS5PAD, 0 }, e;
+	UINT32 algs[] = { TPM_ALG_AES128, TPM_ALG_3DES, TPM_ALG_MGF1, 0 }, a = 0;
+	UINT16 encs[] = { TPM_ES_SYM_OFB, TPM_ES_SYM_CNT, TPM_ES_SYM_CBC_PKCS5PAD, 0 }, e = 0;
 	BYTE *respData;
 	UINT32 respLen, tcsSubCap32;
 	UINT16 tcsSubCap16;
