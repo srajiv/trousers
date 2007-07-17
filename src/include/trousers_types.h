@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004, 2005, 2007
  *
  */
 
@@ -53,180 +53,35 @@ extern TSS_UUID	SRK_UUID;
 
 #define TSS_PS_TYPE_NO			(0)
 
-/* ordinals */
-#if 0
-#define TPM_ORD_OIAP				(TCPA_PROTECTED_ORDINAL + 10)
-#define TPM_ORD_OSAP				(TCPA_PROTECTED_ORDINAL + 11)
-#define TPM_ORD_ChangeAuth			(TCPA_PROTECTED_ORDINAL + 12)
-#define TPM_ORD_TakeOwnership			(TCPA_PROTECTED_ORDINAL + 13)
-#define TPM_ORD_ChangeAuthAsymStart		(TCPA_PROTECTED_ORDINAL + 14)
-#define TPM_ORD_ChangeAuthAsymFinish		(TCPA_PROTECTED_ORDINAL + 15)
-#define TPM_ORD_ChangeAuthOwner			(TCPA_PROTECTED_ORDINAL + 16)
-
-#define TPM_ORD_Extend				(TCPA_PROTECTED_ORDINAL + 20)
-#define TPM_ORD_PcrRead				(TCPA_PROTECTED_ORDINAL + 21)
-#define TPM_ORD_Quote				(TCPA_PROTECTED_ORDINAL + 22)
-#define TPM_ORD_Seal				(TCPA_PROTECTED_ORDINAL + 23)
-#define TPM_ORD_Unseal				(TCPA_PROTECTED_ORDINAL + 24)
-#define TPM_ORD_DirWriteAuth			(TCPA_PROTECTED_ORDINAL + 25)
-#define TPM_ORD_DirRead				(TCPA_PROTECTED_ORDINAL + 26)
-
-#define TPM_ORD_UnBind				(TCPA_PROTECTED_ORDINAL + 30)
-#define TPM_ORD_CreateWrapKey			(TCPA_PROTECTED_ORDINAL + 31)
-#define TPM_ORD_LoadKey				(TCPA_PROTECTED_ORDINAL + 32)
-#define TPM_ORD_GetPubKey			(TCPA_PROTECTED_ORDINAL + 33)
-#define TPM_ORD_EvictKey			(TCPA_PROTECTED_ORDINAL + 34)
-
-#define TPM_ORD_CreateMigrationBlob		(TCPA_PROTECTED_ORDINAL + 40)
-#define TPM_ORD_ReWrapKey			(TCPA_PROTECTED_ORDINAL + 41)
-#define TPM_ORD_ConvertMigrationBlob		(TCPA_PROTECTED_ORDINAL + 42)
-#define TPM_ORD_AuthorizeMigrationKey		(TCPA_PROTECTED_ORDINAL + 43)
-#define TPM_ORD_CreateMaintenanceArchive	(TCPA_PROTECTED_ORDINAL + 44)
-#define TPM_ORD_LoadMaintenanceArchive		(TCPA_PROTECTED_ORDINAL + 45)
-#define TPM_ORD_KillMaintenanceFeature		(TCPA_PROTECTED_ORDINAL + 46)
-#define TPM_ORD_LoadManuMaintPub		(TCPA_PROTECTED_ORDINAL + 47)
-#define TPM_ORD_ReadManuMaintPub		(TCPA_PROTECTED_ORDINAL + 48)
-
-#define TPM_ORD_CertifyKey			(TCPA_PROTECTED_ORDINAL + 50)
-
-#define TPM_ORD_Sign				(TCPA_PROTECTED_ORDINAL + 60)
-
-#define TPM_ORD_GetRandom			(TCPA_PROTECTED_ORDINAL + 70)
-#define TPM_ORD_StirRandom			(TCPA_PROTECTED_ORDINAL + 71)
-
-#define TPM_ORD_SelfTestFull			(TCPA_PROTECTED_ORDINAL + 80)
-#define TPM_ORD_SelfTestStartup			(TCPA_PROTECTED_ORDINAL + 81)
-#define TPM_ORD_CertifySelfTest			(TCPA_PROTECTED_ORDINAL + 82)
-#define TPM_ORD_ContinueSelfTest		(TCPA_PROTECTED_ORDINAL + 83)
-#define TPM_ORD_GetTestResult			(TCPA_PROTECTED_ORDINAL + 84)
-#define TPM_ORD_Reset				(TCPA_PROTECTED_ORDINAL + 90)
-#define TPM_ORD_OwnerClear			(TCPA_PROTECTED_ORDINAL + 91)
-#define TPM_ORD_DisableOwnerClear		(TCPA_PROTECTED_ORDINAL + 92)
-#define TPM_ORD_ForceClear			(TCPA_PROTECTED_ORDINAL + 93)
-#define TPM_ORD_DisableForceClear		(TCPA_PROTECTED_ORDINAL + 94)
-
-#define TPM_ORD_GetCapabilitySigned		(TCPA_PROTECTED_ORDINAL + 100)
-#define TPM_ORD_GetCapability			(TCPA_PROTECTED_ORDINAL + 101)
-#define TPM_ORD_GetCapabilityOwner		(TCPA_PROTECTED_ORDINAL + 102)
-
-#define TPM_ORD_OwnerSetDisable			(TCPA_PROTECTED_ORDINAL + 110)
-#define TPM_ORD_PhysicalEnable			(TCPA_PROTECTED_ORDINAL + 111)
-#define TPM_ORD_PhysicalDisable			(TCPA_PROTECTED_ORDINAL + 112)
-#define TPM_ORD_SetOwnerInstall			(TCPA_PROTECTED_ORDINAL + 113)
-#define TPM_ORD_PhysicalSetDeactivated		(TCPA_PROTECTED_ORDINAL + 114)
-#define TPM_ORD_SetTempDeactivated		(TCPA_PROTECTED_ORDINAL + 115)
-
-#define TPM_ORD_CreateEndorsementKeyPair	(TCPA_PROTECTED_ORDINAL + 120)
-#define TPM_ORD_MakeIdentity			(TCPA_PROTECTED_ORDINAL + 121)
-#define TPM_ORD_ActivateTPMIdentity		(TCPA_PROTECTED_ORDINAL + 122)
-#define TPM_ORD_ReadPubek			(TCPA_PROTECTED_ORDINAL + 124)
-#define TPM_ORD_OwnerReadPubek			(TCPA_PROTECTED_ORDINAL + 125)
-#define TPM_ORD_DisablePubekRead		(TCPA_PROTECTED_ORDINAL + 126)
-
-#define TPM_ORD_GetAuditEvent			(TCPA_PROTECTED_ORDINAL + 130)
-#define TPM_ORD_GetAuditEventSigned		(TCPA_PROTECTED_ORDINAL + 131)
-
-#define TPM_ORD_GetOrdinalAuditStatus		(TCPA_PROTECTED_ORDINAL + 140)
-#define TPM_ORD_SetOrdinalAuditStatus		(TCPA_PROTECTED_ORDINAL + 141)
-
-#define TPM_ORD_Terminate_Handle		(TCPA_PROTECTED_ORDINAL + 150)
-#define TPM_ORD_Init				(TCPA_PROTECTED_ORDINAL + 151)
-#define TPM_ORD_SaveState			(TCPA_PROTECTED_ORDINAL + 152)
-#define TPM_ORD_Startup				(TCPA_PROTECTED_ORDINAL + 153)
-#define TPM_ORD_SetRedirection			(TCPA_PROTECTED_ORDINAL + 154)
-
-#define TPM_ORD_SHA1Start			(TCPA_PROTECTED_ORDINAL + 160)
-#define TPM_ORD_SHA1Update			(TCPA_PROTECTED_ORDINAL + 161)
-#define TPM_ORD_SHA1Complete			(TCPA_PROTECTED_ORDINAL + 162)
-#define TPM_ORD_SHA1CompleteExtend		(TCPA_PROTECTED_ORDINAL + 163)
-
-#define TPM_ORD_FieldUpgrade			(TCPA_PROTECTED_ORDINAL + 170)
-
-#define TPM_ORD_SaveKeyContext			(TCPA_PROTECTED_ORDINAL + 180)
-#define TPM_ORD_LoadKeyContext			(TCPA_PROTECTED_ORDINAL + 181)
-#define TPM_ORD_SaveAuthContext			(TCPA_PROTECTED_ORDINAL + 182)
-#define TPM_ORD_LoadAuthContext			(TCPA_PROTECTED_ORDINAL + 183)
-
-#define TPM_ORD_PhysicalPresence		(TCPA_CONNECTION_ORDINAL + 10)
-#endif
-
-typedef struct tdTCPA_PERSISTENT_DATA{
-	BYTE revMajor;
-	BYTE revMinor;
-	TCPA_NONCE tpmProof;
-	TCPA_PUBKEY manuMaintPub;
-	TCPA_KEY endorsementKey;
-	TCPA_SECRET ownerAuth;
-	TCPA_KEY srk;
-	TCPA_DIRVALUE* dir;
-	BYTE* rngState;
-	BYTE ordinalAuditStatus;
-} TCPA_PERSISTENT_DATA;
-
-typedef struct tdTCPA_PERSISTENT_FLAGS{
-	TSS_BOOL disable;
-	TSS_BOOL ownership;
-	TSS_BOOL deactivated;
-	TSS_BOOL readPubek;
-	TSS_BOOL disableOwnerClear;
-	TSS_BOOL allowMaintenance;
-	TSS_BOOL physicalPresenceLifetimeLock;
-	TSS_BOOL physicalPresenceHWEnable;
-	TSS_BOOL physicalPresenceCMDEnable;
-	TSS_BOOL CEKPUsed;
-	TSS_BOOL TPMpost;
-	TSS_BOOL TPMpostLock;
-} TCPA_PERSISTENT_FLAGS;
-
-typedef struct tdTCPA_VOLATILE_FLAGS{
-	TSS_BOOL deactivated;
-	TSS_BOOL disableForceClear;
-	TSS_BOOL physicalPresence;
-	TSS_BOOL physicalPresenceLock;
-	TSS_BOOL postInitialise;
-} TCPA_VOLATILE_FLAGS;
-
-typedef struct tdTCPA_CHANGEAUTH_VALIDATE {
-	TCPA_SECRET newAuthSecret;
-	TCPA_NONCE n1;
-} TCPA_CHANGEAUTH_VALIDATE;
-#if 0
-typedef struct tdTCPA_AUDIT_EVENT {
-	TCPA_COMMAND_CODE ordinal;
-	TCPA_RESULT returncode;
-} TCPA_AUDIT_EVENT;
-#endif
-typedef struct tdTCPA_EVENT_CERT {
-	TCPA_DIGEST certificateHash;
-	TCPA_DIGEST entityDigest;
-	TSS_BOOL digestChecked;
-	TSS_BOOL digestVerified;
-	UINT32 issuerSize;
-	BYTE *issuer;
-} TCPA_EVENT_CERT;
-#if 0
-typedef struct tdTCPA_BOUND_DATA {
-	TCPA_VERSION ver;
-	TCPA_PAYLOAD_TYPE payload;
-	BYTE *payloadData;
-} TCPA_BOUND_DATA;
-#endif
-typedef struct tdTCPA_MIGRATE_ASYMKEY {
-	TCPA_PAYLOAD_TYPE payload;
-	TCPA_SECRET usageAuth;
-	TCPA_DIGEST pubDataDigest;
-	UINT32 partPrivKeyLen;
-	TCPA_STORE_PRIVKEY partPrivKey;
-} TCPA_MIGRATE_ASYMKEY;
-
-typedef struct tdTCPA_PRIVKEY {
-	UINT32 Privlen;
-	BYTE *Privkey;
-} TCPA_PRIVKEY;
-
-/***********************************************
-Derived Types
-************************************************/
+/* Derived Types */
 #define TSS_MIGRATION_SCHEME	TSS_MIGRATE_SCHEME
+
+// The TPM's non-volatile flags (TPM_PERMANENT_FLAGS)
+#define TSS_TPM_PF_DISABLE_BIT			    (1 << (TPM_PF_DISABLE - 1))
+#define TSS_TPM_PF_OWNERSHIP_BIT		    (1 << (TPM_PF_OWNERSHIP - 1))
+#define TSS_TPM_PF_DEACTIVATED_BIT		    (1 << (TPM_PF_DEACTIVATED - 1))
+#define TSS_TPM_PF_READPUBEK_BIT		    (1 << (TPM_PF_READPUBEK - 1))
+#define TSS_TPM_PF_DISABLEOWNERCLEAR_BIT	    (1 << (TPM_PF_DISABLEOWNERCLEAR - 1))
+#define TSS_TPM_PF_ALLOWMAINTENANCE_BIT		    (1 << (TPM_PF_ALLOWMAINTENANCE - 1))
+#define TSS_TPM_PF_PHYSICALPRESENCELIFETIMELOCK_BIT (1 << (TPM_PF_PHYSICALPRESENCELIFETIMELOCK - 1))
+#define TSS_TPM_PF_PHYSICALPRESENCEHWENABLE_BIT	    (1 << (TPM_PF_PHYSICALPRESENCEHWENABLE - 1))
+#define TSS_TPM_PF_PHYSICALPRESENCECMDENABLE_BIT    (1 << (TPM_PF_PHYSICALPRESENCECMDENABLE - 1))
+#define TSS_TPM_PF_CEKPUSED_BIT			    (1 << (TPM_PF_CEKPUSED - 1))
+#define TSS_TPM_PF_TPMPOST_BIT			    (1 << (TPM_PF_TPMPOST - 1))
+#define TSS_TPM_PF_TPMPOSTLOCK_BIT		    (1 << (TPM_PF_TPMPOSTLOCK - 1))
+#define TSS_TPM_PF_FIPS_BIT			    (1 << (TPM_PF_FIPS - 1))
+#define TSS_TPM_PF_OPERATOR_BIT			    (1 << (TPM_PF_OPERATOR - 1))
+#define TSS_TPM_PF_ENABLEREVOKEEK_BIT		    (1 << (TPM_PF_ENABLEREVOKEEK - 1))
+#define TSS_TPM_PF_NV_LOCKED_BIT		    (1 << (TPM_PF_NV_LOCKED - 1))
+#define TSS_TPM_PF_READSRKPUB_BIT		    (1 << (TPM_PF_READSRKPUB - 1))
+#define TSS_TPM_PF_RESETESTABLISHMENTBIT_BIT	    (1 << (TPM_PF_RESETESTABLISHMENTBIT - 1))
+#define TSS_TPM_PF_MAINTENANCEDONE_BIT		    (1 << (TPM_PF_MAINTENANCEDONE - 1))
+
+// The TPM's volatile flags (TPM_STCLEAR_FLAGS)
+#define TSS_TPM_SF_DEACTIVATED_BIT	    (1 << (TPM_SF_DEACTIVATED - 1))
+#define TSS_TPM_SF_DISABLEFORCECLEAR_BIT    (1 << (TPM_SF_DISABLEFORCECLEAR - 1))
+#define TSS_TPM_SF_PHYSICALPRESENCE_BIT     (1 << (TPM_SF_PHYSICALPRESENCE - 1))
+#define TSS_TPM_SF_PHYSICALPRESENCELOCK_BIT (1 << (TPM_SF_PHYSICALPRESENCELOCK - 1))
+#define TSS_TPM_SF_GLOBALLOCK_BIT	    (1 << (TPM_SF_GLOBALLOCK - 1))
 
 #endif
