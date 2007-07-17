@@ -15,7 +15,7 @@
 #include <netdb.h>
 
 #include "trousers/tss.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -56,7 +56,7 @@ tcs_wrap_UnBind(struct tcsd_thread_data *data)
 
 	inData = calloc(1, inDataSize);
 	if (inData == NULL) {
-		LogError("malloc of %d bytes failed.", inDataSize);
+		LogError("malloc of %u bytes failed.", inDataSize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, inData, inDataSize, &data->comm)) {
