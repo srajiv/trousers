@@ -123,3 +123,7 @@ endif
 if TSS_BUILD_SEALX
 libtcs_a_CFLAGS+=-DTSS_BUILD_SEALX
 endif
+if TSS_BUILD_TSS12
+libtcs_a_SOURCES+=tcsi_oper.c rpc/@RPC@/rpc_oper.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_TSS12
+endif
