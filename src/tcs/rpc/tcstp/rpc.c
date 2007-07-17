@@ -16,7 +16,7 @@
 #include <errno.h>
 
 #include "trousers/tss.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -154,6 +154,10 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 			break;
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			LoadBlob_PCR_EVENT(offset, blob, ((TSS_PCR_EVENT *)data));
+			break;
+		case TCSD_PACKET_TYPE_SECRET:
+			LoadBlob(offset, sizeof(TCPA_SECRET), blob,
+				 ((TCPA_SECRET *)data)->authdata);
 			break;
 		default:
 			LogError("TCSD packet type unknown! (0x%x)", data_type & 0xff);
@@ -446,6 +450,10 @@ getData(TCSD_PACKET_TYPE dataType,
 				return result;
 			break;
 #endif
+		case TCSD_PACKET_TYPE_SECRET:
+			UnloadBlob(&offset, sizeof(TCPA_SECRET), comm->buf,
+					((TCPA_SECRET *) theData)->authdata);
+			break;
 		default:
 			LogError("TCSD packet type unknown! (0x%x)", dataType & 0xff);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -575,7 +583,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_SetOrdinalAuditStatus,"SetOrdinalAuditStatus"}, /* 95 */
 	{tcs_wrap_GetAuditDigest,"GetAuditDigest"},
 	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"},
-	{tcs_wrap_Sealx,"Sealx"}
+	{tcs_wrap_Sealx,"Sealx"},
+	{tcs_wrap_SetOperatorAuth,"SetOperatorAuth"}
 };
 
 int
@@ -688,7 +697,7 @@ getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
 		if (offset < totalSize)
 			UnloadBlob(&offset, totalSize - offset, data->buf, tsp_data.dataBuffer);
 		else
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	/* dispatch the command to the TCS */
@@ -728,7 +737,7 @@ getTCSDPacket(struct tcsd_thread_data *data)
 	if (data->comm.hdr.num_parms > 0 &&
 	    data->comm.hdr.packet_size !=
 		(UINT32)(data->comm.hdr.parm_offset + data->comm.hdr.parm_size))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	/* dispatch the command to the TCS */
 	return dispatchCommand(data);
