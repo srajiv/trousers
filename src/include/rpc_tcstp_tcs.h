@@ -50,12 +50,15 @@ DECLARE_TCSTP_FUNC(GetPubkey);
 DECLARE_TCSTP_FUNC(TerminateHandle);
 DECLARE_TCSTP_FUNC(LoadKeyByBlob);
 DECLARE_TCSTP_FUNC(CreateWrapKey);
+DECLARE_TCSTP_FUNC(OwnerReadInternalPub);
 #else
 #define tcs_wrap_EvictKey		tcs_wrap_Error
 #define tcs_wrap_GetPubkey		tcs_wrap_Error
 #define tcs_wrap_TerminateHandle	tcs_wrap_Error
 #define tcs_wrap_LoadKeyByBlob		tcs_wrap_Error
 #define tcs_wrap_CreateWrapKey		tcs_wrap_Error
+#define tcs_wrap_OwnerReadInternalPub	tcs_wrap_Error
+
 #endif
 
 #ifdef TSS_BUILD_PCR_EXTEND

@@ -363,3 +363,44 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_OwnerReadInternalPub(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCS_KEY_HANDLE hKey;
+	TPM_AUTH ownerAuth;
+	UINT32 pubKeySize;
+	BYTE *pubKeyData;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_AUTH, 2, &ownerAuth, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_OwnerReadInternalPub_Internal(hContext, hKey, &ownerAuth, &pubKeySize, &pubKeyData);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	if (result == TSS_SUCCESS) {
+		initData(&data->comm, 3);
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		if (setData(TCSD_PACKET_TYPE_UINT32, 1, &pubKeySize, 0, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 2, pubKeyData, pubKeySize, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+	return TSS_SUCCESS;
+}

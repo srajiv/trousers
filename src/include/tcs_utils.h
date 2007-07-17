@@ -962,4 +962,10 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						 TCPA_SECRET*           operatorAuth		/* in */
 	);
 
+	TSS_RESULT TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE	hContext, /* in */
+						      TCS_KEY_HANDLE 	hKey, 		/* in */
+						      TPM_AUTH*		pOwnerAuth, 	/*in, out*/
+						      UINT32* 		punPubKeySize,	/* out */
+						      BYTE**		ppbPubKeyData	/* out */
+	);
 #endif /*_TCS_UTILS_H_ */

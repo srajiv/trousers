@@ -73,12 +73,14 @@ TSS_RESULT TCSP_EvictKey_TP(struct host_table_entry *,TCS_KEY_HANDLE);
 TSS_RESULT TCSP_CreateWrapKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH,TCPA_ENCAUTH,UINT32,BYTE *,UINT32 *,BYTE **,TPM_AUTH *);
 TSS_RESULT TCSP_GetPubKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_AUTH *,UINT32 *,BYTE **);
 TSS_RESULT TCSP_TerminateHandle_TP(struct host_table_entry *,TCS_AUTHHANDLE);
+TSS_RESULT TCSP_OwnerReadInternalPub_TP(struct host_table_entry *, TCS_KEY_HANDLE, TPM_AUTH *, UINT32 *, BYTE **);
 #else
 #define TCSP_LoadKeyByBlob_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_EvictKey_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_CreateWrapKey_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_GetPubKey_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_TerminateHandle_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_OwnerReadInternalPub_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_AIK

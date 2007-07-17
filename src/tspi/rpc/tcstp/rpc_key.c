@@ -244,3 +244,51 @@ TCSP_TerminateHandle_TP(struct host_table_entry *hte,
 
 	return result;
 }
+
+TSS_RESULT
+TCSP_OwnerReadInternalPub_TP(struct host_table_entry *hte,
+			     TCS_KEY_HANDLE hKey,	/* in */
+			     TPM_AUTH * pOwnerAuth,	/* in, out */
+			     UINT32 * punPubKeySize,	/* out */
+			     BYTE ** ppbPubKeyData)	/* out */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_OWNERREADINTERNALPUB;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (pOwnerAuth != NULL) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 2, pOwnerAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, &hte->comm))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+		if (getData(TCSD_PACKET_TYPE_UINT32, 1, punPubKeySize, 0, &hte->comm))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+		*ppbPubKeyData = (BYTE *) malloc(*punPubKeySize);
+		if (*ppbPubKeyData == NULL) {
+			LogError("malloc of %u bytes failed.", *punPubKeySize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *ppbPubKeyData, *punPubKeySize, 
+			    &hte->comm)) {
+			free(*ppbPubKeyData);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
+
+	return result;
+}

@@ -584,7 +584,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_GetAuditDigest,"GetAuditDigest"},
 	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"},
 	{tcs_wrap_Sealx,"Sealx"},
-	{tcs_wrap_SetOperatorAuth,"SetOperatorAuth"}
+	{tcs_wrap_SetOperatorAuth,"SetOperatorAuth"},
+	{tcs_wrap_OwnerReadInternalPub,"OwnerReadInternalPub"} /* 100 */
 };
 
 int

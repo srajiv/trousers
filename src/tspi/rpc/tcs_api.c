@@ -2692,3 +2692,32 @@ TCSP_SetOperatorAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	return result;
 }
+
+TSS_RESULT
+TCSP_OwnerReadInternalPub(TCS_CONTEXT_HANDLE hContext,	/* in */
+			  TCS_KEY_HANDLE hKey,		/* in */
+			  TPM_AUTH* pOwnerAuth,		/* in, out */
+			  UINT32* punPubKeySize,	/* out */
+			  BYTE** ppbPubKeyData)		/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_OwnerReadInternalPub_TP(entry, hKey, pOwnerAuth,
+							      punPubKeySize, ppbPubKeyData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+

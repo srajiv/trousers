@@ -278,3 +278,70 @@ done:
 	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 }
+
+TSS_RESULT
+TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+				   TCS_KEY_HANDLE hKey,	/* in */
+				   TPM_AUTH * pOwnerAuth,	/* in, out */
+				   UINT32 * punPubKeySize,	/* out */
+				   BYTE ** ppbPubKeyData)	/* out */
+{
+	UINT64 offset;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	TCPA_PUBKEY pubContainer;
+	TCPA_KEY_HANDLE keySlot;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	LogDebug("Entering OwnerReadInternalPub");
+	if ((result = ctx_verify_context(hContext)))
+		goto done;
+
+	if (hKey != TPM_KH_SRK) {
+		result = TCSERR(TSS_E_FAIL);
+		LogDebug("OwnerReadInternalPub - Unsupported Key Handle");
+		goto done;
+	}
+	if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
+		result = TCSERR(TCS_E_KM_LOADFAILED);
+		goto done;
+	}
+
+	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
+		goto done;
+
+	LogDebug("OwnerReadInternalPub: handle: 0x%x, slot: 0x%x", hKey, keySlot);
+	offset = 10;
+	LoadBlob_UINT32(&offset, keySlot, txBlob);
+	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_OwnerReadInternalPub, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
+
+	offset = 10;
+	result = UnloadBlob_Header(txBlob, &paramSize);
+
+	if (!result) {
+		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer)))
+			goto done;
+		free(pubContainer.pubKey.key);
+		free(pubContainer.algorithmParms.parms);
+
+		*punPubKeySize = offset - 10;
+		*ppbPubKeyData = calloc(1, *punPubKeySize);
+		if (*ppbPubKeyData == NULL) {
+			LogError("malloc of %d bytes failed.", *punPubKeySize);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		memcpy(*ppbPubKeyData, &txBlob[10], *punPubKeySize);
+
+		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	}
+	LogResult("OwnerReadInternalPub", result);
+done:
+	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);
+	return result;
+	
+}
