@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "hosttable.h"
 #include "tsplog.h"
@@ -2576,7 +2576,7 @@ TCSP_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
-#ifdef TSS_BUILD_AUDIT
+
 TSS_RESULT
 TCSP_SetOrdinalAuditStatus(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   TPM_AUTH *ownerAuth,		/* in/out */
@@ -2631,7 +2631,6 @@ TCSP_GetAuditDigest(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	put_table_entry(entry);
 
-
 	return result;
 }
 
@@ -2668,7 +2667,28 @@ TCSP_GetAuditDigestSigned(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	put_table_entry(entry);
 
+	return result;
+}
+
+TSS_RESULT
+TCSP_SetOperatorAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
+		     TCPA_SECRET *operatorAuth)		/* in */
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_SetOperatorAuth_TP(entry, operatorAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
 
 	return result;
 }
-#endif
