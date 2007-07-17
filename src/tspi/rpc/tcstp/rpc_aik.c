@@ -229,17 +229,20 @@ TCS_GetCredential_TP(struct host_table_entry *hte,
 
 	if (result == TSS_SUCCESS) {
 		if (getData(TCSD_PACKET_TYPE_UINT32, 0, pulCredentialSize, 0, &hte->comm)) {
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-			return result;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
 		*prgbCredentialData = (BYTE *) malloc(*pulCredentialSize);
 		if (*prgbCredentialData == NULL) {
 			LogError("malloc of %u bytes failed.", *pulCredentialSize);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			return result;
+			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
+		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *prgbCredentialData,
+			    *pulCredentialSize, &hte->comm)) {
+			free(*prgbCredentialData);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+                }
 	}
 	return result;
 }
