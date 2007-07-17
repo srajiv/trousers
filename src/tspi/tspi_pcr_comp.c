@@ -13,7 +13,7 @@
 #include <string.h>
 
 #include "trousers/tss.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
