@@ -1047,6 +1047,7 @@ Global defines for TSS.
 #define TSS_TPMSTATUS_OPERATORINSTALLED      (0x00000018) // persistent flag
 #define TSS_TPMSTATUS_FIPS                   (0x00000019) // persistent flag
 #define TSS_TPMSTATUS_ENABLEREVOKEEK         (0x0000001A) // persistent flag
+#define TSS_TPMSTATUS_ENABLE_REVOKEEK        (TSS_TPMSTATUS_ENABLEREVOKEEK)
 #define TSS_TPMSTATUS_NV_LOCK                (0x0000001B) // persistent flag
 #define TSS_TPMSTATUS_TPM_ESTABLISHED        (0x0000001C) // persistent flag
 #define TSS_TPMSTATUS_RESETLOCK              (0x0000001D) // volatile flag
