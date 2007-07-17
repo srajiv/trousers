@@ -68,7 +68,7 @@ TSS_RESULT obj_nvstore_set_permission(TSS_HNVSTORE, UINT32);
 TSS_RESULT obj_nvstore_get_permission_from_tpm(TSS_HNVSTORE hNvstore, UINT32 * permission);
 TSS_RESULT obj_nvstore_get_permission(TSS_HNVSTORE, UINT32 *);
 TSS_RESULT obj_nvstore_set_policy(TSS_HNVSTORE, TSS_HPOLICY);
-TSS_RESULT obj_nvstore_get_policy(TSS_HNVSTORE, TSS_HPOLICY *);
+TSS_RESULT obj_nvstore_get_policy(TSS_HNVSTORE, UINT32, TSS_HPOLICY *);
 TSS_RESULT obj_nvstore_get_datapublic(TSS_HNVSTORE, UINT32 *, BYTE *);
 TSS_RESULT obj_nvstore_get_readdigestatrelease(TSS_HNVSTORE, UINT32 *, BYTE **);
 TSS_RESULT obj_nvstore_get_readpcrselection(TSS_HNVSTORE, UINT32 *, BYTE **);

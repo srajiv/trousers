@@ -14,6 +14,9 @@
 /* structures */
 struct tr_tpm_obj {
 	TSS_HPOLICY policy;
+#ifdef TSS_BUILD_TSS12
+	TSS_HPOLICY operatorPolicy;
+#endif
 #ifndef TSS_SPEC_COMPLIANCE
 	TSS_ALGORITHM_ID collateAlg;
 	TSS_ALGORITHM_ID activateAlg;
@@ -49,7 +52,7 @@ TSS_RESULT obj_tpm_get_tsp_context(TSS_HTPM, TSS_HCONTEXT *);
 TSS_RESULT obj_tpm_get(TSS_HCONTEXT, TSS_HTPM *);
 TSS_RESULT obj_tpm_set_policy(TSS_HTPM, TSS_HPOLICY);
 TSS_RESULT obj_tpm_add(TSS_HCONTEXT, TSS_HOBJECT *);
-TSS_RESULT obj_tpm_get_policy(TSS_HTPM, TSS_HPOLICY *);
+TSS_RESULT obj_tpm_get_policy(TSS_HTPM, UINT32, TSS_HPOLICY *);
 TSS_RESULT obj_tpm_set_cb12(TSS_HTPM, TSS_FLAG, BYTE *);
 TSS_RESULT obj_tpm_get_cb12(TSS_HTPM, TSS_FLAG, UINT32 *, BYTE **);
 TSS_RESULT obj_tpm_set_cb11(TSS_HTPM, TSS_FLAG, TSS_FLAG, UINT32);
