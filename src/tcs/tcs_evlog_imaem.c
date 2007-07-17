@@ -35,7 +35,7 @@
 #include <unistd.h>
 
 #include "trousers/tss.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"

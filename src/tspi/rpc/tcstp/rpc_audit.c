@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "tsplog.h"
 #include "hosttable.h"
 #include "tcsd_wrap.h"

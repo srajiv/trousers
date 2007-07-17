@@ -14,7 +14,7 @@
 #include <string.h>
 
 #include "trousers/tss.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "tcs_utils.h"
 #include "tcslog.h"
 #include "req_mgr.h"
