@@ -18,7 +18,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -79,7 +79,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 
 	if (obj_is_tpm(hObjectToChange)) {/*  if TPM Owner Auth change */
 		/* get the owner policy */
-		if ((result = obj_tpm_get_policy(hObjectToChange, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
 
 		/* Now Calculate the authorization */
@@ -134,7 +134,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
 			LogDebug("SRK Handle");
 			/* get the owner policy */
-			if ((result = obj_tpm_get_policy(hParentObject,
+			if ((result = obj_tpm_get_policy(hParentObject, TSS_POLICY_USAGE,
 							 &hParentPolicy)))
 				return result;
 

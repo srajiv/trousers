@@ -16,7 +16,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -123,7 +123,7 @@ Tspi_Context_GetDefaultPolicy(TSS_HCONTEXT tspContext,	/* in */
 	if (!obj_is_context(tspContext))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
-	return obj_context_get_policy(tspContext, phPolicy);
+	return obj_context_get_policy(tspContext, TSS_POLICY_USAGE, phPolicy);
 }
 
 TSS_RESULT
@@ -143,6 +143,10 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 	switch (objectType) {
 	case TSS_OBJECT_TYPE_POLICY:
 		switch (initFlags) {
+#ifdef TSS_BUILD_TSS12
+			case TSS_POLICY_OPERATOR:
+				/* fall through */
+#endif
 			case TSS_POLICY_MIGRATION:
 				/* fall through */
 			case TSS_POLICY_USAGE:

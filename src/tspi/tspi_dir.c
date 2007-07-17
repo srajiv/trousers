@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -45,7 +45,7 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	memcpy((BYTE *)&dirValue, rgbDirData, ulDirDataLength);

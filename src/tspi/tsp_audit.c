@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "obj.h"
 
@@ -53,7 +53,7 @@ audit_set_ordinal_audit_status(TSS_HTPM hTpm,
 	if ((result = obj_tpm_get_tsp_context(hTpm, &tspContext)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTpm, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -155,7 +155,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	if (fOwnerAuthorized) {
-		if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

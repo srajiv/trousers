@@ -16,7 +16,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -35,7 +35,7 @@ obj_encdata_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 	}
 
 	/* add usage policy */
-	if ((result = obj_context_get_policy(tspContext, &encdata->usagePolicy))) {
+	if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &encdata->usagePolicy))) {
 		free(encdata);
 		return result;
 	}
@@ -79,21 +79,28 @@ obj_encdata_get_tsp_context(TSS_HENCDATA hEncdata, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
-obj_encdata_get_policy(TSS_HENCDATA hEncData, UINT32 type, TSS_HPOLICY *phPolicy)
+obj_encdata_get_policy(TSS_HENCDATA hEncData, UINT32 policyType, TSS_HPOLICY *phPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	*phPolicy = encdata->usagePolicy;
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			*phPolicy = encdata->usagePolicy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&encdata_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -101,17 +108,28 @@ obj_encdata_set_policy(TSS_HENCDATA hEncData, TSS_HPOLICY hPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
+	UINT32 policyType;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((result = obj_policy_get_type(hPolicy, &policyType)))
+		return result;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	encdata->usagePolicy = hPolicy;
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			encdata->usagePolicy = hPolicy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&encdata_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT

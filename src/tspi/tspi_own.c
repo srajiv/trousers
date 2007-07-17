@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -88,7 +88,7 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy))) {
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy))) {
 		free(newSrkBlob);
 		return result;
 	}
@@ -129,7 +129,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		return result;
 
 	if (!fForcedClear) {	/*  TPM_OwnerClear */
-		if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
+		if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 			return result;
 
 		/* Now do some Hash'ing */

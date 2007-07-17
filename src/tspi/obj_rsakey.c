@@ -17,7 +17,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -39,7 +39,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-	if ((result = obj_context_get_policy(tspContext, &rsakey->usagePolicy))) {
+	if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
 		free(rsakey);
 		return result;
 	}
@@ -198,7 +198,7 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FL
 	if (rsakey->key.authDataUsage)
 		flags |= TSS_OBJ_FLAG_USAGEAUTH;
 
-	if ((result = obj_context_get_policy(tspContext, &rsakey->usagePolicy))) {
+	if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &rsakey->usagePolicy))) {
 		free(rsakey);
 		return result;
 	}
@@ -313,24 +313,35 @@ done:
 }
 
 TSS_RESULT
-obj_rsakey_set_policy(TSS_HKEY hKey, UINT32 type, TSS_HPOLICY hPolicy)
+obj_rsakey_set_policy(TSS_HKEY hKey, TSS_HPOLICY hPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
+	UINT32 policyType;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((result = obj_policy_get_type(hPolicy, &policyType)))
+		return result;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	if (type == TSS_POLICY_USAGE)
-		rsakey->usagePolicy = hPolicy;
-	else
-		rsakey->migPolicy = hPolicy;
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			rsakey->usagePolicy = hPolicy;
+			break;
+		case TSS_POLICY_MIGRATION:
+			rsakey->migPolicy = hPolicy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -959,7 +970,7 @@ obj_rsakey_get_tsp_context(TSS_HKEY hKey, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
-obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
+obj_rsakey_get_policy(TSS_HKEY hKey, UINT32 policyType,
 		      TSS_HPOLICY *phPolicy, TSS_BOOL *auth)
 {
 	struct tsp_object *obj;
@@ -971,29 +982,34 @@ obj_rsakey_get_policy(TSS_HKEY hKey, TSS_FLAG policyType,
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	if (policyType == TSS_POLICY_USAGE) {
-		*phPolicy = rsakey->usagePolicy;
-		if (auth != NULL) {
-			if (obj->flags & TSS_OBJ_FLAG_USAGEAUTH)
-				*auth = TRUE;
-			else
-				*auth = FALSE;
-		}
-	} else {
-		if (!rsakey->migPolicy) {
-			result = TSPERR(TSS_E_KEY_NO_MIGRATION_POLICY);
-			goto done;
-		}
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			*phPolicy = rsakey->usagePolicy;
+			if (auth != NULL) {
+				if (obj->flags & TSS_OBJ_FLAG_USAGEAUTH)
+					*auth = TRUE;
+				else
+					*auth = FALSE;
+			}
+			break;
+		case TSS_POLICY_MIGRATION:
+			if (!rsakey->migPolicy) {
+				result = TSPERR(TSS_E_KEY_NO_MIGRATION_POLICY);
+				break;
+			}
 
-		*phPolicy = rsakey->migPolicy;
-		if (auth != NULL) {
-			if (obj->flags & TSS_OBJ_FLAG_MIGAUTH)
-				*auth = TRUE;
-			else
-				*auth = FALSE;
-		}
+			*phPolicy = rsakey->migPolicy;
+			if (auth != NULL) {
+				if (obj->flags & TSS_OBJ_FLAG_MIGAUTH)
+					*auth = TRUE;
+				else
+					*auth = FALSE;
+			}
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
 	}
-done:
+
 	obj_list_put(&rsakey_list);
 
 	return result;

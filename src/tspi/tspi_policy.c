@@ -18,7 +18,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -30,13 +30,9 @@ Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 		     TSS_FLAG policyType,	/* in */
 		     TSS_HPOLICY * phPolicy)	/* out */
 {
-	TSS_RESULT result;
+	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (phPolicy == NULL)
-		return TSPERR(TSS_E_BAD_PARAMETER);
-
-	if (policyType != TSS_POLICY_USAGE &&
-	    policyType != TSS_POLICY_MIGRATION)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	if (obj_is_rsakey(hObject)) {
@@ -45,19 +41,13 @@ Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 #endif
 #ifdef TSS_BUILD_NV
 	} else if (obj_is_nvstore(hObject)) {
-		result = obj_nvstore_get_policy(hObject, phPolicy);
+		result = obj_nvstore_get_policy(hObject, policyType, phPolicy);
 #endif
 	} else if (obj_is_tpm(hObject)) {
-		if (policyType == TSS_POLICY_MIGRATION)
-			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = obj_tpm_get_policy(hObject, phPolicy);
+		result = obj_tpm_get_policy(hObject, policyType, phPolicy);
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST
-		if (policyType == TSS_POLICY_MIGRATION)
-			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = obj_encdata_get_policy(hObject, policyType, phPolicy);
+		result = obj_encdata_get_policy(hObject, policyType, phPolicy);
 #endif
 	} else {
 		if (obj_is_policy(hObject) || obj_is_hash(hObject) ||
@@ -101,34 +91,21 @@ TSS_RESULT
 Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/* in */
 			   TSS_HOBJECT hObject)	/* in */
 {
-	TSS_RESULT result;
-	UINT32 type;
-
-	if ((result = obj_policy_get_type(hPolicy, &type)))
-		return result;
+	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (obj_is_rsakey(hObject)) {
 #ifdef TSS_BUILD_RSAKEY_LIST
-		result = obj_rsakey_set_policy(hObject, type, hPolicy);
+		result = obj_rsakey_set_policy(hObject, hPolicy);
 #endif
 #ifdef TSS_BUILD_NV
 	} else if (obj_is_nvstore(hObject)) {
-		if (type != TSS_POLICY_USAGE)
-			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = obj_nvstore_set_policy(hObject, hPolicy);
+		result = obj_nvstore_set_policy(hObject, hPolicy);
 #endif
 	} else if (obj_is_tpm(hObject)) {
-		if (type != TSS_POLICY_USAGE)
-			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = obj_tpm_set_policy(hObject, hPolicy);
+		result = obj_tpm_set_policy(hObject, hPolicy);
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST
-		if (type != TSS_POLICY_USAGE)
-			result = TSPERR(TSS_E_BAD_PARAMETER);
-		else
-			result = obj_encdata_set_policy(hObject, hPolicy);
+		result = obj_encdata_set_policy(hObject, hPolicy);
 #endif
 	} else {
 		result = TSPERR(TSS_E_BAD_PARAMETER);

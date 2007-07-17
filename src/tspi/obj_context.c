@@ -18,7 +18,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "tcs_tsp.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -81,20 +81,28 @@ obj_is_context(TSS_HOBJECT hObject)
 }
 
 TSS_RESULT
-obj_context_get_policy(TSS_HCONTEXT tspContext, TSS_HPOLICY *phPolicy)
+obj_context_get_policy(TSS_HCONTEXT tspContext, UINT32 policyType, TSS_HPOLICY *phPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	context = (struct tr_context_obj *)obj->data;
-	*phPolicy = context->policy;
+
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			*phPolicy = context->policy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&context_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -218,23 +226,6 @@ obj_context_is_silent(TSS_HCONTEXT tspContext)
 	obj_list_put(&context_list);
 
 	return silent;
-}
-
-TSS_RESULT
-obj_context_set_policy(TSS_HCONTEXT tspContext, TSS_HPOLICY hPolicy)
-{
-	struct tsp_object *obj;
-	struct tr_context_obj *context;
-
-	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	context = (struct tr_context_obj *)obj->data;
-	context->policy = hPolicy;
-
-	obj_list_put(&context_list);
-
-	return TSS_SUCCESS;
 }
 
 TSS_RESULT

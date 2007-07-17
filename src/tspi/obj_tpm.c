@@ -16,7 +16,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -70,33 +70,63 @@ obj_tpm_set_policy(TSS_HTPM hTpm, TSS_HPOLICY hPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_tpm_obj *tpm;
+	UINT32 policyType;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((result = obj_policy_get_type(hPolicy, &policyType)))
+		return result;
 
 	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	tpm = (struct tr_tpm_obj *)obj->data;
-	tpm->policy = hPolicy;
+
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			tpm->policy = hPolicy;
+			break;
+#ifdef TSS_BUILD_TSS12
+		case TSS_POLICY_OPERATOR:
+			tpm->operatorPolicy = hPolicy;
+			break;
+#endif
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&tpm_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
-obj_tpm_get_policy(TSS_HTPM hTpm, TSS_HPOLICY *phPolicy)
+obj_tpm_get_policy(TSS_HTPM hTpm, UINT32 policyType, TSS_HPOLICY *phPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	tpm = (struct tr_tpm_obj *)obj->data;
-	*phPolicy = tpm->policy;
+
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			*phPolicy = tpm->policy;
+			break;
+#ifdef TSS_BUILD_TSS12
+		case TSS_POLICY_OPERATOR:
+			*phPolicy = tpm->operatorPolicy;
+			break;
+#endif
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&tpm_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -308,6 +338,10 @@ obj_tpm_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 		tpm = (struct tr_tpm_obj *)obj->data;
 		if (tpm->policy == hPolicy)
 			tpm->policy = NULL_HPOLICY;
+#ifdef TSS_BUILD_TSS12
+		if (tpm->operatorPolicy == hPolicy)
+			tpm->operatorPolicy = NULL_HPOLICY;
+#endif
 	}
 
 	pthread_mutex_unlock(&list->lock);
@@ -357,3 +391,4 @@ done:
 
 	return result;
 }
+

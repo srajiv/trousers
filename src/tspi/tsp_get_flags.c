@@ -20,7 +20,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -37,7 +37,7 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM, UINT32 *volFlags, UI
 	TSS_HPOLICY hPolicy;
 	Trspi_HashCtx hashCtx;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	/* do an owner authorized get capability call */

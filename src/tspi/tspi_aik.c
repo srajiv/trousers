@@ -15,7 +15,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -90,7 +90,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					    &hSRKPolicy, &usesAuth)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hTPMPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hTPMPolicy)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hCAPubKey, TSS_POLICY_USAGE,
@@ -403,7 +403,7 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 					    &hIDPolicy, &usesAuth)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTPM, &hTPMPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hTPMPolicy)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

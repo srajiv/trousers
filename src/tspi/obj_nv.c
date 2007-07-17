@@ -30,7 +30,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -278,14 +278,24 @@ obj_nvstore_set_policy(TSS_HNVSTORE hNvstore, TSS_HPOLICY hPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_nvstore_obj *nvstore;
-	TSS_RESULT result=TSS_SUCCESS;
+	UINT32 policyType;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((result = obj_policy_get_type(hPolicy, &policyType)))
+		return result;
 
 	if ((obj = obj_list_get_obj(&nvstore_list, hNvstore)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	nvstore = (struct tr_nvstore_obj *)obj->data;
 
-	nvstore->policy= hPolicy;
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			nvstore->policy = hPolicy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&nvstore_list);
 
@@ -293,7 +303,7 @@ obj_nvstore_set_policy(TSS_HNVSTORE hNvstore, TSS_HPOLICY hPolicy)
 }
 
 TSS_RESULT
-obj_nvstore_get_policy(TSS_HNVSTORE hNvstore, TSS_HPOLICY *phPolicy)
+obj_nvstore_get_policy(TSS_HNVSTORE hNvstore, UINT32 policyType, TSS_HPOLICY *phPolicy)
 {
 	struct tsp_object *obj;
 	struct tr_nvstore_obj *nvstore;
@@ -304,7 +314,13 @@ obj_nvstore_get_policy(TSS_HNVSTORE hNvstore, TSS_HPOLICY *phPolicy)
 
 	nvstore = (struct tr_nvstore_obj *)obj->data;
 
-	*phPolicy = nvstore->policy;
+	switch (policyType) {
+		case TSS_POLICY_USAGE:
+			*phPolicy = nvstore->policy;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
 
 	obj_list_put(&nvstore_list);
 

@@ -17,7 +17,7 @@
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -59,7 +59,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	 **************************************************/
 
 	/* First get the Owner Policy */
-	if ((result = obj_tpm_get_policy(hTPM, &hOwnerPolicy)))
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hOwnerPolicy)))
 		return result;
 
 	/* Now get the SRK Policy */

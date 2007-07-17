@@ -31,7 +31,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "spi_internal_types.h"
+#include "trousers_types.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
@@ -102,14 +102,14 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 		return result;
 	}
 
-	if ((result = obj_nvstore_get_policy(hNvstore, &hEncPolicy)))
+	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hEncPolicy)))
 		return result;
 
-	if ((result = obj_tpm_get_policy(hTpm, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	if (!hEncPolicy) {
-		if ((result = obj_context_get_policy(tspContext, &hEncPolicy)))
+		if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &hEncPolicy)))
 			return result;
 	}
 
@@ -263,14 +263,14 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 		return result;
 	}
 
-	if ((result = obj_tpm_get_policy(hTpm, &hPolicy)))
+	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
-	if ((result = obj_nvstore_get_policy(hNvstore, &hEncPolicy)))
+	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hEncPolicy)))
 		return result;
 
 	if (!hEncPolicy) {
-		if ((result = obj_context_get_policy(tspContext, &hEncPolicy)))
+		if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &hEncPolicy)))
 			return result;
 	}
 
@@ -376,7 +376,7 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 	if ((result = obj_nvstore_get_index(hNvstore, &nv_data_public.nvIndex)))
 		return result;
 
-	if ((result = obj_nvstore_get_policy(hNvstore, &hPolicy)))
+	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	if (hPolicy) {
@@ -498,7 +498,7 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 	if ((result = obj_nvstore_get_index(hNvstore, &nv_data_public.nvIndex)))
 		return result;
 
-	if ((result = obj_nvstore_get_policy(hNvstore, &hPolicy)))
+	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	if (hPolicy) {/*if the policy secret is set*/
