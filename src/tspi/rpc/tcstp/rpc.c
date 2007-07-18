@@ -161,6 +161,7 @@ getData(TCSD_PACKET_TYPE dataType,
 	int theDataSize,
 	struct tcsd_comm_data *comm)
 {
+	TSS_RESULT result;
 	UINT64 old_offset, offset;
 	TCSD_PACKET_TYPE *type = (TCSD_PACKET_TYPE *)(comm->buf + comm->hdr.type_offset) + index;
 
@@ -211,18 +212,22 @@ getData(TCSD_PACKET_TYPE dataType,
 						      ((TCPA_VERSION *)theData));
 			break;
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
-			Trspi_UnloadBlob_KM_KEYINFO(&offset, comm->buf,
-						    ((TSS_KM_KEYINFO *)theData));
+			if ((result = Trspi_UnloadBlob_KM_KEYINFO(&offset, comm->buf,
+								  ((TSS_KM_KEYINFO *)theData))))
+				return result;
 			break;
 		case TCSD_PACKET_TYPE_KM_KEYINFO2:
-			Trspi_UnloadBlob_KM_KEYINFO2(&offset, comm->buf,
-							((TSS_KM_KEYINFO2 *)theData));
+			if ((result = Trspi_UnloadBlob_KM_KEYINFO2(&offset, comm->buf,
+								   ((TSS_KM_KEYINFO2 *)theData))))
+				return result;
 			break;
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			UnloadBlob_LOADKEY_INFO(&offset, comm->buf, ((TCS_LOADKEY_INFO *)theData));
 			break;
 		case TCSD_PACKET_TYPE_PCR_EVENT:
-			Trspi_UnloadBlob_PCR_EVENT(&offset, comm->buf, ((TSS_PCR_EVENT *)theData));
+			if ((result = Trspi_UnloadBlob_PCR_EVENT(&offset, comm->buf,
+								 ((TSS_PCR_EVENT *)theData))))
+				return result;
 			break;
 		case TCSD_PACKET_TYPE_COUNTER_VALUE:
 			Trspi_UnloadBlob_COUNTER_VALUE(&offset, comm->buf,
