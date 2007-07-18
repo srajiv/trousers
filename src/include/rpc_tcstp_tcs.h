@@ -92,6 +92,7 @@ DECLARE_TCSTP_FUNC(GetRegisteredKeyBlob);
 DECLARE_TCSTP_FUNC(LoadKeyByUUID);
 DECLARE_TCSTP_FUNC(GetRegisteredKeyByPublicInfo);
 DECLARE_TCSTP_FUNC(EnumRegisteredKeys);
+DECLARE_TCSTP_FUNC(EnumRegisteredKeys2);
 #else
 #define tcs_wrap_RegisterKey			tcs_wrap_Error
 #define tcs_wrap_UnregisterKey			tcs_wrap_Error
@@ -99,6 +100,7 @@ DECLARE_TCSTP_FUNC(EnumRegisteredKeys);
 #define tcs_wrap_LoadKeyByUUID			tcs_wrap_Error
 #define tcs_wrap_GetRegisteredKeyByPublicInfo	tcs_wrap_Error
 #define tcs_wrap_EnumRegisteredKeys		tcs_wrap_Error
+#define tcs_wrap_EnumRegisteredKeys2	tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_SIGN
@@ -314,7 +316,9 @@ DECLARE_TCSTP_FUNC(dispatchCommand);
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);
 void LoadBlob_KM_KEYINFO(UINT64 *, BYTE *, TSS_KM_KEYINFO *);
+void LoadBlob_KM_KEYINFO2(UINT64 *, BYTE *, TSS_KM_KEYINFO2 *);
 void UnloadBlob_KM_KEYINFO(UINT64 *, BYTE *, TSS_KM_KEYINFO *);
+void UnloadBlob_KM_KEYINFO2(UINT64 *, BYTE *, TSS_KM_KEYINFO2 *);
 void LoadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
 void UnloadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
 void LoadBlob_PCR_EVENT(UINT64 *, BYTE *, TSS_PCR_EVENT *);

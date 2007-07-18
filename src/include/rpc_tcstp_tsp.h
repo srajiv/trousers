@@ -54,6 +54,7 @@ TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry * tcsCon
 TSS_RESULT TCS_RegisterKey_TP(struct host_table_entry *,TSS_UUID,TSS_UUID,UINT32,BYTE *,UINT32,BYTE *);
 TSS_RESULT TCSP_UnregisterKey_TP(struct host_table_entry *,TSS_UUID);
 TSS_RESULT TCS_EnumRegisteredKeys_TP(struct host_table_entry *,TSS_UUID *,UINT32 *,TSS_KM_KEYINFO **);
+TSS_RESULT TCS_EnumRegisteredKeys_TP2(struct host_table_entry *,TSS_UUID *,UINT32 *,TSS_KM_KEYINFO2 **);
 TSS_RESULT TCS_GetRegisteredKey_TP(struct host_table_entry *,TSS_UUID,TSS_KM_KEYINFO **);
 TSS_RESULT TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *,TSS_UUID,UINT32 *,BYTE **);
 TSS_RESULT TCSP_LoadKeyByUUID_TP(struct host_table_entry *,TSS_UUID,TCS_LOADKEY_INFO *,TCS_KEY_HANDLE *);
@@ -62,6 +63,7 @@ TSS_RESULT TCSP_LoadKeyByUUID_TP(struct host_table_entry *,TSS_UUID,TCS_LOADKEY_
 #define TCS_RegisterKey_TP(...)				TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_UnregisterKey_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCS_EnumRegisteredKeys_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCS_EnumRegisteredKeys_TP2(...)			TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCS_GetRegisteredKey_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCS_GetRegisteredKeyBlob_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_LoadKeyByUUID_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)

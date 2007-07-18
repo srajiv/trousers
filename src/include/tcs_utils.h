@@ -234,6 +234,8 @@ void free_external_events(UINT32, TSS_PCR_EVENT *);
 TSS_RESULT internal_TerminateHandle(TCS_AUTHHANDLE handle);
 UINT32 get_pcr_event_size(TSS_PCR_EVENT *);
 TSS_RESULT fill_key_info(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO *);
+TSS_RESULT fill_key_info2(struct key_disk_cache *, struct key_mem_cache *, TSS_KM_KEYINFO2 *);
+
 char platform_get_runlevel();
 TSS_RESULT tpm_rsp_parse(TPM_COMMAND_CODE, BYTE *, UINT32, ...);
 TSS_RESULT tpm_rqu_build(TPM_COMMAND_CODE, UINT64 *, BYTE *, ...);
@@ -303,6 +305,12 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						    UINT32 * pcKeyHierarchySize,	/* out */
 						    TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
 	    );
+	
+	TSS_RESULT TCS_EnumRegisteredKeys_Internal2(TCS_CONTEXT_HANDLE hContext,	/* in */
+							    TSS_UUID * pKeyUUID,	/* in    */
+							    UINT32 * pcKeyHierarchySize,	/* out */
+							    TSS_KM_KEYINFO2 ** ppKeyHierarchy	/* out */
+		);
 
 	TSS_RESULT TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						  TSS_UUID *KeyUUID,	/* in */
