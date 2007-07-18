@@ -422,16 +422,55 @@ Trspi_UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 	Trspi_UnloadBlob_BYTE(offset, &out->revMinor, blob);
 }
 
-void
+TSS_RESULT
 Trspi_UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
-	Trspi_UnloadBlob_TSS_VERSION( offset, blob, &info->versionInfo);
-	Trspi_UnloadBlob_UUID( offset, blob, &info->keyUUID);
-	Trspi_UnloadBlob_UUID( offset, blob, &info->parentKeyUUID);
-	Trspi_UnloadBlob_BYTE( offset, &info->bAuthDataUsage, blob);
-	Trspi_UnloadBlob_BOOL( offset, &info->fIsLoaded, blob);
-	Trspi_UnloadBlob_UINT32( offset, &info->ulVendorDataLength, blob);
-	Trspi_UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+	Trspi_UnloadBlob_TSS_VERSION(offset, blob, &info->versionInfo);
+	Trspi_UnloadBlob_UUID(offset, blob, &info->keyUUID);
+	Trspi_UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
+	Trspi_UnloadBlob_BYTE(offset, &info->bAuthDataUsage, blob);
+	Trspi_UnloadBlob_BOOL(offset, &info->fIsLoaded, blob);
+	Trspi_UnloadBlob_UINT32(offset, &info->ulVendorDataLength, blob);
+	if (info->ulVendorDataLength > 0){
+		/* allocate space for vendor data */
+		info->rgbVendorData = malloc(info->ulVendorDataLength);
+		if (info->rgbVendorData == NULL) {
+			LogError("malloc of %u bytes failed.", info->ulVendorDataLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		Trspi_UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+	} else
+		info->rgbVendorData = NULL;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
+{
+	Trspi_UnloadBlob_TSS_VERSION(offset, blob, &info->versionInfo);
+	Trspi_UnloadBlob_UUID(offset, blob, &info->keyUUID);
+	Trspi_UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
+	Trspi_UnloadBlob_BYTE(offset, &info->bAuthDataUsage, blob);
+	/* Takes data regarding the new 2 fields of TSS_KM_KEYINFO2 */
+	Trspi_UnloadBlob_UINT32(offset, &info->persistentStorageType, blob);
+	Trspi_UnloadBlob_UINT32(offset, &info->persistentStorageTypeParent, blob);
+	Trspi_UnloadBlob_BOOL(offset, &info->fIsLoaded, blob);
+	Trspi_UnloadBlob_UINT32(offset, &info->ulVendorDataLength, blob);
+	if (info->ulVendorDataLength > 0) {
+		/* allocate space for vendor data */
+		info->rgbVendorData = malloc(info->ulVendorDataLength);
+		if (info->rgbVendorData == NULL) {
+			LogError("malloc of %u bytes failed.", info->ulVendorDataLength);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		Trspi_UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+	} else
+		info->rgbVendorData = NULL;
+
+	return TSS_SUCCESS;
 }
 
 void
@@ -462,7 +501,7 @@ Trspi_UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 	if (event->ulPcrValueLength > 0) {
 		event->rgbPcrValue = malloc(event->ulPcrValueLength);
 		if (event->rgbPcrValue == NULL) {
-			LogError("malloc of %d bytes failed.", event->ulPcrValueLength);
+			LogError("malloc of %u bytes failed.", event->ulPcrValueLength);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
