@@ -241,6 +241,173 @@ done:
 }
 
 TSS_RESULT
+TCS_EnumRegisteredKeys_Internal2(TCS_CONTEXT_HANDLE hContext,		/* in */
+				TSS_UUID * pKeyUUID,			/* in */
+				UINT32 * pcKeyHierarchySize,		/* out */
+				TSS_KM_KEYINFO2 ** ppKeyHierarchy)	/* out */
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT32 count = 0, i;
+	TSS_KM_KEYINFO2 *ret = NULL;
+	TSS_UUID tmp_uuid;
+	struct key_disk_cache *disk_ptr, *tmp_ptrs[MAX_KEY_CHILDREN];
+	struct key_mem_cache *mem_ptr;
+	TSS_BOOL is_reg = FALSE;
+
+	LogDebug("Enum Reg Keys2");
+
+	if (pcKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
+		return TCSERR(TSS_E_BAD_PARAMETER);
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if (pKeyUUID != NULL) {
+		/* First have to verify the key is registered */
+		if ((result = isUUIDRegistered(pKeyUUID, &is_reg)))
+			return result;
+
+		if (is_reg == FALSE) {
+			/* This return code is not listed as possible in the TSS 1.1 spec,
+			 * but it makes more sense than just TCS_SUCCESS or TSS_E_FAIL */
+			return TCSERR(TSS_E_PS_KEY_NOTFOUND);
+		}
+	}
+
+	/* this entire operation needs to be atomic wrt registered keys. We must
+	 * lock the mem cache as well to test if a given key is loaded. */
+	MUTEX_LOCK(disk_cache_lock);
+	MUTEX_LOCK(mem_cache_lock);
+
+	/* return an array of all registered keys if pKeyUUID == NULL */
+	if (pKeyUUID == NULL) {
+		/*  determine the number of registered keys */
+		for (disk_ptr = key_disk_cache_head; disk_ptr; disk_ptr = disk_ptr->next) {
+			if (disk_ptr->flags & CACHE_FLAG_VALID)
+				count++;
+		}
+
+		/* malloc a structure for each of them */
+		if (count != 0) {
+			ret = calloc(count, sizeof(TSS_KM_KEYINFO2));
+			if (ret == NULL) {
+				LogError("malloc of %zd bytes failed.",
+						(count * sizeof(TSS_KM_KEYINFO2)));
+				count = 0;
+				result = TCSERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+		} else {
+			goto done;
+		}
+
+		/* fill out the structure for each key */
+		i = 0;
+		for (disk_ptr = key_disk_cache_head; disk_ptr; disk_ptr = disk_ptr->next) {
+			if (disk_ptr->flags & CACHE_FLAG_VALID) {
+				/* look for a mem cache entry to check if its loaded */
+				for (mem_ptr = key_mem_cache_head; mem_ptr; mem_ptr = mem_ptr->next) {
+					if (!memcmp(&mem_ptr->uuid, &disk_ptr->uuid, sizeof(TSS_UUID))) {
+						if ((result = fill_key_info2(disk_ptr, mem_ptr, &ret[i]))) {
+							free(ret);
+							ret = NULL;
+							count = 0;
+							goto done;
+						}
+						break;
+					}
+				}
+				/* if there is no mem cache entry for this key, go ahead and call
+				 * fill_key_info2(), it will pull everything from disk */
+				if (mem_ptr == NULL) {
+					if ((result = fill_key_info2(disk_ptr, NULL, &ret[i]))) {
+						free(ret);
+						ret = NULL;
+						count = 0;
+						goto done;
+					}
+				}
+				i++;
+			}
+		}
+	} else {
+		/* return a chain of a key and its parents up to the SRK */
+		/*  determine the number of keys in the chain */
+		memcpy(&tmp_uuid, pKeyUUID, sizeof(TSS_UUID));
+		disk_ptr = key_disk_cache_head;
+		while (disk_ptr != NULL && count < MAX_KEY_CHILDREN)
+		{
+			if (disk_ptr->flags & CACHE_FLAG_VALID &&
+				!memcmp(&disk_ptr->uuid, &tmp_uuid, sizeof(TSS_UUID)))
+			{
+				/* increment count, then search for the parent */
+				count++;
+				/* save a pointer to this cache entry */
+				tmp_ptrs[count - 1] = disk_ptr;
+				/* if the parent of this key is NULL, we're at the root of the tree */
+				if (!memcmp(&disk_ptr->parent_uuid, &NULL_UUID, sizeof(TSS_UUID)))
+					break;
+				/* overwrite tmp_uuid with the parent, which we will now search for */
+				memcpy(&tmp_uuid, &disk_ptr->parent_uuid, sizeof(TSS_UUID));
+				disk_ptr = key_disk_cache_head;
+				continue;
+			}
+			disk_ptr = disk_ptr->next;
+		}
+		/* when we reach this point, we have an array of TSS_UUID's that leads from the
+		 * requested key up to the SRK*/
+
+		/* malloc a structure for each of them */
+		if (count != 0) {
+			ret = calloc(count, sizeof(TSS_KM_KEYINFO2));
+			if (ret == NULL) {
+				LogError("malloc of %zd bytes failed.",
+						(count * sizeof(TSS_KM_KEYINFO2)));
+				count = 0;
+				result = TCSERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+		} else {
+			goto done;
+		}
+
+		for (i = 0; i < count; i++) {
+			/* look for a mem cache entry to check if its loaded */
+			for (mem_ptr = key_mem_cache_head; mem_ptr; mem_ptr = mem_ptr->next) {
+				if (!memcmp(&mem_ptr->uuid, &tmp_ptrs[i]->uuid, sizeof(TSS_UUID))) {
+					if ((result = fill_key_info2(tmp_ptrs[i], mem_ptr, &ret[i]))) {
+						free(ret);
+						ret = NULL;
+						count = 0;
+						goto done;
+					}
+					break;
+				}
+			}
+			/* if there is no mem cache entry for this key, go ahead and call
+			 * fill_key_info(), it will pull everything from disk */
+			if (mem_ptr == NULL) {
+				if ((result = fill_key_info2(tmp_ptrs[i], NULL, &ret[i]))) {
+					free(ret);
+					ret = NULL;
+					count = 0;
+					goto done;
+				}
+			}
+		}
+	}
+done:
+
+	MUTEX_UNLOCK(disk_cache_lock);
+	MUTEX_UNLOCK(mem_cache_lock);
+
+	*ppKeyHierarchy = ret;
+	*pcKeyHierarchySize = count;
+
+	return result;
+}
+
+TSS_RESULT
 TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TSS_UUID *KeyUUID,		/* in */
 			      TSS_KM_KEYINFO ** ppKeyInfo)	/* out */
