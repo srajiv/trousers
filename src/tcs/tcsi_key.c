@@ -290,29 +290,24 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubContainer;
-	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering OwnerReadInternalPub");
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
+	LogDebug("OwnerReadInternalPub: handle: 0x%x", hKey);
 	if (hKey != TPM_KH_SRK) {
 		result = TCSERR(TSS_E_FAIL);
 		LogDebug("OwnerReadInternalPub - Unsupported Key Handle");
-		goto done;
-	}
-	if (ensureKeyIsLoaded(hContext, hKey, &keySlot)) {
-		result = TCSERR(TCS_E_KM_LOADFAILED);
 		goto done;
 	}
 
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		goto done;
 
-	LogDebug("OwnerReadInternalPub: handle: 0x%x, slot: 0x%x", hKey, keySlot);
 	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
+	LoadBlob_UINT32(&offset, hKey, txBlob);
 	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_OwnerReadInternalPub, txBlob);
 
@@ -343,5 +338,4 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 done:
 	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);
 	return result;
-	
 }
