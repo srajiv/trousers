@@ -74,6 +74,23 @@ ps_get_registered_keys(TSS_UUID *uuid, TSS_UUID *tcs_uuid, UINT32 *size, TSS_KM_
 }
 
 TSS_RESULT
+ps_get_registered_keys2(TSS_UUID *uuid, TSS_UUID *tcs_uuid, UINT32 *size, TSS_KM_KEYINFO2 **keys)
+{
+	int fd;
+	UINT32 result;
+	
+	if ((result = get_file(&fd)))
+		return result;
+	
+	/* Sets the proper TSS_KM_KEYINFO2 fields according to the UUID type */
+	result = psfile_get_registered_keys2(fd, uuid, tcs_uuid, size, keys);
+	
+	put_file(fd);
+	
+	return result;
+}
+
+TSS_RESULT
 ps_is_key_registered(TSS_UUID *uuid, TSS_BOOL *answer)
 {
 	int fd;
@@ -243,6 +260,33 @@ merge_key_hierarchies(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO *
 	return TSS_SUCCESS;
 }
 
+
+TSS_RESULT
+merge_key_hierarchies2(TSS_HCONTEXT tspContext, UINT32 tsp_size, TSS_KM_KEYINFO2 *tsp_hier,
+		      UINT32 tcs_size, TSS_KM_KEYINFO2 *tcs_hier, UINT32 *merged_size,
+		      TSS_KM_KEYINFO2 **merged_hier)
+{
+	UINT32 i, j;
+
+	*merged_hier = malloc((tsp_size + tcs_size) * sizeof(TSS_KM_KEYINFO2));
+	if (*merged_hier == NULL) {
+		LogError("malloc of %zu bytes failed.", (tsp_size + tcs_size) *
+				sizeof(TSS_KM_KEYINFO2));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	for (i = 0; i < tsp_size; i++)
+		memcpy(&((*merged_hier)[i]), &tsp_hier[i], sizeof(TSS_KM_KEYINFO2));
+
+	for (j = 0; j < tcs_size; j++)
+		memcpy(&((*merged_hier)[i + j]), &tcs_hier[j], sizeof(TSS_KM_KEYINFO2));
+
+	*merged_size = i + j;
+
+	return TSS_SUCCESS;
+}
+
+
 #if 0
 TSS_RESULT
 load_from_system_ps(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TSS_HKEY *phKey)
@@ -298,3 +342,4 @@ load_from_system_ps(TSS_HCONTEXT tspContext, TSS_UUID *uuid, TSS_HKEY *phKey)
 	return result;
 }
 #endif
+

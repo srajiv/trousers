@@ -468,3 +468,84 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 
 	return result;
 }
+
+TSS_RESULT
+Tspi_Context_GetRegisteredKeysByUUID2(TSS_HCONTEXT tspContext,		/* in */
+				     TSS_FLAG persistentStorageType,	/* in */
+				     TSS_UUID * pUuidData,		/* in */
+				     UINT32 * pulKeyHierarchySize,	/* out */
+				     TSS_KM_KEYINFO2 ** ppKeyHierarchy)	/* out */
+{
+	TSS_RESULT result;
+	TSS_KM_KEYINFO2 *tcsHier, *tspHier;
+	UINT32 tcsHierSize, tspHierSize;
+	TSS_UUID tcs_uuid;
+	
+	/* If out parameters are NULL, return error */
+	if (pulKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+	
+	if (!obj_is_context(tspContext))
+			return TSPERR(TSS_E_INVALID_HANDLE);
+	
+	if (pUuidData) {
+		/* TSS 1.2 Spec: If a certain key UUID is provided, the returned array of TSS_KM_KEYINFO2
+		structures only contains data reflecting the path of the key hierarchy
+		regarding that key. The first array entry is the key addressed by the given
+		UUID followed by its parent key up to and including the root key.
+		*/
+			if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+				if ((result = TCS_EnumRegisteredKeys2(tspContext, pUuidData,
+								     pulKeyHierarchySize,
+								     ppKeyHierarchy)))
+					return result;
+			} else if (persistentStorageType == TSS_PS_TYPE_USER) {
+
+				if ((result = ps_get_registered_keys2(pUuidData, &tcs_uuid,
+								     &tspHierSize, &tspHier)))
+					return result;
+				/* The tcs_uuid returned by ps_get_registered_key2 will always be a parent of some
+				 * key into the system ps of a user key into the user ps
+				 * This key needs to be searched for in the system ps to be merged*/
+				if ((result = TCS_EnumRegisteredKeys2(tspContext, &tcs_uuid, &tcsHierSize,
+								     &tcsHier))) {
+					free(tspHier);
+					return result;
+				}
+
+				result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier,
+							       tcsHierSize, tcsHier, pulKeyHierarchySize,
+							       ppKeyHierarchy);
+				free(tcsHier);
+				free(tspHier);
+			} else
+				return TSPERR(TSS_E_BAD_PARAMETER);
+		} else {
+			/* If this field is set to NULL, the returned array of TSS_KM_KEYINFO2
+			structures contains data reflecting the entire key hierarchy starting with
+			root key. The array will include keys from both the user and the system
+			TSS key store. The persistentStorageType field will be ignored. 
+			*/ 
+			if ((result = TCS_EnumRegisteredKeys2(tspContext, pUuidData, &tcsHierSize,
+							     &tcsHier)))
+				return result;
+
+			if ((result = ps_get_registered_keys2(pUuidData, NULL, &tspHierSize, &tspHier))) {
+				free(tcsHier);
+				return result;
+			}
+
+			result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier, tcsHierSize,
+						       tcsHier, pulKeyHierarchySize, ppKeyHierarchy);
+			free(tcsHier);
+			free(tspHier);
+		}
+
+		if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+			free(*ppKeyHierarchy);
+			*ppKeyHierarchy = NULL;
+			*pulKeyHierarchySize = 0;
+		}
+
+		return result;
+}

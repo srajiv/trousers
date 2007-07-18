@@ -214,6 +214,10 @@ getData(TCSD_PACKET_TYPE dataType,
 			Trspi_UnloadBlob_KM_KEYINFO(&offset, comm->buf,
 						    ((TSS_KM_KEYINFO *)theData));
 			break;
+		case TCSD_PACKET_TYPE_KM_KEYINFO2:
+			Trspi_UnloadBlob_KM_KEYINFO2(&offset, comm->buf,
+							((TSS_KM_KEYINFO2 *)theData));
+			break;
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			UnloadBlob_LOADKEY_INFO(&offset, comm->buf, ((TCS_LOADKEY_INFO *)theData));
 			break;

@@ -741,6 +741,49 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 }
 
 TSS_RESULT
+copy_key_info2(int fd, TSS_KM_KEYINFO2 *ki, struct key_disk_cache *c)
+{
+	TCPA_KEY key;
+	BYTE blob[4096];
+	UINT64 offset;
+	TSS_RESULT result;
+	off_t off;
+
+	/* Set the file pointer to the offset that the key blob is at */
+	off = lseek(fd, TSSPS_BLOB_DATA_OFFSET(c), SEEK_SET);
+	if (off == ((off_t)-1)) {
+		LogDebug("lseek: %s", strerror(errno));
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	/* Read in the key blob */
+	if ((result = read_data(fd, (void *)blob, c->blob_size))) {
+		LogDebug("%s", __FUNCTION__);
+		return result;
+	}
+
+	/* Expand the blob into a useable form */
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &key)))
+		return result;
+
+	memcpy(&ki->versionInfo, &key.ver, sizeof(TSS_VERSION));
+	memcpy(&ki->keyUUID, &c->uuid, sizeof(TSS_UUID));
+	memcpy(&ki->parentKeyUUID, &c->parent_uuid, sizeof(TSS_UUID));
+	
+	/* CHECK: fill the two new fields of TSS_KM_KEYINFO2 */
+	ki->persistentStorageType = TSS_PS_TYPE_USER;
+	memcpy(&ki->persistentStorageTypeParent, &c->flags, sizeof(UINT16));
+	
+	ki->bAuthDataUsage = key.authDataUsage;
+
+	free_key_refs(&key);
+
+	return TSS_SUCCESS;
+}
+
+
+TSS_RESULT
 psfile_get_registered_keys(int fd,
 			   TSS_UUID *uuid,
 			   TSS_UUID *tcs_uuid,
@@ -827,6 +870,95 @@ restart_search:
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+psfile_get_registered_keys2(int fd,
+			   TSS_UUID *uuid,
+			   TSS_UUID *tcs_uuid,
+			   UINT32 *size,
+			   TSS_KM_KEYINFO2 **keys)
+{
+	TSS_RESULT result;
+	struct key_disk_cache *cache_entries;
+	UINT32 cache_size, i, j;
+	TSS_KM_KEYINFO2 *keyinfos = NULL;
+	TSS_UUID *find_uuid;
+
+        if ((result = psfile_get_all_cache_entries(fd, &cache_size, &cache_entries)))
+                return result;
+ 
+	if (cache_size == 0) {
+		if (uuid)
+			return TSPERR(TSS_E_PS_KEY_NOTFOUND);
+		else {
+			*size = 0;
+			*keys = NULL;
+			return TSS_SUCCESS;
+		}
+	}
+
+	if (uuid) {
+		find_uuid = uuid;
+		j = 0;
+
+		restart_search:
+			/* Search for the requested UUID.  When found, allocate new space for it, copy
+			 * it in, then change the uuid to be searched for it its parent and start over. */
+			for (i = 0; i < cache_size; i++) {
+				/*Return 0 if normal finish*/
+				if (!memcmp(&cache_entries[i].uuid, find_uuid, sizeof(TSS_UUID))) {
+					if (!(keyinfos = realloc(keyinfos,
+							(j+1) * sizeof(TSS_KM_KEYINFO2)))) {
+						free(cache_entries);
+						free(keyinfos);
+						return TSPERR(TSS_E_OUTOFMEMORY);
+					}
+					/* Here the key UUID is found and needs to be copied for the array*/
+					/* Initializes the keyinfos with 0's*/
+					memset(&keyinfos[j], 0, sizeof(TSS_KM_KEYINFO2));
+
+					if ((result = copy_key_info2(fd, &keyinfos[j], &cache_entries[i]))) {
+						free(cache_entries);
+						free(keyinfos);
+						return result;
+					}
+
+					find_uuid = &keyinfos[j].parentKeyUUID;
+					j++;
+					goto restart_search;
+				}
+			}
+
+		/* Searching for keys in the user PS will always lead us up to some key in the
+		 * system PS. Return that key's uuid so that the upper layers can call down to TCS
+		 * to search for it. */
+		memcpy(tcs_uuid, find_uuid, sizeof(TSS_UUID));
+
+		*size = j;
+	} else {
+		if ((keyinfos = calloc(cache_size, sizeof(TSS_KM_KEYINFO2))) == NULL) {
+			LogDebug("malloc of %zu bytes failed.",
+					cache_size * sizeof(TSS_KM_KEYINFO2));
+			free(cache_entries);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		for (i = 0; i < cache_size; i++) {
+			if ((result = copy_key_info2(fd, &keyinfos[i], &cache_entries[i]))) {
+				free(cache_entries);
+				free(keyinfos);
+				return result;
+			}
+		}
+
+		*size = cache_size;
+	}
+
+	free(cache_entries);
+
+	*keys = keyinfos;
+
+	return TSS_SUCCESS;
+}
 
 /*
  * read into the PS file and return the number of keys

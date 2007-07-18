@@ -300,6 +300,32 @@ TSS_RESULT TCS_EnumRegisteredKeys(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCS_EnumRegisteredKeys2(TSS_HCONTEXT tspContext,	/* in */
+				  TSS_UUID * pKeyUUID,	/* in */
+				  UINT32 * pcKeyHierarchySize,	/* out */
+				  TSS_KM_KEYINFO2 ** ppKeyHierarchy)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCS_EnumRegisteredKeys_TP2(entry, pKeyUUID,
+							   pcKeyHierarchySize, ppKeyHierarchy);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+
 TSS_RESULT TCS_GetRegisteredKey(TSS_HCONTEXT tspContext,	/* in */
 				TSS_UUID KeyUUID,	/* in */
 				TSS_KM_KEYINFO ** ppKeyInfo)	/* out */

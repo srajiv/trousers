@@ -195,6 +195,65 @@ done:
 }
 
 TSS_RESULT
+TCS_EnumRegisteredKeys_TP2(struct host_table_entry *hte,
+				      TSS_UUID * pKeyUUID,	/* in */
+				      UINT32 * pcKeyHierarchySize,	/* out */
+				      TSS_KM_KEYINFO2 ** ppKeyHierarchy	/* out */
+					  )
+{
+	TSS_RESULT result;
+	int i, j;
+
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_ENUMREGISTEREDKEYS2;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	if (pKeyUUID != NULL) {
+		if (setData(TCSD_PACKET_TYPE_UUID, 1, pKeyUUID, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		i = 0;
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcKeyHierarchySize, 0, &hte->comm)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		if (*pcKeyHierarchySize > 0) {
+			*ppKeyHierarchy = malloc((*pcKeyHierarchySize) * sizeof(TSS_KM_KEYINFO2));
+			if (*ppKeyHierarchy == NULL) {
+				LogError("malloc of %zu bytes failed.", (*pcKeyHierarchySize) *
+					 sizeof(TSS_KM_KEYINFO2));
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			for (j = 0; (UINT32)j < *pcKeyHierarchySize; j++) {
+				if (getData(TCSD_PACKET_TYPE_KM_KEYINFO2, i++,
+					    &((*ppKeyHierarchy)[j]), 0, &hte->comm)) {
+					free(*ppKeyHierarchy);
+					result = TSPERR(TSS_E_INTERNAL_ERROR);
+					goto done;
+				}
+			}
+		} else {
+			*ppKeyHierarchy = NULL;
+		}
+	}
+
+done:
+	return result;
+}
+
+TSS_RESULT
 TCS_GetRegisteredKey_TP(struct host_table_entry *hte,
 				    TSS_UUID KeyUUID,	/* in */
 				    TSS_KM_KEYINFO ** ppKeyInfo	/* out */
