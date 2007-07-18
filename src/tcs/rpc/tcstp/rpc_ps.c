@@ -259,6 +259,59 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data)
 }
 
 TSS_RESULT
+tcs_wrap_EnumRegisteredKeys2(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TSS_UUID uuid, *pUuid;
+	UINT32 cKeyHierarchySize;
+	TSS_KM_KEYINFO2 *pKeyHierarchy;
+	unsigned int i, j;
+	TSS_RESULT result;
+
+	/* Receive */
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, &data->comm);
+	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
+		pUuid = NULL;
+	else if (result)
+		return result;
+	else
+		pUuid = &uuid;
+
+	result = TCS_EnumRegisteredKeys_Internal2(
+			hContext,
+			pUuid,
+			&cKeyHierarchySize,
+			&pKeyHierarchy);
+
+	if (result == TSS_SUCCESS) {
+		i=0; 
+		initData(&data->comm, cKeyHierarchySize + 1);
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &cKeyHierarchySize, 0, &data->comm)) {
+			free(pKeyHierarchy);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		for (j = 0; j < cKeyHierarchySize; j++) {
+			if (setData(TCSD_PACKET_TYPE_KM_KEYINFO2, i++, &pKeyHierarchy[j], 0, &data->comm)) {
+				free(pKeyHierarchy);
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+		}
+		free(pKeyHierarchy);
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
 tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
@@ -382,6 +435,22 @@ LoadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 }
 
 void
+LoadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
+{
+	LoadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
+	LoadBlob_UUID(offset, blob, info->keyUUID);
+	LoadBlob_UUID(offset, blob, info->parentKeyUUID);
+	LoadBlob_BYTE(offset, info->bAuthDataUsage, blob);
+	/* Load the infos of the blob regarding the new data type TSS_KM_KEYINFO2 */
+	LoadBlob_UINT32(offset,info->persistentStorageType,blob);
+	LoadBlob_UINT32(offset, info->persistentStorageTypeParent,blob);
+	
+	LoadBlob_BOOL(offset, info->fIsLoaded, blob);
+	LoadBlob_UINT32(offset, info->ulVendorDataLength, blob);
+	LoadBlob(offset, info->ulVendorDataLength, blob, info->rgbVendorData);
+}
+
+void
 UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
 	UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
@@ -392,3 +461,22 @@ UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 	UnloadBlob_UINT32(offset, &info->ulVendorDataLength, blob);
 	UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
 }
+
+#if 0
+void
+UnloadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
+{
+	UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
+	UnloadBlob_UUID(offset, blob, &info->keyUUID);
+	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
+	UnloadBlob_BYTE(offset, blob, &info->bAuthDataUsage);
+	
+	/* Extract the infos of the blob regarding the new data type TSS_KM_KEYINFO2 */
+	UnloadBlob_UINT32(offset, &info->persistentStorageType, blob);
+	UnloadBlob_UINT32(offset, &info->persistentStorageTypeParent, blob);
+	
+	UnloadBlob_BOOL(offset, &info->fIsLoaded, blob);
+	UnloadBlob_UINT32(offset, &info->ulVendorDataLength, blob);
+	UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+}
+#endif

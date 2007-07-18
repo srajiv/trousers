@@ -149,6 +149,9 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
 			LoadBlob_KM_KEYINFO(offset, blob, ((TSS_KM_KEYINFO *)data));
 			break;
+		case TCSD_PACKET_TYPE_KM_KEYINFO2:
+			LoadBlob_KM_KEYINFO2(offset, blob, ((TSS_KM_KEYINFO2 *)data));
+			break;
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			LoadBlob_LOADKEY_INFO(offset, blob, ((TCS_LOADKEY_INFO *)data));
 			break;
@@ -560,7 +563,7 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_LoadManuMaintPub,"LoadManuMaintPub"},
 	{tcs_wrap_ReadManuMaintPub,"ReadManuMaintPub"},
 	{tcs_wrap_DaaJoin,"DaaJoin"},
-        {tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
+    {tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
 	{tcs_wrap_SetCapability,"SetCapability"},
 	{tcs_wrap_ResetLockValue,"ResetLockValue"},
 	{tcs_wrap_PcrReset,"PcrReset"},
@@ -585,7 +588,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_GetAuditDigestSigned,"GetAuditDigestSigned"},
 	{tcs_wrap_Sealx,"Sealx"},
 	{tcs_wrap_SetOperatorAuth,"SetOperatorAuth"},
-	{tcs_wrap_OwnerReadInternalPub,"OwnerReadInternalPub"} /* 100 */
+	{tcs_wrap_OwnerReadInternalPub,"OwnerReadInternalPub"}, /* 100 */
+	{tcs_wrap_EnumRegisteredKeys2,"EnumRegisteredKeys2"}
 };
 
 int
