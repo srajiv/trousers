@@ -173,7 +173,7 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 	rghHandles = (TCS_HANDLE *)malloc(pulHandleListSize * sizeof(UINT32));
 	if (rghHandles == NULL) {
 		free(rgbWrappedCmdDataIn);
-		LogError("malloc of %u bytes failed.", pulHandleListSize * sizeof(UINT32));
+		LogError("malloc of %zd bytes failed.", pulHandleListSize * sizeof(UINT32));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 5, rghHandles, pulHandleListSize * sizeof(UINT32),

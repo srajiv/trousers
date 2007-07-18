@@ -991,7 +991,7 @@ obj_policy_do_sealx_mask(TSS_HPOLICY hPolicy, TSS_HKEY hKey, TSS_HENCDATA hEncDa
 
 	*rgbMaskedData = NULL;
 	if ((*rgbMaskedData = (BYTE *)calloc(1, ulDataLength)) == NULL) {
-		LogError("malloc of %zd bytes failed", ulDataLength);
+		LogError("malloc of %u bytes failed", ulDataLength);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
