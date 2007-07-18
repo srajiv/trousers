@@ -1,4 +1,9 @@
 
+- Added Tspi_Context_GetRegisteredKeysByUUID2 functions
+to the persistent storage system
+- Added Tspi_TPM_OwnerGetSRKPubKey and TCS OwnerReadInternalPub
+code.
+- Added support for operator auth and Tspi_TPM_SetOperatorAuth.
 - Added support for Sealx.
 - Added ordinal auditing support.
 - Added initial transport session support.
