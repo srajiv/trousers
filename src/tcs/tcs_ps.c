@@ -74,6 +74,56 @@ fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO 
 }
 
 TSS_RESULT
+fill_key_info2(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO2 *key_info)
+{
+	BYTE tmp_blob[2048];
+	UINT16 tmp_blob_size = 2048;
+	TCPA_KEY tmp_key;
+	UINT64 offset;
+	TSS_RESULT result;
+
+	if (m == NULL) {
+		key_info->fIsLoaded = FALSE;
+
+		/* read key from disk */
+		if ((result = ps_get_key_by_cache_entry(d, (BYTE *)&tmp_blob, &tmp_blob_size)))
+			return result;
+
+		offset = 0;
+		/* XXX add a real context handle here */
+		if ((result = UnloadBlob_KEY(&offset, tmp_blob, &tmp_key)))
+			return result;
+
+		memcpy(&key_info->versionInfo, &tmp_key.ver, sizeof(TSS_VERSION));
+		memcpy(&key_info->bAuthDataUsage, &tmp_key.authDataUsage,
+		       sizeof(TCPA_AUTH_DATA_USAGE));
+		destroy_key_refs(&tmp_key);
+	} else {
+		if (m->tpm_handle == NULL_TPM_HANDLE)
+			key_info->fIsLoaded = FALSE;
+		else
+			key_info->fIsLoaded = TRUE;
+
+		memcpy(&key_info->versionInfo, &m->blob->ver, sizeof(TSS_VERSION));
+		memcpy(&key_info->bAuthDataUsage, &m->blob->authDataUsage,
+		       sizeof(TCPA_AUTH_DATA_USAGE));
+	}
+
+	memcpy(&key_info->keyUUID, &d->uuid, sizeof(TSS_UUID));
+	memcpy(&key_info->parentKeyUUID, &d->parent_uuid, sizeof(TSS_UUID));
+	
+	/* Fill the two new TSS_KM_KEYINFO2 fields here */
+	memcpy(&key_info->persistentStorageTypeParent, &d->flags, sizeof(UINT16));
+	key_info->persistentStorageType = TSS_PS_TYPE_SYSTEM;
+
+	/* XXX consider filling in something useful here */
+	key_info->ulVendorDataLength = 0;
+	key_info->rgbVendorData = NULL;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
 key_mgr_load_by_uuid(TCS_CONTEXT_HANDLE hContext,
 		     TSS_UUID *uuid,
 		     TCS_LOADKEY_INFO *pInfo,
