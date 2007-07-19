@@ -439,7 +439,7 @@ Trspi_UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
-		Trspi_UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+		Trspi_UnloadBlob(offset, info->ulVendorDataLength, blob, info->rgbVendorData);
 	} else
 		info->rgbVendorData = NULL;
 
@@ -466,7 +466,7 @@ Trspi_UnloadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 
-		Trspi_UnloadBlob(offset, info->ulVendorDataLength, info->rgbVendorData, blob);
+		Trspi_UnloadBlob(offset, info->ulVendorDataLength, blob, info->rgbVendorData);
 	} else
 		info->rgbVendorData = NULL;
 
