@@ -78,15 +78,15 @@ ps_get_registered_keys2(TSS_UUID *uuid, TSS_UUID *tcs_uuid, UINT32 *size, TSS_KM
 {
 	int fd;
 	UINT32 result;
-	
+
 	if ((result = get_file(&fd)))
 		return result;
-	
+
 	/* Sets the proper TSS_KM_KEYINFO2 fields according to the UUID type */
 	result = psfile_get_registered_keys2(fd, uuid, tcs_uuid, size, keys);
-	
+
 	put_file(fd);
-	
+
 	return result;
 }
 
