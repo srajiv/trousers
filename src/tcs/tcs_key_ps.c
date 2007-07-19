@@ -275,7 +275,22 @@ ps_get_key_by_cache_entry(struct key_disk_cache *c, BYTE *blob, UINT16 *blob_siz
         return rc;
 }
 
-TCPA_RESULT
+TSS_RESULT
+ps_get_vendor_data(struct key_disk_cache *c, UINT32 *size, BYTE **data)
+{
+        int fd = -1;
+        TSS_RESULT rc;
+
+        if ((fd = get_file()) < 0)
+                return TCSERR(TSS_E_INTERNAL_ERROR);
+
+        rc = psfile_get_vendor_data(fd, c, size, data);
+
+        put_file(fd);
+        return rc;
+}
+
+TSS_RESULT
 ps_is_pub_registered(TCPA_STORE_PUBKEY *key)
 {
         int fd = -1;

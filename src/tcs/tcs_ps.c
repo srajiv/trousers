@@ -27,6 +27,20 @@
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 
+
+TSS_RESULT
+get_vendor_data(struct key_disk_cache *d, UINT32 *size, BYTE **data)
+{
+	if (d->vendor_data_size == 0) {
+		*size = 0;
+		*data = NULL;
+
+		return TSS_SUCCESS;
+	}
+
+	return ps_get_vendor_data(d, size, data);
+}
+
 TSS_RESULT
 fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO *key_info)
 {
@@ -66,11 +80,7 @@ fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO 
 	memcpy(&key_info->keyUUID, &d->uuid, sizeof(TSS_UUID));
 	memcpy(&key_info->parentKeyUUID, &d->parent_uuid, sizeof(TSS_UUID));
 
-	/* XXX consider filling in something useful here */
-	key_info->ulVendorDataLength = 0;
-	key_info->rgbVendorData = NULL;
-
-	return TSS_SUCCESS;
+	return get_vendor_data(d, &key_info->ulVendorDataLength, &key_info->rgbVendorData);
 }
 
 TSS_RESULT
@@ -111,16 +121,13 @@ fill_key_info2(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO
 
 	memcpy(&key_info->keyUUID, &d->uuid, sizeof(TSS_UUID));
 	memcpy(&key_info->parentKeyUUID, &d->parent_uuid, sizeof(TSS_UUID));
-	
+
 	/* Fill the two new TSS_KM_KEYINFO2 fields here */
-	memcpy(&key_info->persistentStorageTypeParent, &d->flags, sizeof(UINT16));
+	key_info->persistentStorageTypeParent = d->flags & CACHE_FLAG_PARENT_PS_SYSTEM ?
+						TSS_PS_TYPE_SYSTEM : TSS_PS_TYPE_USER;
 	key_info->persistentStorageType = TSS_PS_TYPE_SYSTEM;
 
-	/* XXX consider filling in something useful here */
-	key_info->ulVendorDataLength = 0;
-	key_info->rgbVendorData = NULL;
-
-	return TSS_SUCCESS;
+	return get_vendor_data(d, &key_info->ulVendorDataLength, &key_info->rgbVendorData);
 }
 
 TSS_RESULT

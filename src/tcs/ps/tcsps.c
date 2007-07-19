@@ -213,6 +213,41 @@ psfile_get_key_by_cache_entry(int fd, struct key_disk_cache *c, BYTE *ret_buffer
 	return TSS_SUCCESS;
 }
 
+/*
+ * return the vendor data from PS given its cache entry. The disk cache must be
+ * locked by the caller.
+ */
+TSS_RESULT
+psfile_get_vendor_data(int fd, struct key_disk_cache *c, UINT32 *size, BYTE **data)
+{
+        int rc;
+        UINT32 file_offset;
+
+	/* jump to the location of the data */
+	file_offset = TSSPS_VENDOR_DATA_OFFSET(c);
+
+	rc = lseek(fd, file_offset, SEEK_SET);
+	if (rc == ((off_t) - 1)) {
+		LogError("lseek: %s", strerror(errno));
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if ((*data = malloc(c->vendor_data_size)) == NULL) {
+		LogError("malloc of %u bytes failed", c->vendor_data_size);
+		return TCSERR(TSS_E_OUTOFMEMORY);
+	}
+
+	if ((rc = read_data(fd, *data, c->vendor_data_size))) {
+		LogError("%s: error reading %u bytes", __FUNCTION__, c->vendor_data_size);
+		free(*data);
+		*data = NULL;
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+	*size = c->vendor_data_size;
+
+	return TSS_SUCCESS;
+}
+
 TSS_RESULT
 psfile_get_ps_type_by_uuid(int fd, TSS_UUID *uuid, UINT32 *ret_ps_type)
 {
