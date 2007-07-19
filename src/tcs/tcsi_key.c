@@ -326,7 +326,7 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		*punPubKeySize = offset - 10;
 		*ppbPubKeyData = calloc(1, *punPubKeySize);
 		if (*ppbPubKeyData == NULL) {
-			LogError("malloc of %d bytes failed.", *punPubKeySize);
+			LogError("malloc of %u bytes failed.", *punPubKeySize);
 			result = TCSERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
