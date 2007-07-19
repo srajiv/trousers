@@ -770,11 +770,12 @@ copy_key_info2(int fd, TSS_KM_KEYINFO2 *ki, struct key_disk_cache *c)
 	memcpy(&ki->versionInfo, &key.ver, sizeof(TSS_VERSION));
 	memcpy(&ki->keyUUID, &c->uuid, sizeof(TSS_UUID));
 	memcpy(&ki->parentKeyUUID, &c->parent_uuid, sizeof(TSS_UUID));
-	
+
 	/* CHECK: fill the two new fields of TSS_KM_KEYINFO2 */
 	ki->persistentStorageType = TSS_PS_TYPE_USER;
-	memcpy(&ki->persistentStorageTypeParent, &c->flags, sizeof(UINT16));
-	
+	ki->persistentStorageTypeParent = c->flags & CACHE_FLAG_PARENT_PS_SYSTEM ?
+					  TSS_PS_TYPE_SYSTEM : TSS_PS_TYPE_USER;
+
 	ki->bAuthDataUsage = key.authDataUsage;
 
 	free_key_refs(&key);
@@ -885,7 +886,7 @@ psfile_get_registered_keys2(int fd,
 
         if ((result = psfile_get_all_cache_entries(fd, &cache_size, &cache_entries)))
                 return result;
- 
+
 	if (cache_size == 0) {
 		if (uuid)
 			return TSPERR(TSS_E_PS_KEY_NOTFOUND);
