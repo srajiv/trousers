@@ -37,7 +37,7 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		   BYTE ** sig	/* out */
     )
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
@@ -58,17 +58,9 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_UINT32(&offset, areaToSignSize, txBlob);
-	LoadBlob(&offset, areaToSignSize, txBlob, areaToSign);
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_Sign, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Sign, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_Sign, &offset, txBlob, keySlot, areaToSignSize,
+				    areaToSign, privAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

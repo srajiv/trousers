@@ -39,7 +39,7 @@ TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
 		   UINT32 * SealedDataSize,	/* out */
 		   BYTE ** SealedData)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	TCPA_KEY_HANDLE keySlot;
@@ -59,21 +59,15 @@ TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
+	/* XXX What's this check for? */
 	if (keySlot == 0) {
 		result = TCSERR(TSS_E_FAIL);
 		goto done;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, encAuth.authdata);
-	LoadBlob_UINT32(&offset, pcrInfoSize, txBlob);
-	LoadBlob(&offset, pcrInfoSize, txBlob, PcrInfo);
-	LoadBlob_UINT32(&offset, inDataSize, txBlob);
-	LoadBlob(&offset, inDataSize, txBlob, inData);
-
-	LoadBlob_Auth(&offset, txBlob, pubAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, sealOrdinal, txBlob);
+	if ((result = tpm_rqu_build(sealOrdinal, &offset, txBlob, keySlot, encAuth.authdata,
+				    pcrInfoSize, PcrInfo, inDataSize, inData, pubAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -113,7 +107,7 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		     UINT32 * DataSize,	/* out */
 		     BYTE ** Data)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
@@ -141,24 +135,16 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
 		goto done;
 
+	/* XXX What's this check for? */
 	if (keySlot == 0) {
 		result = TCSERR(TSS_E_FAIL);
 		goto done;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, SealedDataSize, txBlob, SealedData);
-	if (parentAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, parentAuth);
-		LoadBlob_Auth(&offset, txBlob, dataAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND,
-				offset, TPM_ORD_Unseal, txBlob);
-	} else {
-		LoadBlob_Auth(&offset, txBlob, dataAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset, TPM_ORD_Unseal, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_Unseal, &offset, txBlob, keySlot, SealedDataSize,
+				    SealedData, parentAuth, dataAuth)))
+		return result;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 

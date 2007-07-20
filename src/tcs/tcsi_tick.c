@@ -31,32 +31,23 @@ TCSP_ReadCurrentTicks_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetTicks, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetTicks, &offset, txBlob)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
-		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
-		goto done;
-	}
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	if (!result)
+		result = tpm_rsp_parse(TPM_ORD_GetTicks, txBlob, paramSize, pulCurrentTime,
+				       prgbCurrentTime);
 
-	*prgbCurrentTime = malloc(sizeof(TPM_CURRENT_TICKS));
-	if (*prgbCurrentTime == NULL) {
-		result = TCSERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
-
-	offset = 10;
-	UnloadBlob(&offset, sizeof(TPM_CURRENT_TICKS), txBlob, *prgbCurrentTime);
-	*pulCurrentTime = sizeof(TPM_CURRENT_TICKS);
 done:
 	return result;
 }
@@ -64,8 +55,8 @@ done:
 TSS_RESULT
 TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 			    TCS_KEY_HANDLE     hKey,
-			    TPM_NONCE          antiReplay,
-			    TPM_DIGEST         digestToStamp,
+			    TPM_NONCE*         antiReplay,
+			    TPM_DIGEST*        digestToStamp,
 			    TPM_AUTH*          privAuth,
 			    UINT32*            pulSignatureLength,
 			    BYTE**             prgbSignature,
@@ -74,7 +65,7 @@ TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TPM_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -89,16 +80,9 @@ TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = ensureKeyIsLoaded(hContext, hKey, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, sizeof(TPM_NONCE), txBlob, (BYTE *)&antiReplay);
-	LoadBlob(&offset, sizeof(TPM_DIGEST), txBlob, (BYTE *)&digestToStamp);
-	if (privAuth) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_TickStampBlob, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_TickStampBlob, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_TickStampBlob, &offset, txBlob, keySlot, antiReplay,
+				    digestToStamp, privAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

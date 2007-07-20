@@ -43,6 +43,31 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	va_start(ap, len);
 
 	switch (ordinal) {
+	/* TPM_BLOB: TPM_CURRENT_TICKS
+	 * return: UINT32 *, BYTE ** */
+	case TPM_ORD_GetTicks:
+	{
+		UINT32 *len1 = va_arg(ap, UINT32 *);
+		BYTE **blob1 = va_arg(ap, BYTE **);
+		va_end(ap);
+
+		if (!len1 || !blob1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		*blob1 = malloc(sizeof(TPM_CURRENT_TICKS));
+		if (*blob1 == NULL) {
+			LogError("malloc of %zd bytes failed", sizeof(TPM_CURRENT_TICKS));
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+
+		offset1 = TSS_TPM_TXBLOB_HDR_LEN;
+		UnloadBlob(&offset1, sizeof(TPM_CURRENT_TICKS), b, *blob1);
+		*len1 = sizeof(TPM_CURRENT_TICKS);
+
+		break;
+	}
 	/* TPM BLOB: TPM_SYMMETRIC_KEY, optional AUTH, AUTH
 	 * return:   UINT32 *, BYTE **, optional AUTH, AUTH */
 	case TPM_ORD_ActivateIdentity:
@@ -55,6 +80,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		blob1 = va_arg(ap, BYTE **);
 		auth1 = va_arg(ap, TPM_AUTH *);
 		auth2 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
 
 		if (!len1 || !blob1 || !auth2) {
 			LogError("Internal error for ordinal 0x%x", ordinal);
@@ -92,6 +118,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		blob2 = va_arg(ap, BYTE **);
 		auth1 = va_arg(ap, TPM_AUTH *);
 		auth2 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
 
 		if (!len1 || !blob1 || !len2 || !blob2 || !auth2) {
 			LogError("Internal error for ordinal 0x%x", ordinal);
@@ -250,7 +277,6 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, dig1);
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, dig2);
-		//LoadBlob_UINT32(outOffset, len1, out_blob);
 		LoadBlob(outOffset, len1, out_blob, blob1);
 		if (auth1) {
 			LoadBlob_Auth(outOffset, out_blob, auth1);
@@ -285,6 +311,65 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		LoadBlob_UINT32(outOffset, i, out_blob);
 		LoadBlob_UINT32(outOffset, j, out_blob);
 		LoadBlob_UINT32(outOffset, k, out_blob);
+		LoadBlob_Auth(outOffset, out_blob, auth1);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 2 UINT32's, 1 BLOB, 1 optional AUTH */
+	case TPM_ORD_Sign:
+	{
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!keySlot1 || !in_blob1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob_UINT32(outOffset, in_len1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else {
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+		}
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 1 20 byte value, 1 UINT32, 1 optional BLOB, 1 UINT32, 1 BLOB, 1 AUTH */
+	case TPM_ORD_Seal:
+	case TPM_ORD_Sealx:
+	{
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		UINT32 in_len2 = va_arg(ap, UINT32);
+		BYTE *in_blob2 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!keySlot1 || !in_blob2 || !auth1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		LoadBlob_UINT32(outOffset, in_len1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob_UINT32(outOffset, in_len2, out_blob);
+		LoadBlob(outOffset, in_len2, out_blob, in_blob2);
 		LoadBlob_Auth(outOffset, out_blob, auth1);
 		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
 
@@ -345,6 +430,85 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
 		} else
 			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 1 20-byte blob, 1 optional AUTH */
+	case TPM_ORD_CertifySelfTest:
+	{
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!keySlot1 || !digest1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 2 20-byte blobs, 1 optional AUTH */
+	case TPM_ORD_TickStampBlob:
+	{
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		BYTE *digest2 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!keySlot1 || !digest1 || !digest2) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest2);
+
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 1 BLOB, 1 optional AUTH, 1 AUTH */
+	case TPM_ORD_Unseal:
+	{
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		TPM_AUTH *auth2 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Auth(outOffset, out_blob, auth2);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, *outOffset, ordinal, out_blob);
+		} else {
+			LoadBlob_Auth(outOffset, out_blob, auth2);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		}
 
 		result = TSS_SUCCESS;
 		break;
@@ -433,6 +597,9 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		break;
 	}
 	/* No data, just an ordinal */
+	case TPM_ORD_GetTestResult:
+	case TPM_ORD_SelfTestFull:
+	case TPM_ORD_GetTicks:
 	case TPM_ORD_SetTempDeactivated:
 	case TPM_ORD_DisableForceClear:
 	case TPM_ORD_ForceClear:

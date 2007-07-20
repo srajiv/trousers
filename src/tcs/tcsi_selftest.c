@@ -30,6 +30,7 @@
 TSS_RESULT
 TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -38,8 +39,8 @@ TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A, TPM_ORD_SelfTestFull,
-			txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SelfTestFull, &offset, txBlob)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -57,7 +58,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      UINT32 * sigSize,	/* out */
 			      BYTE ** sig)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
@@ -79,18 +80,9 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce);
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset, TPM_ORD_CertifySelfTest,
-				txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_CertifySelfTest, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_CertifySelfTest, &offset, txBlob, keySlot,
+				    antiReplay.nonce, privAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -123,14 +115,15 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Get Test Result");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A, TPM_ORD_GetTestResult, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetTestResult, &offset, txBlob)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
