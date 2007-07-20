@@ -848,8 +848,8 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 	);
 	TSS_RESULT TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 					       TCS_KEY_HANDLE     hKey,
-					       TPM_NONCE          antiReplay,
-					       TPM_DIGEST         digestToStamp,
+					       TPM_NONCE*         antiReplay,
+					       TPM_DIGEST*        digestToStamp,
 					       TPM_AUTH*          privAuth,
 					       UINT32*            pulSignatureLength,
 					       BYTE**             prgbSignature,

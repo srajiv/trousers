@@ -95,7 +95,7 @@ tcs_wrap_TickStampBlob(struct tcsd_thread_data *data)
 
 	MUTEX_LOCK(tcsp_lock);
 
-	result = TCSP_TickStampBlob_Internal(hContext, hKey, nonce, digest, pAuth, &sigSize, &sig,
+	result = TCSP_TickStampBlob_Internal(hContext, hKey, &nonce, &digest, pAuth, &sigSize, &sig,
 					     &tcSize, &tc);
 
 	MUTEX_UNLOCK(tcsp_lock);
