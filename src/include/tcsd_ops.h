@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -91,6 +91,7 @@
 #define KILLMAINTENANCEFEATURE		TCSD_ORD_KILLMAINTENANCEFEATURE
 #define LOADMANUFECTURERMAINTENANCEPUB	TCSD_ORD_LOADMANUFECTURERMAINTENANCEPUB
 #define READMANUFECTURERMAINTENANCEPUB	TCSD_ORD_READMANUFECTURERMAINTENANCEPUB
+#define SETTEMPDEACTIVATED2		TCSD_ORD_SETTEMPDEACTIVATED2
 #endif
 
 /* TCSD ordinal sub-command sets */

@@ -105,6 +105,11 @@ TSS_RESULT TCSP_PhysicalEnable_TP(struct host_table_entry * hContext);
 TSS_RESULT TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *,TSS_BOOL);
 TSS_RESULT TCSP_PhysicalPresence_TP(struct host_table_entry *,TCPA_PHYSICAL_PRESENCE);
 TSS_RESULT TCSP_SetTempDeactivated_TP(struct host_table_entry * hContext);
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT TCSP_SetTempDeactivated2_TP(struct host_table_entry *, TPM_AUTH *);
+#else
+#define TCSP_SetTempDeactivated2_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
 TSS_RESULT TCSP_FieldUpgrade_TP(struct host_table_entry *,UINT32,BYTE *,UINT32 *,BYTE **,TPM_AUTH *);
 TSS_RESULT TCSP_SetRedirection_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,UINT32,TPM_AUTH *);
 TSS_RESULT TCSP_OwnerSetDisable_TP(struct host_table_entry *,TSS_BOOL,TPM_AUTH *);
@@ -119,6 +124,7 @@ TSS_RESULT TCSP_ResetLockValue_TP(struct host_table_entry *, TPM_AUTH *);
 #define TCSP_PhysicalSetDeactivated_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_PhysicalPresence_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_SetTempDeactivated_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_SetTempDeactivated2_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_FieldUpgrade_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_SetRedirection_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define TCSP_OwnerSetDisable_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)

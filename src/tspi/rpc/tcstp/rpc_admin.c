@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -256,6 +256,44 @@ TCSP_SetTempDeactivated_TP(struct host_table_entry *hte)
 
 	if (result == TSS_SUCCESS)
 		result = hte->comm.hdr.u.result;
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_SetTempDeactivated2_TP(struct host_table_entry *hte,
+			    TPM_AUTH *operatorAuth)		/* in/out */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 2);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_SETTEMPDEACTIVATED2;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (operatorAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 1, operatorAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	} else {
+		TPM_AUTH nullAuth;
+
+		memset(&nullAuth, 0, sizeof(TPM_AUTH));
+		if (setData(TCSD_PACKET_TYPE_AUTH, 1, &nullAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		if (operatorAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, 0, operatorAuth, 0, &hte->comm))
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	}
 
 	return result;
 }

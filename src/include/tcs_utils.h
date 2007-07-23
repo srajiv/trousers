@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -737,6 +737,10 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 	    );
 
 	TSS_RESULT TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
+	    );
+
+	TSS_RESULT TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TPM_AUTH * operatorAuth			/* in, out */
 	    );
 
 	TSS_RESULT TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */

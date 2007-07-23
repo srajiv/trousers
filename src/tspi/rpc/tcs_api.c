@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2007
  *
  */
 
@@ -1900,6 +1900,28 @@ TSS_RESULT TCSP_SetTempDeactivated(TSS_HCONTEXT tspContext)	/* in */
 	switch (entry->type) {
 		case CONNECTION_TYPE_TCP_PERSISTANT:
 			result = TCSP_SetTempDeactivated_TP(entry);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT TCSP_SetTempDeactivated2(TSS_HCONTEXT tspContext,	/* in */
+				    TPM_AUTH *operatorAuth)	/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_SetTempDeactivated2_TP(entry, operatorAuth);
 			break;
 		default:
 			break;

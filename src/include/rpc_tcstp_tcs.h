@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -184,6 +184,11 @@ DECLARE_TCSTP_FUNC(OwnerSetDisable);
 DECLARE_TCSTP_FUNC(PhysicalDisable);
 DECLARE_TCSTP_FUNC(PhysicalPresence);
 DECLARE_TCSTP_FUNC(SetTempDeactivated);
+#ifdef TSS_BUILD_TSS12
+DECLARE_TCSTP_FUNC(SetTempDeactivated2);
+#else
+#define tcs_wrap_SetTempDeactivated2	tcs_wrap_Error
+#endif
 DECLARE_TCSTP_FUNC(SetCapability);
 DECLARE_TCSTP_FUNC(ResetLockValue);
 #else
@@ -197,6 +202,7 @@ DECLARE_TCSTP_FUNC(ResetLockValue);
 #define tcs_wrap_PhysicalDisable	tcs_wrap_Error
 #define tcs_wrap_PhysicalPresence	tcs_wrap_Error
 #define tcs_wrap_SetTempDeactivated	tcs_wrap_Error
+#define tcs_wrap_SetTempDeactivated2	tcs_wrap_Error
 #define tcs_wrap_SetCapability		tcs_wrap_Error
 #define tcs_wrap_ResetLockValue		tcs_wrap_Error
 #endif

@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -563,7 +563,7 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_LoadManuMaintPub,"LoadManuMaintPub"},
 	{tcs_wrap_ReadManuMaintPub,"ReadManuMaintPub"},
 	{tcs_wrap_DaaJoin,"DaaJoin"},
-    {tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
+	{tcs_wrap_DaaSign,"DaaSign"}, /* 75 */
 	{tcs_wrap_SetCapability,"SetCapability"},
 	{tcs_wrap_ResetLockValue,"ResetLockValue"},
 	{tcs_wrap_PcrReset,"PcrReset"},
@@ -589,7 +589,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Sealx,"Sealx"},
 	{tcs_wrap_SetOperatorAuth,"SetOperatorAuth"},
 	{tcs_wrap_OwnerReadInternalPub,"OwnerReadInternalPub"}, /* 100 */
-	{tcs_wrap_EnumRegisteredKeys2,"EnumRegisteredKeys2"}
+	{tcs_wrap_EnumRegisteredKeys2,"EnumRegisteredKeys2"},
+	{tcs_wrap_SetTempDeactivated2,"SetTempDeactivated2"},
 };
 
 int

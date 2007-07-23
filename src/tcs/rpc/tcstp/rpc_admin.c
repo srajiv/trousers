@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -288,6 +288,50 @@ tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data)
 	MUTEX_UNLOCK(tcsp_lock);
 
 	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_SetTempDeactivated2(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TPM_AUTH operatorAuth, nullAuth, *pAuth;
+	TSS_RESULT result;
+
+	memset(&operatorAuth, 0, sizeof(TPM_AUTH));
+	memset(&nullAuth, 0, sizeof(TPM_AUTH));
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_AUTH, 1, &operatorAuth, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (memcmp(&nullAuth, &operatorAuth, sizeof(TPM_AUTH)))
+		pAuth = &operatorAuth;
+	else
+		pAuth = NULL;
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_SetTempDeactivated2_Internal(hContext, pAuth);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	if (result == TSS_SUCCESS) {
+		initData(&data->comm, 1);
+		if (pAuth) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pAuth, 0, &data->comm)) {
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+			}
+		}
+	} else
+		initData(&data->comm, 0);
+
 	data->comm.hdr.u.result = result;
 
 	return TSS_SUCCESS;
