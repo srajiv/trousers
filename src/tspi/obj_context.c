@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005, 2006
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -1135,6 +1135,7 @@ done:
 	return result;
 }
 
+/* XXX change 0,1,2 to #defines */
 TSS_RESULT
 obj_context_set_tpm_version(TSS_HCONTEXT tspContext, UINT32 ver)
 {
@@ -1165,6 +1166,30 @@ obj_context_set_tpm_version(TSS_HCONTEXT tspContext, UINT32 ver)
 	obj_list_put(&context_list);
 
 	return result;
+}
+
+/* XXX change 0,1,2 to #defines */
+TSS_RESULT
+obj_context_get_tpm_version(TSS_HCONTEXT tspContext, UINT32 *ver)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	context = (struct tr_context_obj *)obj->data;
+
+	if (context->flags & TSS_CONTEXT_FLAGS_TPM_VERSION_1)
+		*ver = 1;
+	else if (context->flags & TSS_CONTEXT_FLAGS_TPM_VERSION_2)
+		*ver = 2;
+	else
+		*ver = 0;
+
+	obj_list_put(&context_list);
+
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
