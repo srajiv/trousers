@@ -68,6 +68,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	int padding;
 	TSS_CALLBACK *cb;
 	Trspi_HashCtx hashCtx;
+	UINT32 tempCredSize;
+	BYTE *tempCred = NULL;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -247,6 +249,27 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	if ((result = obj_rsakey_get_pub_blob(hIdentityKey, &idPubSize, &idPub)))
 		goto error;
+
+	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_EKCERT, &tempCredSize, &tempCred);
+	if (tempCred != NULL) {
+		free(prgbEndorsementCredential);
+		prgbEndorsementCredential = tempCred;
+		pcEndorsementCredentialSize = tempCredSize;
+	}
+
+	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_TPM_CC, &tempCredSize, &tempCred);
+	if (tempCred != NULL) {
+		free(prgbConformanceCredential);
+		prgbConformanceCredential = tempCred;
+		pcConformanceCredentialSize = tempCredSize;
+	}
+
+	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_PLATFORMCERT, &tempCredSize, &tempCred);
+	if (tempCred != NULL) {
+		free(prgbPlatformCredential);
+		prgbPlatformCredential = tempCred;
+		pcPlatformCredentialSize = tempCredSize;
+	}
 
 	/* set up the TCPA_IDENTITY_PROOF structure */
 	/* XXX This should be DER encoded first. TPM1.1b section 9.4 */

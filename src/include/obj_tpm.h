@@ -41,6 +41,14 @@ struct tr_tpm_obj {
 			UINT32 *pulCredentialLength,
 			BYTE *rgbCredential);
 	TSS_COUNTER_ID ctr_id;
+	UINT32 EndorsementCredSize;
+	BYTE *EndorsementCred;
+	UINT32 PlatformCredSize;
+	BYTE *PlatformCred;
+	UINT32 PlatformConfCredSize;
+	BYTE *PlatformConfCred;
+	UINT32 ConformanceCredSize;
+	BYTE *ConformanceCred;
 };
 
 /* prototypes */
@@ -59,6 +67,8 @@ TSS_RESULT obj_tpm_set_cb11(TSS_HTPM, TSS_FLAG, TSS_FLAG, UINT32);
 TSS_RESULT obj_tpm_get_cb11(TSS_HTPM, TSS_FLAG, UINT32 *);
 void       obj_tpm_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 TSS_RESULT obj_tpm_get_current_counter(TSS_HTPM, TSS_COUNTER_ID *);
+TSS_RESULT obj_tpm_set_cred(TSS_HTPM, TSS_FLAG, UINT32, BYTE *);
+TSS_RESULT obj_tpm_get_cred(TSS_HTPM, TSS_FLAG, UINT32 *, BYTE **);
 
 #define TPM_LIST_DECLARE		struct obj_list tpm_list
 #define TPM_LIST_DECLARE_EXTERN		extern struct obj_list tpm_list

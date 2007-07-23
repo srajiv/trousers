@@ -227,6 +227,131 @@ obj_tpm_set_cb11(TSS_HTPM hTpm, TSS_FLAG type, TSS_FLAG app_data, UINT32 cb)
 #endif
 }
 
+TSS_RESULT
+obj_tpm_set_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 CredSize, BYTE *CredData)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	switch (type) {
+		case TSS_TPMATTRIB_EKCERT:
+			if ((tpm->EndorsementCred = malloc(CredSize)) == NULL) {
+				LogError("malloc of %u bytes failed", CredSize);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			memcpy(tpm->EndorsementCred, CredData, CredSize);
+			tpm->EndorsementCredSize = CredSize;
+			break;
+		case TSS_TPMATTRIB_TPM_CC:
+			if ((tpm->ConformanceCred = malloc(CredSize)) == NULL) {
+				LogError("malloc of %u bytes failed", CredSize);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			memcpy(tpm->ConformanceCred, CredData, CredSize);
+			tpm->ConformanceCredSize = CredSize;
+			break;
+		case TSS_TPMATTRIB_PLATFORMCERT:
+			if ((tpm->PlatformCred = malloc(CredSize)) == NULL) {
+				LogError("malloc of %u bytes failed", CredSize);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			memcpy(tpm->PlatformCred, CredData, CredSize);
+			tpm->PlatformCredSize = CredSize;
+			break;
+		case TSS_TPMATTRIB_PLATFORM_CC:
+			if ((tpm->PlatformConfCred = malloc(CredSize)) == NULL) {
+				LogError("malloc of %u bytes failed", CredSize);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			memcpy(tpm->PlatformConfCred, CredData, CredSize);
+			tpm->PlatformConfCredSize = CredSize;
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+	}
+done:
+	obj_list_put(&tpm_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_tpm_get_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *CredSize, BYTE **CredData)
+{
+	struct tsp_object *obj;
+	struct tr_tpm_obj *tpm;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&tpm_list, hTpm)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	tpm = (struct tr_tpm_obj *)obj->data;
+
+	/* get the size of data we need to allocate */
+	switch (type) {
+		case TSS_TPMATTRIB_EKCERT:
+			*CredSize = tpm->EndorsementCredSize;
+			break;
+		case TSS_TPMATTRIB_TPM_CC:
+			*CredSize = tpm->ConformanceCredSize;
+			break;
+		case TSS_TPMATTRIB_PLATFORMCERT:
+			*CredSize = tpm->PlatformCredSize;
+			break;
+		case TSS_TPMATTRIB_PLATFORM_CC:
+			*CredSize = tpm->PlatformConfCredSize;
+			break;
+		default:
+			LogError("Credential type is unknown");
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+			break;
+	}
+
+	if ((*CredData = calloc_tspi(obj->tspContext, *CredSize)) == NULL) {
+		*CredSize = 0;
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	switch (type) {
+		case TSS_TPMATTRIB_EKCERT:
+			memcpy(*CredData, tpm->EndorsementCred, *CredSize);
+			break;
+		case TSS_TPMATTRIB_TPM_CC:
+			memcpy(*CredData, tpm->ConformanceCred, *CredSize);
+			break;
+		case TSS_TPMATTRIB_PLATFORMCERT:
+			memcpy(*CredData, tpm->PlatformCred, *CredSize);
+			break;
+		case TSS_TPMATTRIB_PLATFORM_CC:
+			memcpy(*CredData, tpm->PlatformConfCred, *CredSize);
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+			*CredSize = 0;
+			free(*CredData);
+			*CredData = NULL;
+			goto done;
+			break;
+	}
+
+done:
+	obj_list_put(&tpm_list);
+	return result;
+}
+
 #ifndef TSS_SPEC_COMPLIANCE
 TSS_RESULT
 obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)

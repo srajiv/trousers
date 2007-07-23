@@ -586,6 +586,17 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 				result = obj_tpm_set_cb12(hObject, attribFlag,
 							  rgbAttribData);
 				break;
+			case TSS_TSPATTRIB_TPM_CREDENTIAL:
+				if (subFlag == TSS_TPMATTRIB_EKCERT ||
+				    subFlag == TSS_TPMATTRIB_TPM_CC ||
+				    subFlag == TSS_TPMATTRIB_PLATFORMCERT ||
+				    subFlag == TSS_TPMATTRIB_PLATFORM_CC) {
+					result = obj_tpm_set_cred(hObject, subFlag,
+								  ulAttribDataSize, rgbAttribData);
+				} else {
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
