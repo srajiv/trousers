@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2007
  *
  */
 
@@ -293,6 +293,53 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("SetTempDeactivated", result);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+				  TPM_AUTH * operatorAuth)	/* in, out */
+{
+	UINT32 paramSize;
+	UINT64 offset;
+	TSS_RESULT result;
+	UINT16 tag;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	LogDebug("Entering Set Temp Deactivated2");
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if (operatorAuth) {
+		if ((result = auth_mgr_check(hContext, &operatorAuth->AuthHandle)))
+			return result;
+	}
+
+	offset = 10;
+	tag = TPM_TAG_RQU_COMMAND;
+	if (operatorAuth) {
+		tag++;
+		LoadBlob_Auth(&offset, txBlob, operatorAuth);
+	}
+	LoadBlob_Header(tag, offset, TPM_ORD_SetTempDeactivated, txBlob);
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+
+	if (!result) {
+		offset = 10;
+		if (operatorAuth)
+			UnloadBlob_Auth(&offset, txBlob, operatorAuth);
+	}
+
+	LogResult("SetTempDeactivated2", result);
+
+done:
+	if (operatorAuth)
+		auth_mgr_release_auth(operatorAuth, NULL, hContext);
 
 	return result;
 }

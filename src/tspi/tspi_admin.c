@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -27,12 +27,14 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		   TSS_FLAG statusFlag,	/* in */
 		   TSS_BOOL fTpmState)	/* in */
 {
-	TPM_AUTH auth;
+	TPM_AUTH auth, *pAuth;
 	TSS_RESULT result;
 	TCPA_DIGEST hashDigest;
 	TSS_HCONTEXT tspContext;
 	TSS_HPOLICY hPolicy;
+	TSS_HPOLICY hOperatorPolicy;
 	Trspi_HashCtx hashCtx;
+	UINT32 tpmVersion;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -101,7 +103,54 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 		result = TCSP_PhysicalSetDeactivated(tspContext, fTpmState);
 		break;
 	case TSS_TPMSTATUS_SETTEMPDEACTIVATED:
-		result = TCSP_SetTempDeactivated(tspContext);
+		if ((result = obj_context_get_tpm_version(tspContext, &tpmVersion)))
+			return result;
+
+		/* XXX Change 0,1,2 to #defines */
+		switch (tpmVersion) {
+		case 0:
+		case 1:
+			result = TCSP_SetTempDeactivated(tspContext);
+			break;
+		case 2:
+			if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_OPERATOR, &hOperatorPolicy)))
+				return result;
+
+			if (hOperatorPolicy != NULL_HPOLICY) {
+				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+				result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_SetTempDeactivated);
+				if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
+					return result;
+
+				pAuth = &auth;
+				if ((result = secret_PerformAuth_OIAP(hTPM,
+								      TPM_ORD_SetTempDeactivated,
+								      hOperatorPolicy, FALSE,
+								      &hashDigest, pAuth)))
+					return result;
+			}
+			else
+				pAuth = NULL;
+
+			if ((result = TCSP_SetTempDeactivated2(tspContext, pAuth)))
+				return result;
+
+			if (pAuth) {
+				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+				result |= Trspi_Hash_UINT32(&hashCtx, result);
+				result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_SetTempDeactivated);
+				if ((result |= Trspi_HashFinal(&hashCtx, hashDigest.digest)))
+					return result;
+
+				if ((result = obj_policy_validate_auth_oiap(hOperatorPolicy,
+									    &hashDigest,
+									    pAuth)))
+					return result;
+			}
+			break;
+		default:
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
 		break;
 	case TSS_TPMSTATUS_SETOWNERINSTALL:
 		result = TCSP_SetOwnerInstall(tspContext, fTpmState);
