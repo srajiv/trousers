@@ -375,13 +375,13 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					case TSS_TSPATTRIB_NVPCR_READLOCALITYATRELEASE:
 						if ((result =
 						     obj_nvstore_get_readlocalityatrelease(hObject,
-											   pulAttrib)))
+										   pulAttrib)))
 							return result;
 						break;
 					case TSS_TSPATTRIB_NVPCR_WRITELOCALITYATRELEASE:
 						if ((result =
 						     obj_nvstore_get_writelocalityatrelease(hObject,
-											    pulAttrib)))
+										    pulAttrib)))
 							return result;
 						break;
 					default:
@@ -686,38 +686,39 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
 #ifdef TSS_BUILD_NV
-		} else if (obj_is_nvstore(hObject)) {
-			if (attribFlag == TSS_TSPATTRIB_NV_PCR){
-				switch (subFlag) {
-					case TSS_TSPATTRIB_NVPCR_READDIGESTATRELEASE:
-						if ((result =
-						     obj_nvstore_get_readdigestatrelease(hObject,
-								pulAttribDataSize, prgbAttribData)))
+	} else if (obj_is_nvstore(hObject)) {
+		if (attribFlag == TSS_TSPATTRIB_NV_PCR) {
+			switch (subFlag) {
+				case TSS_TSPATTRIB_NVPCR_READDIGESTATRELEASE:
+					if ((result = obj_nvstore_get_readdigestatrelease(hObject,
+									pulAttribDataSize,
+									prgbAttribData)))
 							return result;
-						break;
-					case TSS_TSPATTRIB_NVPCR_READPCRSELECTION:
-						if ((result =
-						     obj_nvstore_get_readpcrselection(hObject,
-								pulAttribDataSize, prgbAttribData)))
-							return result;
-						break;
-					case TSS_TSPATTRIB_NVPCR_WRITEDIGESTATRELEASE:
-						if ((result =
-						     obj_nvstore_get_writedigestatrelease(hObject,
-								pulAttribDataSize, prgbAttribData)))
-							return result;
-						break;
-					case TSS_TSPATTRIB_NVPCR_WRITEPCRSELECTION:
-						if ((result =
-						     obj_nvstore_get_writepcrselection(hObject,
-								pulAttribDataSize, prgbAttribData)))
-							return result;
-						break;
-					default:
-						return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
-					}
-			} else
-				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+					break;
+				case TSS_TSPATTRIB_NVPCR_READPCRSELECTION:
+					if ((result = obj_nvstore_get_readpcrselection(
+									hObject,
+									pulAttribDataSize,
+									prgbAttribData)))
+						return result;
+					break;
+				case TSS_TSPATTRIB_NVPCR_WRITEDIGESTATRELEASE:
+					if ((result = obj_nvstore_get_writedigestatrelease(hObject,
+									pulAttribDataSize,
+									prgbAttribData)))
+						return result;
+					break;
+				case TSS_TSPATTRIB_NVPCR_WRITEPCRSELECTION:
+					if ((result = obj_nvstore_get_writepcrselection(hObject,
+									pulAttribDataSize,
+									prgbAttribData)))
+						return result;
+					break;
+				default:
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+		} else
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_ENCDATA_LIST
