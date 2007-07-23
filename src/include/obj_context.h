@@ -70,6 +70,7 @@ TSS_RESULT obj_context_transport_execute(TSS_HCONTEXT, TPM_COMMAND_CODE, UINT32,
 TSS_RESULT obj_context_transport_close(TSS_HCONTEXT, TSS_HKEY, TSS_HPOLICY, TSS_BOOL,
 				       TPM_SIGN_INFO*, UINT32*, BYTE**);
 TSS_RESULT obj_context_set_tpm_version(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_context_get_tpm_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
 
 #define CONTEXT_LIST_DECLARE		struct obj_list context_list
