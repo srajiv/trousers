@@ -113,7 +113,7 @@ LoadKeyByBlob_Internal(UINT32 ord,	/* The ordinal to use, LoadKey or LoadKey2 */
 
 	offset = 0;
 	if ((result = tpm_rqu_build(ord, &offset, txBlob, parentSlot, cWrappedKeyBlobSize,
-				    rgbWrappedKeyBlob, pAuth)))
+				    rgbWrappedKeyBlob, pAuth, NULL)))
 		goto error;
 
 	LogDebugFn("Submitting request to the TPM");
@@ -176,7 +176,7 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    BYTE ** keyData,			/* out */
 			    TPM_AUTH * pAuth)			/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE parentSlot;
@@ -198,14 +198,11 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, parentSlot, txBlob);
-	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, KeyUsageAuth.authdata);
-	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, KeyMigrationAuth.authdata);
-	LoadBlob(&offset, keyInfoSize, txBlob, keyInfo);
-	LoadBlob_Auth(&offset, txBlob, pAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_CreateWrapKey, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_CreateWrapKey, &offset, txBlob, parentSlot,
+				    KeyUsageAuth.authdata, KeyMigrationAuth.authdata, keyInfoSize,
+				    keyInfo, pAuth)))
+		goto done;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
@@ -230,7 +227,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UINT32 * pcPubKeySize,		/* out */
 			BYTE ** prgbPubKey)		/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
@@ -254,14 +251,8 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	LogDebug("GetPubKey: handle: 0x%x, slot: 0x%x", hKey, keySlot);
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	if (pAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, pAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetPubKey, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_GetPubKey, &offset, txBlob, keySlot, pAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -286,7 +277,7 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				   UINT32 * punPubKeySize,	/* out */
 				   BYTE ** ppbPubKeyData)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubContainer;
@@ -306,10 +297,9 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, hKey, txBlob);
-	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_OwnerReadInternalPub, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OwnerReadInternalPub, &offset, txBlob, hKey,
+				    pOwnerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

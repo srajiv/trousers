@@ -37,7 +37,7 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Create Main Archive");
@@ -48,12 +48,9 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_BOOL(&offset, generateRandom, txBlob);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_CreateMaintenanceArchive, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_CreateMaintenanceArchive, &offset, txBlob,
+				    generateRandom, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -101,7 +98,7 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Load Maint Archive");
@@ -112,15 +109,9 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	if (dataInSize != 0) {
-		LoadBlob_UINT32(&offset, dataInSize, txBlob);
-		LoadBlob(&offset, dataInSize, txBlob, dataIn);
-	}
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_LoadMaintenanceArchive, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_LoadMaintenanceArchive, &offset, txBlob, dataInSize,
+				    dataInSize, dataIn, ownerAuth, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -153,7 +144,7 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -162,11 +153,8 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_KillMaintenanceFeature, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_KillMaintenanceFeature, &offset, txBlob, ownerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -191,16 +179,14 @@ TCSP_LoadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Load Manu Maint Pub");
 
-	offset = 10;
-	LoadBlob(&offset, 20, txBlob, antiReplay.nonce);
-	LoadBlob(&offset, PubKeySize, txBlob, PubKey);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-			TPM_ORD_LoadManuMaintPub, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_LoadManuMaintPub, &offset, txBlob, TPM_NONCE_SIZE,
+				    antiReplay.nonce, PubKeySize, PubKey, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -221,15 +207,14 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Read Manu Maint Pub");
 
-	offset = 10;
-	LoadBlob(&offset, 20, txBlob, antiReplay.nonce);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-			TPM_ORD_ReadManuMaintPub, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ReadManuMaintPub, &offset, txBlob, TPM_NONCE_SIZE,
+				    antiReplay.nonce)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;

@@ -38,7 +38,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -58,17 +58,9 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_UINT32(&offset, inDataSize, txBlob);
-	LoadBlob(&offset, inDataSize, txBlob, inData);
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset, TPM_ORD_UnBind, txBlob);
-	} else
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_UnBind, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_UnBind, &offset, txBlob, keySlot, inDataSize, inData,
+				    privAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

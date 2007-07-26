@@ -40,7 +40,7 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UINT32 * bytesRequested,	/* in, out */
 			BYTE ** randomBytes)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 50;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *rnd_tmp = NULL;
@@ -51,12 +51,11 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	do {
-		offset = 10;
-		LoadBlob_UINT32(&offset, *bytesRequested - totalReturned,
-				txBlob);
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetRandom,
-				txBlob);
+		if ((result = tpm_rqu_build(TPM_ORD_GetRandom, &offset, txBlob,
+					    *bytesRequested - totalReturned, NULL)))
+			break;
 
+		/* XXX This return result should be break; */
 		if ((result = req_mgr_submit_req(txBlob)))
 			return result;
 
@@ -97,7 +96,7 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			 UINT32 inDataSize,	/* in */
 			 BYTE * inData)	/* in */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -112,10 +111,9 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, inDataSize, txBlob);
-	LoadBlob(&offset, inDataSize, txBlob, inData);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_StirRandom, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_StirRandom, &offset, txBlob, inDataSize, inDataSize,
+				    inData, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;

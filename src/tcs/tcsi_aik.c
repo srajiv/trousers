@@ -171,5 +171,5 @@ TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,		/* in  */
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	return TCS_SUCCESS;
+	return TSS_SUCCESS;
 }

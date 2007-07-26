@@ -62,18 +62,10 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce);
-	LoadBlob(&offset, pcrDataSizeIn, txBlob, pcrDataIn);
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset, TPM_ORD_Quote, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_Quote, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_Quote, &offset, txBlob, keySlot, antiReplay.nonce,
+				    pcrDataSizeIn, pcrDataIn, privAuth)))
+		goto done;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 

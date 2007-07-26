@@ -58,18 +58,11 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	oldAuthDataUsage = srkKeyContainer.authDataUsage;
 	LogDebug("auth data usage is %.2X", oldAuthDataUsage);
 
-	offset = 10;
-	LoadBlob_UINT16(&offset, protocolID, txBlob);
-	LoadBlob_UINT32(&offset, encOwnerAuthSize, txBlob);
-	LoadBlob(&offset, encOwnerAuthSize, txBlob, encOwnerAuth);
-	LoadBlob_UINT32(&offset, encSrkAuthSize, txBlob);
-	LoadBlob(&offset, encSrkAuthSize, txBlob, encSrkAuth);
-
-	LoadBlob(&offset, srkInfoSize, txBlob, srkInfo);
-
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_TakeOwnership, txBlob);
+	offset = 0;
+	if ((result = tpm_rqu_build(TPM_ORD_TakeOwnership, &offset, txBlob, protocolID,
+				    encOwnerAuthSize, encOwnerAuth, encSrkAuthSize, encSrkAuth,
+				    srkInfoSize, srkInfo, ownerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -137,7 +130,7 @@ TSS_RESULT
 TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			 TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -150,10 +143,8 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_OwnerClear, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OwnerClear, &offset, txBlob, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

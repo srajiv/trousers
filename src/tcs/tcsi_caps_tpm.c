@@ -35,20 +35,19 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    UINT32 * respSize,	/* out */
 			    BYTE ** resp)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
+	LogDebug("Entering Get Cap");
+
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LogDebug("Entering Get Cap");
-	offset = 10;
-	LoadBlob_UINT32(&offset, capArea, txBlob);
-	LoadBlob_UINT32(&offset, subCapSize, txBlob);
-	LoadBlob(&offset, subCapSize, txBlob, subCap);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetCapability, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetCapability, &offset, txBlob, capArea, subCapSize,
+				    subCap, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -70,12 +69,12 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 TSS_RESULT
 TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
-				 TPM_AUTH * pOwnerAuth,	/* out */
+				 TPM_AUTH * pOwnerAuth,		/* in / out */
 				 TCPA_VERSION * pVersion,	/* out */
 				 UINT32 * pNonVolatileFlags,	/* out */
 				 UINT32 * pVolatileFlags)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -88,10 +87,8 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_GetCapabilityOwner, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetCapabilityOwner, &offset, txBlob, pOwnerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -121,7 +118,7 @@ TCSP_SetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    BYTE * value,	/* in */
 			    TPM_AUTH * pOwnerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -132,19 +129,9 @@ TCSP_SetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, capArea, txBlob);
-	LoadBlob_UINT32(&offset, subCapSize, txBlob);
-	LoadBlob(&offset, subCapSize, txBlob, subCap);
-	LoadBlob_UINT32(&offset, valueSize, txBlob);
-	LoadBlob(&offset, valueSize, txBlob, value);
-
-	if (pOwnerAuth) {
-		LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_SetCapability, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_SetCapability, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_SetCapability, &offset, txBlob, capArea, subCapSize,
+				    subCap, valueSize, value, pOwnerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

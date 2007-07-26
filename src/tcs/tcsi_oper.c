@@ -24,7 +24,7 @@ TCSP_SetOperatorAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TCPA_SECRET *operatorAuth)	/* in */
 {
 	TSS_RESULT result;
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -33,9 +33,10 @@ TCSP_SetOperatorAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob(&offset, sizeof(TCPA_SECRET), txBlob, operatorAuth->authdata);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_SetOperatorAuth, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SetOperatorAuth, &offset, txBlob, TPM_AUTHDATA_SIZE,
+				    operatorAuth->authdata)))
+		return result;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 

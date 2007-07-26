@@ -35,7 +35,7 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				       BYTE ** endorsementKey,	/* out */
 				       TCPA_DIGEST * checksum)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubKey;
@@ -44,10 +44,10 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce);
-	LoadBlob(&offset, endorsementKeyInfoSize, txBlob, endorsementKeyInfo);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_CreateEndorsementKeyPair, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_CreateEndorsementKeyPair, &offset, txBlob,
+				    antiReplay.nonce, endorsementKeyInfoSize,
+				    endorsementKeyInfo)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -82,7 +82,7 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			BYTE ** pubEndorsementKey,	/* out */
 			TCPA_DIGEST * checksum)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_PUBKEY pubkey;
@@ -93,9 +93,10 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob(&offset, 20, txBlob, antiReplay.nonce);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_ReadPubek, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ReadPubek, &offset, txBlob, TPM_NONCE_SIZE,
+				    antiReplay.nonce)))
+		return result;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
@@ -126,7 +127,7 @@ TSS_RESULT
 TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			       TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -139,10 +140,8 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_DisablePubekRead, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_DisablePubekRead, &offset, txBlob, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -166,7 +165,7 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	UINT32 paramSize;
 	TSS_RESULT result;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TCPA_PUBKEY container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -178,11 +177,8 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_OwnerReadPubek, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OwnerReadPubek, &offset, txBlob, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

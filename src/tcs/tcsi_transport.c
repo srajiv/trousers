@@ -151,7 +151,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		if ((result = tpm_rqu_build(unWrappedCommandOrdinal, &wrappedOffset,
 					    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], keySlot1,
 					    ulWrappedCmdParamInSize, rgbWrappedCmdParamIn,
-					    pWrappedCmdAuth1)))
+					    pWrappedCmdAuth1, NULL)))
 			return result;
 		break;
 	}

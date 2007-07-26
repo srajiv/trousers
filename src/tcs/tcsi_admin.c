@@ -30,7 +30,7 @@ TSS_RESULT
 TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TSS_BOOL state)	/* in  */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -39,9 +39,8 @@ TCSP_SetOwnerInstall_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_BOOL(&offset, state, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_SetOwnerInstall, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SetOwnerInstall, &offset, txBlob, state, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -56,12 +55,10 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TSS_BOOL disableState,	/* in */
 			      TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
-
-	offset = 10;
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -69,10 +66,9 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	LoadBlob_BOOL(&offset, disableState, txBlob);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_OwnerSetDisable, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OwnerSetDisable, &offset, txBlob, disableState,
+				    ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -92,7 +88,7 @@ TSS_RESULT
 TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -105,10 +101,8 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_DisableOwnerClear, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_DisableOwnerClear, &offset, txBlob, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -128,6 +122,7 @@ done:
 TSS_RESULT
 TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -136,7 +131,8 @@ TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A, TPM_ORD_ForceClear, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ForceClear, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -149,6 +145,7 @@ TCSP_ForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 TSS_RESULT
 TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -157,8 +154,8 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
-			TPM_ORD_DisableForceClear, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_DisableForceClear, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -166,14 +163,13 @@ TCSP_DisableForceClear_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("Disable Force Clear", result);
 	return result;
-
 }
 
 TSS_RESULT
 TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 			TCPA_PHYSICAL_PRESENCE fPhysicalPresence) /* in */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result = TCSERR(TSS_E_NOTIMPL);
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -190,10 +186,8 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT16(&offset, fPhysicalPresence, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-			TSC_ORD_PhysicalPresence, txBlob);
+	if ((result = tpm_rqu_build(TSC_ORD_PhysicalPresence, &offset, txBlob, fPhysicalPresence)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -204,6 +198,7 @@ TCSP_PhysicalPresence_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 TSS_RESULT
 TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -212,9 +207,8 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	/* XXX ooh, magic */
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
-			TPM_ORD_PhysicalDisable, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_PhysicalDisable, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -228,6 +222,7 @@ TCSP_PhysicalDisable_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 TSS_RESULT
 TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -236,8 +231,8 @@ TCSP_PhysicalEnable_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
-			TPM_ORD_PhysicalEnable, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_PhysicalEnable, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -252,19 +247,17 @@ TSS_RESULT
 TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				     TSS_BOOL state)	/* in */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	LogDebug("Entering Physical Set Decativated");
+	LogDebug("Entering Physical Set Deactivated");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_BOOL(&offset, state, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-			TPM_ORD_PhysicalSetDeactivated, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_PhysicalSetDeactivated, &offset, txBlob, state, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -277,6 +270,7 @@ TCSP_PhysicalSetDeactivated_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 TSS_RESULT
 TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -285,8 +279,8 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, 0x0A,
-			TPM_ORD_SetTempDeactivated, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SetTempDeactivated, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -301,10 +295,9 @@ TSS_RESULT
 TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TPM_AUTH * operatorAuth)	/* in, out */
 {
+	UINT64 offset = 0;
 	UINT32 paramSize;
-	UINT64 offset;
 	TSS_RESULT result;
-	UINT16 tag;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Set Temp Deactivated2");
@@ -316,13 +309,8 @@ TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			return result;
 	}
 
-	offset = 10;
-	tag = TPM_TAG_RQU_COMMAND;
-	if (operatorAuth) {
-		tag++;
-		LoadBlob_Auth(&offset, txBlob, operatorAuth);
-	}
-	LoadBlob_Header(tag, offset, TPM_ORD_SetTempDeactivated, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SetTempDeactivated, &offset, txBlob, operatorAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -338,8 +326,7 @@ TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogResult("SetTempDeactivated2", result);
 
 done:
-	if (operatorAuth)
-		auth_mgr_release_auth(operatorAuth, NULL, hContext);
+	auth_mgr_release_auth(operatorAuth, NULL, hContext);
 
 	return result;
 }
@@ -354,7 +341,7 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Field Upgrade");
@@ -365,15 +352,9 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	if (dataInSize != 0) {
-		LoadBlob_UINT32(&offset, dataInSize, txBlob);
-		LoadBlob(&offset, dataInSize, txBlob, dataIn);
-	}
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_FieldUpgrade, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_FieldUpgrade, &offset, txBlob, dataInSize, dataInSize,
+				    dataIn, ownerAuth, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -409,7 +390,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -428,18 +409,10 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_UINT32(&offset, c1, txBlob);
-	LoadBlob_UINT32(&offset, c2, txBlob);
-	if (privAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset, TPM_ORD_SetRedirection, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_SetRedirection, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_SetRedirection, &offset, txBlob, keySlot, c1, c2,
+				    privAuth)))
+		goto done;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
@@ -460,12 +433,10 @@ TSS_RESULT
 TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
-
-	offset = 10;
 
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
@@ -473,8 +444,8 @@ TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ResetLockValue, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ResetLockValue, &offset, txBlob, ownerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

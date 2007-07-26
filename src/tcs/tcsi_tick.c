@@ -37,7 +37,7 @@ TCSP_ReadCurrentTicks_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if ((result = tpm_rqu_build(TPM_ORD_GetTicks, &offset, txBlob)))
+	if ((result = tpm_rqu_build(TPM_ORD_GetTicks, &offset, txBlob, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))

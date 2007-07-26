@@ -48,10 +48,9 @@ TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 				      TPM_ENCAUTH encAuth,	/* in */
 				      TPM_AUTH* pAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TPM_TAG tpm_tag = TPM_TAG_RQU_COMMAND;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebugFn("Enter");
@@ -59,20 +58,13 @@ TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 		return result;
 
 	if (pAuth) {
-		if((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
 			goto done;
-		tpm_tag = TPM_TAG_RQU_AUTH1_COMMAND;
 	}
-	offset = 10;
 
-	LoadBlob(&offset, cPubInfoSize, txBlob, pPubInfo);
-
-	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, encAuth.authdata);
-	if (pAuth)
-		LoadBlob_Auth(&offset, txBlob, pAuth);
-
-	LogDebug("load Header: ordinal: 0x%X  (oldOffset=%" PRIu64 ")", TPM_ORD_NV_DefineSpace, offset);
-	LoadBlob_Header(tpm_tag, offset, TPM_ORD_NV_DefineSpace, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_NV_DefineSpace, &offset, txBlob, cPubInfoSize, pPubInfo,
+				    TPM_ENCAUTH_SIZE, encAuth.authdata, pAuth)))
+		return result;
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", offset);
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -82,7 +74,7 @@ TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
 		offset = 10;
-	LogDebug("Unload Auth");
+		LogDebug("Unload Auth");
 		if (pAuth)
 			UnloadBlob_Auth(&offset, txBlob, pAuth);
 	}
@@ -101,34 +93,23 @@ TCSP_NV_WriteValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			    BYTE * rgbDataToWrite,	/* in */
 			    TPM_AUTH * privAuth)	/* in, out */
 {
-	UINT64 off_set;
+	UINT64 off_set = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TPM_TAG tpm_tag = TPM_TAG_RQU_COMMAND;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebugFn("Enter");
 	if ( (result = ctx_verify_context(hContext)))
 		return result;
 	if (privAuth) {
-		if( (result = auth_mgr_check(hContext, &privAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &privAuth->AuthHandle)))
 			goto done;
-		tpm_tag = TPM_TAG_RQU_AUTH1_COMMAND;
 	}
-	off_set = 10;
-	LoadBlob_UINT32( &off_set, hNVStore, txBlob);
-	LogDebug("load UNIT32: offset: 0x%x  (oldOffset=%" PRIu64 ")", offset, off_set);
-	LoadBlob_UINT32(&off_set, offset, txBlob);
-	LogDebug("load UNIT32: ulDataLength: 0x%x  (oldOffset=%" PRIu64 ")", ulDataLength, off_set);
-	LoadBlob_UINT32(&off_set, ulDataLength, txBlob);
-	LoadBlob(&off_set, ulDataLength, txBlob, rgbDataToWrite);
 
-	if (privAuth)
-		LoadBlob_Auth(&off_set, txBlob, privAuth);
+	if ((result = tpm_rqu_build(TPM_ORD_NV_WriteValue, &off_set, txBlob, hNVStore, offset,
+				    ulDataLength, rgbDataToWrite, privAuth)))
+		return result;
 
-	LogDebug("load Header: ordinal: 0x%X  (oldOffset=%" PRIu64 ")", TPM_ORD_NV_WriteValue, off_set);
-	LoadBlob_Header(tpm_tag, off_set, TPM_ORD_NV_WriteValue, txBlob);
-	
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", off_set);
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -156,7 +137,7 @@ TCSP_NV_WriteValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				BYTE * rgbDataToWrite,	/* in */
 				TPM_AUTH * NVAuth)	/* in, out */
 {
-	UINT64 off_set;
+	UINT64 off_set = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -164,20 +145,12 @@ TCSP_NV_WriteValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebugFn("Enter");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
-	if((result = auth_mgr_check(hContext, &NVAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &NVAuth->AuthHandle)))
 		goto done;
-	off_set = 10;
-	LoadBlob_UINT32( &off_set, hNVStore, txBlob);
-	LogDebug("load UNIT32: offset: 0x%x  (oldOffset=%" PRIu64 ")", offset, off_set);
-	LoadBlob_UINT32(&off_set, offset, txBlob);
-	LogDebug("load UNIT32: ulDataLength: 0x%x  (oldOffset=%" PRIu64 ")", ulDataLength, off_set);
-	LoadBlob_UINT32(&off_set, ulDataLength, txBlob);
-	LoadBlob(&off_set, ulDataLength, txBlob, rgbDataToWrite);
 
-	LoadBlob_Auth(&off_set, txBlob, NVAuth);
-
-	LogDebug("load Header: ordinal: 0x%X  (oldOffset=%" PRIu64 ")", TPM_ORD_NV_WriteValueAuth, off_set);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, off_set, TPM_ORD_NV_WriteValueAuth, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_NV_WriteValueAuth, &off_set, txBlob, hNVStore, offset,
+				    ulDataLength, rgbDataToWrite, NVAuth)))
+		return result;
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", off_set);
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -204,32 +177,23 @@ TCSP_NV_ReadValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   TPM_AUTH * privAuth,	/* in, out */
 			   BYTE ** rgbDataRead)	/* out */
 {
-	UINT64 off_set;
+	UINT64 off_set = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TPM_TAG tpm_tag = TPM_TAG_RQU_COMMAND;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebugFn("Enter");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
+
 	if (privAuth) {
-		if((result = auth_mgr_check(hContext, &privAuth->AuthHandle)))
+		if ((result = auth_mgr_check(hContext, &privAuth->AuthHandle)))
 			goto done;
-		tpm_tag = TPM_TAG_RQU_AUTH1_COMMAND;
 	}
-	off_set = 10;
-	LoadBlob_UINT32(&off_set, hNVStore, txBlob);
-	LogDebug("load UNIT32: offset: 0x%x  (oldOffset=%" PRIu64 ")", offset, off_set);
-	LoadBlob_UINT32(&off_set, offset, txBlob);
-	LogDebug("load UNIT32: pulDataLength: 0x%x  (oldOffset=%" PRIu64 ")", *pulDataLength, off_set);
-	LoadBlob_UINT32(&off_set, *pulDataLength, txBlob);
 
-	if (privAuth)
-		LoadBlob_Auth(&off_set, txBlob, privAuth);
-
-	LogDebug("load Header: ordinal: 0x%X  (oldOffset=%" PRIu64 ")", TPM_ORD_NV_ReadValue, off_set);
-	LoadBlob_Header(tpm_tag, off_set, TPM_ORD_NV_ReadValue, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_NV_ReadValue, &off_set, txBlob, hNVStore, offset,
+				    *pulDataLength, privAuth)))
+		return result;
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", off_set);
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -270,7 +234,7 @@ TCSP_NV_ReadValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			       TPM_AUTH * NVAuth,	/* in, out */
 			       BYTE ** rgbDataRead)	/* out */
 {
-	UINT64 off_set;
+	UINT64 off_set = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -278,19 +242,12 @@ TCSP_NV_ReadValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebugFn("Enter");
 	if ((result = ctx_verify_context(hContext)))
 		return result;
-	if((result = auth_mgr_check(hContext, &NVAuth->AuthHandle)))
+	if ((result = auth_mgr_check(hContext, &NVAuth->AuthHandle)))
 		goto done;
-	off_set = 10;
-	LoadBlob_UINT32( &off_set, hNVStore, txBlob);
-	LogDebug("load UNIT32: offset: 0x%x  (oldOffset=%" PRIu64 ")", offset, off_set);
-	LoadBlob_UINT32(&off_set, offset, txBlob);
-	LogDebug("load UNIT32: pulDataLength: 0x%x  (oldOffset=%" PRIu64 ")", *pulDataLength, off_set);
-	LoadBlob_UINT32(&off_set, *pulDataLength, txBlob);
 
-	LoadBlob_Auth(&off_set, txBlob, NVAuth);
-
-	LogDebug("load Header: ordinal: 0x%X  (oldOffset=%" PRIu64 ")", TPM_ORD_NV_ReadValueAuth, off_set);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, off_set, TPM_ORD_NV_ReadValueAuth, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_NV_ReadValueAuth, &off_set, txBlob, hNVStore, offset,
+				    *pulDataLength, NVAuth)))
+		return result;
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", off_set);
 	if ((result = req_mgr_submit_req(txBlob)))

@@ -31,15 +31,14 @@ TCSP_ReadCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, idCounter, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_ReadCounter, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ReadCounter, &offset, txBlob, idCounter, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto out;
@@ -67,7 +66,7 @@ TCSP_CreateCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if (LabelSize != 4) {
@@ -81,11 +80,9 @@ TCSP_CreateCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		return result;
 
-	offset = 10;
-	LoadBlob(&offset, sizeof(TPM_ENCAUTH), txBlob, (BYTE *)&CounterAuth);
-	LoadBlob(&offset, 4, txBlob, pLabel);
-	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_CreateCounter, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_CreateCounter, &offset, txBlob, CounterAuth.authdata,
+				    LabelSize, pLabel, pOwnerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto out;
@@ -112,7 +109,7 @@ TCSP_IncrementCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -121,10 +118,9 @@ TCSP_IncrementCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = auth_mgr_check(hContext, &pCounterAuth->AuthHandle)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, idCounter, txBlob);
-	LoadBlob_Auth(&offset, txBlob, pCounterAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_IncrementCounter, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_IncrementCounter, &offset, txBlob, idCounter,
+				    pCounterAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto out;
@@ -148,7 +144,7 @@ TCSP_ReleaseCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -157,10 +153,9 @@ TCSP_ReleaseCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = auth_mgr_check(hContext, &pCounterAuth->AuthHandle)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, idCounter, txBlob);
-	LoadBlob_Auth(&offset, txBlob, pCounterAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ReleaseCounter, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ReleaseCounter, &offset, txBlob, idCounter,
+				    pCounterAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto out;
@@ -183,7 +178,7 @@ TCSP_ReleaseCounterOwner_Internal(TCS_CONTEXT_HANDLE hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -192,10 +187,9 @@ TCSP_ReleaseCounterOwner_Internal(TCS_CONTEXT_HANDLE hContext,
 	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, idCounter, txBlob);
-	LoadBlob_Auth(&offset, txBlob, pOwnerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ReleaseCounterOwner, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ReleaseCounterOwner, &offset, txBlob, idCounter,
+				    pOwnerAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto out;

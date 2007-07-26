@@ -39,16 +39,14 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			 UINT32 * outDataSize,	/* out */
 			 BYTE ** outData)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE certKeySlot, keySlot;
 	TCPA_CERTIFY_INFO certifyContainer;
-	UINT16 tag;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Certify Key");
-	offset = 10;
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
@@ -74,20 +72,9 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	LoadBlob_UINT32(&offset, certKeySlot, txBlob);
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, antiReplay.nonce);
-
-	tag = TPM_TAG_RQU_COMMAND;
-	if (certAuth != NULL) {
-		tag++;
-		LoadBlob_Auth(&offset, txBlob, certAuth);
-	}
-	if (keyAuth != NULL) {
-		tag++;
-		LoadBlob_Auth(&offset, txBlob, keyAuth);
-	}
-	LoadBlob_Header(tag, offset, TPM_ORD_CertifyKey, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_CertifyKey, &offset, txBlob, certKeySlot, keySlot,
+				    antiReplay.nonce, certAuth, keyAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

@@ -41,7 +41,7 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 			 BYTE **outData	/* out */
     )
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
@@ -60,18 +60,10 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	if ((result = ensureKeyIsLoaded(contextHandle, parentHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_UINT16(&offset, protocolID, txBlob);
-	LoadBlob(&offset, TCPA_ENCAUTH_SIZE, txBlob, newAuth.authdata);
-	LoadBlob_UINT16(&offset, entityType, txBlob);
-	LoadBlob_UINT32(&offset, encDataSize, txBlob);
-	LoadBlob(&offset, encDataSize, txBlob, encData);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Auth(&offset, txBlob, entityAuth);
-
-	LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset,
-			TPM_ORD_ChangeAuth, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ChangeAuth, &offset, txBlob, keySlot, protocolID,
+				    newAuth.authdata, entityType, encDataSize, encData, ownerAuth,
+				    entityAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -126,7 +118,7 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			      TPM_AUTH * ownerAuth	/* in, out */
     )
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -139,12 +131,9 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT16(&offset, protocolID, txBlob);
-	LoadBlob(&offset, 20, txBlob, newAuth.authdata);
-	LoadBlob_UINT16(&offset, entityType, txBlob);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_ChangeAuthOwner, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_ChangeAuthOwner, &offset, txBlob, protocolID,
+				    newAuth.authdata, entityType, ownerAuth)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;

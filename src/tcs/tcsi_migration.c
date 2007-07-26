@@ -41,7 +41,7 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  UINT32 * outDataSize,	/* out */
 				  BYTE ** outData)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keyHandle;
@@ -78,22 +78,10 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keyHandle, txBlob);
-	LoadBlob_UINT16(&offset, migrationType, txBlob);
-	LoadBlob(&offset, MigrationKeyAuthSize, txBlob, MigrationKeyAuth);
-	LoadBlob_UINT32(&offset, encDataSize, txBlob);
-	LoadBlob(&offset, encDataSize, txBlob, encData);
-	if (parentAuth) {
-		LoadBlob_Auth(&offset, txBlob, parentAuth);
-		LoadBlob_Auth(&offset, txBlob, entityAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, offset,
-				TPM_ORD_CreateMigrationBlob, txBlob);
-	} else {
-		LoadBlob_Auth(&offset, txBlob, entityAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-				TPM_ORD_CreateMigrationBlob, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_CreateMigrationBlob, &offset, txBlob, keyHandle,
+				    migrationType, MigrationKeyAuthSize, MigrationKeyAuth,
+				    encDataSize, encData, parentAuth, entityAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -145,7 +133,7 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TCPA_KEY_HANDLE keySlot;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -163,21 +151,9 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, parentHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_UINT32(&offset, inDataSize, txBlob);
-	LoadBlob(&offset, inDataSize, txBlob, inData);
-	LoadBlob_UINT32(&offset, randomSize, txBlob);
-	LoadBlob(&offset, randomSize, txBlob, random);
-	if (parentAuth != NULL) {
-		LoadBlob_Auth(&offset, txBlob, parentAuth);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND,
-				offset,
-				TPM_ORD_ConvertMigrationBlob, txBlob);
-	} else {
-		LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset,
-				TPM_ORD_ConvertMigrationBlob, txBlob);
-	}
+	if ((result = tpm_rqu_build(TPM_ORD_ConvertMigrationBlob, &offset, txBlob, keySlot,
+				    inDataSize, inData, randomSize, random, parentAuth)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -216,7 +192,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	TSS_RESULT result;
 	UINT32 paramSize;
-	UINT64 offset;
+	UINT64 offset = 0;
 	TCPA_MIGRATIONKEYAUTH container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -242,12 +218,10 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			break;
 	}
 
-	offset = 10;
-	LoadBlob_UINT16(&offset, migrateScheme, txBlob);
-	LoadBlob(&offset, MigrationKeySize, txBlob, MigrationKey);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset,
-			TPM_ORD_AuthorizeMigrationKey, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_AuthorizeMigrationKey, &offset, txBlob, migrateScheme,
+				    MigrationKeySize, MigrationKey, ownerAuth)))
+		return result;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 

@@ -39,7 +39,7 @@ TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if ((result = tpm_rqu_build(TPM_ORD_SelfTestFull, &offset, txBlob)))
+	if ((result = tpm_rqu_build(TPM_ORD_SelfTestFull, &offset, txBlob, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -81,7 +81,7 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if ((result = tpm_rqu_build(TPM_ORD_CertifySelfTest, &offset, txBlob, keySlot,
-				    antiReplay.nonce, privAuth)))
+				    TPM_NONCE_SIZE, antiReplay.nonce, privAuth, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
@@ -122,7 +122,7 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	if ((result = tpm_rqu_build(TPM_ORD_GetTestResult, &offset, txBlob)))
+	if ((result = tpm_rqu_build(TPM_ORD_GetTestResult, &offset, txBlob, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))

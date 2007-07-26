@@ -26,7 +26,7 @@ TCSP_SetOrdinalAuditStatus_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				    TSS_BOOL bAuditState)		/* in */
 {
 	TSS_RESULT result;
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -38,19 +38,19 @@ TCSP_SetOrdinalAuditStatus_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, ulOrdinal, txBlob);
-	LoadBlob_BOOL(&offset, bAuditState, txBlob);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_SetOrdinalAuditStatus, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_SetOrdinalAuditStatus, &offset, txBlob, ulOrdinal,
+				    bAuditState, ownerAuth)))
+		goto done;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
-	if (!result)
+	if (!result) {
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+	}
 
 	LogResult("SetOrdinalAuditStatus", result);
 
@@ -71,7 +71,7 @@ TCSP_GetAuditDigest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     UINT32 **ordList)			/* out */
 {
 	TSS_RESULT result;
-	UINT64 offset, old_offset;
+	UINT64 offset = 0, old_offset;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -80,9 +80,9 @@ TCSP_GetAuditDigest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, startOrdinal, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_GetAuditDigest, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetAuditDigest, &offset, txBlob, startOrdinal, NULL)))
+		return result;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
@@ -142,9 +142,8 @@ TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
-	UINT64 offset, old_offset;
+	UINT64 offset = 0, old_offset;
 	UINT32 paramSize;
-	UINT16 tag;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebugFn("Enter");
@@ -159,22 +158,15 @@ TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ensureKeyIsLoaded(hContext, keyHandle, &keySlot)))
 		goto done;
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, keySlot, txBlob);
-	LoadBlob_BOOL(&offset, closeAudit, txBlob);
-	LoadBlob_NONCE(&offset, txBlob, &antiReplay);
-	tag = TPM_TAG_RQU_COMMAND;
-	if (privAuth != NULL) {
-		tag++;
-		LoadBlob_Auth(&offset, txBlob, privAuth);
-	}
-	LoadBlob_Header(tag, offset, TPM_ORD_GetAuditDigestSigned, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_GetAuditDigestSigned, &offset, txBlob, keySlot,
+				    closeAudit, antiReplay.nonce, privAuth)))
+		goto done;
+
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
 	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
 		TPM_COUNTER_VALUE tmpCounterValue;
 
@@ -208,8 +200,7 @@ TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogResult("GetAuditDigestSigned", result);
 
 done:
-	if (privAuth != NULL)
-		auth_mgr_release_auth(privAuth, NULL, hContext);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 
 	return result;
 }

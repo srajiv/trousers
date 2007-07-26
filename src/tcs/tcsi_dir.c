@@ -32,7 +32,7 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			   TCPA_DIRVALUE newContents,	/* in */
 			   TPM_AUTH * ownerAuth)	/* in, out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -49,11 +49,9 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 	}
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, dirIndex, txBlob);
-	LoadBlob(&offset, TCPA_DIRVALUE_SIZE, txBlob, newContents.digest);
-	LoadBlob_Auth(&offset, txBlob, ownerAuth);
-	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_DirWriteAuth, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_DirWriteAuth, &offset, txBlob, dirIndex,
+				    TPM_DIGEST_SIZE, newContents.digest, ownerAuth, NULL)))
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -75,7 +73,7 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		      TCPA_DIRINDEX dirIndex,	/* in */
 		      TCPA_DIRVALUE * dirValue)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -90,9 +88,8 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (dirIndex > tpm_metrics.num_dirs)
 		return TCSERR(TSS_E_BAD_PARAMETER);
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, dirIndex, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_DirRead, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_DirRead, &offset, txBlob, dirIndex, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;

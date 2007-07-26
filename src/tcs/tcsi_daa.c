@@ -39,7 +39,7 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 		      UINT32 *outputSize, /* out */
 		      BYTE **outputData)  /* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -49,6 +49,8 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 		return result;
 	if( (result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)) != TSS_SUCCESS)
 		goto done;
+
+#if 0
 	offset = 10;
 	LoadBlob_UINT32( &offset, handle, txBlob);
 	LogDebug("load BYTE: stage: %x", stage);
@@ -69,9 +71,15 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 
 	LogDebug("load Header: ordinal: %X  (oldOffset=%" PRIu64 ")", TPM_ORD_DAA_Join, offset);
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_DAA_Join, txBlob);
+#else
+	if ((result = tpm_rqu_build(TPM_ORD_DAA_Join, &offset, txBlob, handle, stage, inputSize0,
+				    inputData0, inputSize1, inputData1, ownerAuth)))
+		goto done;
+#endif
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", offset);
-	if ((result = req_mgr_submit_req(txBlob))) goto done;
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%d) result=%d", paramSize, result);
@@ -107,7 +115,7 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 				 UINT32 *outputSize, /* out */
 				 BYTE **outputData)  /* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -119,6 +127,7 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	if( (result = auth_mgr_check(hContext, &ownerAuth->AuthHandle)) != TSS_SUCCESS)
 		goto done;
 
+#if 0
 	offset = 10;
 	LoadBlob_UINT32( &offset, handle, txBlob);
 	LogDebug("load BYTE: stage: %x", stage);
@@ -139,6 +148,11 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 
 	LogDebug("load Header: ordinal: %X  (oldOffset=%" PRIu64 ")", TPM_ORD_DAA_Sign, offset);
 	LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, offset, TPM_ORD_DAA_Sign, txBlob);
+#else
+	if ((result = tpm_rqu_build(TPM_ORD_DAA_Sign, &offset, txBlob, handle, stage, inputSize0,
+				    inputData0, inputSize1, inputData1, ownerAuth)))
+		goto done;
+#endif
 
 	LogDebug("req_mgr_submit_req  (oldOffset=%" PRIu64 ")", offset);
 	if ((result = req_mgr_submit_req(txBlob))) goto done;

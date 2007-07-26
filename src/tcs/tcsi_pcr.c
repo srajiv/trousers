@@ -34,7 +34,7 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		     TCPA_DIGEST inDigest,	/* in */
 		     TCPA_PCRVALUE * outDigest)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -59,12 +59,9 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TCSERR(TSS_E_FAIL);
 	}
 
-	offset = 10;
-
-	LoadBlob_UINT32(&offset, pcrNum, txBlob);
-	LoadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, inDigest.digest);
-
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Extend, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_Extend, &offset, txBlob, pcrNum, TPM_DIGEST_SIZE,
+				    inDigest.digest, NULL, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -83,7 +80,7 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		      TCPA_PCRINDEX pcrNum,		/* in */
 		      TCPA_PCRVALUE * outDigest)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -97,10 +94,8 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if (pcrNum >= tpm_metrics.num_pcrs)
 		return TCSERR(TSS_E_BAD_PARAMETER);
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, pcrNum, txBlob);
-
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_PcrRead, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_PcrRead, &offset, txBlob, pcrNum, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -119,7 +114,7 @@ TCSP_PcrReset_Internal(TCS_CONTEXT_HANDLE hContext,      /* in */
 		       UINT32 pcrDataSizeIn,             /* in */
 		       BYTE * pcrDataIn)                 /* in */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -129,10 +124,8 @@ TCSP_PcrReset_Internal(TCS_CONTEXT_HANDLE hContext,      /* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob(&offset, pcrDataSizeIn, txBlob, pcrDataIn);
-
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_PCR_Reset, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_PCR_Reset, &offset, txBlob, pcrDataSizeIn, pcrDataIn)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;

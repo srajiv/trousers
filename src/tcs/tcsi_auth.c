@@ -32,7 +32,7 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		   TCS_AUTHHANDLE *authHandle,	/* out */
 		   TCPA_NONCE *nonce0)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -42,8 +42,8 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OIAP, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OIAP, &offset, txBlob, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -69,7 +69,7 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		   TCPA_NONCE * nonceEven,	/* out */
 		   TCPA_NONCE * nonceEvenOSAP)	/* out */
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	TSS_RESULT result;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
@@ -78,11 +78,9 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	offset = 10;
-	LoadBlob_UINT16(&offset, entityType, txBlob);
-	LoadBlob_UINT32(&offset, entityValue, txBlob);
-	LoadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceOddOSAP.nonce);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_OSAP, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_OSAP, &offset, txBlob, entityType, entityValue,
+				    nonceOddOSAP.nonce)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
@@ -103,14 +101,13 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 TSS_RESULT
 internal_TerminateHandle(TCS_AUTHHANDLE handle)
 {
-	UINT64 offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
-	offset = 10;
-	LoadBlob_UINT32(&offset, handle, txBlob);
-	LoadBlob_Header(TPM_TAG_RQU_COMMAND, offset, TPM_ORD_Terminate_Handle, txBlob);
+	if ((result = tpm_rqu_build(TPM_ORD_Terminate_Handle, &offset, txBlob, handle, NULL)))
+		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
