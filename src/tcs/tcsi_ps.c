@@ -21,7 +21,6 @@
 #include "capabilities.h"
 #include "tcslog.h"
 #include "tcsps.h"
-#include "req_mgr.h"
 
 TSS_RESULT
 TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */

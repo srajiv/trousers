@@ -22,7 +22,6 @@
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcslog.h"
-#include "req_mgr.h"
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 
