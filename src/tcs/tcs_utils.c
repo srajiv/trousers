@@ -425,8 +425,10 @@ UnloadBlob_KEY_HANDLE_LIST(UINT64 *offset, BYTE *blob, TCPA_KEY_HANDLE_LIST *lis
 	}
 
 	UnloadBlob_UINT16(offset, &list->loaded, blob);
-	if (list->loaded == 0)
+	if (list->loaded == 0) {
+		list->handle = NULL;
 		return TSS_SUCCESS;
+	}
 
 	list->handle = malloc(list->loaded * sizeof (UINT32));
         if (list->handle == NULL) {
