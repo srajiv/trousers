@@ -198,7 +198,7 @@ done1:
 		signInfo.dataLen = sizeof(auditDigest.digest) + counterValueSize +
 				   sizeof(ordinalDigest.digest);
 		if ((signInfo.data = malloc(signInfo.dataLen)) == NULL) {
-			LogError("malloc of %d bytes failed.", signInfo.dataLen);
+			LogError("malloc of %u bytes failed.", signInfo.dataLen);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done2;
 		}
