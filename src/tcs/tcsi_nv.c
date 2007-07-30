@@ -73,15 +73,11 @@ TCSP_NV_DefineOrReleaseSpace_Internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
-		offset = 10;
-		LogDebug("Unload Auth");
-		if (pAuth)
-			UnloadBlob_Auth(&offset, txBlob, pAuth);
+		result = tpm_rsp_parse(TPM_ORD_NV_DefineSpace, txBlob, paramSize, pAuth);
 	}
 done:
 	LogDebug("Leaving DefineSpace with result:%u", result);
-	if (pAuth)
-		auth_mgr_release_auth(pAuth, NULL, hContext);
+	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 }
 
@@ -117,15 +113,11 @@ TCSP_NV_WriteValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
-		off_set = 10;
-		LogDebug("Unload Auth");
-		if (privAuth)
-			UnloadBlob_Auth(&off_set, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_NV_WriteValue, txBlob, paramSize, privAuth);
 	}
 done:
 	LogDebug("Leaving NVWriteValue with result:%u", result);
-	if (privAuth)
-		auth_mgr_release_auth(privAuth, NULL, hContext);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -159,9 +151,7 @@ TCSP_NV_WriteValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
-		off_set = 10;
-		LogDebug("Unload Auth");
-		UnloadBlob_Auth(&off_set, txBlob, NVAuth);
+		result = tpm_rsp_parse(TPM_ORD_NV_WriteValueAuth, txBlob, paramSize, NVAuth);
 	}
 done:
 	LogDebug("Leaving NVWriteValueAuth with result:%u", result);
@@ -202,27 +192,12 @@ TCSP_NV_ReadValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
-		off_set = 10;
-		UnloadBlob_UINT32( &off_set, pulDataLength, txBlob);
-		LogDebug("Unload outputSize=%u", *pulDataLength);
-
-		*rgbDataRead =(BYTE *)malloc(*pulDataLength);
-		if( *rgbDataRead == NULL) {
-			LogError("malloc of %u bytes failed.", *pulDataLength);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		LogDebug("Unload outputData");
-		UnloadBlob( &off_set, *pulDataLength, txBlob, *rgbDataRead);
-
-		LogDebug("Unload Auth");
-		if (privAuth)
-			UnloadBlob_Auth(&off_set, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_NV_ReadValue, txBlob, paramSize, pulDataLength,
+				       rgbDataRead, privAuth, NULL);
 	}
 done:
 	LogDebug("Leaving NVReadValue with result:%u", result);
-	if (privAuth)
-		auth_mgr_release_auth(privAuth, NULL, hContext);
+	auth_mgr_release_auth(privAuth, NULL, hContext);
 	return result;
 }
 
@@ -256,20 +231,8 @@ TCSP_NV_ReadValueAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%u) result=%u", paramSize, result);
 	if (!result) {
-		off_set = 10;
-		UnloadBlob_UINT32( &off_set, pulDataLength, txBlob);
-		LogDebug("Unload outputSize=%u", *pulDataLength);
-		*rgbDataRead = (BYTE *)malloc(*pulDataLength);
-		if(*rgbDataRead == NULL) {
-			LogError("malloc of %u bytes failed.", *pulDataLength);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		LogDebug("Unload outputData");
-		UnloadBlob( &off_set, *pulDataLength, txBlob, *rgbDataRead);
-
-		LogDebug("Unload Auth");
-		UnloadBlob_Auth(&off_set, txBlob, NVAuth);
+		result = tpm_rsp_parse(TPM_ORD_NV_ReadValueAuth, txBlob, paramSize, pulDataLength,
+				       rgbDataRead, NVAuth, NULL);
 	}
 done:
 	LogDebug("Leaving NVReadValueAuth with result:%u", result);

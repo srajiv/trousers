@@ -43,7 +43,6 @@ TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	TCPA_KEY_HANDLE keySlot;
-	TCPA_STORED_DATA storedData;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Seal");
@@ -76,20 +75,8 @@ TCSP_Seal_Internal(UINT32 sealOrdinal,		/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		if ((result = UnloadBlob_STORED_DATA(&offset, txBlob, &storedData)))
-			goto done;
-		free(storedData.sealInfo);
-		free(storedData.encData);
-
-		*SealedDataSize = offset - 10;
-		*SealedData = calloc(1, *SealedDataSize);
-		if (*SealedData == NULL) {
-			LogError("malloc of %u bytes failed.", *SealedDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		memcpy(*SealedData, &txBlob[10], *SealedDataSize);
-		UnloadBlob_Auth(&offset, txBlob, pubAuth);
+		result = tpm_rsp_parse(sealOrdinal, txBlob, paramSize, SealedDataSize,
+				       SealedData, pubAuth);
 	}
 	LogResult("Seal", result);
 done:
@@ -152,17 +139,8 @@ TCSP_Unseal_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_UINT32(&offset, DataSize, txBlob);
-		*Data = calloc(1, *DataSize);
-		if (*Data == NULL) {
-			LogError("malloc of %u bytes failed.", *DataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *DataSize, txBlob, *Data);
-		if (parentAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, parentAuth);
-		UnloadBlob_Auth(&offset, txBlob, dataAuth);
+		result = tpm_rsp_parse(TPM_ORD_Unseal, txBlob, paramSize, DataSize, Data,
+				       parentAuth, dataAuth);
 	}
 	LogResult("Unseal", result);
 done:

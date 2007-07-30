@@ -84,6 +84,7 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%d) result=%d", paramSize, result);
 	if (!result) {
+#if 0
 		offset = 10;
 		UnloadBlob_UINT32( &offset, outputSize, txBlob);
 		LogDebug("Unload outputSize=%d", *outputSize);
@@ -97,6 +98,10 @@ TCSP_DaaJoin_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 		UnloadBlob( &offset, *outputSize, txBlob, *outputData);
 		LogDebug("Unload Auth");
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+#else
+		result = tpm_rsp_parse(TPM_ORD_DAA_Join, txBlob, paramSize, outputSize, outputData,
+				       ownerAuth);
+#endif
 	}
 done:
 	LogDebug("Leaving DaaJoin with result:%d", result);
@@ -160,6 +165,7 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogDebug("UnloadBlob  (paramSize=%d) result=%d", paramSize, result);
 	if (!result) {
+#if 0
 		offset = 10;
 		UnloadBlob_UINT32( &offset, outputSize, txBlob);
 		LogDebug("Unload outputSize=%d", *outputSize);
@@ -173,6 +179,10 @@ TSS_RESULT TCSP_DaaSign_internal(TCS_CONTEXT_HANDLE hContext, /* in */
 		UnloadBlob(&offset, *outputSize, txBlob, *outputData);
 		LogDebug("Unload Auth");
 		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+#else
+		result = tpm_rsp_parse(TPM_ORD_DAA_Sign, txBlob, paramSize, outputSize, outputData,
+				       ownerAuth);
+#endif
 	}
 done:
 	LogDebug("Leaving DaaSign with result:%d", result);

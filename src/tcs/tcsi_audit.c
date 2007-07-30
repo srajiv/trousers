@@ -49,7 +49,7 @@ TCSP_SetOrdinalAuditStatus_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_SetOrdinalAuditStatus, txBlob, paramSize, ownerAuth);
 	}
 
 	LogResult("SetOrdinalAuditStatus", result);
@@ -71,7 +71,7 @@ TCSP_GetAuditDigest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     UINT32 **ordList)			/* out */
 {
 	TSS_RESULT result;
-	UINT64 offset = 0, old_offset;
+	UINT64 offset = 0;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -86,34 +86,12 @@ TCSP_GetAuditDigest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		TPM_COUNTER_VALUE tmpCounterValue;
-
-		old_offset = offset;
-		UnloadBlob_COUNTER_VALUE(&offset, txBlob, &tmpCounterValue);
-		*counterValueSize = offset - old_offset;
-		*counterValue = malloc(*counterValueSize);
-		if (*counterValue == NULL) {
-			LogError("malloc of %u bytes failed.", *counterValueSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
+		if ((result = tpm_rsp_parse(TPM_ORD_GetAuditDigest, txBlob, paramSize, auditDigest,
+					    counterValueSize, counterValue, more, ordSize,
+					    ordList)))
 			goto done;
-		}
-		memcpy(*counterValue, &txBlob[old_offset], *counterValueSize);
-
-		UnloadBlob_DIGEST(&offset, txBlob, auditDigest);
-		UnloadBlob_BOOL(&offset, more, txBlob);
-		UnloadBlob_UINT32(&offset, ordSize, txBlob);
-		*ordList = malloc(*ordSize);
-		if (*ordList == NULL) {
-			LogError("malloc of %u bytes failed.", *ordSize);
-			free(*counterValue);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *ordSize, txBlob, (BYTE *)*ordList);
 
 		/* ordSize is returned from the TPM as the number of bytes in ordList
 		   so ordSize needs to be converted to comply with the TSS spec which
@@ -142,7 +120,7 @@ TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 {
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE keySlot;
-	UINT64 offset = 0, old_offset;
+	UINT64 offset = 0;//, old_offset;
 	UINT32 paramSize;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -165,36 +143,11 @@ TCSP_GetAuditDigestSigned_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		TPM_COUNTER_VALUE tmpCounterValue;
-
-		old_offset = offset;
-		UnloadBlob_COUNTER_VALUE(&offset, txBlob, &tmpCounterValue);
-		*counterValueSize = offset - old_offset;
-		*counterValue = malloc(*counterValueSize);
-		if (*counterValue == NULL) {
-			LogError("malloc of %u bytes failed.", *counterValueSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		memcpy(*counterValue, &txBlob[old_offset], *counterValueSize);
-
-		UnloadBlob_DIGEST(&offset, txBlob, auditDigest);
-		UnloadBlob_DIGEST(&offset, txBlob, ordinalDigest);
-		UnloadBlob_UINT32(&offset, sigSize, txBlob);
-		*sig = malloc(*sigSize);
-		if (*sig == NULL) {
-			LogError("malloc of %u bytes failed.", *sigSize);
-			free(*counterValue);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *sigSize, txBlob, *sig);
-
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_GetAuditDigestSigned, txBlob, paramSize,
+				       counterValueSize, counterValue, auditDigest, ordinalDigest,
+				       sigSize, sig, privAuth);
 	}
 
 	LogResult("GetAuditDigestSigned", result);

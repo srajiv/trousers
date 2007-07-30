@@ -86,32 +86,10 @@ TCSP_CreateMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (result == TSS_SUCCESS) {
-		UnloadBlob_UINT32(&offset, randomSize, txBlob);
-		*random = calloc(1, *randomSize);
-		if (*random == NULL) {
-			LogError("malloc of %u bytes failed.", *randomSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-
-		UnloadBlob(&offset, *randomSize, txBlob, *random);
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = calloc(1, *outDataSize);
-		if (*outData == NULL) {
-			free(*random);
-			LogError("malloc of %u bytes failed.", *outDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		} else {
-			UnloadBlob(&offset, *outDataSize, txBlob, *outData);
-		}
-		if (parentAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, parentAuth);
-		UnloadBlob_Auth(&offset, txBlob, entityAuth);
+		result = tpm_rsp_parse(TPM_ORD_CreateMigrationBlob, txBlob, paramSize, randomSize,
+				       random, outDataSize, outData, parentAuth, entityAuth);
 	}
 	LogResult("TPM_CreateMigrationBlob", result);
 
@@ -162,17 +140,8 @@ TCSP_ConvertMigrationBlob_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = calloc(1, *outDataSize);
-		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			UnloadBlob(&offset, *outDataSize, txBlob, *outData);
-		}
-		if (parentAuth != NULL) {
-			UnloadBlob_Auth(&offset, txBlob, parentAuth);
-		}
+		result = tpm_rsp_parse(TPM_ORD_ConvertMigrationBlob, txBlob, paramSize, outDataSize,
+				       outData, parentAuth, NULL);
 	}
 	LogResult("***Leaving ConvertMigrationBlob with result ", result);
 done:
@@ -193,7 +162,7 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 paramSize;
 	UINT64 offset = 0;
-	TCPA_MIGRATIONKEYAUTH container;
+	//TCPA_MIGRATIONKEYAUTH container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("TCSP_AuthorizeMigrationKey");
@@ -225,25 +194,10 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		if ((result = UnloadBlob_MIGRATIONKEYAUTH(&offset, txBlob, &container)))
-			goto done;
-		free(container.migrationKey.pubKey.key);
-		free(container.migrationKey.algorithmParms.parms);
-
-		*MigrationKeyAuthSize = offset - 10;
-		*MigrationKeyAuth = calloc(1, *MigrationKeyAuthSize);
-		if (*MigrationKeyAuth == NULL) {
-			LogError("malloc of %d bytes failed.", *MigrationKeyAuthSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			memcpy(*MigrationKeyAuth, &txBlob[10], *MigrationKeyAuthSize);
-		}
-
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_AuthorizeMigrationKey, txBlob, paramSize,
+				       MigrationKeyAuthSize, MigrationKeyAuth, ownerAuth);
 	}
 	LogDebugFn("TPM_AuthorizeMigrationKey result: 0x%x", result);
 done:

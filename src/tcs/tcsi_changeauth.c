@@ -68,20 +68,10 @@ TCSP_ChangeAuth_Internal(TCS_CONTEXT_HANDLE contextHandle,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = calloc(1, *outDataSize);
-		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			UnloadBlob(&offset, *outDataSize, txBlob, *outData);
-		}
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
-		UnloadBlob_Auth(&offset, txBlob, entityAuth);
+		result = tpm_rsp_parse(TPM_ORD_ChangeAuth, txBlob, paramSize, outDataSize, outData,
+				       ownerAuth, entityAuth);
 
 		/* if the malloc above failed, terminate the 2 new auth handles and exit */
 		if (result)
@@ -138,9 +128,10 @@ TCSP_ChangeAuthOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-	UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_ChangeAuthOwner, txBlob, paramSize, ownerAuth);
+	}
 
 	LogResult("ChangeAuthOwner", result);
 done:
@@ -270,7 +261,7 @@ done:
 	auth_mgr_release_auth(pAuth, NULL, hContext);
 	return result;
 #else
-	return TSPERR(TSS_E_NOTIMPL);
+	return TCSERR(TSS_E_NOTIMPL);
 #endif
 }
 
@@ -291,6 +282,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				   TCPA_DIGEST * changeProof	/* out */
     )
 {
+#if 0
 	UINT64 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
@@ -375,5 +367,8 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);
 	return result;
+#else
+	return TCSERR(TSS_E_NOTIMPL);
+#endif
 }
 

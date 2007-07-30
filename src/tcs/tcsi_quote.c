@@ -44,7 +44,6 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	UINT32 keySlot;
-	TCPA_PCR_COMPOSITE pcrComp;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering quote");
@@ -69,34 +68,10 @@ TCSP_Quote_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		if ((result = UnloadBlob_PCR_COMPOSITE(&offset, txBlob, &pcrComp)))
-			goto done;
-		free(pcrComp.select.pcrSelect);
-		free(pcrComp.pcrValue);
-
-		*pcrDataSizeOut = offset - 10;
-		*pcrDataOut = calloc(1, *pcrDataSizeOut);
-		if (*pcrDataOut == NULL) {
-			LogError("malloc of %u bytes failed.", *pcrDataSizeOut);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		memcpy(*pcrDataOut, &txBlob[10], *pcrDataSizeOut);
-		UnloadBlob_UINT32(&offset, sigSize, txBlob);
-		*sig = calloc(1, *sigSize);
-		if (*sig == NULL) {
-			free(*pcrDataOut);
-			LogError("malloc of %u bytes failed.", *sigSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *sigSize, txBlob, *sig);
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_Quote, txBlob, paramSize, pcrDataSizeOut, pcrDataOut,
+				       sigSize, sig, privAuth);
 	}
 	LogResult("Quote", result);
 done:

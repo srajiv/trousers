@@ -44,12 +44,14 @@ TCSP_ReadCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto out;
 
 	if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
-		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
+		LogDebugFn("TPM_ReadCounter failed: rc=0x%x", result);
 		goto out;
 	}
 
-	offset = 10;
-	UnloadBlob_COUNTER_VALUE(&offset, txBlob, counterValue);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_ReadCounter, txBlob, paramSize, NULL, counterValue,
+				       NULL);
+	}
 
 out:
 	return result;
@@ -88,14 +90,14 @@ TCSP_CreateCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto out;
 
 	if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
-		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
+		LogDebugFn("TPM_CreateCounter failed: rc=0x%x", result);
 		goto out;
 	}
 
-	offset = 10;
-	UnloadBlob_UINT32(&offset, idCounter, txBlob);
-	UnloadBlob_COUNTER_VALUE(&offset, txBlob, counterValue);
-	UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_CreateCounter, txBlob, paramSize, idCounter,
+				       counterValue, pOwnerAuth);
+	}
 
 out:
 	return result;
@@ -130,9 +132,10 @@ TCSP_IncrementCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto out;
 	}
 
-	offset = 10;
-	UnloadBlob_COUNTER_VALUE(&offset, txBlob, counterValue);
-	UnloadBlob_Auth(&offset, txBlob, pCounterAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_IncrementCounter, txBlob, paramSize, NULL,
+				       counterValue, pCounterAuth);
+	}
 out:
 	return result;
 }
@@ -165,8 +168,9 @@ TCSP_ReleaseCounter_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto out;
 	}
 
-	offset = 10;
-	UnloadBlob_Auth(&offset, txBlob, pCounterAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_ReleaseCounter, txBlob, paramSize, pCounterAuth);
+	}
 out:
 	return result;
 }
@@ -199,8 +203,9 @@ TCSP_ReleaseCounterOwner_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto out;
 	}
 
-	offset = 10;
-	UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_ReleaseCounterOwner, txBlob, paramSize, pOwnerAuth);
+	}
 out:
 	return result;
 }

@@ -43,7 +43,6 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TCPA_KEY srkKeyContainer;
 	BYTE oldAuthDataUsage;
 	UINT64 bugOffset;
-	BYTE newSRK[1024];
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -68,31 +67,22 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	offset = 10;
-	if (result == 0) {
-		if ((result = UnloadBlob_KEY(&offset, txBlob, &srkKeyContainer)))
+	if (!result) {
+		if ((result = tpm_rsp_parse(TPM_ORD_TakeOwnership, txBlob, paramSize, srkKeySize,
+					    srkKey, ownerAuth)))
 			goto done;
 
-		*srkKeySize = offset - 10;
-		*srkKey = calloc(1, *srkKeySize);
-		if (*srkKey == NULL) {
-			destroy_key_refs(&srkKeyContainer);
-			LogError("malloc of %u bytes failed.", *srkKeySize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
+		offset = 0;
+		if ((result = UnloadBlob_KEY(&offset, *srkKey, &srkKeyContainer))) {
+			*srkKeySize = 0;
+			free(*srkKey);
 			goto done;
 		}
+
 		if (srkKeyContainer.authDataUsage != oldAuthDataUsage) {
 			LogDebug("AuthDataUsage was changed by TPM.  Atmel Bug. Fixing it in PS");
 			srkKeyContainer.authDataUsage = oldAuthDataUsage;
 		}
-		memcpy(*srkKey, &txBlob[10], *srkKeySize);
-
-		memset(srkKeyContainer.pubKey.key, 0, srkKeyContainer.pubKey.keyLength);
-		bugOffset = 0;
-		LoadBlob_KEY(&bugOffset, newSRK, &srkKeyContainer);
-
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
 
 #ifdef TSS_BUILD_PS
 		/* Once the key file is created, it stays forever. There could be
@@ -102,12 +92,16 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
 			destroy_key_refs(&srkKeyContainer);
 			LogError("Error removing SRK from key file.");
+			*srkKeySize = 0;
+			free(*srkKey);
 			goto done;
 		}
 
-		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, newSRK, bugOffset))) {
+		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, *srkKey, bugOffset))) {
 			destroy_key_refs(&srkKeyContainer);
 			LogError("Error writing SRK to disk");
+			*srkKeySize = 0;
+			free(*srkKey);
 			goto done;
 		}
 #endif
@@ -149,11 +143,9 @@ TCSP_OwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_OwnerClear, txBlob, paramSize, ownerAuth);
 	}
 	LogResult("Ownerclear", result);
 done:

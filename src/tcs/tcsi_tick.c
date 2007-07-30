@@ -46,7 +46,7 @@ TCSP_ReadCurrentTicks_Internal(TCS_CONTEXT_HANDLE hContext,
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result)
 		result = tpm_rsp_parse(TPM_ORD_GetTicks, txBlob, paramSize, pulCurrentTime,
-				       prgbCurrentTime);
+				       prgbCurrentTime, NULL);
 
 done:
 	return result;
@@ -92,28 +92,10 @@ TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 		goto done;
 	}
 
-	offset = 10;
-	/* 32 is hard coded in the TPM spec, so I'll hard code it here */
-	*pulTickCountLength = 32;
-
-	*prgbTickCount = malloc(*pulTickCountLength);
-	if (*prgbTickCount == NULL) {
-		result = TCSERR(TSS_E_OUTOFMEMORY);
-		goto done;
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_TickStampBlob, txBlob, paramSize, pulTickCountLength,
+				       prgbTickCount, pulSignatureLength, prgbSignature, privAuth);
 	}
-	UnloadBlob(&offset, *pulTickCountLength, txBlob, *prgbTickCount);
-	UnloadBlob_UINT32(&offset, pulSignatureLength, txBlob);
-
-	*prgbSignature = malloc(*pulSignatureLength);
-	if (*prgbSignature == NULL) {
-		free(*prgbTickCount);
-		result = TCSERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
-
-	UnloadBlob(&offset, *pulSignatureLength, txBlob, *prgbSignature);
-	if (privAuth)
-		UnloadBlob_Auth(&offset, txBlob, privAuth);
 done:
 	return result;
 }

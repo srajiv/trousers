@@ -66,10 +66,9 @@ TCSP_Extend_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, outDigest->digest);
+		result = tpm_rsp_parse(TPM_ORD_Extend, txBlob, paramSize, NULL, outDigest->digest);
 	}
 	LogResult("Extend", result);
 	return result;
@@ -100,10 +99,9 @@ TCSP_PcrRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, outDigest->digest);
+		result = tpm_rsp_parse(TPM_ORD_PcrRead, txBlob, paramSize, NULL, outDigest->digest);
 	}
 	LogResult("PCR Read", result);
 	return result;
@@ -130,7 +128,6 @@ TCSP_PcrReset_Internal(TCS_CONTEXT_HANDLE hContext,      /* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	LogResult("PCR Reset", result);
 	return result;

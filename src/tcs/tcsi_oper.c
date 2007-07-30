@@ -40,11 +40,9 @@ TCSP_SetOperatorAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	LogResult("SetOperatorAuth", result);
-
 done:
 	return result;
 }

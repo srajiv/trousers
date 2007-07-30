@@ -73,11 +73,9 @@ TCSP_OwnerSetDisable_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_OwnerSetDisable, txBlob, paramSize, ownerAuth);
 	}
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);
@@ -107,11 +105,9 @@ TCSP_DisableOwnerClear_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_DisableOwnerClear, txBlob, paramSize, ownerAuth);
 	}
 	LogResult("DisableOwnerClear", result);
 done:
@@ -318,9 +314,8 @@ TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 10;
-		if (operatorAuth)
-			UnloadBlob_Auth(&offset, txBlob, operatorAuth);
+			result = tpm_rsp_parse(TPM_ORD_SetTempDeactivated, txBlob, paramSize,
+					       operatorAuth);
 	}
 
 	LogResult("SetTempDeactivated2", result);
@@ -362,18 +357,8 @@ TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 10;
-		if (dataInSize != 0) {
-			UnloadBlob_UINT32(&offset, dataOutSize, txBlob);
-			*dataOut = malloc(*dataOutSize);
-			if (*dataOut == NULL) {
-				LogError("malloc of %u bytes failed.", *dataOutSize);
-				result = TCSERR(TSS_E_OUTOFMEMORY);
-				goto done;
-			}
-			UnloadBlob(&offset, *dataOutSize, txBlob, *dataOut);
-		}
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_FieldUpgrade, txBlob, paramSize, dataOutSize,
+				       dataOut, ownerAuth);
 	}
 	LogResult("Field Upgrade", result);
 done:
@@ -419,9 +404,7 @@ TCSP_SetRedirection_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 10;
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_SetRedirection, txBlob, paramSize, privAuth);
 	}
 	LogResult("Set Redirection", result);
 done:
@@ -450,10 +433,10 @@ TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-	if (!result)
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_ResetLockValue, txBlob, paramSize, ownerAuth);
+	}
 
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);

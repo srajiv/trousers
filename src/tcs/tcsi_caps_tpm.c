@@ -52,16 +52,10 @@ TCSP_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob_UINT32(&offset, respSize, txBlob);
-		*resp = malloc(*respSize);
-		if (*resp == NULL) {
-			LogError("malloc of %d bytes failed.", *respSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(&offset, *respSize, txBlob, *resp);
+		result = tpm_rsp_parse(TPM_ORD_GetCapability, txBlob, paramSize, respSize, resp,
+				       NULL, NULL);
 	}
 	LogResult("Get Cap", result);
 	return result;
@@ -93,14 +87,10 @@ TCSP_GetCapabilityOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_VERSION(&offset, txBlob, pVersion);
-		UnloadBlob_UINT32(&offset, pNonVolatileFlags, txBlob);
-		UnloadBlob_UINT32(&offset, pVolatileFlags, txBlob);
-		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+		result = tpm_rsp_parse(TPM_ORD_GetCapabilityOwner, txBlob, paramSize, pVersion,
+				       pNonVolatileFlags, pVolatileFlags, pOwnerAuth);
 	}
 
 	LogResult("GetCapowner", result);
@@ -136,11 +126,10 @@ TCSP_SetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
-	if (!result)
-		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_SetCapability, txBlob, paramSize, pOwnerAuth);
+	}
 
 done:
 	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);

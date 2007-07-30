@@ -48,12 +48,9 @@ TCSP_OIAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_UINT32(&offset, authHandle, txBlob);
-		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonce0->nonce);
+		result = tpm_rsp_parse(TPM_ORD_OIAP, txBlob, paramSize, authHandle, nonce0->nonce);
 	}
 
 	LogResult("OIAP", result);
@@ -85,13 +82,10 @@ TCSP_OSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
-
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob_UINT32(&offset, authHandle, txBlob);
-		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEven->nonce);
-		UnloadBlob(&offset, TCPA_NONCE_SIZE, txBlob, nonceEvenOSAP->nonce);
+		result = tpm_rsp_parse(TPM_ORD_OSAP, txBlob, paramSize, authHandle,
+				       nonceEven->nonce, nonceEvenOSAP->nonce);
 	}
 	LogResult("OSAP", result);
 

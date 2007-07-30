@@ -56,11 +56,10 @@ TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_DirWriteAuth, txBlob, paramSize, ownerAuth);
 	}
 	LogResult("DirWriteAuth", result);
 done:
@@ -94,10 +93,9 @@ TCSP_DirRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob(&offset, TCPA_DIRVALUE_SIZE, txBlob, dirValue->digest);
+		result = tpm_rsp_parse(TPM_ORD_DirRead, txBlob, paramSize, NULL, dirValue->digest);
 	}
 	LogResult("DirRead", result);
 	return result;

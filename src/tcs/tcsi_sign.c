@@ -65,20 +65,10 @@ TCSP_Sign_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_UINT32(&offset, sigSize, txBlob);
-		*sig = calloc(1, *sigSize);
-		if (*sig == NULL) {
-			LogError("malloc of %d bytes failed.", *sigSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *sigSize, txBlob, *sig);
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_Sign, txBlob, paramSize, sigSize, sig, privAuth,
+				       NULL);
 	}
 	LogResult("sign", result);
 done:

@@ -38,7 +38,6 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TCPA_PUBKEY pubKey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -52,25 +51,11 @@ TCSP_CreateEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubKey)))
-			goto done;
-		free(pubKey.pubKey.key);
-		free(pubKey.algorithmParms.parms);
-
-		*endorsementKeySize = offset - 10;
-		*endorsementKey = malloc(*endorsementKeySize);
-		if (*endorsementKey == NULL) {
-			LogError("malloc of %u bytes failed.", *endorsementKeySize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		memcpy(*endorsementKey, &txBlob[10], *endorsementKeySize);
-
-		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, checksum->digest);
+		result = tpm_rsp_parse(TPM_ORD_CreateEndorsementKeyPair, txBlob, paramSize,
+				       endorsementKeySize, endorsementKey, checksum->digest);
 	}
-done:
 	LogDebug("Leaving CreateEKPair with result: 0x%x", result);
 	return result;
 }
@@ -85,7 +70,6 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TCPA_PUBKEY pubkey;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebugFn("Enter");
@@ -100,25 +84,11 @@ TCSP_ReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubkey)))
-			goto done;
-		free(pubkey.pubKey.key);
-		free(pubkey.algorithmParms.parms);
-
-		*pubEndorsementKeySize = (UINT32) (offset - 10);
-		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
-		if (*pubEndorsementKey == NULL) {
-			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
-		UnloadBlob(&offset, TCPA_DIGEST_SIZE, txBlob, checksum->digest);
+		result = tpm_rsp_parse(TPM_ORD_ReadPubek, txBlob, paramSize, pubEndorsementKeySize,
+				       pubEndorsementKey, checksum->digest);
 	}
-done:
 	LogDebugFn("result: 0x%x", result);
 	return result;
 }
@@ -146,11 +116,9 @@ TCSP_DisablePubekRead_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_DisablePubekRead, txBlob, paramSize, ownerAuth);
 	}
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);
@@ -166,7 +134,6 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	UINT64 offset = 0;
-	TCPA_PUBKEY container;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering OwnerReadPubek");
@@ -186,23 +153,8 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 10;
-		/* Call UnloadBlob to parse the data and set its size in &offset */
-		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &container)))
-			goto done;
-
-		free(container.pubKey.key);
-		free(container.algorithmParms.parms);
-
-		*pubEndorsementKeySize = offset - 10;
-		*pubEndorsementKey = malloc(*pubEndorsementKeySize);
-		if (*pubEndorsementKey == NULL) {
-			LogError("malloc of %u bytes failed.", *pubEndorsementKeySize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		memcpy(*pubEndorsementKey, &txBlob[10], *pubEndorsementKeySize);
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_OwnerReadPubek, txBlob, paramSize,
+				       pubEndorsementKeySize, pubEndorsementKey, ownerAuth);
 	}
 	LogResult("Owner Read Pubek", result);
 done:

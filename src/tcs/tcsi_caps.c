@@ -35,7 +35,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 	UINT32 tcsSubCapContainer;
 	UINT64 offset;
 	TSS_RESULT result;
-	TCPA_VERSION tcsVersion = INTERNAL_CAP_TCS_VERSION;
+	TPM_VERSION tcsVersion = INTERNAL_CAP_TCS_VERSION;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;

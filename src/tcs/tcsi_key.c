@@ -262,7 +262,7 @@ TCSP_GetPubKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if (!result) {
 		result = tpm_rsp_parse(TPM_ORD_GetPubKey, txBlob, paramSize, pcPubKeySize,
-					prgbPubKey, pAuth);
+				       prgbPubKey, pAuth);
 	}
 	LogResult("Get Public Key", result);
 done:
@@ -280,7 +280,6 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT64 offset = 0;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TCPA_PUBKEY pubContainer;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering OwnerReadInternalPub");
@@ -304,25 +303,10 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		if ((result = UnloadBlob_PUBKEY(&offset, txBlob, &pubContainer)))
-			goto done;
-		free(pubContainer.pubKey.key);
-		free(pubContainer.algorithmParms.parms);
-
-		*punPubKeySize = offset - 10;
-		*ppbPubKeyData = calloc(1, *punPubKeySize);
-		if (*ppbPubKeyData == NULL) {
-			LogError("malloc of %u bytes failed.", *punPubKeySize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		memcpy(*ppbPubKeyData, &txBlob[10], *punPubKeySize);
-
-		UnloadBlob_Auth(&offset, txBlob, pOwnerAuth);
+		result = tpm_rsp_parse(TPM_ORD_OwnerReadInternalPub, txBlob, paramSize,
+				       punPubKeySize, ppbPubKeyData, pOwnerAuth);
 	}
 	LogResult("OwnerReadInternalPub", result);
 done:

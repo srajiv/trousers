@@ -59,26 +59,16 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	if ((result = tpm_rqu_build(TPM_ORD_UnBind, &offset, txBlob, keySlot, inDataSize, inData,
-				    privAuth)))
+				    privAuth, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = calloc(1, *outDataSize);
-		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", *outDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-		} else {
-			UnloadBlob(&offset, (*outDataSize), txBlob, *outData);
-		}
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_UnBind, txBlob, paramSize, outDataSize, outData,
+				       privAuth);
 	}
 
 done:

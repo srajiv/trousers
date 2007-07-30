@@ -56,31 +56,9 @@ TCSP_CreateMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		offset = 10;
-		UnloadBlob_UINT32(&offset, randomSize, txBlob);
-		*random = malloc(*randomSize);
-		if (*random == NULL) {
-			LogError("malloc of %d bytes failed.", *randomSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		} else {
-			UnloadBlob(&offset, *randomSize, txBlob, *random);
-		}
-
-		UnloadBlob_UINT32(&offset, archiveSize, txBlob);
-		*archive = malloc(*archiveSize);
-		if (*archive == NULL) {
-			free(*random);
-			LogError("malloc of %d bytes failed.", *archiveSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		} else {
-			UnloadBlob(&offset, *archiveSize, txBlob, *archive);
-		}
-
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_CreateMaintenanceArchive, txBlob, paramSize,
+				       randomSize, random, archiveSize, archive, ownerAuth);
 	}
 	LogResult("Create Main Archive", result);
 done:
@@ -117,20 +95,9 @@ TCSP_LoadMaintenanceArchive_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		offset = 10;
-		if (dataInSize != 0) {
-			UnloadBlob_UINT32(&offset, dataOutSize, txBlob);
-			*dataOut = calloc(1, *dataOutSize);
-			if (*dataOut == NULL) {
-				LogError("malloc of %u bytes failed.", *dataOutSize);
-				result = TCSERR(TSS_E_OUTOFMEMORY);
-				goto done;
-			}
-			UnloadBlob(&offset, *dataOutSize, txBlob, *dataOut);
-		}
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_LoadMaintenanceArchive, txBlob, paramSize,
+				       dataOutSize, dataOut, ownerAuth, NULL);
 	}
 	LogResult("Load Maint Archive", result);
 done:
@@ -162,8 +129,8 @@ TCSP_KillMaintenanceFeature_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 
 	if (!result) {
-		offset = 10;
-		UnloadBlob_Auth(&offset, txBlob, ownerAuth);
+		result = tpm_rsp_parse(TPM_ORD_KillMaintenanceFeature, txBlob, paramSize,
+				       ownerAuth);
 	}
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);
@@ -193,8 +160,8 @@ TCSP_LoadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		offset = 10;
-		UnloadBlob(&offset, 20, txBlob, checksum->digest);
+		result = tpm_rsp_parse(TPM_ORD_LoadManuMaintPub, txBlob, paramSize, NULL,
+				       checksum->digest);
 	}
 	LogResult("Load Manu Maint Pub", result);
 	return result;
@@ -221,8 +188,8 @@ TCSP_ReadManuMaintPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		offset = 10;
-		UnloadBlob(&offset, 20, txBlob, checksum->digest);
+		result = tpm_rsp_parse(TPM_ORD_ReadManuMaintPub, txBlob, paramSize, NULL,
+				       checksum->digest);
 	}
 	LogResult("Read Manu Maint Pub", result);
 	return result;

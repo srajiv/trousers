@@ -43,7 +43,6 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TCPA_KEY_HANDLE certKeySlot, keySlot;
-	TCPA_CERTIFY_INFO certifyContainer;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	LogDebug("Entering Certify Key");
@@ -79,43 +78,10 @@ TCSP_CertifyKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
-
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		if ((result = UnloadBlob_CERTIFY_INFO(&offset, txBlob, &certifyContainer)))
-			goto done;
-		free(certifyContainer.algorithmParms.parms);
-		free(certifyContainer.PCRInfo);
-
-		*CertifyInfoSize = offset - 10;
-		*CertifyInfo = calloc(1, *CertifyInfoSize);
-		if (*CertifyInfo == NULL) {
-			LogError("malloc of %u bytes failed.", *CertifyInfoSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		} else {
-			memcpy(*CertifyInfo, &txBlob[10], *CertifyInfoSize);
-		}
-
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = calloc(1, *outDataSize);
-		if (*outData == NULL) {
-			free(*CertifyInfo);
-			LogError("malloc of %u bytes failed.", *outDataSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		} else {
-			UnloadBlob(&offset, *outDataSize, txBlob, *outData);
-		}
-
-		if (certAuth != NULL) {
-			UnloadBlob_Auth(&offset, txBlob, certAuth);
-		}
-		if (keyAuth != NULL) {
-			UnloadBlob_Auth(&offset, txBlob, keyAuth);
-		}
+		result = tpm_rsp_parse(TPM_ORD_CertifyKey, txBlob, paramSize, CertifyInfoSize,
+				       CertifyInfo, outDataSize, outData, certAuth, keyAuth);
 	}
 	LogResult("Certify Key", result);
 done:

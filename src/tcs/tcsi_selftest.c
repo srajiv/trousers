@@ -87,20 +87,10 @@ TCSP_CertifySelfTest_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		UnloadBlob_UINT32(&offset, sigSize, txBlob);
-		*sig = malloc(*sigSize);
-		if (*sig == NULL) {
-			LogError("malloc of %d bytes failed.", *sigSize);
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		UnloadBlob(&offset, *sigSize, txBlob, *sig);
-		if (privAuth != NULL)
-			UnloadBlob_Auth(&offset, txBlob, privAuth);
+		result = tpm_rsp_parse(TPM_ORD_CertifySelfTest, txBlob, paramSize, sigSize, sig,
+				       privAuth, NULL);
 	}
 	LogResult("Certify Self Test", result);
 done:
@@ -128,18 +118,10 @@ TCSP_GetTestResult_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		return result;
 
-	offset = 10;
-
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		UnloadBlob_UINT32(&offset, outDataSize, txBlob);
-		*outData = malloc(*outDataSize);
-		if (*outData == NULL) {
-			LogError("malloc of %d bytes failed.", *outDataSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		UnloadBlob(&offset, *outDataSize, txBlob, *outData);
-		LogBlob(*outDataSize, *outData);
+		result = tpm_rsp_parse(TPM_ORD_GetTestResult, txBlob, paramSize, outDataSize,
+				       outData, NULL, NULL);
 	}
 	LogResult("Get Test Result", result);
 	return result;
