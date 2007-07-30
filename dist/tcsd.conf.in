@@ -123,3 +123,15 @@
 # remote_ops =
 #
 
+# Option: enforce_exclusive_transport
+# Values: 0 or 1
+# Description: When an application opens a transport session with the TPM, one
+#  of the options available is an "exclusive" session, meaning that the TPM
+#  will not execute any commands other than those coming through the transport
+#  session for the lifetime of the session. The TCSD can choose to enforce this
+#  option or not. By default, exclusive sessions are not enforced, since this
+#  could allow for a denial of service to the TPM.
+#
+#  enforce_exclusive_transport = 0
+#
+

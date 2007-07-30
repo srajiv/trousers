@@ -31,6 +31,7 @@
 #include "tcsd.h"
 #include "tcsd_ops.h"
 
+
 struct tcsd_config_options options_list[] = {
 	{"port", opt_port},
 	{"num_threads", opt_max_threads},
@@ -43,9 +44,9 @@ struct tcsd_config_options options_list[] = {
 	{"conformance_cred", opt_conformance_cred},
 	{"endorsement_cred", opt_endorsement_cred},
 	{"remote_ops", opt_remote_ops},
+	{"enforce_exclusive_transport", opt_exclusive_transport},
 	{NULL, 0}
 };
-
 
 void
 init_tcsd_config(struct tcsd_config *conf)
@@ -63,6 +64,7 @@ init_tcsd_config(struct tcsd_config *conf)
 	conf->endorsement_cred = NULL;
 	memset(conf->remote_ops, 0, sizeof(conf->remote_ops));
 	conf->unset = 0xffffffff;
+	conf->exclusive_transport = 0;
 }
 
 void
@@ -490,6 +492,17 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 				LogError("Config option \"remote_ops\" is invalid. "
 					 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
 			}
+		}
+		break;
+        case opt_exclusive_transport:
+		tmp_int = atoi(arg);
+		if (tmp_int < 0 || tmp_int > 1) {
+			LogError("Config option \"enforce_exclusive_transport\" out of range."
+				 " %s:%d: \"%d\"", TCSD_CONFIG_FILE, line_num, tmp_int);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		} else {
+			conf->exclusive_transport = tmp_int;
+			conf->unset &= ~TCSD_OPTION_EXCLUSIVE_TRANSPORT;
 		}
 		break;
 	default:

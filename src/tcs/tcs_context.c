@@ -22,6 +22,8 @@
 #include "tcs_int_literals.h"
 #include "capabilities.h"
 #include "tcslog.h"
+#include "tcsd_wrap.h"
+#include "tcsd.h"
 
 
 unsigned long nextContextHandle = 0xA0000000;
@@ -217,6 +219,11 @@ ctx_req_exclusive_transport(TCS_CONTEXT_HANDLE tcsContext)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	struct tcs_context *tmp, *self = NULL;
+
+	/* If the daemon is configured to ignore apps that want an exclusive transport, just
+	 * return */
+	if (!tcsd_options.exclusive_transport)
+		return result;
 
 	MUTEX_LOCK(tcs_ctx_lock);
 

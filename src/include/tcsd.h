@@ -32,6 +32,8 @@ struct tcsd_config
 	char *endorsement_cred;		/* location of the endorsement credential */
 	int remote_ops[TCSD_MAX_NUM_ORDS];	/* array of ordinals executable by remote hosts */
 	unsigned int unset;	/* bitmask of options which are still unset */
+	int exclusive_transport; /* allow applications to open exclusive transport sessions with
+				    the TPM and enforce their exclusivity (possible DOS issue) */
 };
 
 #define TCSD_CONFIG_FILE	ETC_PREFIX "/tcsd.conf"
@@ -65,6 +67,7 @@ struct tcsd_config
 #define TCSD_OPTION_CONFORMANCE_CRED	0x0100
 #define TCSD_OPTION_ENDORSEMENT_CRED	0x0200
 #define TCSD_OPTION_REMOTE_OPS		0x0400
+#define TCSD_OPTION_EXCLUSIVE_TRANSPORT	0x0800
 
 #define TSS_TCP_RPC_MAX_DATA_LEN	1048576
 #define TSS_TCP_RPC_BAD_PACKET_TYPE	0x10000000
@@ -80,7 +83,8 @@ enum tcsd_config_option_code {
 	opt_platform_cred,
 	opt_conformance_cred,
 	opt_endorsement_cred,
-	opt_remote_ops
+	opt_remote_ops,
+	opt_exclusive_transport
 };
 
 struct tcsd_config_options {
