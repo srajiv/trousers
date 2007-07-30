@@ -268,7 +268,7 @@ UnloadBlob_Auth(UINT64 *offset, BYTE * blob, TPM_AUTH * auth)
 }
 
 void
-UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
+UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TPM_VERSION *out)
 {
 	if (!out) {
 		*offset += (sizeof(BYTE) * 4);
@@ -282,7 +282,7 @@ UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 }
 
 void
-LoadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *ver)
+LoadBlob_VERSION(UINT64 *offset, BYTE *blob, TPM_VERSION *ver)
 {
 	LoadBlob_BYTE(offset, ver->major, blob);
 	LoadBlob_BYTE(offset, ver->minor, blob);
@@ -378,7 +378,7 @@ UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify)
 		return TSS_SUCCESS;
 	}
 
-	UnloadBlob_VERSION(offset, blob, &certify->version);
+	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&certify->version);
 	UnloadBlob_UINT16(offset, &certify->keyUsage, blob);
 	UnloadBlob_KEY_FLAGS(offset, blob, &certify->keyFlags);
 	UnloadBlob_BOOL(offset, (TSS_BOOL *)&certify->authDataUsage, blob);

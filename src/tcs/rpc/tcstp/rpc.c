@@ -144,7 +144,7 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 				 ((TCPA_ENCAUTH *)data)->authdata);
 			break;
 		case TCSD_PACKET_TYPE_VERSION:
-			LoadBlob_VERSION(offset, blob, ((TCPA_VERSION *)data));
+			LoadBlob_VERSION(offset, blob, ((TPM_VERSION *)data));
 			break;
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
 			LoadBlob_KM_KEYINFO(offset, blob, ((TSS_KM_KEYINFO *)data));
@@ -433,7 +433,7 @@ getData(TCSD_PACKET_TYPE dataType,
 					((TCPA_ENCAUTH *) theData)->authdata);
 			break;
 		case TCSD_PACKET_TYPE_VERSION:
-			UnloadBlob_VERSION(&offset, comm->buf, ((TCPA_VERSION *) theData));
+			UnloadBlob_VERSION(&offset, comm->buf, ((TPM_VERSION *) theData));
 			break;
 #ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_KM_KEYINFO:

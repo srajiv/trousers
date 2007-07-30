@@ -32,7 +32,7 @@
 
 
 TSS_RESULT
-get_current_version(TCPA_VERSION *version)
+get_current_version(TPM_VERSION *version)
 {
 	TCPA_CAPABILITY_AREA capArea = TPM_CAP_VERSION_VAL;
 	UINT32 respSize;
@@ -105,10 +105,10 @@ get_max_auths(UINT32 *auths)
 	TSS_RESULT result;
 	int i;
 
-	if (TPM_VERSION(1,2)) {
+	if (TPM_VERSION_IS(1,2)) {
 		UINT32ToArray(TPM_CAP_PROP_MAX_AUTHSESS, (BYTE *)(&subCap));
 		result = get_cap_uint32(TPM_CAP_PROPERTY, (BYTE *)&subCap, sizeof(subCap), auths);
-	} else if (TPM_VERSION(1,1)) {
+	} else if (TPM_VERSION_IS(1,1)) {
 		/* open auth sessions until we get a failure */
 		for (i = 0; i < TSS_MAX_AUTHS_CAP; i++) {
 			result = TCSP_OIAP_Internal(InternalContext, &(handles[i]), &nonce);

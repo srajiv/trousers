@@ -42,13 +42,13 @@ struct tpm_properties
 	UINT32 num_auths;
 	TSS_BOOL authctx_swap;
 	TSS_BOOL keyctx_swap;
-	TCPA_VERSION version;
+	TPM_VERSION version;
 	BYTE manufacturer[16];
 };
 
 extern struct tpm_properties tpm_metrics;
 
-#define TPM_VERSION(maj, min) \
+#define TPM_VERSION_IS(maj, min) \
 	((tpm_metrics.version.major == maj) && (tpm_metrics.version.minor == min))
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -163,7 +163,7 @@ TCS_CONTEXT_HANDLE make_context();
 void destroy_context(TCS_CONTEXT_HANDLE);
 
 /* tcs_utils.c */
-TSS_RESULT get_current_version(TCPA_VERSION *);
+TSS_RESULT get_current_version(TPM_VERSION *);
 void LogData(char *string, UINT32 data);
 void LogResult(char *string, TSS_RESULT result);
 TSS_RESULT canILoadThisKey(TCPA_KEY_PARMS *parms, TSS_BOOL *);
@@ -200,8 +200,8 @@ void LoadBlob_KEY_PARMS(UINT64 *, BYTE *, TCPA_KEY_PARMS *);
 TSS_RESULT UnloadBlob_KEY_PARMS(UINT64 *, BYTE *, TCPA_KEY_PARMS *);
 TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
 void LoadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
-void UnloadBlob_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
-void LoadBlob_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
+void UnloadBlob_VERSION(UINT64 *, BYTE *, TPM_VERSION *);
+void LoadBlob_VERSION(UINT64 *, BYTE *, TPM_VERSION *);
 TSS_RESULT UnloadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
 void LoadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
 void LoadBlob_PUBKEY(UINT64 *, BYTE *, TCPA_PUBKEY *);
@@ -243,6 +243,7 @@ TSS_RESULT tpm_preload_check(TCS_CONTEXT_HANDLE, TPM_COMMAND_CODE ordinal, ...);
 TSS_RESULT getKeyByCacheEntry(struct key_disk_cache *, BYTE *, UINT16 *);
 TSS_RESULT add_cache_entry(TCS_CONTEXT_HANDLE, BYTE *, TCS_KEY_HANDLE, TPM_KEY_HANDLE, TCS_KEY_HANDLE *);
 TSS_RESULT get_slot(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TPM_KEY_HANDLE *);
+TSS_RESULT get_slot_lite(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TPM_KEY_HANDLE *);
 TSS_RESULT load_key_init(TPM_COMMAND_CODE, TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, UINT32, BYTE*, TSS_BOOL, TPM_AUTH*, TSS_BOOL*, UINT64*, BYTE*, TCS_KEY_HANDLE*, TPM_KEY_HANDLE*);
 TSS_RESULT load_key_final(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCS_KEY_HANDLE *, BYTE *, TPM_KEY_HANDLE);
 TSS_RESULT LoadKeyByBlob_Internal(UINT32,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,

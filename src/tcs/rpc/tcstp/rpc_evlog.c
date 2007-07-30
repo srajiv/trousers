@@ -222,7 +222,7 @@ tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data)
 void
 LoadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 {
-	LoadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(event->versionInfo));
+	LoadBlob_VERSION(offset, blob, (TPM_VERSION *)&(event->versionInfo));
 	LoadBlob_UINT32(offset, event->ulPcrIndex, blob);
 	LoadBlob_UINT32(offset, event->eventType, blob);
 
@@ -239,7 +239,7 @@ LoadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 TSS_RESULT
 UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 {
-	UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(event->versionInfo));
+	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&(event->versionInfo));
 	UnloadBlob_UINT32(offset, &event->ulPcrIndex, blob);
 	UnloadBlob_UINT32(offset, &event->eventType, blob);
 

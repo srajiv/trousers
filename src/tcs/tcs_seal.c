@@ -47,7 +47,7 @@ UnloadBlob_STORED_DATA(UINT64 *offset, BYTE *blob, TCPA_STORED_DATA *data)
 		return TSS_SUCCESS;
 	}
 
-	UnloadBlob_VERSION(offset, blob, &data->ver);
+	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&data->ver);
 
 	UnloadBlob_UINT32(offset, &data->sealInfoSize, blob);
 

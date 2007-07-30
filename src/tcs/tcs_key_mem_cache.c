@@ -602,7 +602,7 @@ key_mgr_load_by_blob(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hUnwrappingKey,
 
 	MUTEX_LOCK(mem_cache_lock);
 
-	if (TPM_VERSION(1,2)) {
+	if (TPM_VERSION_IS(1,2)) {
 		result = TCSP_LoadKey2ByBlob_Internal(hContext, hUnwrappingKey, cWrappedKeyBlob,
 						      rgbWrappedKeyBlob, pAuth, phKeyTCSI);
 	} else {

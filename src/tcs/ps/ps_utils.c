@@ -30,23 +30,6 @@
 
 struct key_disk_cache *key_disk_cache_head = NULL;
 
-void
-LoadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION version)
-{
-	blob[(*offset)++] = version.major;
-	blob[(*offset)++] = version.minor;
-	blob[(*offset)++] = version.revMajor;
-	blob[(*offset)++] = version.revMinor;
-}
-
-void
-UnloadBlob_TCPA_VERSION(UINT16 * offset, BYTE * blob, TCPA_VERSION * out)
-{
-	out->major = blob[(*offset)++];
-	out->minor = blob[(*offset)++];
-	out->revMajor = blob[(*offset)++];
-	out->revMinor = blob[(*offset)++];
-}
 
 inline TSS_RESULT
 read_data(int fd, void *data, UINT32 size)

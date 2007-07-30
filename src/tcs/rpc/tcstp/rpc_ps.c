@@ -425,7 +425,7 @@ UnloadBlob_UUID(UINT64 *offset, BYTE * blob, TSS_UUID *uuid)
 void
 LoadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
-	LoadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
+	LoadBlob_VERSION(offset, blob, (TPM_VERSION *)&(info->versionInfo));
 	LoadBlob_UUID(offset, blob, info->keyUUID);
 	LoadBlob_UUID(offset, blob, info->parentKeyUUID);
 	LoadBlob_BYTE(offset, info->bAuthDataUsage, blob);
@@ -437,14 +437,14 @@ LoadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 void
 LoadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
 {
-	LoadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
+	LoadBlob_VERSION(offset, blob, (TPM_VERSION *)&(info->versionInfo));
 	LoadBlob_UUID(offset, blob, info->keyUUID);
 	LoadBlob_UUID(offset, blob, info->parentKeyUUID);
 	LoadBlob_BYTE(offset, info->bAuthDataUsage, blob);
 	/* Load the infos of the blob regarding the new data type TSS_KM_KEYINFO2 */
 	LoadBlob_UINT32(offset,info->persistentStorageType,blob);
 	LoadBlob_UINT32(offset, info->persistentStorageTypeParent,blob);
-	
+
 	LoadBlob_BOOL(offset, info->fIsLoaded, blob);
 	LoadBlob_UINT32(offset, info->ulVendorDataLength, blob);
 	LoadBlob(offset, info->ulVendorDataLength, blob, info->rgbVendorData);
@@ -453,7 +453,7 @@ LoadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
 void
 UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
-	UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&(info->versionInfo));
+	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&(info->versionInfo));
 	UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
 	UnloadBlob_BYTE(offset, blob, &info->bAuthDataUsage);
