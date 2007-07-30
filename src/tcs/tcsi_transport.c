@@ -126,9 +126,9 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 			       BYTE**                  rgbWrappedCmdParamOut)
 {
 	TSS_RESULT result;
-	UINT32 paramSize, wrappedSize, keySlot1 = 0;
+	UINT32 paramSize, wrappedSize, val1 = 0, val2 = 0, *pVal1 = NULL, *pVal2 = NULL;
 	UINT64 offset, wrappedOffset = 0;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *blob = NULL;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 
 	if (*pulHandleListSize > 2) {
@@ -139,28 +139,33 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	switch (unWrappedCommandOrdinal) {
-	case TPM_ORD_LoadKey2:
-	{
-		if (*pulHandleListSize != 1)
-			return TCSERR(TSS_E_BAD_PARAMETER);
+	if (pWrappedCmdAuth1)
+		if ((result = auth_mgr_check(hContext, &pWrappedCmdAuth1->AuthHandle)))
+			goto done;
 
-		if ((result = get_slot(hContext, *rghHandles[0], &keySlot1)))
-			return result;
+	if (pWrappedCmdAuth2)
+		if ((result = auth_mgr_check(hContext, &pWrappedCmdAuth2->AuthHandle)))
+			goto done;
 
-		if ((result = tpm_rqu_build(unWrappedCommandOrdinal, &wrappedOffset,
-					    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], keySlot1,
-					    ulWrappedCmdParamInSize, rgbWrappedCmdParamIn,
-					    pWrappedCmdAuth1, NULL)))
-			return result;
-		break;
+	if (*pulHandleListSize >= 1) {
+		if ((result = get_slot_lite(hContext, *rghHandles[0], &val1)))
+			goto done;
+
+		pVal1 = &val1;
 	}
-	default:
-		LogDebugFn("Unknown ordinal to parse in transport session: 0x%x",
-			   unWrappedCommandOrdinal);
-		result = TCSERR(TSS_E_INTERNAL_ERROR);
-		goto done;
+
+	if (*pulHandleListSize == 2) {
+		if ((result = get_slot_lite(hContext, *rghHandles[1], &val2)))
+			goto done;
+
+		pVal2 = &val2;
 	}
+
+	if ((result = tpm_rqu_build(TPM_ORD_ExecuteTransport, &wrappedOffset,
+				    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], pVal1, pVal2,
+				    ulWrappedCmdParamInSize, rgbWrappedCmdParamIn, pWrappedCmdAuth1,
+				    pWrappedCmdAuth2)))
+		return result;
 
 	/* The blob we'll load here looks like this:
 	 *
@@ -245,42 +250,37 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 	*pulWrappedCmdReturnCode = TSS_SUCCESS;
 
-	/* Now we need to parse the returned data, which will be ordinal-specific */
+	pVal1 = pVal2 = NULL;
 	switch (unWrappedCommandOrdinal) {
-		case TPM_ORD_GetPubKey:
-		case TPM_ORD_CreateWrapKey:
-			result = tpm_rsp_parse(unWrappedCommandOrdinal, &txBlob[wrappedOffset],
-						paramSize, ulWrappedCmdParamOutSize,
-						rgbWrappedCmdParamOut, pWrappedCmdAuth1);
-			break;
 		case TPM_ORD_LoadKey2:
-		{
-			TPM_KEY_HANDLE slot;
-			TCS_KEY_HANDLE tcs_handle = NULL_TCS_HANDLE;
-
-			if ((result = tpm_rsp_parse(unWrappedCommandOrdinal, &txBlob[wrappedOffset],
-						    paramSize, &slot, pWrappedCmdAuth1)))
-				goto done;
-
-			if ((result = load_key_final(hContext, *rghHandles[0], &tcs_handle, blob,
-						     slot)))
-				goto done;
-
-			*rghHandles[0] = tcs_handle;
-			*ulWrappedCmdParamOutSize = 0;
-			*rgbWrappedCmdParamOut = NULL;
+			pVal1 = &val1;
 			break;
-		}
-		case TPM_ORD_LoadKey:
 		default:
-			LogDebugFn("Unknown ordinal to parse in transport session: 0x%x",
-				   unWrappedCommandOrdinal);
-			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			break;
 	}
 
-	auth_mgr_release_auth(pWrappedCmdAuth1, pWrappedCmdAuth2, hContext);
+	result = tpm_rsp_parse(TPM_ORD_ExecuteTransport, &txBlob[wrappedOffset], paramSize,
+			       ulWrappedCmdParamOutSize, pVal1, pVal2, rgbWrappedCmdParamOut,
+			       pWrappedCmdAuth1, pWrappedCmdAuth2);
+
+	switch (unWrappedCommandOrdinal) {
+	case TPM_ORD_LoadKey2:
+	{
+		TCS_KEY_HANDLE tcs_handle = NULL_TCS_HANDLE;
+
+		if ((result = load_key_final(hContext, *rghHandles[0], &tcs_handle, NULL,
+					     val1)))
+			goto done;
+
+		*rghHandles[0] = tcs_handle;
+		break;
+	}
+	default:
+		break;
+	}
+
 done:
+	auth_mgr_release_auth(pWrappedCmdAuth1, pWrappedCmdAuth2, hContext);
 	return result;
 }
 
@@ -366,6 +366,6 @@ TCSP_ReleaseTransportSigned_Internal(TCS_CONTEXT_HANDLE      hContext,
 	UnloadBlob_Auth(&offset, txBlob, pTransAuth);
 
 done:
-	auth_mgr_release_auth(pKeyAuth, pTransAuth, hContext);
+	auth_mgr_release_auth(pKeyAuth, NULL, hContext);
 	return result;
 }
