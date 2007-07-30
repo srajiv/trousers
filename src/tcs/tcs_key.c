@@ -79,6 +79,23 @@ done:
 	return result;
 }
 
+/* Check that the context has this key loaded and return the associated slot. Do not search PS if
+ * the key is not found */
+TSS_RESULT
+get_slot_lite(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hKey, TPM_KEY_HANDLE *out)
+{
+	if (ctx_has_key_loaded(hContext, hKey)) {
+		if ((*out = mc_get_slot_by_handle(hKey)) == NULL_TPM_HANDLE)
+			return TCSERR(TCS_E_INVALID_KEY);
+
+		return TSS_SUCCESS;
+	}
+
+	return TCSERR(TCS_E_INVALID_KEY);
+}
+
+/* XXX Can get_slot be merged with ensureKeyIsLoaded? */
+
 /* Given a handle, get_slot searches the mem cache for a mapping to a TPM handle. If there is no
  * mapping, it looks up the pub key of the handle and attempts to load it by finding its pub key
  * in the persistent store. If that's not found, return error. */
@@ -424,7 +441,7 @@ UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 		return TSS_SUCCESS;
 	}
 
-	UnloadBlob_VERSION(offset, blob, &key->ver);
+	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&key->ver);
 	UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	UnloadBlob_BOOL(offset, (TSS_BOOL *)&key->authDataUsage, blob);
@@ -485,7 +502,7 @@ UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 void
 LoadBlob_KEY(UINT64 *offset, BYTE * blob, TCPA_KEY * key)
 {
-	LoadBlob_VERSION(offset, blob, &key->ver);
+	LoadBlob_VERSION(offset, blob, (TPM_VERSION *)&key->ver);
 	LoadBlob_UINT16(offset, key->keyUsage, blob);
 	LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	LoadBlob_BOOL(offset, key->authDataUsage, blob);
