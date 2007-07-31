@@ -148,6 +148,20 @@ extern TSS_RESULT Tcsip_MakeIdentity
     UINT32*               pcConformanceCredentialSize,           // out
     BYTE**                prgbConformanceCredential              // out
 );
+extern TSS_RESULT Tcsip_MakeIdentity2
+(
+    TCS_CONTEXT_HANDLE    hContext,                              // in
+    TPM_ENCAUTH           identityAuth,                          // in
+    TPM_CHOSENID_HASH     IDLabel_PrivCAHash,                    // in
+    UINT32                idIdentityKeyInfoSize,                 // in
+    BYTE*                 idIdentityKeyInfo,                     // in
+    TPM_AUTH*             pSrkAuth,                              // in, out
+    TPM_AUTH*             pOwnerAuth,                            // in, out
+    UINT32*               idIdentityKeySize,                     // out
+    BYTE**                idIdentityKey,                         // out
+    UINT32*               pcIdentityBindingSize,                 // out
+    BYTE**                prgbIdentityBinding                    // out
+);
 extern TSS_RESULT Tcsi_LogPcrEvent
 (
     TCS_CONTEXT_HANDLE    hContext,                    // in
