@@ -96,7 +96,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 		}
 
-		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, *srkKey, srkKeySize))) {
+		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, *srkKey, *srkKeySize))) {
 			destroy_key_refs(&srkKeyContainer);
 			LogError("Error writing SRK to disk");
 			*srkKeySize = 0;
