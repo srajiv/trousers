@@ -528,6 +528,9 @@ Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
 	Trspi_HashCtx hashCtx;
 	TCPA_DIGEST digest;
 
+	if (pulPuKeyLength == NULL || prgbPubKey == NULL)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
