@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -48,10 +48,11 @@ TSS_HOBJECT	   obj_GetPolicyOfObject(UINT32, UINT32);
 void		   obj_list_init();
 TSS_HOBJECT	   obj_get_next_handle();
 TSS_RESULT	   obj_list_add(struct obj_list *, UINT32, TSS_FLAG, void *, TSS_HOBJECT *);
-TSS_RESULT	   obj_list_remove(struct obj_list *, TSS_HOBJECT, TSS_HCONTEXT);
+TSS_RESULT	   obj_list_remove(struct obj_list *, void (*)(void *), TSS_HOBJECT, TSS_HCONTEXT);
 void		   obj_list_put(struct obj_list *);
 struct tsp_object *obj_list_get_obj(struct obj_list *, UINT32);
 struct tsp_object *obj_list_get_tspcontext(struct obj_list *, UINT32);
+void		   obj_list_close(struct obj_list *, void (*)(void *), TSS_HCONTEXT);
 void		   obj_connectContext(TSS_HCONTEXT, TCS_CONTEXT_HANDLE);
 void		   obj_close_context(TSS_HCONTEXT);
 void               obj_lists_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
@@ -65,6 +66,7 @@ void               obj_lists_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 #include "obj_encdata.h"
 #include "obj_daa.h"
 #include "obj_nv.h"
+#include "obj_delfamily.h"
 
 
 TPM_LIST_DECLARE_EXTERN;
@@ -76,5 +78,6 @@ RSAKEY_LIST_DECLARE_EXTERN;
 ENCDATA_LIST_DECLARE_EXTERN;
 DAA_LIST_DECLARE_EXTERN;
 NVSTORE_LIST_DECLARE_EXTERN;
+DELFAMILY_LIST_DECLARE_EXTERN;
 
 #endif
