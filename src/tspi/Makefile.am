@@ -186,7 +186,7 @@ libtspi_la_SOURCES+=obj_hash.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_HASH_LIST
 endif
 if TSS_BUILD_ENCDATA_LIST
-libtspi_la_SOURCES+=obj_encdata.c tsp_encdata.c
+libtspi_la_SOURCES+=obj_encdata.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_ENCDATA_LIST
 endif
 if TSS_BUILD_RSAKEY_LIST
@@ -215,4 +215,8 @@ endif
 if TSS_BUILD_NV
 libtspi_la_SOURCES+=tspi_nv.c obj_nv.c rpc/@RPC@/rpc_nv.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_NV
+endif
+if TSS_BUILD_DELEGATION
+libtspi_la_SOURCES+=tspi_delegate.c tsp_delegate.c obj_delfamily.c rpc/@RPC@/rpc_delegate.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_DELEGATION
 endif
