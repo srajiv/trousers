@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -203,6 +203,9 @@ UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE * blob)
 void
 LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
+	if (size == 0)
+		return;
+
 	if (container)
 		memcpy(&container[*offset], object, size);
 	(*offset) += (UINT64) size;
@@ -211,6 +214,9 @@ LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 void
 UnloadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
+	if (size == 0)
+		return;
+
 	if (object)
 		memcpy(object, &container[*offset], size);
 	(*offset) += (UINT64) size;
@@ -466,3 +472,16 @@ UnloadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *nonce)
 {
 	UnloadBlob(offset, TCPA_NONCE_SIZE, blob, nonce->nonce);
 }
+
+void
+LoadBlob_AUTHDATA(UINT64 *offset, BYTE *blob, TPM_AUTHDATA *authdata)
+{
+	LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, authdata->authdata);
+}
+
+void
+UnloadBlob_AUTHDATA(UINT64 *offset, BYTE *blob, TPM_AUTHDATA *authdata)
+{
+	UnloadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, authdata->authdata);
+}
+

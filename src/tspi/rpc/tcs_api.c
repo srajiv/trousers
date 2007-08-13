@@ -2768,4 +2768,202 @@ TCSP_OwnerReadInternalPub(TCS_CONTEXT_HANDLE hContext,	/* in */
 	return result;
 }
 
+TSS_RESULT
+TCSP_Delegate_Manage(TCS_CONTEXT_HANDLE hContext,	/* in */
+		     TPM_FAMILY_ID familyID,		/* in */
+		     TPM_FAMILY_OPERATION opFlag,	/* in */
+		     UINT32 opDataSize,			/* in */
+		     BYTE *opData,			/* in */
+		     TPM_AUTH *ownerAuth,		/* in, out */
+		     UINT32 *retDataSize,		/* out */
+		     BYTE **retData)			/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_Manage_TP(entry, familyID, opFlag,
+					opDataSize, opData, ownerAuth, retDataSize, retData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_CreateKeyDelegation(TCS_CONTEXT_HANDLE hContext,	/* in */
+				  TCS_KEY_HANDLE hKey,		/* in */
+				  UINT32 publicInfoSize,	/* in */
+				  BYTE *publicInfo,		/* in */
+				  TPM_ENCAUTH encDelAuth,	/* in */
+				  TPM_AUTH *keyAuth,		/* in, out */
+				  UINT32 *blobSize,		/* out */
+				  BYTE **blob)			/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_CreateKeyDelegation_TP(entry, hKey,
+					publicInfoSize, publicInfo, encDelAuth, keyAuth,
+					blobSize, blob);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_CreateOwnerDelegation(TCS_CONTEXT_HANDLE hContext,	/* in */
+				    TSS_BOOL increment,			/* in */
+				    UINT32 publicInfoSize,		/* in */
+				    BYTE *publicInfo,			/* in */
+				    TPM_ENCAUTH encDelAuth,		/* in */
+				    TPM_AUTH *ownerAuth,		/* in, out */
+				    UINT32 *blobSize,			/* out */
+				    BYTE **blob)			/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_CreateOwnerDelegation_TP(entry, increment,
+					publicInfoSize, publicInfo, encDelAuth, ownerAuth,
+					blobSize, blob);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_LoadOwnerDelegation(TCS_CONTEXT_HANDLE hContext,	/* in */
+				  TPM_DELEGATE_INDEX index,	/* in */
+				  UINT32 blobSize,		/* in */
+				  BYTE *blob,			/* in */
+				  TPM_AUTH *ownerAuth)		/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_LoadOwnerDelegation_TP(entry, index,
+					blobSize, blob, ownerAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_ReadTable(TCS_CONTEXT_HANDLE hContext,	/* in */
+			UINT32 *familyTableSize,	/* out */
+			BYTE **familyTable,		/* out */
+			UINT32 *delegateTableSize,	/* out */
+			BYTE **delegateTable)		/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_ReadTable_TP(entry, familyTableSize, familyTable,
+					delegateTableSize, delegateTable);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_UpdateVerificationCount(TCS_CONTEXT_HANDLE hContext,	/* in */
+				      UINT32 inputSize,			/* in */
+				      BYTE *input,			/* in */
+				      TPM_AUTH *ownerAuth,		/* in, out */
+				      UINT32 *outputSize,		/* out */
+				      BYTE **output)			/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_UpdateVerificationCount_TP(entry,
+					inputSize, input, ownerAuth, outputSize, output);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_Delegate_VerifyDelegation(TCS_CONTEXT_HANDLE hContext,	/* in */
+			       UINT32 delegateSize,		/* in */
+			       BYTE *delegate)			/* in */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_Delegate_VerifyDelegation_TP(entry,
+					delegateSize, delegate);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
 

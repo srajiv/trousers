@@ -227,6 +227,10 @@ void LoadBlob_DIGEST(UINT64 *, BYTE *, TPM_DIGEST *);
 void UnloadBlob_DIGEST(UINT64 *, BYTE *, TPM_DIGEST *);
 void LoadBlob_NONCE(UINT64 *, BYTE *, TPM_NONCE *);
 void UnloadBlob_NONCE(UINT64 *, BYTE *, TPM_NONCE *);
+void LoadBlob_AUTHDATA(UINT64 *, BYTE *, TPM_AUTHDATA *);
+void UnloadBlob_AUTHDATA(UINT64 *, BYTE *, TPM_AUTHDATA *);
+#define LoadBlob_ENCAUTH(a, b, c)	LoadBlob_AUTHDATA(a, b, c)
+#define UnloadBlob_ENCAUTH(a, b, c)	UnloadBlob_AUTHDATA(a, b, c)
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 void free_external_events(UINT32, TSS_PCR_EVENT *);
@@ -981,4 +985,62 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						      UINT32* 		punPubKeySize,	/* out */
 						      BYTE**		ppbPubKeyData	/* out */
 	);
+
+	TSS_RESULT TCSP_Delegate_Manage_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+						 TPM_FAMILY_ID		familyID,	/* in */
+						 TPM_FAMILY_OPERATION	opFlag,		/* in */
+						 UINT32			opDataSize,	/* in */
+						 BYTE*			opData,		/* in */
+						 TPM_AUTH*		ownerAuth,	/* in, out */
+						 UINT32*		retDataSize,	/* out */
+						 BYTE**			retData		/* out */
+	);
+
+	TSS_RESULT TCSP_Delegate_CreateKeyDelegation_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+							      TCS_KEY_HANDLE		hKey,		/* in */
+							      UINT32			publicInfoSize,	/* in */
+							      BYTE*			publicInfo,	/* in */
+							      TPM_ENCAUTH*		encDelAuth,	/* in */
+							      TPM_AUTH*			keyAuth,	/* in, out */
+							      UINT32*			blobSize,	/* out */
+							      BYTE**			blob		/* out */
+	);
+
+	TSS_RESULT TCSP_Delegate_CreateOwnerDelegation_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+								TSS_BOOL		increment,	/* in */
+								UINT32			publicInfoSize,	/* in */
+								BYTE*			publicInfo,	/* in */
+								TPM_ENCAUTH*		encDelAuth,	/* in */
+								TPM_AUTH*		ownerAuth,	/* in, out */
+								UINT32*			blobSize,	/* out */
+								BYTE**			blob		/* out */
+	);
+
+	TSS_RESULT TCSP_Delegate_LoadOwnerDelegation_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+							      TPM_DELEGATE_INDEX	index,		/* in */
+							      UINT32			blobSize,	/* in */
+							      BYTE*			blob,		/* in */
+							      TPM_AUTH*			ownerAuth	/* in, out */
+	);
+
+	TSS_RESULT TCSP_Delegate_ReadTable_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						    UINT32*		pulFamilyTableSize,	/* out */
+						    BYTE**		ppFamilyTable,		/* out */
+						    UINT32*		pulDelegateTableSize,	/* out */
+						    BYTE**		ppDelegateTable		/* out */
+	);
+
+	TSS_RESULT TCSP_Delegate_UpdateVerificationCount_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+								  UINT32		inputSize,	/* in */
+								  BYTE*			input,		/* in */
+								  TPM_AUTH*		ownerAuth,	/* in, out */
+								  UINT32*		outputSize,	/* out */
+								  BYTE**		output		/* out */
+	);
+
+	TSS_RESULT TCSP_Delegate_VerifyDelegation_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+							   UINT32		delegateSize,	/* in */
+							   BYTE*		delegate	/* in */
+	);
+
 #endif /*_TCS_UTILS_H_ */

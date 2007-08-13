@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -283,6 +283,15 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		result = obj_nvstore_add(tspContext, phObject);
 		break;
 #endif
+#ifdef TSS_BUILD_DELEGATION
+	case TSS_OBJECT_TYPE_DELFAMILY:
+		/* There are no valid flags for a DELFAMILY object */
+		if (initFlags & ~(0UL))
+			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+	
+		result = obj_delfamily_add(tspContext, phObject);
+		break;
+#endif
 	default:
 		LogDebug("Invalid Object type");
 		return TSPERR(TSS_E_INVALID_OBJECT_TYPE);
@@ -319,6 +328,10 @@ Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/* in */
 #endif
 	} else if (obj_is_policy(hObject)) {
 		result = obj_policy_remove(hObject, tspContext);
+	} else if (obj_is_delfamily(hObject)) {
+#ifdef TSS_BUILD_DELEGATION
+		result = obj_delfamily_remove(hObject, tspContext);
+#endif
 	} else {
 		result = TSPERR(TSS_E_INVALID_HANDLE);
 	}
