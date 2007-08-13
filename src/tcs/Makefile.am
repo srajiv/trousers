@@ -127,3 +127,7 @@ if TSS_BUILD_TSS12
 libtcs_a_SOURCES+=tcsi_oper.c rpc/@RPC@/rpc_oper.c
 libtcs_a_CFLAGS+=-DTSS_BUILD_TSS12
 endif
+if TSS_BUILD_DELEGATION
+libtcs_a_SOURCES+=tcsi_delegate.c rpc/@RPC@/rpc_delegate.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_DELEGATION
+endif
