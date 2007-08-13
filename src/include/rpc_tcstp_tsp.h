@@ -349,4 +349,22 @@ TSS_RESULT TCSP_SetOperatorAuth_TP(struct host_table_entry *hte, TCPA_SECRET *);
 #define TCSP_SetOperatorAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_DELEGATION
+TSS_RESULT TCSP_Delegate_Manage_TP(struct host_table_entry *hte, TPM_FAMILY_ID, TPM_FAMILY_OPERATION, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_ENCAUTH, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte, TSS_BOOL, UINT32, BYTE *, TPM_ENCAUTH, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte, TPM_DELEGATE_INDEX, UINT32, BYTE *, TPM_AUTH *);
+TSS_RESULT TCSP_Delegate_ReadTable_TP(struct host_table_entry *hte, UINT32 *, BYTE **, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT TCSP_Delegate_VerifyDelegation_TP(struct host_table_entry *hte, UINT32, BYTE *);
+#else
+#define TCSP_Delegate_Manage_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_CreateKeyDelegation_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_CreateOwnerDelegation_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_LoadOwnerDelegation_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_ReadTable_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_UpdateVerificationCount_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_Delegate_VerifyDelegation_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif

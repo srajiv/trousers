@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -158,6 +158,38 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
 				result = obj_policy_set_hash_mode(hObject, ulAttrib);
 				break;
+#ifdef TSS_BUILD_DELEGATION
+			case TSS_TSPATTRIB_POLICY_DELEGATION_INFO:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDEL_TYPE:
+					switch (ulAttrib) {
+					case TSS_DELEGATIONTYPE_NONE:
+					case TSS_DELEGATIONTYPE_OWNER:
+					case TSS_DELEGATIONTYPE_KEY:
+						result = obj_policy_set_delegation_type(hObject,
+								ulAttrib);
+						break;
+					default:
+						result = TSPERR(TSS_E_INVALID_ATTRIB_DATA);
+					}
+					break;
+				case TSS_TSPATTRIB_POLDEL_INDEX:
+					result = obj_policy_set_delegation_index(hObject,
+							ulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_PER1:
+					result = obj_policy_set_delegation_per1(hObject,
+							ulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_PER2:
+					result = obj_policy_set_delegation_per2(hObject,
+							ulAttrib);
+					break;
+				default:
+					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -236,6 +268,25 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			result = obj_encdata_set_seal_protect_mode(hObject, ulAttrib);
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+#endif
+#ifdef TSS_BUILD_DELEGATION
+	} else if (obj_is_delfamily(hObject)) {
+		switch (attribFlag) {
+		case TSS_TSPATTRIB_DELFAMILY_STATE:
+			switch (subFlag) {
+			case TSS_TSPATTRIB_DELFAMILYSTATE_LOCKED:
+				result = obj_delfamily_set_locked(hObject, (TSS_BOOL)ulAttrib, TRUE);
+				break;
+			case TSS_TSPATTRIB_DELFAMILYSTATE_ENABLED:
+				result = obj_delfamily_set_enabled(hObject, (TSS_BOOL)ulAttrib, TRUE);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		}
 #endif
 	} else {
 		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
@@ -428,6 +479,52 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
+#ifdef TSS_BUILD_DELEGATION
+			case TSS_TSPATTRIB_POLICY_DELEGATION_INFO:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDEL_TYPE:
+					result = obj_policy_get_delegation_type(hObject,
+							pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_INDEX:
+					result = obj_policy_get_delegation_index(hObject,
+							pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_PER1:
+					result = obj_policy_get_delegation_per1(hObject,
+							pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_PER2:
+					result = obj_policy_get_delegation_per2(hObject,
+							pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_LABEL:
+					result = obj_policy_get_delegation_label(hObject,
+							(BYTE *)pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_FAMILYID:
+					result = obj_policy_get_delegation_familyid(hObject,
+							pulAttrib);
+					break;
+				case TSS_TSPATTRIB_POLDEL_VERCOUNT:
+					result = obj_policy_get_delegation_vercount(hObject,
+							pulAttrib);
+					break;
+				default:
+					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+			case TSS_TSPATTRIB_POLICY_DELEGATION_PCR:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDELPCR_LOCALITY:
+					result = obj_policy_get_delegation_pcr_locality(hObject,
+							pulAttrib);
+					break;
+				default:
+					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -483,6 +580,40 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			result = obj_encdata_get_seal_protect_mode(hObject, pulAttrib);
 		else
 			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+#endif
+#ifdef TSS_BUILD_DELEGATION
+	} else if (obj_is_delfamily(hObject)) {
+		switch (attribFlag) {
+		case TSS_TSPATTRIB_DELFAMILY_STATE:
+			switch (subFlag) {
+			case TSS_TSPATTRIB_DELFAMILYSTATE_LOCKED:
+				result = obj_delfamily_get_locked(hObject, (TSS_BOOL *)pulAttrib);
+				break;
+			case TSS_TSPATTRIB_DELFAMILYSTATE_ENABLED:
+				result = obj_delfamily_get_enabled(hObject, (TSS_BOOL *)pulAttrib);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_TSPATTRIB_DELFAMILY_INFO:
+			switch (subFlag) {
+			case TSS_TSPATTRIB_DELFAMILYINFO_LABEL:
+				result = obj_delfamily_get_label(hObject, (BYTE *)pulAttrib);
+				break;
+			case TSS_TSPATTRIB_DELFAMILYINFO_VERCOUNT:
+				result = obj_delfamily_get_vercount(hObject, pulAttrib);
+				break;
+			case TSS_TSPATTRIB_DELFAMILYINFO_FAMILYID:
+				result = obj_delfamily_get_familyid(hObject, pulAttrib);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+		}
 #endif
 	} else {
 		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
@@ -565,6 +696,24 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 				result = obj_policy_set_cb12(hObject, attribFlag,
 							     rgbAttribData);
 				break;
+#ifdef TSS_BUILD_DELEGATION
+			case TSS_TSPATTRIB_POLICY_DELEGATION_INFO:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDEL_OWNERBLOB:
+					result = obj_policy_set_delegation_blob(hObject,
+							TSS_DELEGATIONTYPE_OWNER,
+							ulAttribDataSize, rgbAttribData);
+					break;
+				case TSS_TSPATTRIB_POLDEL_KEYBLOB:
+					result = obj_policy_set_delegation_blob(hObject,
+							TSS_DELEGATIONTYPE_KEY,
+							ulAttribDataSize, rgbAttribData);
+					break;
+				default:
+					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
@@ -774,6 +923,38 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 								    prgbAttribData)))
 					return result;
 				break;
+#ifdef TSS_BUILD_DELEGATION
+			case TSS_TSPATTRIB_POLICY_DELEGATION_INFO:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDEL_OWNERBLOB:
+					result = obj_policy_get_delegation_blob(hObject,
+							TSS_DELEGATIONTYPE_OWNER,
+							pulAttribDataSize, prgbAttribData);
+					break;
+				case TSS_TSPATTRIB_POLDEL_KEYBLOB:
+					result = obj_policy_get_delegation_blob(hObject,
+							TSS_DELEGATIONTYPE_KEY,
+							pulAttribDataSize, prgbAttribData);
+					break;
+				default:
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+			case TSS_TSPATTRIB_POLICY_DELEGATION_PCR:
+				switch (subFlag) {
+				case TSS_TSPATTRIB_POLDELPCR_DIGESTATRELEASE:
+					result = obj_policy_get_delegation_pcr_digest(hObject,
+							pulAttribDataSize, prgbAttribData);
+					break;
+				case TSS_TSPATTRIB_POLDELPCR_SELECTION:
+					result = obj_policy_get_delegation_pcr_selection(hObject,
+							pulAttribDataSize, prgbAttribData);
+					break;
+				default:
+					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+				}
+				break;
+#endif
 			default:
 				result = TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;

@@ -60,11 +60,20 @@ obj_context_add(TSS_HOBJECT *phObject)
 
 	/* Add the default policy */
 	if ((result = obj_policy_add(*phObject, TSS_POLICY_USAGE, &context->policy))) {
-		obj_list_remove(&context_list, *phObject, *phObject);
+		obj_list_remove(&context_list, &context_free, *phObject, *phObject);
 		return result;
 	}
 
 	return TSS_SUCCESS;
+}
+
+void
+context_free(void *data)
+{
+	struct tr_context_obj *context = (struct tr_context_obj *)data;
+
+	free(context->machineName);
+	free(context);
 }
 
 TSS_BOOL

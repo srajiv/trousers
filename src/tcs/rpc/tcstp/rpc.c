@@ -591,6 +591,13 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_OwnerReadInternalPub,"OwnerReadInternalPub"}, /* 100 */
 	{tcs_wrap_EnumRegisteredKeys2,"EnumRegisteredKeys2"},
 	{tcs_wrap_SetTempDeactivated2,"SetTempDeactivated2"},
+	{tcs_wrap_Delegate_Manage,"Delegate_Manage"},
+	{tcs_wrap_Delegate_CreateKeyDelegation,"Delegate_CreateKeyDelegation"},
+	{tcs_wrap_Delegate_CreateOwnerDelegation,"Delegate_CreateOwnerDelegation"}, /* 105 */
+	{tcs_wrap_Delegate_LoadOwnerDelegation,"Delegate_LoadOwnerDelegation"},
+	{tcs_wrap_Delegate_ReadTable,"Delegate_ReadTable"},
+	{tcs_wrap_Delegate_UpdateVerificationCount,"Delegate_UpdateVerificationCount"},
+	{tcs_wrap_Delegate_VerifyDelegation,"Delegate_VerifyDelegation"},
 };
 
 int

@@ -317,6 +317,24 @@ DECLARE_TCSTP_FUNC(SetOperatorAuth);
 #define tcs_wrap_SetOperatorAuth	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_DELEGATION
+DECLARE_TCSTP_FUNC(Delegate_Manage);
+DECLARE_TCSTP_FUNC(Delegate_CreateKeyDelegation);
+DECLARE_TCSTP_FUNC(Delegate_CreateOwnerDelegation);
+DECLARE_TCSTP_FUNC(Delegate_LoadOwnerDelegation);
+DECLARE_TCSTP_FUNC(Delegate_ReadTable);
+DECLARE_TCSTP_FUNC(Delegate_UpdateVerificationCount);
+DECLARE_TCSTP_FUNC(Delegate_VerifyDelegation);
+#else
+#define tcs_wrap_Delegate_Manage			tcs_wrap_Error
+#define tcs_wrap_Delegate_CreateKeyDelegation		tcs_wrap_Error
+#define tcs_wrap_Delegate_CreateOwnerDelegation		tcs_wrap_Error
+#define tcs_wrap_Delegate_LoadOwnerDelegation		tcs_wrap_Error
+#define tcs_wrap_Delegate_ReadTable			tcs_wrap_Error
+#define tcs_wrap_Delegate_UpdateVerificationCount	tcs_wrap_Error
+#define tcs_wrap_Delegate_VerifyDelegation		tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);

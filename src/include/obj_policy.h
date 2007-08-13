@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -39,6 +39,18 @@ struct tr_policy_obj {
 	PVOID changeauthAppData;
 #ifdef TSS_BUILD_SEALX
 	PVOID sealxAppData;
+#endif
+#ifdef TSS_BUILD_DELEGATION
+	/* The per1 and per2 are only used when creating a delegation.
+	   After that, the blob or index is used to retrieve the information */
+	UINT32 delegationPer1;
+	UINT32 delegationPer2;
+
+	UINT32 delegationType;
+	TSS_BOOL delegationIndexSet;	/* Since 0 is a valid index value */
+	UINT32 delegationIndex;
+	UINT32 delegationBlobLength;
+	BYTE *delegationBlob;
 #endif
 	TSS_RESULT (*Tspicb_CallbackHMACAuth)(
 			PVOID lpAppData,
@@ -99,6 +111,7 @@ struct tr_policy_obj {
 };
 
 /* obj_policy.c */
+void       policy_free(void *data);
 TSS_BOOL   anyPopupPolicies(TSS_HCONTEXT);
 TSS_BOOL   obj_is_policy(TSS_HOBJECT);
 TSS_RESULT obj_policy_get_tsp_context(TSS_HPOLICY, TSS_HCONTEXT *);
@@ -145,11 +158,33 @@ TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_policy_do_sealx_mask(TSS_HPOLICY, TSS_HKEY, TSS_HENCDATA, TPM_AUTH *,
 		TPM_NONCE *, TPM_NONCE *, UINT32, BYTE *, BYTE **);
 #endif
+#ifdef TSS_BUILD_DELEGATION
+TSS_RESULT obj_policy_set_delegation_type(TSS_HPOLICY, UINT32);
+TSS_RESULT obj_policy_get_delegation_type(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_set_delegation_index(TSS_HPOLICY, UINT32);
+TSS_RESULT obj_policy_get_delegation_index(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_set_delegation_per1(TSS_HPOLICY, UINT32);
+TSS_RESULT obj_policy_get_delegation_per1(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_set_delegation_per2(TSS_HPOLICY, UINT32);
+TSS_RESULT obj_policy_get_delegation_per2(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_set_delegation_blob(TSS_HPOLICY, UINT32, UINT32, BYTE *);
+TSS_RESULT obj_policy_get_delegation_blob(TSS_HPOLICY, UINT32, UINT32 *, BYTE **);
+TSS_RESULT obj_policy_get_delegation_label(TSS_HPOLICY, BYTE *);
+TSS_RESULT obj_policy_get_delegation_familyid(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_get_delegation_vercount(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_get_delegation_pcr_locality(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_get_delegation_pcr_digest(TSS_HPOLICY, UINT32 *, BYTE **);
+TSS_RESULT obj_policy_get_delegation_pcr_selection(TSS_HPOLICY, UINT32 *, BYTE **);
+TSS_RESULT obj_policy_is_delegation_index_set(TSS_HPOLICY, TSS_BOOL *);
+
+void obj_policy_clear_delegation(struct tr_policy_obj *);
+TSS_RESULT obj_policy_get_delegate_public(struct tsp_object *, TPM_DELEGATE_PUBLIC *);
+#endif
 
 #define POLICY_LIST_DECLARE		struct obj_list policy_list
 #define POLICY_LIST_DECLARE_EXTERN	extern struct obj_list policy_list
 #define POLICY_LIST_INIT()		list_init(&policy_list)
 #define POLICY_LIST_CONNECT(a,b)	obj_connectContext_list(&policy_list, a, b)
-#define POLICY_LIST_CLOSE(a)		obj_list_close(&policy_list, a)
+#define POLICY_LIST_CLOSE(a)		obj_list_close(&policy_list, &policy_free, a)
 
 #endif
