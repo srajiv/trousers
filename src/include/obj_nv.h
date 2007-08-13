@@ -55,9 +55,9 @@ struct tr_nvstore_obj {
 };
 
 /* obj_nv.c */
+void       nvstore_free(void *data);
 TSS_RESULT obj_nvstore_add(TSS_HCONTEXT, TSS_HOBJECT *);
 TSS_BOOL   obj_is_nvstore(TSS_HOBJECT tspContext);
-void nvstore_free(struct tr_nvstore_obj *nvstore);
 TSS_RESULT obj_nvstore_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_nvstore_get_tsp_context(TSS_HNVSTORE, TSS_HCONTEXT *);
 TSS_RESULT obj_nvstore_set_index(TSS_HNVSTORE, UINT32);
@@ -84,8 +84,8 @@ TSS_RESULT obj_nvstore_create_pcrshortinfo(TSS_HNVSTORE, TSS_HPCRS, UINT32 *, BY
 #define NVSTORE_LIST_DECLARE		struct obj_list nvstore_list
 #define NVSTORE_LIST_DECLARE_EXTERN	extern struct obj_list nvstore_list
 #define NVSTORE_LIST_INIT()		list_init(&nvstore_list)
-#define NVSTORE_LIST_CONNECT(a,b)		obj_connectContext_list(&nvstore_list, a, b)
-#define NVSTORE_LIST_CLOSE(a)		obj_list_close(&nvstore_list, a)
+#define NVSTORE_LIST_CONNECT(a,b)	obj_connectContext_list(&nvstore_list, a, b)
+#define NVSTORE_LIST_CLOSE(a)		obj_list_close(&nvstore_list, &nvstore_free, a)
 #else
 #define NVSTORE_LIST_DECLARE
 #define NVSTORE_LIST_DECLARE_EXTERN

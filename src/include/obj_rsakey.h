@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -43,7 +43,7 @@ struct tr_rsakey_obj {
 };
 
 /* obj_rsakey.c */
-void       obj_list_rsakey_close(struct obj_list *, TSS_HCONTEXT);
+void       rsakey_free(void *data);
 TSS_BOOL   obj_is_rsakey(TSS_HOBJECT);
 TSS_RESULT obj_rsakey_add(TSS_HCONTEXT, TSS_FLAG, TSS_HOBJECT *);
 TSS_RESULT obj_rsakey_add_by_key(TSS_HCONTEXT, TSS_UUID *, BYTE *, TSS_FLAG, TSS_HKEY *);
@@ -106,7 +106,7 @@ TSS_RESULT obj_rsakey_get_transport_attribs(TSS_HKEY, TCS_KEY_HANDLE *, TPM_DIGE
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list
 #define RSAKEY_LIST_INIT()		list_init(&rsakey_list)
 #define RSAKEY_LIST_CONNECT(a,b)	obj_connectContext_list(&rsakey_list, a, b)
-#define RSAKEY_LIST_CLOSE(a)		obj_list_rsakey_close(&rsakey_list, a)
+#define RSAKEY_LIST_CLOSE(a)		obj_list_close(&rsakey_list, &rsakey_free, a)
 
 #else
 

@@ -43,6 +43,7 @@ struct tr_context_obj {
 };
 
 /* obj_context.c */
+void       context_free(void *data);
 TSS_BOOL   obj_is_context(TSS_HOBJECT);
 TSS_RESULT obj_context_get_policy(TSS_HCONTEXT, UINT32, TSS_HPOLICY *);
 TSS_BOOL   obj_context_is_silent(TSS_HCONTEXT);
@@ -77,6 +78,6 @@ TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
 #define CONTEXT_LIST_DECLARE_EXTERN	extern struct obj_list context_list
 #define CONTEXT_LIST_INIT()		list_init(&context_list)
 #define CONTEXT_LIST_CONNECT(a,b)	obj_connectContext_list(&context_list, a, b)
-#define CONTEXT_LIST_CLOSE(a)		obj_list_close(&context_list, a)
+#define CONTEXT_LIST_CLOSE(a)		obj_list_close(&context_list, &context_free, a)
 
 #endif

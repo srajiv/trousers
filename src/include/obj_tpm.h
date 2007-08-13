@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -55,6 +55,7 @@ struct tr_tpm_obj {
 TSS_RESULT	   obj_getTpmObject(UINT32, TSS_HOBJECT *);
 
 /* obj_tpm.c */
+void       tpm_free(void *);
 TSS_BOOL   obj_is_tpm(TSS_HOBJECT);
 TSS_RESULT obj_tpm_get_tsp_context(TSS_HTPM, TSS_HCONTEXT *);
 TSS_RESULT obj_tpm_get(TSS_HCONTEXT, TSS_HTPM *);
@@ -74,6 +75,6 @@ TSS_RESULT obj_tpm_get_cred(TSS_HTPM, TSS_FLAG, UINT32 *, BYTE **);
 #define TPM_LIST_DECLARE_EXTERN		extern struct obj_list tpm_list
 #define TPM_LIST_INIT()			list_init(&tpm_list)
 #define TPM_LIST_CONNECT(a,b)		obj_connectContext_list(&tpm_list, a, b)
-#define TPM_LIST_CLOSE(a)		obj_list_close(&tpm_list, a)
+#define TPM_LIST_CLOSE(a)		obj_list_close(&tpm_list, &tpm_free, a)
 
 #endif

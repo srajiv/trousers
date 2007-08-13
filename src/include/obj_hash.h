@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -23,7 +23,7 @@ struct tr_hash_obj {
 };
 
 /* obj_hash.c */
-void       obj_list_hash_close(struct obj_list *, TSS_HCONTEXT);
+void       hash_free(void *data);
 TSS_RESULT obj_hash_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
 TSS_BOOL   obj_is_hash(TSS_HOBJECT);
 TSS_RESULT obj_hash_remove(TSS_HOBJECT, TSS_HCONTEXT);
@@ -36,7 +36,7 @@ TSS_RESULT obj_hash_update_value(TSS_HHASH, UINT32, BYTE *);
 #define HASH_LIST_DECLARE_EXTERN	extern struct obj_list hash_list
 #define HASH_LIST_INIT()		list_init(&hash_list)
 #define HASH_LIST_CONNECT(a,b)		obj_connectContext_list(&hash_list, a, b)
-#define HASH_LIST_CLOSE(a)		obj_list_hash_close(&hash_list, a)
+#define HASH_LIST_CLOSE(a)		obj_list_close(&hash_list, &hash_free, a)
 
 #else
 
