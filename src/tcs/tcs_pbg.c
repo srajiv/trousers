@@ -345,6 +345,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	/* TPM BLOB: UINT32, BLOB, UINT32, BLOB, optional AUTH, optional AUTH */
 	case TPM_ORD_CreateMaintenanceArchive:
 	case TPM_ORD_CreateMigrationBlob:
+	case TPM_ORD_Delegate_ReadTable:
 	{
 		UINT32 *len1 = va_arg(ap, UINT32 *);
 		BYTE **blob1 = va_arg(ap, BYTE **);
@@ -516,6 +517,10 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	case TPM_ORD_ConvertMigrationBlob:
 	case TPM_ORD_NV_ReadValue:
 	case TPM_ORD_NV_ReadValueAuth:
+	case TPM_ORD_Delegate_Manage:
+	case TPM_ORD_Delegate_CreateKeyDelegation:
+	case TPM_ORD_Delegate_CreateOwnerDelegation:
+	case TPM_ORD_Delegate_UpdateVerification:
 	{
 		UINT32 *data_len = va_arg(ap, UINT32 *);
 		BYTE **data = va_arg(ap, BYTE **);
@@ -708,6 +713,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	case TPM_ORD_NV_WriteValue:
 	case TPM_ORD_NV_WriteValueAuth:
 	case TPM_ORD_OwnerClear:
+	case TPM_ORD_Delegate_LoadOwnerDelegation:
 	{
 		TPM_AUTH *auth = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
@@ -727,6 +733,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	return result;
 }
 
+/* XXX optimize these cases by always passing in lengths for blobs, no more "20 byte values" */
 TSS_RESULT
 tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 {
@@ -740,6 +747,60 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	va_start(ap, out_blob);
 
 	switch (ordinal) {
+	case TPM_ORD_Delegate_CreateOwnerDelegation:
+	{
+		TSS_BOOL bool1 = va_arg(ap, int);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!in_len1 || !in_blob1 || !digest1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_BOOL(outOffset, bool1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	case TPM_ORD_Delegate_CreateKeyDelegation:
+	{
+		UINT32 keyslot1 = va_arg(ap, UINT32);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!keyslot1 || !in_len1 || !in_blob1 || !digest1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keyslot1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
 	case TPM_ORD_ExecuteTransport:
 	{
 		UINT32 *keyslot1 = va_arg(ap, UINT32 *);
@@ -883,6 +944,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	/* 3 UINT32's, 1 BLOB, 1 optional AUTH */
 	case TPM_ORD_NV_WriteValue:
 	case TPM_ORD_NV_WriteValueAuth:
+	case TPM_ORD_Delegate_Manage:
 	{
 		UINT32 i = va_arg(ap, UINT32);
 		UINT32 j = va_arg(ap, UINT32);
@@ -1081,6 +1143,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		break;
 	}
 	/* 2 UINT32's, 1 BLOB, 1 optional AUTH */
+	case TPM_ORD_Delegate_LoadOwnerDelegation:
 	case TPM_ORD_GetCapability:
 	case TPM_ORD_UnBind:
 	case TPM_ORD_Sign:
@@ -1318,6 +1381,8 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	case TPM_ORD_StirRandom:
 	case TPM_ORD_LoadMaintenanceArchive: /* XXX */
 	case TPM_ORD_FieldUpgrade:
+	case TPM_ORD_Delegate_UpdateVerification:
+	case TPM_ORD_Delegate_VerifyDelegation:
 	{
 		UINT32 val1 = va_arg(ap, UINT32);
 		UINT32 in_len1 = va_arg(ap, UINT32);
@@ -1537,6 +1602,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	case TPM_ORD_GetTicks:
 	case TPM_ORD_GetTestResult:
 	case TPM_ORD_KillMaintenanceFeature:
+	case TPM_ORD_Delegate_ReadTable:
 	{
 		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
