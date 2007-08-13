@@ -1601,6 +1601,59 @@ TSS_RESULT TCSP_OwnerReadPubek(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT TCSP_CreateRevocableEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
+						  TPM_NONCE antiReplay,		/* in */
+						  UINT32 endorsementKeyInfoSize,/* in */
+						  BYTE * endorsementKeyInfo,	/* in */
+						  TSS_BOOL genResetAuth,	/* in */
+						  TPM_DIGEST * eKResetAuth,	/* in, out */
+						  UINT32 * endorsementKeySize,	/* out */
+						  BYTE ** endorsementKey,	/* out */
+						  TPM_DIGEST * checksum)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_CreateRevocableEndorsementKeyPair_TP(entry, antiReplay,
+					endorsementKeyInfoSize, endorsementKeyInfo, genResetAuth,
+					eKResetAuth, endorsementKeySize, endorsementKey, checksum);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT TCSP_RevokeEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
+					 TPM_DIGEST *EKResetAuth)	/* in */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = TCSP_RevokeEndorsementKeyPair_TP(entry, EKResetAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT TCSP_SelfTestFull(TSS_HCONTEXT tspContext)	/* in */
 {
 	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);

@@ -37,11 +37,20 @@ DECLARE_TCSTP_FUNC(CreateEndorsementKeyPair);
 DECLARE_TCSTP_FUNC(ReadPubek);
 DECLARE_TCSTP_FUNC(OwnerReadPubek);
 DECLARE_TCSTP_FUNC(DisablePubekRead);
+#ifdef TSS_BUILD_TSS12
+DECLARE_TCSTP_FUNC(CreateRevocableEndorsementKeyPair);
+DECLARE_TCSTP_FUNC(RevokeEndorsementKeyPair);
 #else
-#define tcs_wrap_CreateEndorsementKeyPair	tcs_wrap_Error
-#define tcs_wrap_ReadPubek			tcs_wrap_Error
-#define tcs_wrap_OwnerReadPubek			tcs_wrap_Error
-#define tcs_wrap_DisablePubekRead	tcs_wrap_Error
+#define tcs_wrap_CreateRevocableEndorsementKeyPair	tcs_wrap_Error
+#define tcs_wrap_RevokeEndorsementKeyPair		tcs_wrap_Error
+#endif
+#else
+#define tcs_wrap_CreateEndorsementKeyPair		tcs_wrap_Error
+#define tcs_wrap_ReadPubek				tcs_wrap_Error
+#define tcs_wrap_OwnerReadPubek				tcs_wrap_Error
+#define tcs_wrap_DisablePubekRead			tcs_wrap_Error
+#define tcs_wrap_CreateRevocableEndorsementKeyPair	tcs_wrap_Error
+#define tcs_wrap_RevokeEndorsementKeyPair		tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_KEY

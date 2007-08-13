@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -50,18 +50,14 @@ tcs_wrap_CreateEndorsementKeyPair(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &eKPtrSize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	if (eKPtrSize == 0)
-		eKPtr = NULL;
-	else {
-		eKPtr = calloc(1, eKPtrSize);
-		if (eKPtr == NULL) {
-			LogError("malloc of %d bytes failed.", eKPtrSize);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, eKPtr, eKPtrSize, &data->comm)) {
-			free(eKPtr);
-			return TCSERR(TSS_E_INTERNAL_ERROR);
-		}
+	eKPtr = calloc(1, eKPtrSize);
+	if (eKPtr == NULL) {
+		LogError("malloc of %u bytes failed.", eKPtrSize);
+		return TCSERR(TSS_E_OUTOFMEMORY);
+	}
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, eKPtr, eKPtrSize, &data->comm)) {
+		free(eKPtr);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	MUTEX_LOCK(tcsp_lock);
@@ -87,8 +83,7 @@ tcs_wrap_CreateEndorsementKeyPair(struct tcsd_thread_data *data)
 		if (setData(TCSD_PACKET_TYPE_DIGEST, 2, &checksum, 0, &data->comm)) {
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-	}
-	else
+	} else
 		initData(&data->comm, 0);
 
 	data->comm.hdr.u.result = result;
@@ -217,3 +212,112 @@ tcs_wrap_DisablePubekRead(struct tcsd_thread_data *data)
 	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_CreateRevocableEndorsementKeyPair(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TPM_NONCE antiReplay;
+	UINT32 eKPtrSize;
+	BYTE *eKPtr;
+	TSS_BOOL genResetAuth;
+	TPM_DIGEST eKResetAuth;
+	UINT32 eKSize;
+	BYTE* eK;
+	TPM_DIGEST checksum;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_NONCE, 1, &antiReplay, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &eKPtrSize, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	eKPtr = calloc(1, eKPtrSize);
+	if (eKPtr == NULL) {
+		LogError("malloc of %d bytes failed.", eKPtrSize);
+		return TCSERR(TSS_E_OUTOFMEMORY);
+	}
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, eKPtr, eKPtrSize, &data->comm)) {
+		free(eKPtr);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if (getData(TCSD_PACKET_TYPE_BOOL, 4, &genResetAuth, 0, &data->comm)) {
+		free(eKPtr);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	if (getData(TCSD_PACKET_TYPE_DIGEST, 5, &eKResetAuth, 0, &data->comm)) {
+		free(eKPtr);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_CreateRevocableEndorsementKeyPair_Internal(hContext, antiReplay,
+			eKPtrSize, eKPtr, genResetAuth, &eKResetAuth, &eKSize, &eK, &checksum);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	free(eKPtr);
+
+	if (result == TSS_SUCCESS) {
+		initData(&data->comm, 4);
+		if (setData(TCSD_PACKET_TYPE_DIGEST, 0, &eKResetAuth, 0, &data->comm)) {
+			free(eK);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (setData(TCSD_PACKET_TYPE_UINT32, 1, &eKSize, 0, &data->comm)) {
+			free(eK);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (setData(TCSD_PACKET_TYPE_PBYTE, 2, eK, eKSize, &data->comm)) {
+			free(eK);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		free(eK);
+		if (setData(TCSD_PACKET_TYPE_DIGEST, 3, &checksum, 0, &data->comm)) {
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+tcs_wrap_RevokeEndorsementKeyPair(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TPM_DIGEST eKResetAuth;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_DIGEST, 1, &eKResetAuth, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_RevokeEndorsementKeyPair_Internal(hContext, eKResetAuth);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+}
+

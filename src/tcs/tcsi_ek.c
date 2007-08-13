@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004, 2007
  *
  */
 
@@ -159,6 +159,68 @@ TCSP_OwnerReadPubek_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogResult("Owner Read Pubek", result);
 done:
 	auth_mgr_release_auth(ownerAuth, NULL, hContext);
+	return result;
+}
+
+TSS_RESULT
+TCSP_CreateRevocableEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TPM_NONCE antiReplay,	/* in */
+						UINT32 endorsementKeyInfoSize,	/* in */
+						BYTE * endorsementKeyInfo,	/* in */
+						TSS_BOOL genResetAuth,	/* in */
+						TPM_DIGEST * eKResetAuth, /* in, out */
+						UINT32 * endorsementKeySize,	/* out */
+						BYTE ** endorsementKey,	/* out */
+						TPM_DIGEST * checksum)	/* out */
+{
+	UINT64 offset = 0;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if ((result = tpm_rqu_build(TPM_ORD_CreateRevocableEK, &offset, txBlob,
+				    antiReplay.nonce, endorsementKeyInfoSize,
+				    endorsementKeyInfo, genResetAuth, eKResetAuth->digest)))
+		return result;
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_CreateRevocableEK, txBlob, paramSize,
+				endorsementKeySize, endorsementKey, checksum->digest,
+				eKResetAuth->digest);
+	}
+
+	LogDebug("Leaving CreateRevocableEKPair with result: 0x%x", result);
+	return result;
+}
+
+TSS_RESULT
+TCSP_RevokeEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+				       TPM_DIGEST EKResetAuth)		/* in */
+{
+	UINT64 offset = 0;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if ((result = tpm_rqu_build(TPM_ORD_RevokeTrust, &offset, txBlob, EKResetAuth.digest)))
+		return result;
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+
+	LogDebug("Leaving RevokeEKPair with result: 0x%x", result);
 	return result;
 }
 

@@ -688,6 +688,21 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						 BYTE ** pubEndorsementKey	/* out */
 	    );
 
+	TSS_RESULT TCSP_CreateRevocableEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+								   TPM_NONCE antiReplay,	/* in */
+								   UINT32 endorsementKeyInfoSize,	/* in */
+								   BYTE * endorsementKeyInfo,	/* in */
+								   TSS_BOOL genResetAuth,	/* in */
+								   TPM_DIGEST * eKResetAuth,	/* in, out */
+								   UINT32 * endorsementKeySize,	/* out */
+								   BYTE ** endorsementKey,	/* out */
+								   TPM_DIGEST * checksum	/* out */
+	    );
+
+	TSS_RESULT TCSP_RevokeEndorsementKeyPair_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+							  TPM_DIGEST EKResetAuth	/* in */
+	    );
+
 	TSS_RESULT TCSP_SelfTestFull_Internal(TCS_CONTEXT_HANDLE hContext	/* in */
 	    );
 

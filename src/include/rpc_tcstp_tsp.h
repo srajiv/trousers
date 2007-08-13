@@ -248,11 +248,20 @@ TSS_RESULT TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *,TCPA_NONCE
 TSS_RESULT TCSP_ReadPubek_TP(struct host_table_entry *,TCPA_NONCE,UINT32 *,BYTE **,TCPA_DIGEST *);
 TSS_RESULT TCSP_OwnerReadPubek_TP(struct host_table_entry *,TPM_AUTH *,UINT32 *,BYTE **);
 TSS_RESULT TCSP_DisablePubekRead_TP(struct host_table_entry *,TPM_AUTH *);
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT TCSP_CreateRevocableEndorsementKeyPair_TP(struct host_table_entry *,TPM_NONCE,UINT32,BYTE *,TSS_BOOL,TPM_DIGEST *,UINT32 *,BYTE **,TPM_DIGEST *);
+TSS_RESULT TCSP_RevokeEndorsementKeyPair_TP(struct host_table_entry *,TPM_DIGEST *);
 #else
-#define TCSP_DisablePubekRead_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
-#define TCSP_CreateEndorsementKeyPair_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
-#define TCSP_ReadPubek_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
-#define TCSP_OwnerReadPubek_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_CreateRevocableEndorsementKeyPair_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_RevokeEndorsementKeyPair_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+#else
+#define TCSP_DisablePubekRead_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_CreateEndorsementKeyPair_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_ReadPubek_TP(...)				TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_OwnerReadPubek_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_CreateRevocableEndorsementKeyPair_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define TCSP_RevokeEndorsementKeyPair_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_SELFTEST

@@ -628,6 +628,38 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		*data_len = offset2;
 		break;
 	}
+	/* TPM BLOB: BLOB, DIGEST, DIGEST
+	 * return: UINT32 *, BYTE**, DIGEST, DIGEST */
+	case TPM_ORD_CreateRevocableEK:
+	{
+		UINT32 *data_len = va_arg(ap, UINT32 *);
+		BYTE **data = va_arg(ap, BYTE **);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		BYTE *digest2 = va_arg(ap, BYTE *);
+		va_end(ap);
+
+		if (!data || !data_len || !digest1 || !digest2) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		offset2 = len - TPM_DIGEST_SIZE;
+		memcpy(digest2, &b[offset2], TPM_DIGEST_SIZE);
+
+		offset2 -= TPM_DIGEST_SIZE;
+		memcpy(digest1, &b[offset2], TPM_DIGEST_SIZE);
+
+		offset1 = TSS_TPM_TXBLOB_HDR_LEN;
+		offset2 -= offset1;
+		if ((*data = malloc((size_t)offset2)) == NULL) {
+			LogError("malloc of %zd bytes failed", (size_t)offset2);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+
+		UnloadBlob(&offset1, offset2, b, *data);
+		*data_len = offset2;
+		break;
+	}
 	/* 1 UINT32, 1 optional AUTH */
 	case TPM_ORD_LoadKey:
 	case TPM_ORD_LoadKey2:
@@ -1014,6 +1046,49 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 20 byte value, 1 UINT32, 1 BLOB, 1 BOOL, 1 20 byte value */
+	case TPM_ORD_CreateRevocableEK:
+	{
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		TSS_BOOL in_bool1 = va_arg(ap, int);
+		BYTE *digest2 = va_arg(ap, BYTE *);
+		va_end(ap);
+
+		if (!digest1 || !in_blob1 || !digest2) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob_BOOL(outOffset, in_bool1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest2);
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 20 byte value */
+	case TPM_ORD_RevokeTrust:
+	{
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		va_end(ap);
+
+		if (!digest1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
 
 		result = TSS_SUCCESS;

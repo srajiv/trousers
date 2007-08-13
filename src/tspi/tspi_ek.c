@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -82,17 +82,19 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		result |= Trspi_HashUpdate(&hashCtx, newEKSize, newEK);
 		result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, antiReplay.nonce);
 		if ((result |= Trspi_HashFinal(&hashCtx, hash.digest)))
-			return result;
+			goto done;
 
 		if (memcmp(hash.digest, digest.digest, TCPA_SHA1_160_HASH_LEN)) {
 			LogError("Internal verification failed");
-			return TSPERR(TSS_E_EK_CHECKSUM);
+			result = TSPERR(TSS_E_EK_CHECKSUM);
+			goto done;
 		}
 	} else {
 		pValidationData->rgbData = calloc_tspi(tspContext, newEKSize);
 		if (pValidationData->rgbData == NULL) {
 			LogError("malloc of %u bytes failed.", newEKSize);
-			return TSPERR(TSS_E_OUTOFMEMORY);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		pValidationData->ulDataLength = newEKSize;
 		memcpy(pValidationData->rgbData, newEK, newEKSize);
@@ -106,7 +108,8 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 			free_tspi(tspContext, pValidationData->rgbData);
 			pValidationData->rgbData = NULL;
 			pValidationData->ulDataLength = 0;
-			return TSPERR(TSS_E_OUTOFMEMORY);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
 		}
 		pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
 		memcpy(pValidationData->rgbValidationData, digest.digest, TCPA_SHA1_160_HASH_LEN);
@@ -121,6 +124,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		pValidationData->ulValidationDataLength = 0;
 	}
 
+done:
 	free(newEK);
 
 	return result;
@@ -175,7 +179,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadPubek);
 		result |= Trspi_HashUpdate(&hashCtx, pubEKSize, pubEK);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+			goto done;
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &ownerAuth)))
 			goto done;
@@ -206,7 +210,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 			result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN,
 						   antiReplay.nonce);
 			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-				return result;
+				goto done;
 
 			/* check validation of the entire pubkey structure */
 			if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
@@ -225,7 +229,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN,
 							   antiReplay.nonce);
 				if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-					return result;
+					goto done;
 
 				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
 					result = TSPERR(TSS_E_EK_CHECKSUM);
@@ -241,7 +245,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 				LogError("malloc of %u bytes failed.",
 					 pValidationData->ulDataLength);
 				pValidationData->ulDataLength = 0;
-				return TSPERR(TSS_E_OUTOFMEMORY);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
 			}
 
 			memcpy(pValidationData->rgbData, pubEK, pubEKSize);
@@ -266,7 +271,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	}
 
 	if ((result = obj_rsakey_add(tspContext, TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY, &retKey)))
-		return result;
+		goto done;
 
 	if ((result = obj_rsakey_set_pubkey(retKey, FALSE, pubEK)))
 		goto done;
@@ -275,6 +280,182 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 done:
 	free(pubEK);
+	return result;
+}
+
+TSS_RESULT
+Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
+				       TSS_HKEY hKey,			/* in */
+				       TSS_VALIDATION * pValidationData,/* in, out */
+				       UINT32 * pulEkResetDataLength,	/* in, out */
+				       BYTE ** prgbEkResetData)		/* in, out */
+{
+	TPM_NONCE antiReplay;
+	TPM_DIGEST digest;
+	TSS_RESULT result;
+	UINT32 ekSize;
+	BYTE *ek;
+	TPM_KEY dummyKey;
+	UINT64 offset;
+	TSS_BOOL genResetAuth;
+	TPM_DIGEST eKResetAuth;
+	TPM_DIGEST hash;
+	UINT32 newEKSize;
+	BYTE *newEK;
+	TSS_HCONTEXT tspContext;
+	TPM_PUBKEY pubEK;
+	Trspi_HashCtx hashCtx;
+
+	memset(&pubEK, 0, sizeof(TPM_PUBKEY));
+	memset(&dummyKey, 0, sizeof(TPM_KEY));
+	memset(&eKResetAuth, 0xff, sizeof(eKResetAuth));
+
+	if (!pulEkResetDataLength || !prgbEkResetData)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	if (*pulEkResetDataLength != 0) {
+		if (*prgbEkResetData == NULL)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		if (*pulEkResetDataLength < sizeof(eKResetAuth.digest))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(eKResetAuth.digest, *prgbEkResetData, sizeof(eKResetAuth.digest));
+		genResetAuth = FALSE;
+	} else {
+		if (*prgbEkResetData != NULL)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		genResetAuth = TRUE;
+	}
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	if ((result = obj_rsakey_get_blob(hKey, &ekSize, &ek)))
+		return result;
+
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_KEY(&offset, ek, &dummyKey)))
+		return result;
+
+	offset = 0;
+	Trspi_LoadBlob_KEY_PARMS(&offset, ek, &dummyKey.algorithmParms);
+	free_key_refs(&dummyKey);
+	ekSize = offset;
+
+	if (pValidationData == NULL) {
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+					       (BYTE **)antiReplay.nonce))) {
+			LogError("Failed to create random nonce");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
+	}
+
+	if ((result = TCSP_CreateRevocableEndorsementKeyPair(tspContext, antiReplay, ekSize, ek,
+			genResetAuth, &eKResetAuth, &newEKSize, &newEK, &digest)))
+		return result;
+
+	if (pValidationData == NULL) {
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_HashUpdate(&hashCtx, newEKSize, newEK);
+		result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, antiReplay.nonce);
+		if ((result |= Trspi_HashFinal(&hashCtx, hash.digest)))
+			goto done;
+
+		if (memcmp(hash.digest, digest.digest, TPM_SHA1_160_HASH_LEN)) {
+			LogError("Internal verification failed");
+			result = TSPERR(TSS_E_EK_CHECKSUM);
+			goto done;
+		}
+	} else {
+		pValidationData->rgbData = calloc_tspi(tspContext, newEKSize);
+		if (pValidationData->rgbData == NULL) {
+			LogError("malloc of %u bytes failed.", newEKSize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		pValidationData->ulDataLength = newEKSize;
+		memcpy(pValidationData->rgbData, newEK, newEKSize);
+		memcpy(&pValidationData->rgbData[ekSize], antiReplay.nonce,
+		       sizeof(antiReplay.nonce));
+
+		pValidationData->rgbValidationData = calloc_tspi(tspContext,
+								 TPM_SHA1_160_HASH_LEN);
+		if (pValidationData->rgbValidationData == NULL) {
+			LogError("malloc of %d bytes failed.", TPM_SHA1_160_HASH_LEN);
+			free_tspi(tspContext, pValidationData->rgbData);
+			pValidationData->rgbData = NULL;
+			pValidationData->ulDataLength = 0;
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		pValidationData->ulValidationDataLength = TPM_SHA1_160_HASH_LEN;
+		memcpy(pValidationData->rgbValidationData, digest.digest, TPM_SHA1_160_HASH_LEN);
+	}
+
+	if ((result = obj_rsakey_set_pubkey(hKey, FALSE, newEK))) {
+		if (pValidationData) {
+			free_tspi(tspContext, pValidationData->rgbValidationData);
+			free_tspi(tspContext, pValidationData->rgbData);
+			pValidationData->rgbData = NULL;
+			pValidationData->ulDataLength = 0;
+			pValidationData->rgbValidationData = NULL;
+			pValidationData->ulValidationDataLength = 0;
+		}
+		goto done;
+	}
+
+	if (genResetAuth) {
+		if ((*prgbEkResetData = calloc_tspi(tspContext, sizeof(eKResetAuth.digest))) == NULL) {
+			LogError("malloc of %u bytes failed.", sizeof(eKResetAuth.digest));
+			if (pValidationData) {
+				free_tspi(tspContext, pValidationData->rgbValidationData);
+				free_tspi(tspContext, pValidationData->rgbData);
+				pValidationData->rgbData = NULL;
+				pValidationData->ulDataLength = 0;
+				pValidationData->rgbValidationData = NULL;
+				pValidationData->ulValidationDataLength = 0;
+			}
+			goto done;
+		}
+
+		memcpy(*prgbEkResetData, eKResetAuth.digest, sizeof(eKResetAuth.digest));
+		*pulEkResetDataLength = sizeof(eKResetAuth.digest);
+	}
+
+done:
+	free(newEK);
+
+	return result;
+}
+
+TSS_RESULT
+Tspi_TPM_RevokeEndorsementKey(TSS_HTPM hTPM,			/* in */
+			      UINT32  ulEkResetDataLength,	/* in */
+			      BYTE * rgbEkResetData)		/* in */
+{
+	TSS_HCONTEXT tspContext;
+	TPM_DIGEST eKResetAuth;
+	TSS_RESULT result;
+
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	if (ulEkResetDataLength < sizeof(eKResetAuth.digest))
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	memcpy(eKResetAuth.digest, rgbEkResetData, sizeof(eKResetAuth.digest));
+
+	if ((result = TCSP_RevokeEndorsementKeyPair(tspContext, &eKResetAuth)))
+		return result;
+
 	return result;
 }
 
