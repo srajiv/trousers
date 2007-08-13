@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -299,27 +299,39 @@ obj_encdata_set_data(TSS_HENCDATA hEncData, UINT32 size, BYTE *data)
 {
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
-
-	/* XXX hard-coded */
-	if (size > 512)
-		return TSPERR(TSS_E_BAD_PARAMETER);
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	encdata->encryptedDataLength = size;
-	memcpy(encdata->encryptedData, data, size);
+	free(encdata->encryptedData);
+	encdata->encryptedData = NULL;
+	encdata->encryptedDataLength = 0;
 
+	if (size > 0) {
+		if ((encdata->encryptedData = malloc(size)) == NULL) {
+			LogError("malloc of %u bytes failed.", size);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		encdata->encryptedDataLength = size;
+		memcpy(encdata->encryptedData, data, size);
+	}
+
+done:
 	obj_list_put(&encdata_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 void
-encdata_free(struct tr_encdata_obj *encdata)
+encdata_free(void *data)
 {
+	struct tr_encdata_obj *encdata = (struct tr_encdata_obj *)data;
+
+	free(encdata->encryptedData);
 	free(encdata->pcrInfo.pcrSelection.pcrSelect);
 	free(encdata);
 }
@@ -329,65 +341,12 @@ encdata_free(struct tr_encdata_obj *encdata)
 TSS_RESULT
 obj_encdata_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-	struct tsp_object *obj, *prev = NULL;
-	struct obj_list *list = &encdata_list;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-	MUTEX_LOCK(list->lock);
+	if ((result = obj_list_remove(&encdata_list, &encdata_free, hObject, tspContext)))
+		return result;
 
-	for (obj = list->head; obj; prev = obj, obj = obj->next) {
-		if (obj->handle == hObject) {
-			/* validate tspContext */
-			if (obj->tspContext != tspContext)
-				break;
-
-			encdata_free(obj->data);
-			if (prev)
-				prev->next = obj->next;
-			else
-				list->head = obj->next;
-			free(obj);
-			result = TSS_SUCCESS;
-			break;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
-
-	return result;
-}
-
-void
-obj_list_encdata_close(struct obj_list *list, TSS_HCONTEXT tspContext)
-{
-	struct tsp_object *index;
-	struct tsp_object *next = NULL;
-	struct tsp_object *toKill;
-	struct tsp_object *prev = NULL;
-
-	MUTEX_LOCK(list->lock);
-
-	for (index = list->head; index; ) {
-		next = index->next;
-		if (index->tspContext == tspContext) {
-			toKill = index;
-			if (prev == NULL) {
-				list->head = toKill->next;
-			} else {
-				prev->next = toKill->next;
-			}
-
-			encdata_free(toKill->data);
-			free(toKill);
-
-			index = next;
-		} else {
-			prev = index;
-			index = next;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
+	return TSS_SUCCESS;
 }
 
 void

@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -18,7 +18,7 @@ struct tr_encdata_obj {
 	TSS_HPOLICY usagePolicy;
 	TSS_HPOLICY migPolicy;
 	UINT32 encryptedDataLength;
-	BYTE encryptedData[512]; /* XXX get rid of hardcoded size */
+	BYTE *encryptedData;
 	TCPA_PCR_INFO pcrInfo; /* XXX use a link to a PCR object here */
 	UINT32 type;
 #ifdef TSS_BUILD_SEALX
@@ -27,13 +27,13 @@ struct tr_encdata_obj {
 };
 
 /* obj_encdata.c */
+void       encdata_free(void *data);
 TSS_BOOL   obj_is_encdata(TSS_HOBJECT);
 TSS_RESULT obj_encdata_set_policy(TSS_HKEY, TSS_HPOLICY);
 TSS_RESULT obj_encdata_set_data(TSS_HENCDATA, UINT32, BYTE *);
 TSS_RESULT obj_encdata_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_encdata_get_tsp_context(TSS_HENCDATA, TSS_HCONTEXT *);
 TSS_RESULT obj_encdata_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
-void       obj_list_encdata_close(struct obj_list *, TSS_HCONTEXT);
 TSS_RESULT obj_encdata_get_data(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_pcr_atcreation(TSS_HENCDATA, UINT32 *, BYTE **);
 TSS_RESULT obj_encdata_get_pcr_atrelease(TSS_HENCDATA, UINT32 *, BYTE **);
@@ -51,7 +51,7 @@ TSS_RESULT obj_encdata_get_seal_protect_mode(TSS_HENCDATA, UINT32 *);
 #define ENCDATA_LIST_DECLARE_EXTERN	extern struct obj_list encdata_list
 #define ENCDATA_LIST_INIT()		list_init(&encdata_list)
 #define ENCDATA_LIST_CONNECT(a,b)	obj_connectContext_list(&encdata_list, a, b)
-#define ENCDATA_LIST_CLOSE(a)		obj_list_encdata_close(&encdata_list, a)
+#define ENCDATA_LIST_CLOSE(a)		obj_list_close(&encdata_list, &encdata_free, a)
 
 #else
 
