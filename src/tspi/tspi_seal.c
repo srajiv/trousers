@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -29,7 +29,6 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	       BYTE * rgbDataToSeal,	/* in */
 	       TSS_HPCRS hPcrComposite)	/* in */
 {
-	UINT64 offset;
 	BYTE sharedSecret[20];
 	TPM_AUTH auth;
 	TCPA_ENCAUTH encAuthUsage;
@@ -39,12 +38,12 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	BYTE *encData = NULL;
 	UINT32 encDataSize;
-	UINT32 pcrDataSize, pcrSelectSize;
-	BYTE pcrData[256];
+	UINT32 pcrInfoType;
+	UINT32 pcrDataSize;
+	BYTE *pcrData;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TCPA_NONCE nonceOddOSAP;
 	TCPA_NONCE nonceEvenOSAP;
-	TCPA_DIGEST digAtCreation;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
 	UINT32 sealOrdinal;
@@ -70,22 +69,31 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hEncKey, &tcsKeyHandle)))
 		return result;
 
+#ifdef TSS_BUILD_SEALX
+	/* Get the TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE attribute
+	   to determine the seal function to invoke */
+	if ((result = obj_encdata_get_seal_protect_mode(hEncData, &protectMode)))
+		return result;
+
+	if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT) {
+		sealOrdinal = TPM_ORD_Seal;
+		pcrInfoType = 0;
+	} else if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_PROTECT) {
+		sealOrdinal = TPM_ORD_Sealx;
+		pcrInfoType = TSS_PCRS_STRUCT_INFO_LONG;
+	} else
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+#else
+	sealOrdinal = TPM_ORD_Seal;
+	pcrInfoType = 0;
+#endif
+
 	/* If PCR's are of interest */
 	pcrDataSize = 0;
 	if (hPcrComposite) {
-		if ((result = obj_pcrs_get_digest_at_creation(hPcrComposite, &digAtCreation)))
+		if ((result = obj_pcrs_create_info_type(hPcrComposite, pcrInfoType,
+				&pcrDataSize, &pcrData)))
 			return result;
-
-		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrSelectSize, pcrData)))
-			return result;
-
-		LogDebug("Digest at Creation:");
-		LogDebugData(sizeof(digAtCreation), (BYTE *)&digAtCreation);
-
-		offset = pcrSelectSize;
-		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
-		/* XXX */
-		Trspi_LoadBlob(&offset, TCPA_SHA1_160_HASH_LEN, pcrData, digAtCreation.digest);
 	}
 
 	if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy, hEncKey,
@@ -95,27 +103,17 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	nonceOddOSAP = auth.NonceOdd;
 
 #ifdef TSS_BUILD_SEALX
-	/* Get the TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE attribute
-	   to determine the seal function to invoke */
-	if ((result = obj_encdata_get_seal_protect_mode(hEncData, &protectMode)))
-		return result;
-
-	if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT) {
-		sealOrdinal = TPM_ORD_Seal;
+	if (sealOrdinal == TPM_ORD_Seal)
 		sealData = rgbDataToSeal;
-	} else if (protectMode == TSS_TSPATTRIB_ENCDATASEAL_PROTECT) {
-		sealOrdinal = TPM_ORD_Sealx;
-
+	else {
 		/* Mask the input data before sending it */
 		if ((result = obj_policy_do_sealx_mask(hEncPolicy, hEncKey, hEncData, &auth,
 						       &nonceEvenOSAP, &nonceOddOSAP,
 						       ulDataLength, rgbDataToSeal,
 						       &sealData)))
 			return result;
-	} else
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 #else
-	sealOrdinal = TPM_ORD_Seal;
 	sealData = rgbDataToSeal;
 #endif
 

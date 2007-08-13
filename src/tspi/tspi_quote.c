@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -32,7 +32,7 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	TPM_AUTH privAuth;
 	TPM_AUTH *pPrivAuth = &privAuth;
 	UINT64 offset;
-	TCPA_DIGEST digest, composite;
+	TCPA_DIGEST digest;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HPOLICY hPolicy;
 	TCPA_NONCE antiReplay;
@@ -78,10 +78,6 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 
 	pcrDataSize = 0;
 	if (hPcrComposite) {
-		offset = 0;
-		if ((result = obj_pcrs_get_digest_at_creation(hPcrComposite, &composite)))
-			return result;
-
 		if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrDataSize, pcrData)))
 			return result;
 	}
