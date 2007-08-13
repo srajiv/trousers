@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -208,6 +208,78 @@ Trspi_LoadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION version)
 	Trspi_LoadBlob_BYTE(offset, version.minor, blob);
 	Trspi_LoadBlob_BYTE(offset, version.revMajor, blob);
 	Trspi_LoadBlob_BYTE(offset, version.revMinor, blob);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_PCR_INFO(UINT64 *offset, BYTE *blob, TCPA_PCR_INFO *pcr)
+{
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
+		return result;
+	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_PCR_INFO(UINT64 *offset, BYTE *blob, TCPA_PCR_INFO *pcr)
+{
+	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection);
+	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_PCR_INFO_LONG(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_LONG *pcr)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT16(offset, &pcr->tag, blob);
+	Trspi_UnloadBlob_BYTE(offset, &pcr->localityAtCreation, blob);
+	Trspi_UnloadBlob_BYTE(offset, &pcr->localityAtRelease, blob);
+	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->creationPCRSelection)))
+		return result;
+	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->releasePCRSelection)))
+		return result;
+	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_PCR_INFO_LONG(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_LONG *pcr)
+{
+	Trspi_LoadBlob_UINT16(offset, pcr->tag, blob);
+	Trspi_LoadBlob_BYTE(offset, pcr->localityAtCreation, blob);
+	Trspi_LoadBlob_BYTE(offset, pcr->localityAtRelease, blob);
+	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->creationPCRSelection);
+	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->releasePCRSelection);
+	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_SHORT *pcr)
+{
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
+		return result;
+	Trspi_UnloadBlob_BYTE(offset, &pcr->localityAtRelease, blob);
+	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_SHORT *pcr)
+{
+	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection);
+	Trspi_LoadBlob_BYTE(offset, pcr->localityAtRelease, blob);
+	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
 }
 
 TSS_RESULT
@@ -1666,5 +1738,278 @@ Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s)
 	Trspi_LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, s->replay.nonce);
 	Trspi_LoadBlob_UINT32(offset, s->dataLen, blob);
 	Trspi_LoadBlob(offset, s->dataLen, blob, s->data);
+}
+
+void
+Trspi_UnloadBlob_TPM_FAMILY_LABEL(UINT64 *offset, BYTE *blob, TPM_FAMILY_LABEL *label)
+{
+	Trspi_UnloadBlob_BYTE(offset, &label->label, blob);
+}
+
+void
+Trspi_LoadBlob_TPM_FAMILY_LABEL(UINT64 *offset, BYTE *blob, TPM_FAMILY_LABEL *label)
+{
+	Trspi_LoadBlob_BYTE(offset, label->label, blob);
+}
+
+void
+Trspi_UnloadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_TABLE_ENTRY *entry)
+{
+	Trspi_UnloadBlob_UINT16(offset, &entry->tag, blob);
+	Trspi_UnloadBlob_TPM_FAMILY_LABEL(offset, blob, &entry->label);
+	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob); 
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
+	Trspi_UnloadBlob_UINT32(offset, &entry->flags, blob); 
+}
+
+void
+Trspi_LoadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_TABLE_ENTRY *entry)
+{
+	Trspi_LoadBlob_UINT16(offset, entry->tag, blob);
+	Trspi_LoadBlob_TPM_FAMILY_LABEL(offset, blob, &entry->label);
+	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob); 
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
+	Trspi_LoadBlob_UINT32(offset, entry->flags, blob); 
+}
+
+void
+Trspi_UnloadBlob_TPM_DELEGATE_LABEL(UINT64 *offset, BYTE *blob, TPM_DELEGATE_LABEL *label)
+{
+	Trspi_UnloadBlob_BYTE(offset, &label->label, blob);
+}
+
+void
+Trspi_LoadBlob_TPM_DELEGATE_LABEL(UINT64 *offset, BYTE *blob, TPM_DELEGATE_LABEL *label)
+{
+	Trspi_LoadBlob_BYTE(offset, label->label, blob);
+}
+
+void
+Trspi_UnloadBlob_TPM_DELEGATIONS(UINT64 *offset, BYTE *blob, TPM_DELEGATIONS *delegations)
+{
+	Trspi_UnloadBlob_UINT16(offset, &delegations->tag, blob);
+	Trspi_UnloadBlob_UINT32(offset, &delegations->delegateType, blob);
+	Trspi_UnloadBlob_UINT32(offset, &delegations->per1, blob);
+	Trspi_UnloadBlob_UINT32(offset, &delegations->per2, blob);
+}
+
+void
+Trspi_LoadBlob_TPM_DELEGATIONS(UINT64 *offset, BYTE *blob, TPM_DELEGATIONS *delegations)
+{
+	Trspi_LoadBlob_UINT16(offset, delegations->tag, blob);
+	Trspi_LoadBlob_UINT32(offset, delegations->delegateType, blob);
+	Trspi_LoadBlob_UINT32(offset, delegations->per1, blob);
+	Trspi_LoadBlob_UINT32(offset, delegations->per2, blob);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(UINT64 *offset, BYTE *blob, TPM_DELEGATE_PUBLIC *pub)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT16(offset, &pub->tag, blob);
+	Trspi_UnloadBlob_TPM_DELEGATE_LABEL(offset, blob, &pub->label);
+	if ((result = Trspi_UnloadBlob_PCR_INFO_SHORT(offset, blob, &pub->pcrInfo)))
+		return result;
+	Trspi_UnloadBlob_TPM_DELEGATIONS(offset, blob, &pub->permissions);
+	Trspi_UnloadBlob_UINT32(offset, &pub->familyID, blob);
+	Trspi_UnloadBlob_UINT32(offset, &pub->verificationCount, blob);
+	
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_TPM_DELEGATE_PUBLIC(UINT64 *offset, BYTE *blob, TPM_DELEGATE_PUBLIC *pub)
+{
+	Trspi_LoadBlob_UINT16(offset, pub->tag, blob);
+	Trspi_LoadBlob_TPM_DELEGATE_LABEL(offset, blob, &pub->label);
+	Trspi_LoadBlob_PCR_INFO_SHORT(offset, blob, &pub->pcrInfo);
+	Trspi_LoadBlob_TPM_DELEGATIONS(offset, blob, &pub->permissions);
+	Trspi_LoadBlob_UINT32(offset, pub->familyID, blob);
+	Trspi_LoadBlob_UINT32(offset, pub->verificationCount, blob);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_OWNER_BLOB *owner)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT16(offset, &owner->tag, blob);
+	if ((result = Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &owner->pub)))
+		return result;
+	Trspi_UnloadBlob_DIGEST(offset, blob, owner->integrityDigest);
+	Trspi_UnloadBlob_UINT32(offset, &owner->additionalSize, blob);
+	if (owner->additionalSize > 0) {
+		owner->additionalArea = malloc(owner->additionalSize);
+		if (owner->additionalArea == NULL) {
+			LogError("malloc of %u bytes failed.", owner->additionalSize);
+			free(owner->pub.pcrInfo.pcrSelection.pcrSelect);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, owner->additionalSize, blob, owner->additionalArea);
+	}
+	Trspi_UnloadBlob_UINT32(offset, &owner->sensitiveSize, blob);
+	if (owner->sensitiveSize > 0) {
+		owner->sensitiveArea = malloc(owner->sensitiveSize);
+		if (owner->sensitiveArea == NULL) {
+			LogError("malloc of %u bytes failed.", owner->sensitiveSize);
+			free(owner->pub.pcrInfo.pcrSelection.pcrSelect);
+			free(owner->additionalArea);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, owner->sensitiveSize, blob, owner->sensitiveArea);
+	}
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_TPM_DELEGATE_OWNER_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_OWNER_BLOB *owner)
+{
+	Trspi_LoadBlob_UINT16(offset, owner->tag, blob);
+	Trspi_LoadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &owner->pub);
+	Trspi_LoadBlob_DIGEST(offset, blob, owner->integrityDigest);
+	Trspi_LoadBlob_UINT32(offset, owner->additionalSize, blob);
+	Trspi_LoadBlob(offset, owner->additionalSize, blob, owner->additionalArea);
+	Trspi_LoadBlob_UINT32(offset, owner->sensitiveSize, blob);
+	Trspi_LoadBlob(offset, owner->sensitiveSize, blob, owner->sensitiveArea);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_KEY_BLOB *key)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT16(offset, &key->tag, blob);
+	if ((result = Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &key->pub)))
+		return result;
+	Trspi_UnloadBlob_DIGEST(offset, blob, key->integrityDigest);
+	Trspi_UnloadBlob_DIGEST(offset, blob, key->pubKeyDigest);
+	Trspi_UnloadBlob_UINT32(offset, &key->additionalSize, blob);
+	if (key->additionalSize > 0) {
+		key->additionalArea = malloc(key->additionalSize);
+		if (key->additionalArea == NULL) {
+			LogError("malloc of %u bytes failed.", key->additionalSize);
+			free(key->pub.pcrInfo.pcrSelection.pcrSelect);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, key->additionalSize, blob, key->additionalArea);
+	}
+	Trspi_UnloadBlob_UINT32(offset, &key->sensitiveSize, blob);
+	if (key->sensitiveSize > 0) {
+		key->sensitiveArea = malloc(key->sensitiveSize);
+		if (key->sensitiveArea == NULL) {
+			LogError("malloc of %u bytes failed.", key->sensitiveSize);
+			free(key->pub.pcrInfo.pcrSelection.pcrSelect);
+			free(key->additionalArea);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, key->sensitiveSize, blob, key->sensitiveArea);
+	}
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_KEY_BLOB *key)
+{
+	Trspi_LoadBlob_UINT16(offset, key->tag, blob);
+	Trspi_LoadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &key->pub);
+	Trspi_LoadBlob_DIGEST(offset, blob, key->integrityDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, key->pubKeyDigest);
+	Trspi_LoadBlob_UINT32(offset, key->additionalSize, blob);
+	Trspi_LoadBlob(offset, key->additionalSize, blob, key->additionalArea);
+	Trspi_LoadBlob_UINT32(offset, key->sensitiveSize, blob);
+	Trspi_LoadBlob(offset, key->sensitiveSize, blob, key->sensitiveArea);
+}
+
+void
+Trspi_UnloadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TABLE_ENTRY *entry)
+{
+	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob);
+	Trspi_UnloadBlob_BYTE(offset, &entry->label, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
+	Trspi_UnloadBlob_BOOL(offset, &entry->enabled, blob); 
+	Trspi_UnloadBlob_BOOL(offset, &entry->locked, blob); 
+}
+
+void
+Trspi_LoadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TABLE_ENTRY *entry)
+{
+	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob);
+	Trspi_LoadBlob_BYTE(offset, entry->label, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
+	Trspi_LoadBlob_BOOL(offset, entry->enabled, blob); 
+	Trspi_LoadBlob_BOOL(offset, entry->locked, blob); 
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT *pcr)
+{
+	Trspi_UnloadBlob_UINT32(offset, &pcr->sizeOfSelect, blob);
+	if (pcr->sizeOfSelect > 0) {
+		pcr->selection = malloc(pcr->sizeOfSelect);
+		if (pcr->selection == NULL) {
+			LogError("malloc of %u bytes failed.", pcr->sizeOfSelect);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, pcr->sizeOfSelect, blob, pcr->selection);
+	} else {
+		pcr->selection = NULL;
+	}
+	Trspi_UnloadBlob_BYTE(offset, &pcr->localityAtRelease, blob);
+	Trspi_UnloadBlob_UINT32(offset, &pcr->sizeOfDigestAtRelease, blob);
+	if (pcr->sizeOfDigestAtRelease > 0) {
+		pcr->digestAtRelease = malloc(pcr->sizeOfDigestAtRelease);
+		if (pcr->digestAtRelease == NULL) {
+			LogError("malloc of %u bytes failed.", pcr->sizeOfDigestAtRelease);
+			free(pcr->selection);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+		Trspi_UnloadBlob(offset, pcr->sizeOfDigestAtRelease, blob, pcr->digestAtRelease);
+	} else {
+		pcr->digestAtRelease = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT *pcr)
+{
+	Trspi_LoadBlob_UINT32(offset, pcr->sizeOfSelect, blob);
+	Trspi_LoadBlob(offset, pcr->sizeOfSelect, blob, pcr->selection);
+	Trspi_LoadBlob_BYTE(offset, pcr->localityAtRelease, blob);
+	Trspi_LoadBlob_UINT32(offset, pcr->sizeOfDigestAtRelease, blob);
+	Trspi_LoadBlob(offset, pcr->sizeOfDigestAtRelease, blob, pcr->digestAtRelease);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry)
+{
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT32(offset, &entry->tableIndex, blob);
+	Trspi_UnloadBlob_BYTE(offset, &entry->label, blob);
+	if ((result = Trspi_UnloadBlob_TSS_PCR_INFO_SHORT(offset, blob, &entry->pcrInfo)))
+		return result;
+	Trspi_UnloadBlob_UINT32(offset, &entry->per1, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->per2, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry)
+{
+	Trspi_LoadBlob_UINT32(offset, entry->tableIndex, blob);
+	Trspi_LoadBlob_BYTE(offset, entry->label, blob);
+	Trspi_LoadBlob_TSS_PCR_INFO_SHORT(offset, blob, &entry->pcrInfo);
+	Trspi_LoadBlob_UINT32(offset, entry->per1, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->per2, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
 }
 
