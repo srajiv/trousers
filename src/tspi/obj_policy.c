@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005, 2006
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -22,6 +22,7 @@
 #include "tsplog.h"
 #include "obj.h"
 #include "tsp_seal.h"
+#include "tsp_delegate.h"
 
 TSS_RESULT
 obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
@@ -47,6 +48,9 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	policy->SecretMode = TSS_SECRET_MODE_POPUP;
 #endif
 	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
+#ifdef TSS_BUILD_DELEGATION
+	policy->delegationType = TSS_DELEGATIONTYPE_NONE;
+#endif
 
 	if ((result = obj_list_add(&policy_list, tsp_context, 0, policy, phObject))) {
 		free(policy);
@@ -56,17 +60,29 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	return TSS_SUCCESS;
 }
 
+void
+policy_free(void *data)
+{
+	struct tr_policy_obj *policy = (struct tr_policy_obj *)data;
+
+	free(policy->popupString);
+#ifdef TSS_BUILD_DELEGATION
+	free(policy->delegationBlob);
+#endif
+	free(policy);
+}
+
 TSS_RESULT
 obj_policy_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-        TSS_RESULT result;
+	TSS_RESULT result;
 
-        if ((result = obj_list_remove(&policy_list, hObject, tspContext)))
-                return result;
+	if ((result = obj_list_remove(&policy_list, &policy_free, hObject, tspContext)))
+		return result;
 
-        obj_lists_remove_policy_refs(hObject, tspContext);
+	obj_lists_remove_policy_refs(hObject, tspContext);
 
-        return TSS_SUCCESS;
+	return TSS_SUCCESS;
 }
 
 TSS_BOOL
@@ -1040,6 +1056,578 @@ done:
 		free(*rgbMaskedData);
 
 	return result;
+}
+#endif
+
+#ifdef TSS_BUILD_DELEGATION
+TSS_RESULT
+obj_policy_set_delegation_type(TSS_HPOLICY hPolicy, UINT32 type)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	switch (type) {
+	case TSS_DELEGATIONTYPE_NONE:
+		obj_policy_clear_delegation(policy);
+		break;
+	case TSS_DELEGATIONTYPE_OWNER:
+	case TSS_DELEGATIONTYPE_KEY:
+		if (policy->delegationIndexSet || policy->delegationBlob) {
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+		}
+		break;
+	}
+
+	policy->delegationType = type;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+
+TSS_RESULT
+obj_policy_get_delegation_type(TSS_HPOLICY hPolicy, UINT32 *type)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	*type = policy->delegationType;
+
+	obj_list_put(&policy_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_policy_set_delegation_index(TSS_HPOLICY hPolicy, UINT32 index)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if ((result = get_delegate_index(obj->tspContext, index, &public)))
+		goto done;
+
+	free(public.pcrInfo.pcrSelection.pcrSelect);
+
+	obj_policy_clear_delegation(policy);
+	switch (public.permissions.delegateType) {
+	case TPM_DEL_OWNER_BITS:
+		policy->delegationType = TSS_DELEGATIONTYPE_OWNER;
+		break;
+	case TPM_DEL_KEY_BITS:
+		policy->delegationType = TSS_DELEGATIONTYPE_KEY;
+		break;
+	default:
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+	policy->delegationIndex = index;
+	policy->delegationIndexSet = TRUE;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_index(TSS_HPOLICY hPolicy, UINT32 *index)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (!policy->delegationIndexSet) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	*index = policy->delegationIndex;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT obj_policy_set_delegation_per1(TSS_HPOLICY hPolicy, UINT32 per1)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	policy->delegationPer1 = per1;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT obj_policy_get_delegation_per1(TSS_HPOLICY hPolicy, UINT32 *per1)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*per1 = public.permissions.per1;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		*per1 = policy->delegationPer1;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT obj_policy_set_delegation_per2(TSS_HPOLICY hPolicy, UINT32 per2)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	policy->delegationPer2 = per2;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT obj_policy_get_delegation_per2(TSS_HPOLICY hPolicy, UINT32 *per2)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*per2 = public.permissions.per2;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		*per2 = policy->delegationPer2;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_set_delegation_blob(TSS_HPOLICY hPolicy, UINT32 type, UINT32 blobLength, BYTE *blob)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	UINT16 tag;
+	UINT64 offset;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	obj_policy_clear_delegation(policy);
+
+	if (blobLength == 0) {
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT16(&offset, &tag, blob);
+	switch (tag) {
+	case TPM_TAG_DELEGATE_OWNER_BLOB:
+		if (type && (type != TSS_DELEGATIONTYPE_OWNER)) {
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+			goto done;
+		}
+		policy->delegationType = TSS_DELEGATIONTYPE_OWNER;
+		break;
+	case TPM_TAG_DELG_KEY_BLOB:
+		if (type && (type != TSS_DELEGATIONTYPE_KEY)) {
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+			goto done;
+		}
+		policy->delegationType = TSS_DELEGATIONTYPE_KEY;
+		break;
+	default:
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+
+	if ((policy->delegationBlob = malloc(blobLength)) == NULL) {
+		LogError("malloc of %u bytes failed.", blobLength);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	policy->delegationBlobLength = blobLength;
+	memcpy(policy->delegationBlob, blob, blobLength);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_blob(TSS_HPOLICY hPolicy, UINT32 type, UINT32 *blobLength, BYTE **blob)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationBlobLength == 0) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	if (type && (type != policy->delegationType)) {
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+
+	if ((*blob = calloc_tspi(obj->tspContext, policy->delegationBlobLength)) == NULL) {
+		LogError("malloc of %u bytes failed.", policy->delegationBlobLength);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	memcpy(*blob, policy->delegationBlob, policy->delegationBlobLength);
+	*blobLength = policy->delegationBlobLength;
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_label(TSS_HPOLICY hPolicy, BYTE *label)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*label = public.label.label;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_familyid(TSS_HPOLICY hPolicy, UINT32 *familyID)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*familyID = public.familyID;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_vercount(TSS_HPOLICY hPolicy, UINT32 *verCount)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*verCount = public.verificationCount;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_pcr_locality(TSS_HPOLICY hPolicy, UINT32 *locality)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*locality = public.pcrInfo.localityAtRelease;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_pcr_digest(TSS_HPOLICY hPolicy, UINT32 *digestLength, BYTE **digest)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		*digest = calloc_tspi(obj->tspContext, TPM_SHA1_160_HASH_LEN);
+		if (*digest == NULL) {
+			LogError("malloc of %u bytes failed.", TPM_SHA1_160_HASH_LEN);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		memcpy(*digest, &public.pcrInfo.digestAtRelease.digest, TPM_SHA1_160_HASH_LEN);
+		*digestLength = TPM_SHA1_160_HASH_LEN;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_delegation_pcr_selection(TSS_HPOLICY hPolicy, UINT32 *selectionLength,
+					BYTE **selection)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TPM_DELEGATE_PUBLIC public;
+	UINT64 offset;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet || policy->delegationBlob) {
+		if ((result = obj_policy_get_delegate_public(obj, &public)))
+			goto done;
+		offset = 0;
+		Trspi_LoadBlob_PCR_SELECTION(&offset, NULL, &public.pcrInfo.pcrSelection);
+		*selection = calloc_tspi(obj->tspContext, offset);
+		if (*selection == NULL) {
+			LogError("malloc of %u bytes failed.", (UINT32)offset);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		offset = 0;
+		Trspi_LoadBlob_PCR_SELECTION(&offset, *selection, &public.pcrInfo.pcrSelection);
+		*selectionLength = offset;
+		free(public.pcrInfo.pcrSelection.pcrSelect);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+done:
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_is_delegation_index_set(TSS_HPOLICY hPolicy, TSS_BOOL *indexSet)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	*indexSet = policy->delegationIndexSet;
+
+	obj_list_put(&policy_list);
+
+	return TSS_SUCCESS;
+}
+
+void
+obj_policy_clear_delegation(struct tr_policy_obj *policy)
+{
+	free(policy->delegationBlob);
+	policy->delegationType = TSS_DELEGATIONTYPE_NONE;
+	policy->delegationPer1 = 0;
+	policy->delegationPer2 = 0;
+	policy->delegationIndexSet = FALSE;
+	policy->delegationIndex = 0;
+	policy->delegationBlobLength = 0;
+	policy->delegationBlob = NULL;
+}
+
+TSS_RESULT
+obj_policy_get_delegate_public(struct tsp_object *obj, TPM_DELEGATE_PUBLIC *public)
+{
+	struct tr_policy_obj *policy;
+	UINT16 tag;
+	TPM_DELEGATE_OWNER_BLOB ownerBlob;
+	TPM_DELEGATE_KEY_BLOB keyBlob;
+	UINT64 offset;
+	TSS_RESULT result;
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if (policy->delegationIndexSet) {
+		if ((result = get_delegate_index(obj->tspContext, policy->delegationIndex,
+				public)))
+			return result;
+	} else if (policy->delegationBlob) {
+		offset = 0;
+		Trspi_UnloadBlob_UINT16(&offset, &tag, policy->delegationBlob);
+
+		offset = 0;
+		switch (tag) {
+		case TPM_TAG_DELEGATE_OWNER_BLOB:
+			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(&offset, policy->delegationBlob,
+					 &ownerBlob)))
+				return result;
+			*public = ownerBlob.pub;
+			free(ownerBlob.additionalArea);
+			free(ownerBlob.sensitiveArea);
+			break;
+		case TPM_TAG_DELG_KEY_BLOB:
+			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(&offset, policy->delegationBlob,
+					 &keyBlob)))
+				return result;
+			*public = keyBlob.pub;
+			free(keyBlob.additionalArea);
+			free(keyBlob.sensitiveArea);
+			break;
+		default:
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		}
+	} else
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	return TSS_SUCCESS;
 }
 #endif
 

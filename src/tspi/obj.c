@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -34,6 +34,7 @@ RSAKEY_LIST_DECLARE;
 ENCDATA_LIST_DECLARE;
 DAA_LIST_DECLARE;
 NVSTORE_LIST_DECLARE;
+DELFAMILY_LIST_DECLARE;
 
 void
 list_init(struct obj_list *list)
@@ -54,6 +55,7 @@ obj_list_init()
 	ENCDATA_LIST_INIT();
 	DAA_LIST_INIT();
 	NVSTORE_LIST_INIT();
+	DELFAMILY_LIST_INIT();
 }
 
 TSS_HOBJECT
@@ -160,7 +162,7 @@ obj_list_add(struct obj_list *list, UINT32 tsp_context, TSS_FLAG flags, void *da
 }
 
 TSS_RESULT
-obj_list_remove(struct obj_list *list, TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
+obj_list_remove(struct obj_list *list, void (*freeFcn)(void *), TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
 	struct tsp_object *obj, *prev = NULL;
 	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
@@ -173,7 +175,8 @@ obj_list_remove(struct obj_list *list, TSS_HOBJECT hObject, TSS_HCONTEXT tspCont
 			if (obj->tspContext != tspContext)
 				break;
 
-			free(obj->data);
+			(*freeFcn)(obj->data);
+
 			if (prev)
 				prev->next = obj->next;
 			else
@@ -192,7 +195,7 @@ obj_list_remove(struct obj_list *list, TSS_HOBJECT hObject, TSS_HCONTEXT tspCont
 /* a generic routine for removing all members of a list who's tsp context
  * matches @tspContext */
 void
-obj_list_close(struct obj_list *list, TSS_HCONTEXT tspContext)
+obj_list_close(struct obj_list *list, void (*freeFcn)(void *), TSS_HCONTEXT tspContext)
 {
 	struct tsp_object *index;
 	struct tsp_object *next = NULL;
@@ -211,7 +214,7 @@ obj_list_close(struct obj_list *list, TSS_HCONTEXT tspContext)
 				prev->next = toKill->next;
 			}
 
-			free(toKill->data);
+			(*freeFcn)(toKill->data);
 			free(toKill);
 
 			index = next;
@@ -236,6 +239,7 @@ obj_close_context(TSS_HCONTEXT tspContext)
 	ENCDATA_LIST_CLOSE(tspContext);
 	DAA_LIST_CLOSE(tspContext);
 	NVSTORE_LIST_CLOSE(tspContext);
+	DELFAMILY_LIST_CLOSE(tspContext);
 }
 
 /* When a policy object is closed, all references to it must be removed. This function
