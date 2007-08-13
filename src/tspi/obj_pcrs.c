@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -63,8 +63,10 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 }
 
 void
-free_pcrs(struct tr_pcrs_obj *pcrs)
+pcrs_free(void *data)
 {
+	struct tr_pcrs_obj *pcrs = (struct tr_pcrs_obj *)data;
+
 	switch (pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
 			free(pcrs->info.info11.pcrSelection.pcrSelect);
@@ -87,33 +89,12 @@ free_pcrs(struct tr_pcrs_obj *pcrs)
 TSS_RESULT
 obj_pcrs_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-        struct tsp_object *obj, *prev = NULL;
-	struct obj_list *list = &pcrs_list;
-        TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-        MUTEX_LOCK(list->lock);
+	if ((result = obj_list_remove(&pcrs_list, &pcrs_free, hObject, tspContext)))
+		return result;
 
-        for (obj = list->head; obj; prev = obj, obj = obj->next) {
-                if (obj->handle == hObject) {
-			/* validate tspContext */
-			if (obj->tspContext != tspContext)
-				break;
-
-                        free_pcrs(obj->data);
-                        if (prev)
-                                prev->next = obj->next;
-                        else
-                                list->head = obj->next;
-                        free(obj);
-                        result = TSS_SUCCESS;
-                        break;
-                }
-        }
-
-        MUTEX_UNLOCK(list->lock);
-
-        return result;
-
+	return TSS_SUCCESS;
 }
 
 TSS_BOOL
@@ -130,7 +111,7 @@ obj_is_pcrs(TSS_HOBJECT hObject)
 }
 
 TSS_RESULT
-obj_pcrs_get_tsp_context(TSS_HTPM hPcrs, TSS_HCONTEXT *tspContext)
+obj_pcrs_get_tsp_context(TSS_HPCRS hPcrs, TSS_HCONTEXT *tspContext)
 {
 	struct tsp_object *obj;
 
@@ -138,6 +119,24 @@ obj_pcrs_get_tsp_context(TSS_HTPM hPcrs, TSS_HCONTEXT *tspContext)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	*tspContext = obj->tspContext;
+
+	obj_list_put(&pcrs_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_pcrs_get_type(TSS_HPCRS hPcrs, UINT32 *type)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	*type = pcrs->type;
 
 	obj_list_put(&pcrs_list);
 
@@ -193,7 +192,7 @@ obj_pcrs_set_values(TSS_HPCRS hPcrs, TPM_PCR_COMPOSITE *pcrComp)
 		if (select->pcrSelect[i / 8] & (1 << (i % 8))) {
 			if ((result = obj_pcrs_set_value(hPcrs, i, TCPA_SHA1_160_HASH_LEN,
 							 (BYTE *)&pcrComp->pcrValue[val_idx])))
-				break;
+				return result;
 
 			val_idx++;
 		}
@@ -209,6 +208,7 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
 	TPM_PCR_SELECTION *select;
+	TPM_COMPOSITE_HASH *compHash;
 	UINT16 bytes_to_hold = (idx / 8) + 1;
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
@@ -218,13 +218,19 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 
 	switch(pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
+			bytes_to_hold = (bytes_to_hold < 2) ? 2 : bytes_to_hold;
 			select = &pcrs->info.info11.pcrSelection;
+			compHash = &pcrs->info.info11.digestAtRelease;
 			break;
 		case TSS_PCRS_STRUCT_INFO_SHORT:
+			bytes_to_hold = (bytes_to_hold < 3) ? 3 : bytes_to_hold;
 			select = &pcrs->info.infoshort.pcrSelection;
+			compHash = &pcrs->info.infoshort.digestAtRelease;
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
+			bytes_to_hold = (bytes_to_hold < 3) ? 3 : bytes_to_hold;
 			select = &pcrs->info.infolong.creationPCRSelection;
+			compHash = &pcrs->info.infolong.digestAtRelease;
 			break;
 		default:
 			LogDebugFn("Undefined type of PCRs object");
@@ -277,6 +283,9 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 
 	/* set the value in the pcrs array */
 	memcpy(&(pcrs->pcrs[idx]), value, size);
+
+	result = pcrs_calc_composite(select, pcrs->pcrs, compHash);
+
 done:
 	obj_list_put(&pcrs_list);
 
@@ -326,47 +335,6 @@ obj_pcrs_get_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 *size, BYTE **value)
 
 	*size = TCPA_SHA1_160_HASH_LEN;
 	memcpy(*value, &pcrs->pcrs[idx], TCPA_SHA1_160_HASH_LEN);
-
-done:
-	obj_list_put(&pcrs_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_pcrs_get_digest_at_creation(TSS_HPCRS hPcrs, TCPA_PCRVALUE *comp)
-{
-	struct tsp_object *obj;
-	struct tr_pcrs_obj *pcrs;
-	TSS_RESULT result = TSS_SUCCESS;
-	TPM_PCR_SELECTION *select;
-
-	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	pcrs = (struct tr_pcrs_obj *)obj->data;
-
-	switch(pcrs->type) {
-		case TSS_PCRS_STRUCT_INFO:
-			select = &pcrs->info.info11.pcrSelection;
-			break;
-		case TSS_PCRS_STRUCT_INFO_SHORT:
-			select = &pcrs->info.infoshort.pcrSelection;
-			break;
-		case TSS_PCRS_STRUCT_INFO_LONG:
-			select = &pcrs->info.infolong.creationPCRSelection;
-			break;
-		default:
-			LogDebugFn("Undefined type of PCRs object");
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-			goto done;
-			break;
-	}
-
-	if ((result = pcrs_sanity_check_selection(obj->tspContext, pcrs, select)))
-		goto done;
-
-	result = pcrs_calc_composite(select, pcrs->pcrs, comp);
 
 done:
 	obj_list_put(&pcrs_list);
@@ -434,6 +402,7 @@ obj_pcrs_select_index(TSS_HPCRS hPcrs, UINT32 idx)
 
 	switch(pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
+			bytes_to_hold = (bytes_to_hold < 2) ? 2 : bytes_to_hold;
 			select = &pcrs->info.info11.pcrSelection;
 			break;
 		case TSS_PCRS_STRUCT_INFO_SHORT:
@@ -517,9 +486,11 @@ obj_pcrs_select_index_ex(TSS_HPCRS hPcrs, UINT32 dir, UINT32 idx)
 				result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 				goto done;
 			}
+			bytes_to_hold = (bytes_to_hold < 3) ? 3 : bytes_to_hold;
 			select = &pcrs->info.infoshort.pcrSelection;
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
+			bytes_to_hold = (bytes_to_hold < 3) ? 3 : bytes_to_hold;
 			if (dir == TSS_PCRS_DIRECTION_CREATION)
 				select = &pcrs->info.infolong.creationPCRSelection;
 			else
@@ -579,6 +550,43 @@ done:
 	return result;
 }
 
+TSS_RESULT
+obj_pcrs_create_info_type(TSS_HPCRS hPcrs, UINT32 type, UINT32 *size, BYTE **info)
+{
+	TSS_RESULT result;
+
+	/* If type equals 0, then we create the structure
+	   based on how the object was created */
+	if (type == 0) {
+		struct tsp_object *obj;
+		struct tr_pcrs_obj *pcrs;
+
+		if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+			return TSPERR(TSS_E_INVALID_HANDLE);
+
+		pcrs = (struct tr_pcrs_obj *)obj->data;
+		type = pcrs->type;
+
+		obj_list_put(&pcrs_list);
+	}
+
+	switch (type) {
+	case TSS_PCRS_STRUCT_INFO:
+		result = obj_pcrs_create_info(hPcrs, size, info);
+		break;
+	case TSS_PCRS_STRUCT_INFO_LONG:
+		result = obj_pcrs_create_info_long(hPcrs, size, info);
+		break;
+	case TSS_PCRS_STRUCT_INFO_SHORT:
+		result = obj_pcrs_create_info_short(hPcrs, size, info);
+		break;
+	default:
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	return result;
+}
+
 /* Create a PCR info struct based on the hPcrs object */
 TSS_RESULT
 obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
@@ -586,42 +594,39 @@ obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	struct tsp_object *obj;
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_INFO info11;
 	UINT64 offset;
-	UINT32 ret_size = 0;
+	UINT32 ret_size;
 	BYTE *ret;
-	TPM_PCR_SELECTION *select;
-	BYTE *creation_digest = NULL, release_digest[TPM_SHA1_160_HASH_LEN] = { 0, };
 
 	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	pcrs = (struct tr_pcrs_obj *)obj->data;
 
+	/* Set everything that is not assigned to be all zeroes */
+	memset(&info11, 0, sizeof(info11));
+
 	switch (pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
-			ret_size = (UINT32)sizeof(TPM_PCR_INFO);
-			select = &pcrs->info.info11.pcrSelection;
-			creation_digest = (BYTE *)&pcrs->info.info11.digestAtCreation;
+			info11 = pcrs->info.info11;
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
-			ret_size = (UINT32)sizeof(TPM_PCR_INFO_LONG);
-			select = &pcrs->info.infolong.creationPCRSelection;
-			creation_digest = (BYTE *)&pcrs->info.infolong.digestAtCreation;
+			info11.pcrSelection = pcrs->info.infolong.releasePCRSelection;
+			info11.digestAtRelease = pcrs->info.infolong.digestAtRelease;
 			break;
 		case TSS_PCRS_STRUCT_INFO_SHORT:
-			ret_size = (UINT32)sizeof(TPM_PCR_INFO_SHORT);
-			select = &pcrs->info.infoshort.pcrSelection;
+			info11.pcrSelection = pcrs->info.infoshort.pcrSelection;
+			info11.digestAtRelease = pcrs->info.infoshort.digestAtRelease;
 			break;
-		case TSS_PCRS_STRUCT_DEFAULT:
-			/* fall through */
 		default:
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
-			break;
 	}
 
-	if ((result = pcrs_calc_composite(select, pcrs->pcrs, (TPM_DIGEST *)creation_digest)))
-		goto done;
+	offset = 0;
+	Trspi_LoadBlob_PCR_INFO(&offset, NULL, &info11);
+	ret_size = offset;
 
 	if ((ret = calloc(1, ret_size)) == NULL) {
 		result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -630,32 +635,142 @@ obj_pcrs_create_info(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	}
 
 	offset = 0;
-	if (pcrs->type == TSS_PCRS_STRUCT_INFO) {
-		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
-		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, creation_digest);
-		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
-		ret_size = offset;
-	} else if (pcrs->type == TSS_PCRS_STRUCT_INFO_LONG) {
-		Trspi_LoadBlob_UINT16(&offset, TPM_TAG_PCR_INFO_LONG, ret);
-		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
-		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
-		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
-		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
-		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, creation_digest);
-		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
-		ret_size = offset;
-	} else if (pcrs->type == TSS_PCRS_STRUCT_INFO_SHORT) {
-		Trspi_LoadBlob_PCR_SELECTION(&offset, ret, select);
-		Trspi_LoadBlob_BYTE(&offset, TPM_LOC_ZERO, ret);
-		Trspi_LoadBlob(&offset, TPM_SHA1_160_HASH_LEN, ret, release_digest);
-		ret_size = offset;
-	}
+	Trspi_LoadBlob_PCR_INFO(&offset, ret, &info11);
 
 	*info = ret;
 	*size = ret_size;
 
 done:
 	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_pcrs_create_info_long(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_INFO_LONG infolong;
+	UINT64 offset;
+	UINT32 ret_size;
+	BYTE *ret;
+
+	if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	pcrs = (struct tr_pcrs_obj *)obj->data;
+
+	/* Set everything that is not assigned to be all zeroes */
+	memset(&infolong, 0, sizeof(infolong));
+
+	infolong.tag = TPM_TAG_PCR_INFO_LONG;
+	switch (pcrs->type) {
+		case TSS_PCRS_STRUCT_INFO:
+			infolong.localityAtRelease = 0x1f;
+			infolong.releasePCRSelection = pcrs->info.info11.pcrSelection;
+			infolong.digestAtRelease = pcrs->info.info11.digestAtRelease;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			infolong = pcrs->info.infolong;
+			break;
+		case TSS_PCRS_STRUCT_INFO_SHORT:
+			infolong.localityAtRelease = pcrs->info.infoshort.localityAtRelease;
+			infolong.releasePCRSelection = pcrs->info.infoshort.pcrSelection;
+			infolong.digestAtRelease = pcrs->info.infoshort.digestAtRelease;
+			break;
+		default:
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_PCR_INFO_LONG(&offset, NULL, &infolong);
+	ret_size = offset;
+
+	if ((ret = calloc(1, ret_size)) == NULL) {
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		LogDebug("malloc of %u bytes failed.", ret_size);
+		goto done;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_PCR_INFO_LONG(&offset, ret, &infolong);
+
+	*info = ret;
+	*size = ret_size;
+
+done:
+	obj_list_put(&pcrs_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_pcrs_create_info_short(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
+{
+	struct tsp_object *obj;
+	struct tr_pcrs_obj *pcrs;
+	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_INFO_SHORT infoshort;
+	BYTE select[] = { 0, 0, 0 };
+	UINT64 offset;
+	UINT32 ret_size;
+	BYTE *ret;
+
+	/* Set everything that is not assigned to be all zeroes */
+	memset(&infoshort, 0, sizeof(infoshort));
+
+	if (hPcrs != NULL_HPCRS) {
+		if ((obj = obj_list_get_obj(&pcrs_list, hPcrs)) == NULL)
+			return TSPERR(TSS_E_INVALID_HANDLE);
+
+		pcrs = (struct tr_pcrs_obj *)obj->data;
+
+		switch (pcrs->type) {
+			case TSS_PCRS_STRUCT_INFO:
+				infoshort.pcrSelection = pcrs->info.info11.pcrSelection;
+				infoshort.localityAtRelease = 0x1f;
+				infoshort.digestAtRelease = pcrs->info.info11.digestAtRelease;
+				break;
+			case TSS_PCRS_STRUCT_INFO_LONG:
+				infoshort.pcrSelection = pcrs->info.infolong.releasePCRSelection;
+				infoshort.localityAtRelease = pcrs->info.infolong.localityAtRelease;
+				infoshort.digestAtRelease = pcrs->info.infolong.digestAtRelease;
+				break;
+			case TSS_PCRS_STRUCT_INFO_SHORT:
+				infoshort = pcrs->info.infoshort;
+				break;
+			default:
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+		}
+	} else {
+		infoshort.pcrSelection.sizeOfSelect = sizeof(select);
+		infoshort.pcrSelection.pcrSelect = select;
+		infoshort.localityAtRelease = 0x1f;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_PCR_INFO_SHORT(&offset, NULL, &infoshort);
+	ret_size = offset;
+
+	if ((ret = calloc(1, ret_size)) == NULL) {
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		LogDebug("malloc of %u bytes failed.", ret_size);
+		goto done;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_PCR_INFO_SHORT(&offset, ret, &infoshort);
+
+	*info = ret;
+	*size = ret_size;
+
+done:
+	if (hPcrs != NULL_HPCRS)
+		obj_list_put(&pcrs_list);
 
 	return result;
 }
