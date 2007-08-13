@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2006
+ * (C) Copyright International Business Machines Corp. 2006, 2007
  *
  */
 
@@ -44,9 +44,11 @@ obj_daa_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)
 	return TSS_SUCCESS;
 }
 
-static void
-free_daa(struct tr_daa_obj *daa)
+void
+daa_free(void *data)
 {
+	struct tr_daa_obj *daa = (struct tr_daa_obj *)data;
+
 	/* free all pointers in the tr_daa_obj object here */
 	free(daa);
 }
@@ -57,32 +59,12 @@ free_daa(struct tr_daa_obj *daa)
 TSS_RESULT
 obj_daa_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-        struct tsp_object *obj, *prev = NULL;
-	struct obj_list *list = &daa_list;
-        TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-        MUTEX_LOCK(list->lock);
+	if ((result = obj_list_remove(&daa_list, &daa_free, hObject, tspContext)))
+		return result;
 
-        for (obj = list->head; obj; prev = obj, obj = obj->next) {
-                if (obj->handle == hObject) {
-			if (obj->tspContext != tspContext)
-				break;
-
-                        free_daa(obj->data);
-                        if (prev)
-                                prev->next = obj->next;
-                        else
-                                list->head = obj->next;
-                        free(obj);
-                        result = TSS_SUCCESS;
-                        break;
-                }
-        }
-
-        MUTEX_UNLOCK(list->lock);
-
-        return result;
-
+	return TSS_SUCCESS;
 }
 
 TSS_BOOL

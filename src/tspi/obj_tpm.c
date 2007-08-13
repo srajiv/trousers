@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -21,6 +21,14 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+
+void
+tpm_free(void *data)
+{
+	struct tr_tpm_obj *tpm = (struct tr_tpm_obj *)data;
+
+	free(tpm);
+}
 
 TSS_RESULT
 obj_tpm_add(TSS_HCONTEXT tspContext, TSS_HOBJECT *phObject)

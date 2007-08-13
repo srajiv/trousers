@@ -70,40 +70,22 @@ obj_is_nvstore(TSS_HOBJECT hObject)
 }
 
 void
-nvstore_free(struct tr_nvstore_obj *nvstore)
+nvstore_free(void *data)
 {
+	struct tr_nvstore_obj *nvstore = (struct tr_nvstore_obj *)data;
+
 	free(nvstore);
 }
 
 TSS_RESULT
 obj_nvstore_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-	struct tsp_object *obj, *prev = NULL;
-	struct obj_list *list = &nvstore_list;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-	MUTEX_LOCK(list->lock);
+	if ((result = obj_list_remove(&nvstore_list, &nvstore_free, hObject, tspContext)))
+		return result;
 
-	for (obj = list->head; obj; prev = obj, obj = obj->next) {
-		if (obj->handle == hObject) {
-			/* validate tspContext */
-			if (obj->tspContext != tspContext)
-				break;
-
-			nvstore_free(obj->data);
-			if (prev)
-				prev->next = obj->next;
-			else
-				list->head = obj->next;
-			free(obj);
-			result = TSS_SUCCESS;
-			break;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
-
-	return result;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT

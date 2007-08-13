@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2005
+ * (C) Copyright International Business Machines Corp. 2005, 2007
  *
  */
 
@@ -202,8 +202,10 @@ done:
 }
 
 void
-hash_free(struct tr_hash_obj *hash)
+hash_free(void *data)
 {
+	struct tr_hash_obj *hash = (struct tr_hash_obj *)data;
+
 	free(hash->hashData);
 	free(hash->hashUpdateBuffer);
 	free(hash);
@@ -215,66 +217,11 @@ hash_free(struct tr_hash_obj *hash)
 TSS_RESULT
 obj_hash_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
-	struct tsp_object *obj, *prev = NULL;
-	struct obj_list *list = &hash_list;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-	MUTEX_LOCK(list->lock);
+	if ((result = obj_list_remove(&hash_list, &hash_free, hObject, tspContext)))
+		return result;
 
-	for (obj = list->head; obj; prev = obj, obj = obj->next) {
-		if (obj->handle == hObject) {
-			/* validate tspContext */
-			if (obj->tspContext != tspContext)
-				break;
-
-			hash_free(obj->data);
-			if (prev)
-				prev->next = obj->next;
-			else
-				list->head = obj->next;
-			free(obj);
-			result = TSS_SUCCESS;
-			break;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
-
-	return result;
+	return TSS_SUCCESS;
 }
 
-/*
- * remove all objects in the list with a TSP context matching tspContext
- */
-void
-obj_list_hash_close(struct obj_list *list, TSS_HCONTEXT tspContext)
-{
-	struct tsp_object *index;
-	struct tsp_object *next = NULL;
-	struct tsp_object *toKill;
-	struct tsp_object *prev = NULL;
-
-	MUTEX_LOCK(list->lock);
-
-	for (index = list->head; index; ) {
-		next = index->next;
-		if (index->tspContext == tspContext) {
-			toKill = index;
-			if (prev == NULL) {
-				list->head = toKill->next;
-			} else {
-				prev->next = toKill->next;
-			}
-
-			hash_free(toKill->data);
-			free(toKill);
-
-			index = next;
-		} else {
-			prev = index;
-			index = next;
-		}
-	}
-
-	MUTEX_UNLOCK(list->lock);
-}
