@@ -1810,7 +1810,7 @@ Trspi_UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TPM_CERTIFY_INFO *c)
 		return result;
 	Trspi_UnloadBlob_DIGEST(offset, blob, &c->pubkeyDigest);
 	Trspi_UnloadBlob_NONCE(offset, blob, &c->data);
-	Trspi_UnloadBlob_BOOL(offset, &c->parentPCRStatus, blob);
+	Trspi_UnloadBlob_BOOL(offset, (TSS_BOOL *)&c->parentPCRStatus, blob);
 	Trspi_UnloadBlob_UINT32(offset, &c->PCRInfoSize, blob);
 	Trspi_UnloadBlob(offset, c->PCRInfoSize, blob, c->PCRInfo);
 
