@@ -315,6 +315,7 @@ done:
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_MakeIdentity2_TP(struct host_table_entry *hte,
 		     TCPA_ENCAUTH identityAuth,	/* in */
@@ -412,4 +413,5 @@ RPC_MakeIdentity2_TP(struct host_table_entry *hte,
 done:
 	return result;
 }
+#endif
 
