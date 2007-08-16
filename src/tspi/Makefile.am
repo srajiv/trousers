@@ -45,15 +45,15 @@ libtspi_la_SOURCES+=tspi_oper.c rpc/@RPC@/rpc_oper.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_TSS12
 endif
 if TSS_BUILD_TRANSPORT
-libtspi_la_SOURCES+=tspi_transport.c tsp_transport.c rpc/@RPC@/rpc_transport.c
+libtspi_la_SOURCES+=tspi_transport.c rpc/@RPC@/rpc_transport.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_TRANSPORT
 endif
 if TSS_BUILD_TICK
-libtspi_la_SOURCES+=tspi_tick.c rpc/@RPC@/rpc_tick.c
+libtspi_la_SOURCES+=tspi_tick.c tsp_tick.c rpc/@RPC@/rpc_tick.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_TICK
 endif
 if TSS_BUILD_COUNTER
-libtspi_la_SOURCES+=tspi_counter.c rpc/@RPC@/rpc_counter.c
+libtspi_la_SOURCES+=tspi_counter.c tsp_counter.c rpc/@RPC@/rpc_counter.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_COUNTER
 endif
 if TSS_BUILD_PCR_COMP12
@@ -68,7 +68,7 @@ libtspi_la_SOURCES+=tspi_getset.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_GETSET
 endif
 if TSS_BUILD_RANDOM
-libtspi_la_SOURCES+=tspi_random.c rpc/@RPC@/rpc_random.c
+libtspi_la_SOURCES+=tspi_random.c tsp_random.c rpc/@RPC@/rpc_random.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_RANDOM
 endif
 if TSS_BUILD_CAPS
