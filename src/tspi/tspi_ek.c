@@ -417,7 +417,7 @@ Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	if (genResetAuth) {
 		if ((*prgbEkResetData = calloc_tspi(tspContext, sizeof(eKResetAuth.digest))) == NULL) {
-			LogError("malloc of %u bytes failed.", sizeof(eKResetAuth.digest));
+			LogError("malloc of %zd bytes failed.", sizeof(eKResetAuth.digest));
 			if (pValidationData) {
 				free_tspi(tspContext, pValidationData->rgbValidationData);
 				free_tspi(tspContext, pValidationData->rgbData);
