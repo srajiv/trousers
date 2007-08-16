@@ -607,7 +607,7 @@ TSPICALL Tspi_TPM_Delegate_InvalidateFamily
 
 TSPICALL Tspi_TPM_Delegate_CreateDelegation
 (
-    TSS_HTPM            hObject,                       // in
+    TSS_HOBJECT         hObject,                       // in
     BYTE                bLabel,                        // in
     UINT32              ulFlags,                       // in
     TSS_HPCRS           hPcr,                          // in, may be NULL
