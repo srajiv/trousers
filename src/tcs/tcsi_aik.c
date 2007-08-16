@@ -173,3 +173,55 @@ TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,		/* in  */
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+TCSP_MakeIdentity2_Internal(TCS_CONTEXT_HANDLE hContext,		/* in  */
+			    TCPA_ENCAUTH identityAuth,			/* in */
+			    TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+			    UINT32 idKeyInfoSize,			/* in */
+			    BYTE * idKeyInfo,				/* in */
+			    TPM_AUTH * pSrkAuth,			/* in, out */
+			    TPM_AUTH * pOwnerAuth,			/* in, out */
+			    UINT32 * idKeySize,				/* out */
+			    BYTE ** idKey,				/* out */
+			    UINT32 * pcIdentityBindingSize,		/* out */
+			    BYTE ** prgbIdentityBinding)		/* out */
+{
+	UINT64 offset;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	if ((result = ctx_verify_context(hContext)))
+		goto done;
+
+	if (pSrkAuth) {
+		if ((result = auth_mgr_check(hContext, &pSrkAuth->AuthHandle)))
+			goto done;
+	}
+
+	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle)))
+		goto done;
+
+	offset = 0;
+	if ((result = tpm_rqu_build(TPM_ORD_MakeIdentity, &offset, txBlob, identityAuth.authdata,
+				    IDLabel_PrivCAHash.digest, idKeyInfoSize, idKeyInfo, pSrkAuth,
+				    pOwnerAuth)))
+		goto done;
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		goto done;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	if (!result) {
+		if ((result = tpm_rsp_parse(TPM_ORD_MakeIdentity, txBlob, paramSize, idKeySize,
+					    idKey, pcIdentityBindingSize, prgbIdentityBinding,
+					    pSrkAuth, pOwnerAuth)))
+			goto done;
+	}
+	LogResult("Make Identity", result);
+done:
+	auth_mgr_release_auth(pSrkAuth, pOwnerAuth, hContext);
+	return result;
+}
+

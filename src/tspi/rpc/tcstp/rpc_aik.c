@@ -26,23 +26,23 @@
 
 
 TSS_RESULT
-TCSP_MakeIdentity_TP(struct host_table_entry *hte,
-		     TCPA_ENCAUTH identityAuth,	/* in */
-		     TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
-		     UINT32 idKeyInfoSize,	/* in */
-		     BYTE * idKeyInfo,	/* in */
-		     TPM_AUTH * pSrkAuth,	/* in, out */
-		     TPM_AUTH * pOwnerAuth,	/* in, out */
-		     UINT32 * idKeySize,	/* out */
-		     BYTE ** idKey,	/* out */
-		     UINT32 * pcIdentityBindingSize,	/* out */
-		     BYTE ** prgbIdentityBinding,	/* out */
-		     UINT32 * pcEndorsementCredentialSize,	/* out */
-		     BYTE ** prgbEndorsementCredential,	/* out */
-		     UINT32 * pcPlatformCredentialSize,	/* out */
-		     BYTE ** prgbPlatformCredential,	/* out */
-		     UINT32 * pcConformanceCredentialSize,	/* out */
-		     BYTE ** prgbConformanceCredential)	/* out */
+RPC_MakeIdentity_TP(struct host_table_entry *hte,
+		    TCPA_ENCAUTH identityAuth,	/* in */
+		    TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+		    UINT32 idKeyInfoSize,	/* in */
+		    BYTE * idKeyInfo,	/* in */
+		    TPM_AUTH * pSrkAuth,	/* in, out */
+		    TPM_AUTH * pOwnerAuth,	/* in, out */
+		    UINT32 * idKeySize,	/* out */
+		    BYTE ** idKey,	/* out */
+		    UINT32 * pcIdentityBindingSize,	/* out */
+		    BYTE ** prgbIdentityBinding,	/* out */
+		    UINT32 * pcEndorsementCredentialSize,	/* out */
+		    BYTE ** prgbEndorsementCredential,	/* out */
+		    UINT32 * pcPlatformCredentialSize,	/* out */
+		    BYTE ** prgbPlatformCredential,	/* out */
+		    UINT32 * pcConformanceCredentialSize,	/* out */
+		    BYTE ** prgbConformanceCredential)	/* out */
 {
 	TSS_RESULT result;
 	int i;
@@ -203,7 +203,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetCredential_TP(struct host_table_entry *hte,
+RPC_GetCredential_TP(struct host_table_entry *hte,
 		     UINT32 ulCredentialType,          /* in */
 		     UINT32 ulCredentialAccessMode,    /* in */
 		     UINT32 * pulCredentialSize,       /* out */
@@ -248,15 +248,15 @@ TCS_GetCredential_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte,
-					TCS_KEY_HANDLE idKey,	/* in */
-					UINT32 blobSize,	/* in */
-					BYTE * blob,	/* in */
-					TPM_AUTH * idKeyAuth,	/* in, out */
-					TPM_AUTH * ownerAuth,	/* in, out */
-					UINT32 * SymmetricKeySize,	/* out */
-					BYTE ** SymmetricKey	/* out */
-    ) {
+RPC_ActivateTPMIdentity_TP(struct host_table_entry *hte,
+			   TCS_KEY_HANDLE idKey,	/* in */
+			   UINT32 blobSize,	/* in */
+			   BYTE * blob,	/* in */
+			   TPM_AUTH * idKeyAuth,	/* in, out */
+			   TPM_AUTH * ownerAuth,	/* in, out */
+			   UINT32 * SymmetricKeySize,	/* out */
+			   BYTE ** SymmetricKey)	/* out */
+{
 	TSS_RESULT result;
 	int i = 0;
 
@@ -314,3 +314,102 @@ TCSP_ActivateTPMIdentity_TP(struct host_table_entry *hte,
 done:
 	return result;
 }
+
+TSS_RESULT
+RPC_MakeIdentity2_TP(struct host_table_entry *hte,
+		     TCPA_ENCAUTH identityAuth,	/* in */
+		     TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+		     UINT32 idKeyInfoSize,	/* in */
+		     BYTE * idKeyInfo,	/* in */
+		     TPM_AUTH * pSrkAuth,	/* in, out */
+		     TPM_AUTH * pOwnerAuth,	/* in, out */
+		     UINT32 * idKeySize,	/* out */
+		     BYTE ** idKey,	/* out */
+		     UINT32 * pcIdentityBindingSize,	/* out */
+		     BYTE ** prgbIdentityBinding)	/* out */
+{
+	TSS_RESULT result;
+	int i;
+
+	initData(&hte->comm, 7);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_MAKEIDENTITY2;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 1, &identityAuth, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_DIGEST, 2, &IDLabel_PrivCAHash, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &idKeyInfoSize, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, idKeyInfo, idKeyInfoSize, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	i = 5;
+	if (pSrkAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	i = 0;
+	if (result == TSS_SUCCESS) {
+		i = 0;
+		if (pSrkAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pSrkAuth, 0, &hte->comm)) {
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+			}
+		}
+		if (getData(TCSD_PACKET_TYPE_AUTH, i++, pOwnerAuth, 0, &hte->comm)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, idKeySize, 0, &hte->comm)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*idKey = (BYTE *) malloc(*idKeySize);
+		if (*idKey == NULL) {
+			LogError("malloc of %u bytes failed.", *idKeySize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *idKey, *idKeySize, &hte->comm)) {
+			free(*idKey);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcIdentityBindingSize, 0, &hte->comm)) {
+			free(*idKey);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		*prgbIdentityBinding = (BYTE *) malloc(*pcIdentityBindingSize);
+		if (*prgbIdentityBinding == NULL) {
+			LogError("malloc of %u bytes failed.", *pcIdentityBindingSize);
+			free(*idKey);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbIdentityBinding,
+			    *pcIdentityBindingSize, &hte->comm)) {
+			free(*idKey);
+			free(*prgbIdentityBinding);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+	}
+
+done:
+	return result;
+}
+
