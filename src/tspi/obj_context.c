@@ -644,7 +644,6 @@ obj_context_transport_init(TSS_HCONTEXT tspContext)
 
 	/* return immediately if we're not in a transport session */
 	if (!(context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_ENABLED)) {
-		//result = TSS_TSPATTRIB_DISABLE_TRANSPORT;
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
@@ -655,7 +654,8 @@ obj_context_transport_init(TSS_HCONTEXT tspContext)
 			goto done;
 	}
 
-	//result = TSS_TSPATTRIB_ENABLE_TRANSPORT;
+	context->flags |= TSS_CONTEXT_FLAGS_TRANSPORT_ESTABLISHED;
+
 	result = TSS_SUCCESS;
 done:
 	obj_list_put(&context_list);
@@ -892,6 +892,7 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 
 	switch (ordinal) {
 		case TPM_ORD_OSAP:
+		case TPM_ORD_OIAP:
 			break;
 		default:
 			result |= Trspi_HashUpdate(&hashCtx, ulDataLen, rgbData);
@@ -1006,7 +1007,16 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, tpmResult);
 	result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
-	result |= Trspi_HashUpdate(&hashCtx, *outLen, *out);
+
+	switch (ordinal) {
+		case TPM_ORD_OSAP:
+		case TPM_ORD_OIAP:
+			break;
+		default:
+			result |= Trspi_HashUpdate(&hashCtx, *outLen, *out);
+			break;
+	}
+
 	if ((result |= Trspi_HashFinal(&hashCtx, wDigest.digest)))
 		goto done;
 
@@ -1104,10 +1114,10 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 	/* continue the auth session established in obj_context_transport_establish */
 	HMAC_Auth(context->transSecret.authData.authdata, digest.digest, &context->transAuth);
 
-	if ((result = RPC_ReleaseTransportSigned(tspContext, tcsKey, &signInfo->replay,
-							     pAuth, &context->transAuth,
-							     &context->transLogOut.locality,
-							     &tickLen, &ticks, sigLen, sig)))
+	if ((result = RPC_ReleaseTransportSigned(tspContext, tcsKey, &signInfo->replay, pAuth,
+						 &context->transAuth,
+						 &context->transLogOut.locality, &tickLen, &ticks,
+						 sigLen, sig)))
 		goto done;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -1118,19 +1128,19 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 	result |= Trspi_Hash_UINT32(&hashCtx, *sigLen);
 	result |= Trspi_HashUpdate(&hashCtx, *sigLen, *sig);
 	if ((result |= Trspi_HashFinal(&hashCtx, (BYTE *)&digest)))
-		goto done;
+		goto done_disabled;
 
 	/* validate the return data using the key's auth */
 	if (pAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, pAuth)))
-			goto done;
+			goto done_disabled;
 	}
 
 	/* validate again using the transport session's auth */
 	if ((result = validateReturnAuth(context->transSecret.authData.authdata, digest.digest,
 					 &context->transAuth))) {
 		result = TSPERR(TSS_E_TSP_AUTHFAIL);
-		goto done;
+		goto done_disabled;
 	}
 
 	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
@@ -1141,7 +1151,7 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ReleaseTransportSigned);
 		result |= Trspi_Hash_NONCE(&hashCtx, signInfo->replay.nonce);
 		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogOut.parameters.digest)))
-			goto done;
+			goto done_disabled;
 
 		/* TPM Commands Spec step 6.c */
 		offset = 0;
@@ -1154,13 +1164,13 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 		result |= Trspi_Hash_DIGEST(&hashCtx, context->transLogDigest.digest);
 		result |= Trspi_Hash_TRANSPORT_LOG_OUT(&hashCtx, &context->transLogOut);
 		if ((result |= Trspi_HashFinal(&hashCtx, context->transLogDigest.digest)))
-			goto done;
+			goto done_disabled;
 	}
 
 	if ((signInfo->data = malloc(sizeof(TPM_DIGEST))) == NULL) {
 		LogError("malloc %zd bytes failed.", sizeof(TPM_DIGEST));
 		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
+		goto done_disabled;
 	}
 	memcpy(signInfo->data, context->transLogDigest.digest, sizeof(TPM_DIGEST));
 	signInfo->dataLen = sizeof(TPM_DIGEST);
@@ -1174,6 +1184,8 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 	memset(&context->transLogOut, 0, sizeof(TPM_TRANSPORT_LOG_OUT));
 	memset(&context->transLogDigest, 0, sizeof(TPM_DIGEST));
 
+done_disabled:
+	context->flags &= ~TSS_CONTEXT_FLAGS_TRANSPORT_ESTABLISHED;
 done:
 	obj_list_put(&context_list);
 
