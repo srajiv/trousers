@@ -58,15 +58,15 @@ do_delegate_manage(TSS_HTPM hTpm, UINT32 familyID, UINT32 opFlag,
 			return result;
 
 		pAuth = &ownerAuth;
-		if ((result = secret_PerformAuth_OIAP(hTpm, TPM_ORD_Delegate_Manage,
-				hPolicy, FALSE, &digest, pAuth)))
+		if ((result = secret_PerformAuth_OIAP(hTpm, TPM_ORD_Delegate_Manage, hPolicy, FALSE,
+						      &digest, pAuth)))
 			return result;
 	} else
 		pAuth = NULL;
 
 	/* Perform the delegation operation */
-	if ((result = TCSP_Delegate_Manage(hContext, familyID, opFlag,
-			opDataSize, opData, pAuth, &retDataSize, &retData))) 
+	if ((result = RPC_Delegate_Manage(hContext, familyID, opFlag, opDataSize, opData, pAuth,
+					  &retDataSize, &retData)))
 		return result;
 
 	if (pAuth) {
@@ -148,9 +148,10 @@ create_owner_delegation(TSS_HTPM       hTpm,
 
 	if (secretMode != TSS_SECRET_MODE_NONE) {
 		pAuth = &ownerAuth;
-		if ((result = secret_PerformXOR_OSAP(hPolicy, hDelegation, NULL_HPOLICY, TPM_KH_OWNER,
-						     TCPA_ET_OWNER, TPM_KH_OWNER, &encAuthUsage,
-						     &encAuthMig, sharedSecret, pAuth, &nonceEvenOSAP)))
+		if ((result = secret_PerformXOR_OSAP(hPolicy, hDelegation, NULL_HPOLICY,
+						     TPM_KH_OWNER, TCPA_ET_OWNER, TPM_KH_OWNER,
+						     &encAuthUsage, &encAuthMig, sharedSecret,
+						     pAuth, &nonceEvenOSAP)))
 			goto done;
 		nonceOddOSAP = pAuth->NonceOdd;
 
@@ -162,16 +163,17 @@ create_owner_delegation(TSS_HTPM       hTpm,
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			goto done;
 
-		if ((result = secret_PerformAuth_OSAP(hTpm,
-				TPM_ORD_Delegate_CreateOwnerDelegation, hPolicy, hPolicy,
-				NULL_HPOLICY, sharedSecret, pAuth, digest.digest, &nonceEvenOSAP)))
+		if ((result = secret_PerformAuth_OSAP(hTpm, TPM_ORD_Delegate_CreateOwnerDelegation,
+						      hPolicy, hPolicy, NULL_HPOLICY, sharedSecret,
+						      pAuth, digest.digest, &nonceEvenOSAP)))
 			goto done;
 	} else
 		pAuth = NULL;
 
 	/* Create the delegation */
-	if ((result = TCSP_Delegate_CreateOwnerDelegation(hContext, incrementCount, publicInfoSize,
-			publicInfo, encAuthUsage, pAuth, &blobSize, &blob)))
+	if ((result = RPC_Delegate_CreateOwnerDelegation(hContext, incrementCount, publicInfoSize,
+							 publicInfo, encAuthUsage, pAuth, &blobSize,
+							 &blob)))
 		return result;
 
 	if (pAuth) {
@@ -276,8 +278,9 @@ create_key_delegation(TSS_HKEY       hKey,
 		pAuth = NULL;
 
 	/* Create the delegation */
-	if ((result = TCSP_Delegate_CreateKeyDelegation(hContext, tcsKeyHandle, publicInfoSize,
-			publicInfo, encAuthUsage, pAuth, &blobSize, &blob)))
+	if ((result = RPC_Delegate_CreateKeyDelegation(hContext, tcsKeyHandle, publicInfoSize,
+						       publicInfo, encAuthUsage, pAuth, &blobSize,
+						       &blob)))
 		return result;
 
 	if (pAuth) {
@@ -289,10 +292,9 @@ create_key_delegation(TSS_HKEY       hKey,
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			goto done;
 
-		if ((result = secret_ValidateAuth_OSAP(hKey,
-				TPM_ORD_Delegate_CreateKeyDelegation, hPolicy, hPolicy,
-				NULL_HPOLICY, sharedSecret, pAuth, digest.digest,
-				&nonceEvenOSAP)))
+		if ((result = secret_ValidateAuth_OSAP(hKey, TPM_ORD_Delegate_CreateKeyDelegation,
+						       hPolicy, hPolicy, NULL_HPOLICY, sharedSecret,
+						       pAuth, digest.digest, &nonceEvenOSAP)))
 			goto done;
 	}
 
@@ -320,8 +322,8 @@ update_delfamily_object(TSS_HTPM hTpm, UINT32 familyID)
 	if ((result = obj_tpm_get_tsp_context(hTpm, &hContext)))
 		return result;
 
-	if ((result = TCSP_Delegate_ReadTable(hContext, &familyTableSize, &familyTable,
-			&delegateTableSize, &delegateTable)))
+	if ((result = RPC_Delegate_ReadTable(hContext, &familyTableSize, &familyTable,
+					     &delegateTableSize, &delegateTable)))
 		return result;
 
 	for (offset = 0; offset < familyTableSize;) {
@@ -331,20 +333,24 @@ update_delfamily_object(TSS_HTPM hTpm, UINT32 familyID)
 			if (hFamily == NULL_HDELFAMILY) {
 				if ((result = obj_delfamily_add(hContext, &hFamily)))
 					goto done;
-				if ((result = obj_delfamily_set_familyid(hFamily, familyTableEntry.familyID)))
+				if ((result = obj_delfamily_set_familyid(hFamily,
+									 familyTableEntry.familyID)))
 					goto done;
-				if ((result = obj_delfamily_set_label(hFamily, familyTableEntry.label.label)))
+				if ((result = obj_delfamily_set_label(hFamily,
+								      familyTableEntry.label.label)))
 					goto done;
 			}
 
 			/* Set/Update the family attributes */
-			familyState = (familyTableEntry.flags & TPM_FAMFLAG_DELEGATE_ADMIN_LOCK) ? TRUE : FALSE;
+			familyState = (familyTableEntry.flags & TPM_FAMFLAG_DELEGATE_ADMIN_LOCK) ?
+				      TRUE : FALSE;
 			if ((result = obj_delfamily_set_locked(hFamily, familyState, FALSE)))
 				goto done;
 			familyState = (familyTableEntry.flags & TPM_FAMFLAG_ENABLE) ? TRUE : FALSE;
 			if ((result = obj_delfamily_set_enabled(hFamily, familyState, FALSE)))
 				goto done;
-			if ((result = obj_delfamily_set_vercount(hFamily, familyTableEntry.verificationCount)))
+			if ((result = obj_delfamily_set_vercount(hFamily,
+								 familyTableEntry.verificationCount)))
 				goto done;
 
 			break;
@@ -368,8 +374,8 @@ get_delegate_index(TSS_HCONTEXT hContext, UINT32 index, TPM_DELEGATE_PUBLIC *pub
 	TPM_DELEGATE_PUBLIC tempPublic;
 	TSS_RESULT result;
 
-	if ((result = TCSP_Delegate_ReadTable(hContext, &familyTableSize, &familyTable,
-			&delegateTableSize, &delegateTable)))
+	if ((result = RPC_Delegate_ReadTable(hContext, &familyTableSize, &familyTable,
+					     &delegateTableSize, &delegateTable)))
 		goto done;
 
 	for (offset = 0; offset < delegateTableSize;) {
