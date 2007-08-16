@@ -253,3 +253,36 @@ obj_lists_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	obj_tpm_remove_policy_refs(hPolicy, tspContext);
 }
 
+/* search all key lists (right now only RSA keys exist) looking for a TCS key handle, when
+ * found, return the hash of its TPM_STORE_PUBKEY structure */
+TSS_RESULT
+obj_tcskey_get_pubkeyhash(TCS_KEY_HANDLE hKey, BYTE *pubKeyHash)
+{
+	struct tsp_object *obj;
+	struct obj_list *list = &rsakey_list;
+	struct tr_rsakey_obj *rsakey = NULL;
+	TSS_RESULT result = TSS_SUCCESS;
+	Trspi_HashCtx hashCtx;
+
+	MUTEX_LOCK(list->lock);
+
+	for (obj = list->head; obj; obj = obj->next) {
+		rsakey = (struct tr_rsakey_obj *)obj->data;
+		if (rsakey->tcsHandle == hKey)
+			break;
+	}
+
+	if (obj == NULL || rsakey == NULL) {
+		MUTEX_UNLOCK(list->lock);
+		return TSPERR(TSS_E_KEY_NOT_LOADED);
+	}
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_STORE_PUBKEY(&hashCtx, &rsakey->key.pubKey);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash)))
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_UNLOCK(list->lock);
+
+	return result;
+}
