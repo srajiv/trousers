@@ -30,7 +30,7 @@ Trspi_UnloadBlob_MigrationKeyAuth(UINT64 *offset, BYTE *blob, TCPA_MIGRATIONKEYA
 		return result;
 
 	Trspi_UnloadBlob_UINT16(offset, &migAuth->migrationScheme, blob);
-	Trspi_UnloadBlob_DIGEST(offset, blob, migAuth->digest);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &migAuth->digest);
 
 	return TSS_SUCCESS;
 }

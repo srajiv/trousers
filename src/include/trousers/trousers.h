@@ -42,7 +42,7 @@ void       Trspi_UnloadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS
 TSS_RESULT Trspi_UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms);
 void       Trspi_UnloadBlob_UUID(UINT64 *offset, BYTE *blob, TSS_UUID *uuid);
 TSS_RESULT Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
-void       Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest);
+void       Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest);
 TSS_RESULT Trspi_UnloadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey);
 TSS_RESULT Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key);
 TSS_RESULT Trspi_UnloadBlob_MigrationKeyAuth(UINT64 *offset, BYTE *blob, TCPA_MIGRATIONKEYAUTH *migAuth);
@@ -57,6 +57,8 @@ TSS_RESULT Trspi_UnloadBlob_IDENTITY_PROOF(UINT64 *offset, BYTE *blob, TCPA_IDEN
 void	   Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr);
 void	   Trspi_UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *blob, TPM_CURRENT_TICKS *ticks);
 void	   Trspi_UnloadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t);
+void       Trspi_UnloadBlob_NONCE(UINT64 *offset, BYTE* blob, TPM_NONCE *n);
+TSS_RESULT Trspi_UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE* blob, TPM_CERTIFY_INFO *c);
 void       Trspi_UnloadBlob_TPM_FAMILY_LABEL(UINT64 *offset, BYTE *blob, TPM_FAMILY_LABEL *label);
 void       Trspi_UnloadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_TABLE_ENTRY *entry);
 void       Trspi_UnloadBlob_TPM_DELEGATE_LABEL(UINT64 *offset, BYTE *blob, TPM_DELEGATE_LABEL *label);
@@ -67,7 +69,6 @@ TSS_RESULT Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TP
 void       Trspi_UnloadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TABLE_ENTRY *entry);
 TSS_RESULT Trspi_UnloadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT *pcr);
 TSS_RESULT Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry);
-
 
 /* Blob loading functions */
 void Trspi_LoadBlob_BOUND_DATA(UINT64 *, TCPA_BOUND_DATA, UINT32, BYTE *);
@@ -103,7 +104,8 @@ void Trspi_LoadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE 
 void Trspi_LoadBlob_TRANSPORT_PUBLIC(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_PUBLIC *t);
 void Trspi_LoadBlob_TRANSPORT_AUTH(UINT64 *offset, BYTE *blob, TPM_TRANSPORT_AUTH *t);
 void Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s);
-void Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest);
+void Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest);
+void Trspi_LoadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *n);
 void Trspi_LoadBlob_TPM_FAMILY_LABEL(UINT64 *offset, BYTE *blob, TPM_FAMILY_LABEL *label);
 void Trspi_LoadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_TABLE_ENTRY *entry);
 void Trspi_LoadBlob_TPM_DELEGATE_LABEL(UINT64 *offset, BYTE *blob, TPM_DELEGATE_LABEL *label);

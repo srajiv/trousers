@@ -31,15 +31,37 @@
 
 
 void
-Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest)
+Trspi_UnloadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *n)
 {
-	Trspi_LoadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
+	if (!n) {
+		offset += TPM_SHA1_160_HASH_LEN;
+		return;
+	}
+
+	Trspi_UnloadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, n->nonce);
 }
 
 void
-Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TCPA_DIGEST digest)
+Trspi_LoadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *n)
 {
-	Trspi_UnloadBlob(offset, TCPA_SHA1_160_HASH_LEN, blob, digest.digest);
+	Trspi_LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, n->nonce);
+}
+
+void
+Trspi_LoadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest)
+{
+	Trspi_LoadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, digest->digest);
+}
+
+void
+Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest)
+{
+	if (!digest) {
+		offset += TPM_SHA1_160_HASH_LEN;
+		return;
+	}
+
+	Trspi_UnloadBlob(offset, TPM_SHA1_160_HASH_LEN, blob, digest->digest);
 }
 
 void
@@ -99,7 +121,8 @@ Trspi_LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE *blob)
 void
 Trspi_UnloadBlob_BYTE(UINT64 *offset, BYTE *dataOut, BYTE *blob)
 {
-	*dataOut = blob[*offset];
+	if (dataOut)
+		*dataOut = blob[*offset];
 	(*offset)++;
 }
 
@@ -114,7 +137,8 @@ Trspi_LoadBlob_BOOL(UINT64 *offset, TSS_BOOL data, BYTE *blob)
 void
 Trspi_UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE *blob)
 {
-	*dataOut = blob[*offset];
+	if (dataOut)
+		*dataOut = blob[*offset];
 	(*offset)++;
 }
 
@@ -152,14 +176,16 @@ Trspi_UnloadBlob_UINT64(UINT64 *offset, UINT64 *out, BYTE *blob)
 void
 Trspi_UnloadBlob_UINT32(UINT64 *offset, UINT32 *out, BYTE *blob)
 {
-	*out = Decode_UINT32(&blob[*offset]);
+	if (out)
+		*out = Decode_UINT32(&blob[*offset]);
 	*offset += sizeof(UINT32);
 }
 
 void
 Trspi_UnloadBlob_UINT16(UINT64 *offset, UINT16 *out, BYTE *blob)
 {
-	*out = Decode_UINT16(&blob[*offset]);
+	if (out)
+		*out = Decode_UINT16(&blob[*offset]);
 	*offset += sizeof(UINT16);
 }
 
@@ -217,8 +243,8 @@ Trspi_UnloadBlob_PCR_INFO(UINT64 *offset, BYTE *blob, TCPA_PCR_INFO *pcr)
 
 	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
 		return result;
-	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
-	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &pcr->digestAtCreation);
 
 	return TSS_SUCCESS;
 }
@@ -227,8 +253,8 @@ void
 Trspi_LoadBlob_PCR_INFO(UINT64 *offset, BYTE *blob, TCPA_PCR_INFO *pcr)
 {
 	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection);
-	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
-	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
+	Trspi_LoadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
+	Trspi_LoadBlob_DIGEST(offset, blob, &pcr->digestAtCreation);
 }
 
 TSS_RESULT
@@ -243,8 +269,8 @@ Trspi_UnloadBlob_PCR_INFO_LONG(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_LONG *pc
 		return result;
 	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->releasePCRSelection)))
 		return result;
-	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
-	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &pcr->digestAtCreation);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
 
 	return TSS_SUCCESS;
 }
@@ -257,8 +283,8 @@ Trspi_LoadBlob_PCR_INFO_LONG(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_LONG *pcr)
 	Trspi_LoadBlob_BYTE(offset, pcr->localityAtRelease, blob);
 	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->creationPCRSelection);
 	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->releasePCRSelection);
-	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtCreation);
-	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_LoadBlob_DIGEST(offset, blob, &pcr->digestAtCreation);
+	Trspi_LoadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
 }
 
 TSS_RESULT
@@ -269,7 +295,7 @@ Trspi_UnloadBlob_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_SHORT *
 	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection)))
 		return result;
 	Trspi_UnloadBlob_BYTE(offset, &pcr->localityAtRelease, blob);
-	Trspi_UnloadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
 
 	return TSS_SUCCESS;
 }
@@ -279,7 +305,7 @@ Trspi_LoadBlob_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TPM_PCR_INFO_SHORT *pc
 {
 	Trspi_LoadBlob_PCR_SELECTION(offset, blob, &pcr->pcrSelection);
 	Trspi_LoadBlob_BYTE(offset, pcr->localityAtRelease, blob);
-	Trspi_LoadBlob_DIGEST(offset, blob, pcr->digestAtRelease);
+	Trspi_LoadBlob_DIGEST(offset, blob, &pcr->digestAtRelease);
 }
 
 TSS_RESULT
@@ -405,6 +431,19 @@ Trspi_UnloadBlob_UUID(UINT64 *offset, BYTE *blob, TSS_UUID *uuid)
 TSS_RESULT
 Trspi_UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 {
+	if (!keyParms) {
+		UINT32 parmSize;
+
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, &parmSize, blob);
+
+		offset += parmSize;
+
+		return TSS_SUCCESS;
+	}
+
 	Trspi_UnloadBlob_UINT32(offset, &keyParms->algorithmID, blob);
 	Trspi_UnloadBlob_UINT16(offset, &keyParms->encScheme, blob);
 	Trspi_UnloadBlob_UINT16(offset, &keyParms->sigScheme, blob);
@@ -413,7 +452,7 @@ Trspi_UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 	if (keyParms->parmSize > 0) {
 		keyParms->parms = malloc(keyParms->parmSize);
 		if (keyParms->parms == NULL) {
-			LogError("malloc of %d bytes failed.", keyParms->parmSize);
+			LogError("malloc of %u bytes failed.", keyParms->parmSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		Trspi_UnloadBlob(offset, keyParms->parmSize, blob, keyParms->parms);
@@ -1740,6 +1779,44 @@ Trspi_LoadBlob_SIGN_INFO(UINT64 *offset, BYTE *blob, TPM_SIGN_INFO *s)
 	Trspi_LoadBlob(offset, s->dataLen, blob, s->data);
 }
 
+TSS_RESULT
+Trspi_UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TPM_CERTIFY_INFO *c)
+{
+	TSS_RESULT result;
+
+	if (!c) {
+		UINT32 pcrInfoSize;
+
+		Trspi_UnloadBlob_VERSION(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_KEY_PARMS(offset, blob, NULL);
+		Trspi_UnloadBlob_DIGEST(offset, blob, NULL);
+		Trspi_UnloadBlob_NONCE(offset, blob, NULL);
+		Trspi_UnloadBlob_BOOL(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, &pcrInfoSize, blob);
+
+		offset += pcrInfoSize;
+
+		return TSS_SUCCESS;
+	}
+
+	Trspi_UnloadBlob_VERSION(offset, blob, &c->version);
+	Trspi_UnloadBlob_UINT16(offset, &c->keyUsage, blob);
+	Trspi_UnloadBlob_UINT32(offset, &c->keyFlags, blob);
+	Trspi_UnloadBlob_BYTE(offset, &c->authDataUsage, blob);
+	if ((result = Trspi_UnloadBlob_KEY_PARMS(offset, blob, &c->algorithmParms)))
+		return result;
+	Trspi_UnloadBlob_DIGEST(offset, blob, &c->pubkeyDigest);
+	Trspi_UnloadBlob_NONCE(offset, blob, &c->data);
+	Trspi_UnloadBlob_BOOL(offset, &c->parentPCRStatus, blob);
+	Trspi_UnloadBlob_UINT32(offset, &c->PCRInfoSize, blob);
+	Trspi_UnloadBlob(offset, c->PCRInfoSize, blob, c->PCRInfo);
+
+	return TSS_SUCCESS;
+}
+
 void
 Trspi_UnloadBlob_TPM_FAMILY_LABEL(UINT64 *offset, BYTE *blob, TPM_FAMILY_LABEL *label)
 {
@@ -1757,9 +1834,9 @@ Trspi_UnloadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_T
 {
 	Trspi_UnloadBlob_UINT16(offset, &entry->tag, blob);
 	Trspi_UnloadBlob_TPM_FAMILY_LABEL(offset, blob, &entry->label);
-	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob); 
-	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
-	Trspi_UnloadBlob_UINT32(offset, &entry->flags, blob); 
+	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob);
+	Trspi_UnloadBlob_UINT32(offset, &entry->flags, blob);
 }
 
 void
@@ -1767,9 +1844,9 @@ Trspi_LoadBlob_TPM_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TPM_FAMILY_TAB
 {
 	Trspi_LoadBlob_UINT16(offset, entry->tag, blob);
 	Trspi_LoadBlob_TPM_FAMILY_LABEL(offset, blob, &entry->label);
-	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob); 
-	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
-	Trspi_LoadBlob_UINT32(offset, entry->flags, blob); 
+	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob);
+	Trspi_LoadBlob_UINT32(offset, entry->flags, blob);
 }
 
 void
@@ -1814,7 +1891,7 @@ Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(UINT64 *offset, BYTE *blob, TPM_DELEGATE_PU
 	Trspi_UnloadBlob_TPM_DELEGATIONS(offset, blob, &pub->permissions);
 	Trspi_UnloadBlob_UINT32(offset, &pub->familyID, blob);
 	Trspi_UnloadBlob_UINT32(offset, &pub->verificationCount, blob);
-	
+
 	return TSS_SUCCESS;
 }
 
@@ -1837,7 +1914,7 @@ Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGAT
 	Trspi_UnloadBlob_UINT16(offset, &owner->tag, blob);
 	if ((result = Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &owner->pub)))
 		return result;
-	Trspi_UnloadBlob_DIGEST(offset, blob, owner->integrityDigest);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &owner->integrityDigest);
 	Trspi_UnloadBlob_UINT32(offset, &owner->additionalSize, blob);
 	if (owner->additionalSize > 0) {
 		owner->additionalArea = malloc(owner->additionalSize);
@@ -1868,7 +1945,7 @@ Trspi_LoadBlob_TPM_DELEGATE_OWNER_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_
 {
 	Trspi_LoadBlob_UINT16(offset, owner->tag, blob);
 	Trspi_LoadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &owner->pub);
-	Trspi_LoadBlob_DIGEST(offset, blob, owner->integrityDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, &owner->integrityDigest);
 	Trspi_LoadBlob_UINT32(offset, owner->additionalSize, blob);
 	Trspi_LoadBlob(offset, owner->additionalSize, blob, owner->additionalArea);
 	Trspi_LoadBlob_UINT32(offset, owner->sensitiveSize, blob);
@@ -1883,8 +1960,8 @@ Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_
 	Trspi_UnloadBlob_UINT16(offset, &key->tag, blob);
 	if ((result = Trspi_UnloadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &key->pub)))
 		return result;
-	Trspi_UnloadBlob_DIGEST(offset, blob, key->integrityDigest);
-	Trspi_UnloadBlob_DIGEST(offset, blob, key->pubKeyDigest);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &key->integrityDigest);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &key->pubKeyDigest);
 	Trspi_UnloadBlob_UINT32(offset, &key->additionalSize, blob);
 	if (key->additionalSize > 0) {
 		key->additionalArea = malloc(key->additionalSize);
@@ -1915,8 +1992,8 @@ Trspi_LoadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_KE
 {
 	Trspi_LoadBlob_UINT16(offset, key->tag, blob);
 	Trspi_LoadBlob_TPM_DELEGATE_PUBLIC(offset, blob, &key->pub);
-	Trspi_LoadBlob_DIGEST(offset, blob, key->integrityDigest);
-	Trspi_LoadBlob_DIGEST(offset, blob, key->pubKeyDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, &key->integrityDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, &key->pubKeyDigest);
 	Trspi_LoadBlob_UINT32(offset, key->additionalSize, blob);
 	Trspi_LoadBlob(offset, key->additionalSize, blob, key->additionalArea);
 	Trspi_LoadBlob_UINT32(offset, key->sensitiveSize, blob);
@@ -1928,9 +2005,9 @@ Trspi_UnloadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_T
 {
 	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob);
 	Trspi_UnloadBlob_BYTE(offset, &entry->label, blob);
-	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
-	Trspi_UnloadBlob_BOOL(offset, &entry->enabled, blob); 
-	Trspi_UnloadBlob_BOOL(offset, &entry->locked, blob); 
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob);
+	Trspi_UnloadBlob_BOOL(offset, &entry->enabled, blob);
+	Trspi_UnloadBlob_BOOL(offset, &entry->locked, blob);
 }
 
 void
@@ -1938,9 +2015,9 @@ Trspi_LoadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TAB
 {
 	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob);
 	Trspi_LoadBlob_BYTE(offset, entry->label, blob);
-	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
-	Trspi_LoadBlob_BOOL(offset, entry->enabled, blob); 
-	Trspi_LoadBlob_BOOL(offset, entry->locked, blob); 
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob);
+	Trspi_LoadBlob_BOOL(offset, entry->enabled, blob);
+	Trspi_LoadBlob_BOOL(offset, entry->locked, blob);
 }
 
 TSS_RESULT
@@ -1985,7 +2062,8 @@ Trspi_LoadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT
 }
 
 TSS_RESULT
-Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry)
+Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob,
+					    TSS_DELEGATION_TABLE_ENTRY *entry)
 {
 	TSS_RESULT result;
 
@@ -1996,13 +2074,14 @@ Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELE
 	Trspi_UnloadBlob_UINT32(offset, &entry->per1, blob);
 	Trspi_UnloadBlob_UINT32(offset, &entry->per2, blob);
 	Trspi_UnloadBlob_UINT32(offset, &entry->familyID, blob);
-	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob); 
+	Trspi_UnloadBlob_UINT32(offset, &entry->verificationCount, blob);
 
 	return TSS_SUCCESS;
 }
 
 void
-Trspi_LoadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry)
+Trspi_LoadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob,
+					  TSS_DELEGATION_TABLE_ENTRY *entry)
 {
 	Trspi_LoadBlob_UINT32(offset, entry->tableIndex, blob);
 	Trspi_LoadBlob_BYTE(offset, entry->label, blob);
@@ -2010,6 +2089,5 @@ Trspi_LoadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGA
 	Trspi_LoadBlob_UINT32(offset, entry->per1, blob);
 	Trspi_LoadBlob_UINT32(offset, entry->per2, blob);
 	Trspi_LoadBlob_UINT32(offset, entry->familyID, blob);
-	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob); 
+	Trspi_LoadBlob_UINT32(offset, entry->verificationCount, blob);
 }
-
