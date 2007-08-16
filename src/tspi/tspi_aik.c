@@ -212,12 +212,17 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					      &nonceEvenOSAP)))
 		return result;
 
-	if ((result = TCSP_MakeIdentity(tspContext, encAuthUsage, chosenIDHash, idKeySize, idKey,
-					pSrkAuth, &ownerAuth, &idKeySize, &newIdKey,
-					&pcIdentityBindingSize, &prgbIdentityBinding,
-					&pcEndorsementCredentialSize, &prgbEndorsementCredential,
-					&pcPlatformCredentialSize, &prgbPlatformCredential,
-					&pcConformanceCredentialSize, &prgbConformanceCredential)))
+	if ((result = TCS_API(tspContext)->MakeIdentity(tspContext, encAuthUsage, chosenIDHash,
+							idKeySize, idKey, pSrkAuth, &ownerAuth,
+							&idKeySize, &newIdKey,
+							&pcIdentityBindingSize,
+							&prgbIdentityBinding,
+							&pcEndorsementCredentialSize,
+							&prgbEndorsementCredential,
+							&pcPlatformCredentialSize,
+							&prgbPlatformCredential,
+							&pcConformanceCredentialSize,
+							&prgbConformanceCredential)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -449,9 +454,11 @@ Tspi_TPM_ActivateIdentity(TSS_HTPM hTPM,			/* in */
 					      &digest, &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_ActivateTPMIdentity(tspContext, tcsKeyHandle, ulAsymCAContentsBlobLength,
-					       rgbAsymCAContentsBlob, pIDKeyAuth, &ownerAuth,
-					       &symKeyBlobLen, &symKeyBlob)))
+	if ((result = TCS_API(tspContext)->ActivateTPMIdentity(tspContext, tcsKeyHandle,
+							       ulAsymCAContentsBlobLength,
+							       rgbAsymCAContentsBlob, pIDKeyAuth,
+							       &ownerAuth, &symKeyBlobLen,
+							       &symKeyBlob)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

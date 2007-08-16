@@ -60,9 +60,11 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 					      FALSE, &digest, &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_CreateMaintenanceArchive(tspContext, fGenerateRndNumber, &ownerAuth,
-						    pulRndNumberLength, prgbRndNumber,
-						    pulArchiveDataLength, prgbArchiveData)))
+	if ((result = TCS_API(tspContext)->CreateMaintenanceArchive(tspContext, fGenerateRndNumber,
+								    &ownerAuth, pulRndNumberLength,
+								    prgbRndNumber,
+								    pulArchiveDataLength,
+								    prgbArchiveData)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -106,7 +108,7 @@ Tspi_TPM_KillMaintenanceFeature(TSS_HTPM hTPM)	/*  in */
 					      FALSE, &digest, &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_KillMaintenanceFeature(tspContext, &ownerAuth)))
+	if ((result = TCS_API(tspContext)->KillMaintenanceFeature(tspContext, &ownerAuth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -151,7 +153,8 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_rsakey_get_pub_blob(hMaintenanceKey, &pubBlobSize, &pubBlob)))
 		return result;
 
-	if ((result = TCSP_LoadManuMaintPub(tspContext, nonce, pubBlobSize, pubBlob, &checkSum)))
+	if ((result = TCS_API(tspContext)->LoadManuMaintPub(tspContext, nonce, pubBlobSize, pubBlob,
+							    &checkSum)))
 		return result;
 
 	offset = 0;
@@ -172,7 +175,7 @@ Tspi_TPM_LoadMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		memcpy(pValidationData->rgbData, hashBlob, offset);
 
 		if ((pValidationData->rgbValidationData = calloc_tspi(tspContext,
-								      TCPA_SHA1_160_HASH_LEN))
+								      TPM_SHA1_160_HASH_LEN))
 		     == NULL) {
 			free_tspi(tspContext, pValidationData->rgbData);
 			pValidationData->rgbData = NULL;
@@ -217,7 +220,7 @@ Tspi_TPM_CheckMaintenancePubKey(TSS_HTPM hTPM,				/* in */
 		memcpy(&nonce.nonce, pValidationData->rgbExternalData, sizeof(nonce.nonce));
 	}
 
-	if ((result = TCSP_ReadManuMaintPub(tspContext, nonce, &checkSum)))
+	if ((result = TCS_API(tspContext)->ReadManuMaintPub(tspContext, nonce, &checkSum)))
 		return result;
 
 	if (pValidationData == NULL) {

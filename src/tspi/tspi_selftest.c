@@ -31,7 +31,7 @@ Tspi_TPM_SelfTestFull(TSS_HTPM hTPM)	/*  in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	return TCSP_SelfTestFull(tspContext);
+	return TCS_API(tspContext)->SelfTestFull(tspContext);
 }
 
 TSS_RESULT
@@ -99,8 +99,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		pKeyAuth = NULL;
 	}
 
-	if ((result = TCSP_CertifySelfTest(tspContext, keyTCSKeyHandle, antiReplay, pKeyAuth,
-					   &outDataSize, &outData)))
+	if ((result = TCS_API(tspContext)->CertifySelfTest(tspContext, keyTCSKeyHandle, antiReplay,
+							   pKeyAuth, &outDataSize, &outData)))
 		return result;
 
 	/* validate auth */
@@ -191,6 +191,6 @@ Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	return TCSP_GetTestResult(tspContext, pulTestResultLength, prgbTestResult);
+	return TCS_API(tspContext)->GetTestResult(tspContext, pulTestResultLength, prgbTestResult);
 }
 

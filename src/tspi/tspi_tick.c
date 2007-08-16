@@ -82,9 +82,10 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 	} else
 		pAuth = NULL;
 
-	if ((result = TCSP_TickStampBlob(tspContext, tcsKey,
-					 (TPM_NONCE *)pValidationData->rgbExternalData,
-					 (TPM_DIGEST *)hash, pAuth, &sigLen, &sig, &tcLen, &tc))) {
+	if ((result = TCS_API(tspContext)->TickStampBlob(tspContext, tcsKey,
+						(TPM_NONCE *)pValidationData->rgbExternalData,
+						(TPM_DIGEST *)hash, pAuth, &sigLen, &sig, &tcLen,
+						&tc))) {
 		free_tspi(tspContext, hash);
 		return result;
 	}
@@ -155,7 +156,7 @@ Tspi_TPM_ReadCurrentTicks(TSS_HTPM           hTPM,	/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCSP_ReadCurrentTicks(tspContext, &tcLen, &tc)))
+	if ((result = TCS_API(tspContext)->ReadCurrentTicks(tspContext, &tcLen, &tc)))
 		return result;
 
 	offset = 0;

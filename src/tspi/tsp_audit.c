@@ -67,7 +67,8 @@ audit_set_ordinal_audit_status(TSS_HTPM hTpm,
 					      hPolicy, FALSE, &digest, &ownerAuth)))
 		return result;
 
-	if ((result = TCSP_SetOrdinalAuditStatus(tspContext, &ownerAuth, ulOrdinal, bAuditState)))
+	if ((result = TCS_API(tspContext)->SetOrdinalAuditStatus(tspContext, &ownerAuth, ulOrdinal,
+								 bAuditState)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

@@ -93,8 +93,8 @@ Tspi_TPM_Delegate_InvalidateFamily(TSS_HTPM       hTpm,		/* in, must not be NULL
 	if ((result = obj_delfamily_get_familyid(hFamily, &familyID)))
 		return result;
 
-	if ((result = do_delegate_manage(hTpm, familyID, TPM_FAMILY_INVALIDATE,
-			0, NULL, &outDataSize, &outData)))
+	if ((result = do_delegate_manage(hTpm, familyID, TPM_FAMILY_INVALIDATE,	0, NULL,
+					 &outDataSize, &outData)))
 		return result;
 
 	/* Delete the delfamily object */
@@ -193,7 +193,7 @@ Tspi_TPM_Delegate_CacheOwnerDelegation(TSS_HTPM    hTpm,	/* in */
 	} else
 		pAuth = NULL;
 
-	if ((result = TCSP_Delegate_LoadOwnerDelegation(hContext, ulIndex, blobSize, blob, pAuth)))
+	if ((result = RPC_Delegate_LoadOwnerDelegation(hContext, ulIndex, blobSize, blob, pAuth)))
 		goto done;
 
 	if (pAuth) {
@@ -280,8 +280,8 @@ Tspi_TPM_Delegate_UpdateVerificationCount(TSS_HTPM    hTpm,		/* in */
 	} else
 		pAuth = NULL;
 
-	if ((result = TCSP_Delegate_UpdateVerificationCount(hContext, inputSize, input, pAuth,
-			&outputSize, &output)))
+	if ((result = RPC_Delegate_UpdateVerificationCount(hContext, inputSize, input, pAuth,
+							   &outputSize, &output)))
 		goto done;
 
 	if (pAuth) {
@@ -320,7 +320,7 @@ Tspi_TPM_Delegate_VerifyDelegation(TSS_HPOLICY hDelegation)	/* in, out */
 	if ((result = obj_policy_get_delegation_blob(hDelegation, 0, &delegateSize, &delegate)))
 		return result;
 
-	result = TCSP_Delegate_VerifyDelegation(hContext, delegateSize, delegate);
+	result = RPC_Delegate_VerifyDelegation(hContext, delegateSize, delegate);
 
 	free_tspi(hContext, delegate);
 
@@ -350,8 +350,8 @@ Tspi_TPM_Delegate_ReadTables(TSS_HCONTEXT                 hContext,		/* in */
 	if (!pulFamilyTableSize || !ppFamilyTable || !pulDelegateTableSize || !ppDelegateTable)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = TCSP_Delegate_ReadTable(hContext, &tpmFamilyTableSize, &tpmFamilyTable,
-			&tpmDelegateTableSize, &tpmDelegateTable)))
+	if ((result = RPC_Delegate_ReadTable(hContext, &tpmFamilyTableSize, &tpmFamilyTable,
+					     &tpmDelegateTableSize, &tpmDelegateTable)))
 		return result;
 
 	if (tpmFamilyTableSize > 0) {

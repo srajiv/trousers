@@ -28,7 +28,7 @@
 
 
 TSS_RESULT
-get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM, UINT32 *volFlags, UINT32 *nonVolFlags)
+get_tpm_flags(TSS_HCONTEXT tspContext, TSS_HTPM hTPM, UINT32 *volFlags, UINT32 *nonVolFlags)
 {
 	TCPA_DIGEST digest;
 	TPM_AUTH auth;
@@ -50,7 +50,8 @@ get_tpm_flags(TCS_CONTEXT_HANDLE tcsContext, TSS_HTPM hTPM, UINT32 *volFlags, UI
 					      &digest, &auth)))
 		return result;
 
-	if ((result = TCSP_GetCapabilityOwner(tcsContext, &auth, &version, nonVolFlags, volFlags)))
+	if ((result = TCS_API(tspContext)->GetCapabilityOwner(tspContext, &auth, &version,
+							      nonVolFlags, volFlags)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

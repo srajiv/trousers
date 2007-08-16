@@ -39,7 +39,7 @@ Tspi_TPM_ReadCounter(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_tpm_get_current_counter(hTPM, &counterID)))
 		return result;
 
-	if ((result = TCSP_ReadCounter(tspContext, counterID, &counter_value)))
+	if ((result = TCS_API(tspContext)->ReadCounter(tspContext, counterID, &counter_value)))
 		return result;
 
 	*counterValue = counter_value.counter;

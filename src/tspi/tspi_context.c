@@ -46,7 +46,7 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/* Have the TCS do its thing */
-	result = TCS_CloseContext(tspContext);
+	result = TCS_API(tspContext)->CloseContext(tspContext);
 
 	/* Note: Memory that was returned to the app that was alloc'd by this
 	 * context isn't free'd here.  Any memory that the app doesn't explicitly
@@ -78,8 +78,8 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 							   &machine_name)))
 			return result;
 
-		if ((result = TCS_OpenContext_RPC(tspContext, machine_name,
-						  CONNECTION_TYPE_TCP_PERSISTANT)))
+		if ((result = RPC_OpenContext(tspContext, machine_name,
+					      CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 	} else {
 		if ((machine_name =
@@ -88,8 +88,8 @@ Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
-		if ((result = TCS_OpenContext_RPC(tspContext, machine_name,
-						CONNECTION_TYPE_TCP_PERSISTANT)))
+		if ((result = RPC_OpenContext(tspContext, machine_name,
+					      CONNECTION_TYPE_TCP_PERSISTANT)))
 			return result;
 
 		if ((result = obj_context_set_machine_name(tspContext, machine_name,

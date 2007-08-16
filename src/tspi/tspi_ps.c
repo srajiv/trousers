@@ -53,7 +53,7 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 #if 1
 		memset(&info, 0, sizeof(TCS_LOADKEY_INFO));
 
-		result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info, &tcsKeyHandle);
+		result = RPC_LoadKeyByUUID(tspContext, uuidData, &info, &tcsKeyHandle);
 
 		if (TSS_ERROR_CODE(result) == TCS_E_KM_LOADFAILED) {
 			TSS_HKEY keyHandle;
@@ -79,13 +79,13 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 						    &info.paramDigest, &info.authData))
 				return result;
 
-			if ((result = TCSP_LoadKeyByUUID(tspContext, uuidData, &info,
-							 &tcsKeyHandle)))
+			if ((result = RPC_LoadKeyByUUID(tspContext, uuidData, &info,
+							&tcsKeyHandle)))
 				return result;
 		} else if (result)
 			return result;
 
-		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
+		if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -153,7 +153,7 @@ Tspi_Context_RegisterKey(TSS_HCONTEXT tspContext,		/* in */
 							  &keyBlob)))
 				return result;
 
-			if ((result = TCS_RegisterKey(tspContext, uuidParentKey, uuidKey,
+			if ((result = RPC_RegisterKey(tspContext, uuidParentKey, uuidKey,
 						      keyBlobSize, keyBlob,
 						      strlen(PACKAGE_STRING) + 1,
 						      (BYTE *)PACKAGE_STRING)))
@@ -204,7 +204,7 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
 		/* get the key first, so it doesn't disappear when we
 		 * unregister it */
-		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidKey, &keyBlobSize,
+		if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidKey, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -217,7 +217,7 @@ Tspi_Context_UnregisterKey(TSS_HCONTEXT tspContext,		/* in */
 		free(keyBlob);
 
 		/* now unregister it */
-		if ((result = TCSP_UnregisterKey(tspContext, uuidKey)))
+		if ((result = RPC_UnregisterKey(tspContext, uuidKey)))
 			return result;
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
 		/* get the key first, so it doesn't disappear when we
@@ -252,7 +252,7 @@ Tspi_Context_GetKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		if ((result = TCS_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
+		if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 						       &keyBlob)))
 			return result;
 
@@ -308,9 +308,9 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 	}
 
 	if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-		if ((result = TCSP_GetRegisteredKeyByPublicInfo(tspContext, tcsAlgID,
-								ulPublicInfoLength, rgbPublicInfo,
-								&keyBlobSize, &keyBlob)))
+		if ((result = RPC_GetRegisteredKeyByPublicInfo(tspContext, tcsAlgID,
+							       ulPublicInfoLength, rgbPublicInfo,
+							       &keyBlobSize, &keyBlob)))
 			return result;
 
 	} else if (persistentStorageType == TSS_PS_TYPE_USER) {
@@ -422,7 +422,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 
 	if (pUuidData) {
 		if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-			if ((result = TCS_EnumRegisteredKeys(tspContext, pUuidData,
+			if ((result = RPC_EnumRegisteredKeys(tspContext, pUuidData,
 							     pulKeyHierarchySize,
 							     ppKeyHierarchy)))
 				return result;
@@ -431,7 +431,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 							     &tspHierSize, &tspHier)))
 				return result;
 
-			if ((result = TCS_EnumRegisteredKeys(tspContext, &tcs_uuid, &tcsHierSize,
+			if ((result = RPC_EnumRegisteredKeys(tspContext, &tcs_uuid, &tcsHierSize,
 							     &tcsHier))) {
 				free(tspHier);
 				return result;
@@ -445,7 +445,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 		} else
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	} else {
-		if ((result = TCS_EnumRegisteredKeys(tspContext, pUuidData, &tcsHierSize,
+		if ((result = RPC_EnumRegisteredKeys(tspContext, pUuidData, &tcsHierSize,
 						     &tcsHier)))
 			return result;
 
@@ -480,72 +480,68 @@ Tspi_Context_GetRegisteredKeysByUUID2(TSS_HCONTEXT tspContext,		/* in */
 	TSS_KM_KEYINFO2 *tcsHier, *tspHier;
 	UINT32 tcsHierSize, tspHierSize;
 	TSS_UUID tcs_uuid;
-	
+
 	/* If out parameters are NULL, return error */
 	if (pulKeyHierarchySize == NULL || ppKeyHierarchy == NULL)
 			return TSPERR(TSS_E_BAD_PARAMETER);
-	
+
 	if (!obj_is_context(tspContext))
 			return TSPERR(TSS_E_INVALID_HANDLE);
-	
+
 	if (pUuidData) {
-		/* TSS 1.2 Spec: If a certain key UUID is provided, the returned array of TSS_KM_KEYINFO2
-		structures only contains data reflecting the path of the key hierarchy
-		regarding that key. The first array entry is the key addressed by the given
-		UUID followed by its parent key up to and including the root key.
-		*/
-			if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
-				if ((result = TCS_EnumRegisteredKeys2(tspContext, pUuidData,
-								     pulKeyHierarchySize,
-								     ppKeyHierarchy)))
-					return result;
-			} else if (persistentStorageType == TSS_PS_TYPE_USER) {
-
-				if ((result = ps_get_registered_keys2(pUuidData, &tcs_uuid,
-								     &tspHierSize, &tspHier)))
-					return result;
-				/* The tcs_uuid returned by ps_get_registered_key2 will always be a parent of some
-				 * key into the system ps of a user key into the user ps
-				 * This key needs to be searched for in the system ps to be merged*/
-				if ((result = TCS_EnumRegisteredKeys2(tspContext, &tcs_uuid, &tcsHierSize,
-								     &tcsHier))) {
-					free(tspHier);
-					return result;
-				}
-
-				result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier,
-							       tcsHierSize, tcsHier, pulKeyHierarchySize,
-							       ppKeyHierarchy);
-				free(tcsHier);
-				free(tspHier);
-			} else
-				return TSPERR(TSS_E_BAD_PARAMETER);
-		} else {
-			/* If this field is set to NULL, the returned array of TSS_KM_KEYINFO2
-			structures contains data reflecting the entire key hierarchy starting with
-			root key. The array will include keys from both the user and the system
-			TSS key store. The persistentStorageType field will be ignored. 
-			*/ 
-			if ((result = TCS_EnumRegisteredKeys2(tspContext, pUuidData, &tcsHierSize,
-							     &tcsHier)))
+		/* TSS 1.2 Spec: If a certain key UUID is provided, the returned array of
+		 * TSS_KM_KEYINFO2 structures only contains data reflecting the path of the key
+		 * hierarchy regarding that key. The first array entry is the key addressed by the
+		 * given UUID followed by its parent key up to and including the root key. */
+		if (persistentStorageType == TSS_PS_TYPE_SYSTEM) {
+			if ((result = RPC_EnumRegisteredKeys2(tspContext, pUuidData,
+							      pulKeyHierarchySize, ppKeyHierarchy)))
 				return result;
-
-			if ((result = ps_get_registered_keys2(pUuidData, NULL, &tspHierSize, &tspHier))) {
-				free(tcsHier);
+		} else if (persistentStorageType == TSS_PS_TYPE_USER) {
+			if ((result = ps_get_registered_keys2(pUuidData, &tcs_uuid, &tspHierSize,
+							      &tspHier)))
+				return result;
+			/* The tcs_uuid returned by ps_get_registered_key2 will always be a parent
+			 * of some key into the system ps of a user key into the user ps. This key
+			 * needs to be searched for in the system ps to be merged */
+			if ((result = RPC_EnumRegisteredKeys2(tspContext, &tcs_uuid, &tcsHierSize,
+							      &tcsHier))) {
+				free(tspHier);
 				return result;
 			}
 
-			result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier, tcsHierSize,
-						       tcsHier, pulKeyHierarchySize, ppKeyHierarchy);
+			result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier,
+							tcsHierSize, tcsHier, pulKeyHierarchySize,
+							ppKeyHierarchy);
 			free(tcsHier);
 			free(tspHier);
+		} else
+			return TSPERR(TSS_E_BAD_PARAMETER);
+	} else {
+		/* If this field is set to NULL, the returned array of TSS_KM_KEYINFO2 structures
+		 * contains data reflecting the entire key hierarchy starting with root key. The
+		 * array will include keys from both the user and the system TSS key store. The
+		 * persistentStorageType field will be ignored. */
+		if ((result = RPC_EnumRegisteredKeys2(tspContext, pUuidData, &tcsHierSize,
+						      &tcsHier)))
+			return result;
+
+		if ((result = ps_get_registered_keys2(pUuidData, NULL, &tspHierSize, &tspHier))) {
+			free(tcsHier);
+			return result;
 		}
 
-		if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
-			free(*ppKeyHierarchy);
-			*ppKeyHierarchy = NULL;
-			*pulKeyHierarchySize = 0;
-		}
+		result = merge_key_hierarchies2(tspContext, tspHierSize, tspHier, tcsHierSize,
+						tcsHier, pulKeyHierarchySize, ppKeyHierarchy);
+		free(tcsHier);
+		free(tspHier);
+	}
 
-		return result;
+	if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+		free(*ppKeyHierarchy);
+		*ppKeyHierarchy = NULL;
+		*pulKeyHierarchySize = 0;
+	}
+
+	return result;
 }

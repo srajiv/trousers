@@ -74,10 +74,11 @@ Tspi_TPM_TakeOwnership(TSS_HTPM hTPM,			/* in */
 
 	/* Now, take ownership is ready to call.  The auth structure should be complete
 	 * and the encrypted data structures should be ready */
-	if ((result = TCSP_TakeOwnership(tspContext, TCPA_PID_OWNER, encOwnerAuthLength,
-					 encOwnerAuth, encSRKAuthLength, encSRKAuth,
-					 srkKeyBlobLength, srkKeyBlob, &privAuth, &newSrkBlobSize,
-					 &newSrkBlob)))
+	if ((result = TCS_API(tspContext)->TakeOwnership(tspContext, TPM_PID_OWNER,
+							 encOwnerAuthLength, encOwnerAuth,
+							 encSRKAuthLength, encSRKAuth,
+							 srkKeyBlobLength, srkKeyBlob, &privAuth,
+							 &newSrkBlobSize, &newSrkBlob)))
 		return result;
 
 	/* The final step is to validate the return Auth */
@@ -143,7 +144,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 						      &hashDigest, &auth)))
 			return result;
 
-		if ((result = TCSP_OwnerClear(tspContext, &auth)))
+		if ((result = TCS_API(tspContext)->OwnerClear(tspContext, &auth)))
 			return result;
 
 		/* validate auth */
@@ -156,7 +157,7 @@ Tspi_TPM_ClearOwner(TSS_HTPM hTPM,		/* in */
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &hashDigest, &auth)))
 			return result;
 	} else {
-		if ((result = TCSP_ForceClear(tspContext)))
+		if ((result = TCS_API(tspContext)->ForceClear(tspContext)))
 			return result;
 	}
 

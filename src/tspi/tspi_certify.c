@@ -111,9 +111,11 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	} else
 		pCertAuth = NULL;
 
-	if ((result = TCSP_CertifyKey(tspContext, certifyTCSKeyHandle, keyTCSKeyHandle, antiReplay,
-				      pCertAuth, pKeyAuth, &CertifyInfoSize, &CertifyInfo,
-				      &outDataSize, &outData)))
+	/* XXX free CertifyInfo */
+	if ((result = TCS_API(tspContext)->CertifyKey(tspContext, certifyTCSKeyHandle,
+						      keyTCSKeyHandle, &antiReplay, pCertAuth,
+						      pKeyAuth, &CertifyInfoSize, &CertifyInfo,
+						      &outDataSize, &outData)))
 		return result;
 
 	/* Validate auth */

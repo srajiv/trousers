@@ -73,8 +73,9 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		       sizeof(antiReplay.nonce));
 	}
 
-	if ((result = TCSP_CreateEndorsementKeyPair(tspContext, antiReplay, ekSize, ek, &newEKSize,
-						    &newEK, &digest)))
+	if ((result = TCS_API(tspContext)->CreateEndorsementKeyPair(tspContext, antiReplay, ekSize,
+								    ek, &newEKSize, &newEK,
+								    &digest)))
 		return result;
 
 	if (pValidationData == NULL) {
@@ -171,7 +172,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 						      &digest, &ownerAuth)))
 			return result;
 
-		if ((result = TCSP_OwnerReadPubek(tspContext, &ownerAuth, &pubEKSize, &pubEK)))
+		if ((result = TCS_API(tspContext)->OwnerReadPubek(tspContext, &ownerAuth,
+								  &pubEKSize, &pubEK)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -199,8 +201,8 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 		}
 
 		/* call down to the TPM */
-		if ((result = TCSP_ReadPubek(tspContext, antiReplay, &pubEKSize, &pubEK,
-					     &checkSum)))
+		if ((result = TCS_API(tspContext)->ReadPubek(tspContext, antiReplay, &pubEKSize,
+							     &pubEK, &checkSum)))
 			return result;
 
 		/* validate the returned hash, or set up the return so that the user can */
@@ -358,8 +360,9 @@ Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 		       sizeof(antiReplay.nonce));
 	}
 
-	if ((result = TCSP_CreateRevocableEndorsementKeyPair(tspContext, antiReplay, ekSize, ek,
-			genResetAuth, &eKResetAuth, &newEKSize, &newEK, &digest)))
+	if ((result = RPC_CreateRevocableEndorsementKeyPair(tspContext, antiReplay, ekSize, ek,
+							    genResetAuth, &eKResetAuth, &newEKSize,
+							    &newEK, &digest)))
 		return result;
 
 	if (pValidationData == NULL) {
@@ -453,7 +456,7 @@ Tspi_TPM_RevokeEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	memcpy(eKResetAuth.digest, rgbEkResetData, sizeof(eKResetAuth.digest));
 
-	if ((result = TCSP_RevokeEndorsementKeyPair(tspContext, &eKResetAuth)))
+	if ((result = RPC_RevokeEndorsementKeyPair(tspContext, &eKResetAuth)))
 		return result;
 
 	return result;

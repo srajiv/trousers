@@ -68,7 +68,8 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 		extendData = pbPcrData;
 	}
 
-	if ((result = TCSP_Extend(tspContext, ulPcrIndex, *(TPM_DIGEST *)extendData, &outDigest)))
+	if ((result = TCS_API(tspContext)->Extend(tspContext, ulPcrIndex, *(TPM_DIGEST *)extendData,
+						  &outDigest)))
 		return result;
 
 	/* log the event structure if its passed in */
@@ -88,7 +89,7 @@ Tspi_TPM_PcrExtend(TSS_HTPM hTPM,		/* in */
 		/* Set the version info in the event struct */
 		memcpy(&pPcrEvent->versionInfo, &VERSION_1_1, sizeof(TCPA_VERSION));
 
-		if ((result = TCS_LogPcrEvent(tspContext, *pPcrEvent, &number)))
+		if ((result = RPC_LogPcrEvent(tspContext, *pPcrEvent, &number)))
 			return result;
 	}
 
@@ -120,7 +121,7 @@ Tspi_TPM_PcrRead(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCSP_PcrRead(tspContext, ulPcrIndex, &outDigest)))
+	if ((result = TCS_API(tspContext)->PcrRead(tspContext, ulPcrIndex, &outDigest)))
 		return result;
 
 	*prgbPcrValue = calloc_tspi(tspContext, sizeof(TCPA_PCRVALUE));
@@ -152,6 +153,6 @@ Tspi_TPM_PcrReset(TSS_HTPM hTPM,                 /* in */
 	if ((result = obj_pcrs_get_selection(hPcrComposite, &pcrDataSize, pcrData)))
 		return result;
 
-	return TCSP_PcrReset(tspContext, pcrDataSize, pcrData);
+	return TCS_API(tspContext)->PcrReset(tspContext, pcrDataSize, pcrData);
 }
 

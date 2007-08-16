@@ -181,8 +181,10 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 						      digest.digest, &nonceEvenOSAP)))
 			return result;
 
-		if ((result = TCSP_NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
-							   NVPublicData, encAuthUsage, &auth)))
+		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
+									   NVPublic_DataSize,
+									   NVPublicData,
+									   encAuthUsage, &auth)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -196,8 +198,10 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 						       digest.digest, &nonceEvenOSAP)))
 			return result;
 	} else {
-		if ((result = TCSP_NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
-							   NVPublicData, encAuthUsage, NULL)))
+		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
+									   NVPublic_DataSize,
+									   NVPublicData,
+									   encAuthUsage, NULL)))
 			return result;
 	}
 
@@ -324,8 +328,10 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 						      digest.digest, &nonceEvenOSAP)))
 			return result;
 
-		if ((result = TCSP_NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
-							   NVPublicData, encAuthUsage, &auth)))
+		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
+									   NVPublic_DataSize,
+									   NVPublicData,
+									   encAuthUsage, &auth)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -339,8 +345,10 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 						       digest.digest, &nonceEvenOSAP)))
 			return result;
 	} else {
-		if ((result = TCSP_NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
-							   NVPublicData, encAuthUsage, NULL)))
+		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
+									   NVPublic_DataSize,
+									   NVPublicData,
+									   encAuthUsage, NULL)))
 			return result;
 	}
 
@@ -407,9 +415,10 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 								      &auth)))
 					return result;
 
-				if ((result = TCSP_NV_WriteValue(tspContext,nv_data_public.nvIndex,
-								 offset, ulDataLength,
-								 rgbDataToWrite, &auth)))
+				if ((result = TCS_API(tspContext)->NV_WriteValue(tspContext,
+									nv_data_public.nvIndex,
+									offset, ulDataLength,
+									rgbDataToWrite, &auth)))
 					return result;
 
 				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -438,9 +447,10 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 								      &auth)))
 					return result;
 
-				if ((result = TCSP_NV_WriteValueAuth(tspContext,nv_data_public.nvIndex,
-								 offset, ulDataLength,
-								 rgbDataToWrite, &auth)))
+				if ((result = TCS_API(tspContext)->NV_WriteValueAuth(tspContext,
+									nv_data_public.nvIndex,
+									offset, ulDataLength,
+									rgbDataToWrite, &auth)))
 					return result;
 
 				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -454,14 +464,17 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 					return result;
 			}
 		} else {
-			if ((result = TCSP_NV_WriteValue(tspContext, nv_data_public.nvIndex, offset,
-							 ulDataLength, rgbDataToWrite, NULL)))
+			if ((result = TCS_API(tspContext)->NV_WriteValue(tspContext,
+									 nv_data_public.nvIndex,
+									 offset, ulDataLength,
+									 rgbDataToWrite, NULL)))
 				return result;
 		}
 	} else {
 		LogDebug("no policy, so noauthentication\n");
-		if ((result = TCSP_NV_WriteValue(tspContext, nv_data_public.nvIndex, offset,
-						 ulDataLength, rgbDataToWrite, NULL)))
+		if ((result = TCS_API(tspContext)->NV_WriteValue(tspContext, nv_data_public.nvIndex,
+								 offset, ulDataLength,
+								 rgbDataToWrite, NULL)))
 			return result;
 	}
 
@@ -528,13 +541,14 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 								      &auth)))
 					return result;
 
-				if ((result = TCSP_NV_ReadValue(tspContext, nv_data_public.nvIndex,
-								offset, ulDataLength,
-								&auth, rgbDataRead)))
+				if ((result = TCS_API(tspContext)->NV_ReadValue(tspContext,
+									nv_data_public.nvIndex,
+									offset, ulDataLength,
+									&auth, rgbDataRead)))
 					return result;
 
 				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-				result |= Trspi_Hash_UINT32(&hashCtx, result);
+				result |= Trspi_Hash_UINT32(&hashCtx, TSS_SUCCESS);
 				result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_ReadValue);
 				result |= Trspi_Hash_UINT32(&hashCtx, *ulDataLength);
 				result |= Trspi_HashUpdate(&hashCtx, *ulDataLength, *rgbDataRead);
@@ -560,14 +574,14 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 								      &auth)))
 					return result;
 
-				if ((result = TCSP_NV_ReadValueAuth(tspContext,
-								    nv_data_public.nvIndex,
-								    offset, ulDataLength,
-								    &auth, rgbDataRead)))
+				if ((result = TCS_API(tspContext)->NV_ReadValueAuth(tspContext,
+									nv_data_public.nvIndex,
+									offset, ulDataLength,
+									&auth, rgbDataRead)))
 					return result;
 
 				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-				result |= Trspi_Hash_UINT32(&hashCtx, result);
+				result |= Trspi_Hash_UINT32(&hashCtx, TSS_SUCCESS);
 				result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_ReadValueAuth);
 				result |= Trspi_Hash_UINT32(&hashCtx, *ulDataLength);
 				result |= Trspi_HashUpdate(&hashCtx, *ulDataLength, *rgbDataRead);
@@ -579,13 +593,16 @@ Tspi_NV_ReadValue(TSS_HNVSTORE hNvstore,	/* in */
 					return result;
 			}
 		} else {
-			if ((result = TCSP_NV_ReadValue(tspContext, nv_data_public.nvIndex, offset,
-							ulDataLength, NULL, rgbDataRead)))
+			if ((result = TCS_API(tspContext)->NV_ReadValue(tspContext,
+									nv_data_public.nvIndex,
+									offset, ulDataLength, NULL,
+									rgbDataRead)))
 				return result;
 		}
 	} else {
-		if ((result = TCSP_NV_ReadValue(tspContext, nv_data_public.nvIndex, offset,
-						ulDataLength, NULL, rgbDataRead)))
+		if ((result = TCS_API(tspContext)->NV_ReadValue(tspContext, nv_data_public.nvIndex,
+								offset, ulDataLength, NULL,
+								rgbDataRead)))
 			return result;
 	}
 

@@ -35,7 +35,7 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &hTcsKey)))
 		return result;
 
-	return TCSP_EvictKey(tspContext, hTcsKey);
+	return TCS_API(tspContext)->EvictKey(tspContext, hTcsKey);
 }
 
 TSS_RESULT
@@ -50,7 +50,7 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 	TSS_HPOLICY hPolicy;
 	UINT32 keySize;
 	BYTE *keyBlob;
-	TCS_KEY_HANDLE tcsKey;
+	TCS_KEY_HANDLE tcsKey, tcsParentHandle;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pAuth;
 	Trspi_HashCtx hashCtx;
@@ -66,6 +66,9 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 		return result;
 
 	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
+		return result;
+
+	if ((result = obj_rsakey_get_tcs_handle(hUnwrappingKey, &tcsParentHandle)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hUnwrappingKey, TSS_POLICY_USAGE, &hPolicy,
@@ -93,8 +96,8 @@ Tspi_Key_LoadKey(TSS_HKEY hKey,			/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = Transport_LoadKeyByBlob(tspContext, ordinal, hUnwrappingKey, keySize,
-					      keyBlob, pAuth, &tcsKey, &keyslot))) {
+	if ((result = TCS_API(tspContext)->LoadKeyByBlob(tspContext, tcsParentHandle, keySize,
+							 keyBlob, pAuth, &tcsKey, &keyslot))) {
 		free_tspi(tspContext, keyBlob);
 		return result;
 	}
@@ -159,7 +162,8 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCSP_GetPubKey(tspContext, tcsKeyHandle, pAuth, pulPubKeyLength, prgbPubKey)))
+	if ((result = TCS_API(tspContext)->GetPubKey(tspContext, tcsKeyHandle, pAuth,
+						     pulPubKeyLength, prgbPubKey)))
 		return result;
 
 	if (usesAuth) {
@@ -274,8 +278,9 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 
 	/* Now call the function */
-	if ((result = TCSP_CreateWrapKey(tspContext, parentTCSKeyHandle, encAuthUsage, encAuthMig,
-					 keySize, keyBlob, &newKeySize, &newKey, &auth)))
+	if ((result = TCS_API(tspContext)->CreateWrapKey(tspContext, parentTCSKeyHandle,
+							 encAuthUsage, encAuthMig, keySize, keyBlob,
+							 &newKeySize, &newKey, &auth)))
 		return result;
 
 	/* Validate the Authorization before using the new key */
@@ -463,8 +468,9 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = Transport_LoadKeyByBlob(tspContext, ordinal, hUnwrappingKey, ulBlobLength,
-					      rgbBlobData, pAuth, &myTCSKeyHandle, &keyslot)))
+	if ((result = TCS_API(tspContext)->LoadKeyByBlob(tspContext, hUnwrappingKey, ulBlobLength,
+							 rgbBlobData, pAuth, &myTCSKeyHandle,
+							 &keyslot)))
 		return result;
 
 	if (useAuth) {
@@ -550,8 +556,8 @@ Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
 					      hPolicy, FALSE, &digest, &auth)))
 		return result;
 
-	if ((result = TCSP_OwnerReadInternalPub(tspContext, hKey, &auth, pulPuKeyLength,
-					      prgbPubKey)))
+	if ((result = TCS_API(tspContext)->OwnerReadInternalPub(tspContext, hKey, &auth,
+								pulPuKeyLength, prgbPubKey)))
 		return result;
 
 	/* Validate return auth */

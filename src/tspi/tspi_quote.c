@@ -99,9 +99,9 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Quote(tspContext, tcsKeyHandle, antiReplay, pcrDataSize, pcrData,
-				 pPrivAuth, &pcrDataOutSize, &pcrDataOut, &validationLength,
-				 &validationData)))
+	if ((result = TCS_API(tspContext)->Quote(tspContext, tcsKeyHandle, antiReplay, pcrDataSize,
+						 pcrData, pPrivAuth, &pcrDataOutSize, &pcrDataOut,
+						 &validationLength, &validationData)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

@@ -62,12 +62,17 @@ Tspi_TPM_GetAuditDigest(TSS_HTPM            hTpm,		/* in */
 		*ordList = NULL;
 		*ordSize = 0;
 		do {
-			if ((result = TCSP_GetAuditDigest(tspContext, startOrdinal, &auditDigest,
-							  &counterValueSize, &counterValue,
-							  &more, &tcsOrdSize, &tcsOrdList)))
+			if ((result = TCS_API(tspContext)->GetAuditDigest(tspContext, startOrdinal,
+									  &auditDigest,
+									  &counterValueSize,
+									  &counterValue, &more,
+									  &tcsOrdSize,
+									  &tcsOrdList)))
 				goto done1;
 
-			if ((pulTemp = calloc_tspi(tspContext, (*ordSize + tcsOrdSize) * sizeof(UINT32))) == NULL) {
+			if ((pulTemp =
+			    calloc_tspi(tspContext,
+				        (*ordSize + tcsOrdSize) * sizeof(UINT32))) == NULL) {
 				LogError("malloc of %u bytes failed.", *ordSize + tcsOrdSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done1;
@@ -97,12 +102,12 @@ Tspi_TPM_GetAuditDigest(TSS_HTPM            hTpm,		/* in */
 
 		*pulAuditDigestSize = sizeof(auditDigest.digest);
 		if ((*prgbAuditDigest = calloc_tspi(tspContext, *pulAuditDigestSize)) == NULL) {
-			LogError("malloc of %d bytes failed.", *pulAuditDigestSize);
+			LogError("malloc of %u bytes failed.", *pulAuditDigestSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done1;
 		}
 		offset = 0;
-		Trspi_LoadBlob_DIGEST(&offset, *prgbAuditDigest, auditDigest);
+		Trspi_LoadBlob_DIGEST(&offset, *prgbAuditDigest, &auditDigest);
 
 		offset = 0;
 		Trspi_UnloadBlob_COUNTER_VALUE(&offset, counterValue, pCounterValue);
@@ -185,10 +190,12 @@ done1:
 		else
 			pAuth = NULL;
 
-		if ((result = TCSP_GetAuditDigestSigned(tspContext, tcsKeyHandle, closeAudit,
-							antiReplay, pAuth, &counterValueSize,
-							&counterValue, &auditDigest,
-							&ordinalDigest, &sigSize, &sig)))
+		if ((result = TCS_API(tspContext)->GetAuditDigestSigned(tspContext, tcsKeyHandle,
+									closeAudit, antiReplay,
+									pAuth, &counterValueSize,
+									&counterValue, &auditDigest,
+									&ordinalDigest, &sigSize,
+									&sig)))
 			return result;
 
 		memset(&signInfo, 0, sizeof(signInfo));
@@ -203,9 +210,9 @@ done1:
 			goto done2;
 		}
 		offset = 0;
-		Trspi_LoadBlob_DIGEST(&offset, signInfo.data, auditDigest);
+		Trspi_LoadBlob_DIGEST(&offset, signInfo.data, &auditDigest);
 		Trspi_LoadBlob(&offset, counterValueSize, signInfo.data, counterValue);
-		Trspi_LoadBlob_DIGEST(&offset, signInfo.data, ordinalDigest);
+		Trspi_LoadBlob_DIGEST(&offset, signInfo.data, &ordinalDigest);
 
 		if (usesAuth) {
 			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -272,7 +279,7 @@ done1:
 			goto done2;
 		}
 		offset = 0;
-		Trspi_LoadBlob_DIGEST(&offset, *prgbAuditDigest, auditDigest);
+		Trspi_LoadBlob_DIGEST(&offset, *prgbAuditDigest, &auditDigest);
 
 		offset = 0;
 		Trspi_UnloadBlob_COUNTER_VALUE(&offset, counterValue, pCounterValue);

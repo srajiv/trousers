@@ -108,8 +108,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 					    digest.digest, &nonceEvenOSAP)))
 			return result;
 
-		if ((result = TCSP_ChangeAuthOwner(tspContext, TCPA_PID_ADCP, encAuthUsage,
-						   TCPA_ET_OWNER, &auth1)))
+		if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext, TCPA_PID_ADCP,
+								   encAuthUsage, TCPA_ET_OWNER,
+								   &auth1)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -167,8 +168,10 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 						    &nonceEvenOSAP)))
 				return result;
 
-			if ((result = TCSP_ChangeAuthOwner(tspContext, TCPA_PID_ADCP, encAuthUsage,
-							   TCPA_ET_SRK, &auth1)))
+			if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext,
+									   TCPA_PID_ADCP,
+									   encAuthUsage, TPM_ET_SRK,
+									   &auth1)))
 				return result;
 
 			/* Validate the Auths */
@@ -252,10 +255,13 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 							      hPolicy, FALSE, &digest, &auth2)))
 				return result;
 
-			if ((result = TCSP_ChangeAuth(tspContext, keyHandle, TCPA_PID_ADCP,
-						      encAuthUsage, TCPA_ET_KEY,
-						      keyToChange.encSize, keyToChange.encData,
-						      &auth1, &auth2, &newEncSize, &newEncData)))
+			if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle,
+								      TPM_PID_ADCP, encAuthUsage,
+								      TPM_ET_KEY,
+								      keyToChange.encSize,
+								      keyToChange.encData, &auth1,
+								      &auth2, &newEncSize,
+								      &newEncData)))
 				return result;
 
 			/* Validate the Auths */
@@ -354,10 +360,11 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 		}
 
-		if ((result = TCSP_ChangeAuth(tspContext, keyHandle, TCPA_PID_ADCP, encAuthUsage,
-					      TCPA_ET_DATA, storedData.encDataSize,
-					      storedData.encData, &auth1, &auth2, &newEncSize,
-					      &newEncData))) {
+		if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
+							      encAuthUsage, TPM_ET_DATA,
+							      storedData.encDataSize,
+							      storedData.encData, &auth1, &auth2,
+							      &newEncSize, &newEncData))) {
 			free(storedData.sealInfo);
 			free(storedData.encData);
 			return result;
@@ -421,6 +428,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 		    TSS_HKEY hIdentKey,			/* in */
 		    TSS_HPOLICY hNewPolicy)		/* in */
 {
+#if 0
 	TPM_AUTH auth;
 	UINT64 offset;
 	BYTE hashBlob[0x1000];
@@ -761,5 +769,8 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	free(encObject);
 
 	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
+#else
+	return TSPERR(TSS_E_NOTIMPL);
+#endif
 }
 

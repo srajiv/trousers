@@ -28,7 +28,7 @@
 
 
 UINT16
-get_num_pcrs(TCS_CONTEXT_HANDLE hContext)
+get_num_pcrs(TSS_HCONTEXT tspContext)
 {
 	TSS_RESULT result;
 	static UINT16 ret = 0;
@@ -40,8 +40,9 @@ get_num_pcrs(TCS_CONTEXT_HANDLE hContext)
 		return ret;
 
 	subCap = endian32(TPM_CAP_PROP_PCR);
-	if ((result = TCSP_GetCapability(hContext, TPM_CAP_PROPERTY, sizeof(UINT32),
-					 (BYTE *)&subCap, &respSize, &resp))) {
+	if ((result = TCS_API(tspContext)->GetTPMCapability(tspContext, TPM_CAP_PROPERTY,
+							    sizeof(UINT32), (BYTE *)&subCap,
+							    &respSize, &resp))) {
 		if ((resp = (BYTE *)getenv("TSS_DEFAULT_NUM_PCRS")) == NULL)
 			return TSS_DEFAULT_NUM_PCRS;
 

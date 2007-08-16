@@ -172,8 +172,9 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 
 	tcsSubCap = endian32(tcsSubCap);
 
-	if ((result = TCSP_GetCapability(tspContext, tcsCapArea, ulSubCapLength, (BYTE *)&tcsSubCap,
-					 &respLen, &respData)))
+	if ((result = TCS_API(tspContext)->GetTPMCapability(tspContext, tcsCapArea, ulSubCapLength,
+							    (BYTE *)&tcsSubCap, &respLen,
+							    &respData)))
 		return result;
 
 	*prgbRespData = calloc_tspi(tspContext, respLen);

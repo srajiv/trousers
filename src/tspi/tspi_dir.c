@@ -63,7 +63,7 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 					      &hashDigest, &auth)))
 		return result;
 
-	if ((result = TCSP_DirWriteAuth(tspContext, ulDirIndex, dirValue, &auth)))
+	if ((result = TCS_API(tspContext)->DirWriteAuth(tspContext, ulDirIndex, dirValue, &auth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -91,7 +91,7 @@ Tspi_TPM_DirRead(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCSP_DirRead(tspContext, ulDirIndex, &dirValue)))
+	if ((result = TCS_API(tspContext)->DirRead(tspContext, ulDirIndex, &dirValue)))
 		return result;
 
 	*pulDirDataLength = 20;

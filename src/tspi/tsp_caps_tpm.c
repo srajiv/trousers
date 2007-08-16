@@ -55,8 +55,9 @@ TSP_SetCapability(TSS_HCONTEXT tspContext,
 					      &digest, &auth)))
 		return result;
 
-	if ((result = TCSP_SetCapability(tspContext, tcsCapArea, sizeof(UINT32), (BYTE *)&subCap,
-					 sizeof(TSS_BOOL), (BYTE *)&value, &auth)))
+	if ((result = TCS_API(tspContext)->SetCapability(tspContext, tcsCapArea, sizeof(UINT32),
+							 (BYTE *)&subCap, sizeof(TSS_BOOL),
+							 (BYTE *)&value, &auth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -67,3 +68,60 @@ TSP_SetCapability(TSS_HCONTEXT tspContext,
 
 	return obj_policy_validate_auth_oiap(hTPMPolicy, &digest, &auth);
 }
+
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT
+Transport_GetTPMCapability(TSS_HCONTEXT        tspContext,	/* in */
+			   TPM_CAPABILITY_AREA capArea,	/* in */
+			   UINT32              subCapLen,	/* in */
+			   BYTE*               subCap,	/* in */
+			   UINT32*             respLen,	/* out */
+			   BYTE**              resp)	/* out */
+{
+	TSS_RESULT result;
+	UINT32 decLen = 0;
+	BYTE *dec = NULL;
+	UINT64 offset;
+	TCS_HANDLE handlesLen = 0;
+	BYTE *data;
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((data = malloc(2 * sizeof(UINT32) + subCapLen)) == NULL) {
+		LogError("malloc of %zd bytes failed", 2 * sizeof(UINT32) + subCapLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, capArea, data);
+	Trspi_LoadBlob_UINT32(&offset, subCapLen, data);
+	Trspi_LoadBlob(&offset, subCapLen, data, subCap);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_GetCapability,
+						    (UINT32)(2 * sizeof(UINT32) + subCapLen),
+						    data, NULL, &handlesLen, NULL, NULL, NULL,
+						    &decLen, &dec))) {
+		free(data);
+		return result;
+	}
+	free(data);
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, respLen, dec);
+
+	if ((*resp = malloc(*respLen)) == NULL) {
+		free(dec);
+		LogError("malloc of %u bytes failed", *respLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	Trspi_UnloadBlob(&offset, *respLen, dec, *resp);
+	free(dec);
+
+	return result;
+
+}
+#endif

@@ -186,8 +186,9 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_UnBind(tspContext, tcsKeyHandle, encDataSize, encData, pPrivAuth,
-				  pulUnboundDataLength, prgbUnboundData)))
+	if ((result = TCS_API(tspContext)->UnBind(tspContext, tcsKeyHandle, encDataSize, encData,
+						  pPrivAuth, pulUnboundDataLength,
+						  prgbUnboundData)))
 		return result;
 
 	if (usesAuth) {

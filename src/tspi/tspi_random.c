@@ -39,7 +39,8 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
 	if (ulRandomDataLength == 0)
 		return TSS_SUCCESS;
 
-	if ((result = TCSP_GetRandom(tspContext, ulRandomDataLength, prgbRandomData)))
+	if ((result = TCS_API(tspContext)->GetRandom(tspContext, ulRandomDataLength,
+						     prgbRandomData)))
 		return result;
 
 	return TSS_SUCCESS;
@@ -59,7 +60,8 @@ Tspi_TPM_StirRandom(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCSP_StirRandom(tspContext, ulEntropyDataLength, rgbEntropyData)))
+	if ((result = TCS_API(tspContext)->StirRandom(tspContext, ulEntropyDataLength,
+						      rgbEntropyData)))
 		return result;
 
 	return TSS_SUCCESS;

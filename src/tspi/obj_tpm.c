@@ -327,6 +327,9 @@ obj_tpm_get_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *CredSize, BYTE **CredData
 			break;
 	}
 
+	if (*CredSize == 0)
+		goto done;
+
 	if ((*CredData = calloc_tspi(obj->tspContext, *CredSize)) == NULL) {
 		*CredSize = 0;
 		result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -501,8 +504,9 @@ obj_tpm_get_current_counter(TSS_HTPM hTPM, TSS_COUNTER_ID *ctr_id)
 
 	/* No counter has yet been associated with the TPM object, so let the TPM object lock
 	 * protect us here and get a counter ID */
-	if ((result = TCSP_GetCapability(obj->tspContext, TPM_CAP_PROPERTY, sizeof(UINT32),
-					 (BYTE *)&subCap, &respLen, &resp)))
+	if ((result = TCS_API(obj->tspContext)->GetTPMCapability(obj->tspContext, TPM_CAP_PROPERTY,
+								 sizeof(UINT32), (BYTE *)&subCap,
+								 &respLen, &resp)))
 		goto done;
 
 	if (respLen != sizeof(UINT32)) {

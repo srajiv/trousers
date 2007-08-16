@@ -38,7 +38,7 @@ Tspi_TPM_GetEvent(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if ((result = TCS_GetPcrEvent(tspContext, ulPcrIndex, &ulEventNumber, &event)))
+	if ((result = RPC_GetPcrEvent(tspContext, ulPcrIndex, &ulEventNumber, &event)))
 		return result;
 
 	memcpy(pPcrEvent, event, sizeof(TSS_PCR_EVENT));
@@ -65,7 +65,7 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	if (prgbPcrEvents) {
-		if ((result = TCS_GetPcrEventsByPcr(tspContext, ulPcrIndex, ulStartNumber,
+		if ((result = RPC_GetPcrEventsByPcr(tspContext, ulPcrIndex, ulStartNumber,
 						    pulEventNumber, &events)))
 			return result;
 
@@ -73,7 +73,7 @@ Tspi_TPM_GetEvents(TSS_HTPM hTPM,			/* in */
 	} else {
 		/* if the pointer to receive events is NULL, the app only
 		 * wants a total number of events for this PCR. */
-		if ((result = TCS_GetPcrEvent(tspContext, ulPcrIndex, pulEventNumber, NULL)))
+		if ((result = RPC_GetPcrEvent(tspContext, ulPcrIndex, pulEventNumber, NULL)))
 			return result;
 	}
 
@@ -107,13 +107,13 @@ Tspi_TPM_GetEventLog(TSS_HTPM hTPM,			/* in */
 
 		*pulEventNumber = 0;
 		for (i = 0; i < numPcrs; i++) {
-			if ((result = TCS_GetPcrEvent(tspContext, i, &numEvents, NULL)))
+			if ((result = RPC_GetPcrEvent(tspContext, i, &numEvents, NULL)))
 				return result;
 
 			*pulEventNumber += numEvents;
 		}
 	} else
-		return TCS_GetPcrEventLog(tspContext, pulEventNumber, prgbPcrEvents);
+		return RPC_GetPcrEventLog(tspContext, pulEventNumber, prgbPcrEvents);
 
 	return TSS_SUCCESS;
 }

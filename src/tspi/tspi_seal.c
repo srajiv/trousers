@@ -140,14 +140,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 
 #ifdef TSS_BUILD_SEALX
 	if (sealOrdinal == TPM_ORD_Seal) {
-		if ((result = TCSP_Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
-					pcrData, ulDataLength, sealData, &auth,
-					&encDataSize, &encData)))
+		if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, encAuthUsage,
+							pcrDataSize, pcrData, ulDataLength,
+							sealData, &auth, &encDataSize, &encData)))
 			return result;
 	} else if (sealOrdinal == TPM_ORD_Sealx) {
-		result = TCSP_Sealx(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
-					 pcrData, ulDataLength, sealData, &auth,
-					 &encDataSize, &encData);
+		result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, encAuthUsage,
+						    pcrDataSize, pcrData, ulDataLength, sealData,
+						    &auth, &encDataSize, &encData);
 		free(sealData);
 
 		if (result != TSS_SUCCESS)
@@ -155,8 +155,9 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	} else
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 #else
-	if ((result = TCSP_Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize, pcrData,
-				ulDataLength, sealData, &auth, &encDataSize, &encData)))
+	if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
+						pcrData, ulDataLength, sealData, &auth,
+						&encDataSize, &encData)))
 		return result;
 #endif
 
@@ -238,8 +239,9 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 					      &privAuth2)))
 		return result;
 
-	if ((result = TCSP_Unseal(tspContext, tcsKeyHandle, ulDataLen, data, &privAuth, &privAuth2,
-				  pulUnsealedDataLength, prgbUnsealedData)))
+	if ((result = TCS_API(tspContext)->Unseal(tspContext, tcsKeyHandle, ulDataLen, data,
+						  &privAuth, &privAuth2, pulUnsealedDataLength,
+						  prgbUnsealedData)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

@@ -77,7 +77,7 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 
 			subCap = rgbSubCap ? endian32(*(UINT32 *)rgbSubCap) : 0;
 
-			result = TCS_GetCapability(tspContext, capArea, ulSubCapLength,
+			result = RPC_GetCapability(tspContext, capArea, ulSubCapLength,
 						   (BYTE *)&subCap, pulRespDataLength,
 						   prgbRespData);
 			break;

@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -37,6 +37,8 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 	UINT32 mode;
 	TCPA_SECRET secret;
 	TSS_HCONTEXT tspContext;
+	TSS_RESULT (*OIAP)(TSS_HCONTEXT, TCS_AUTHHANDLE *, TPM_NONCE *); // XXX hack
+	TSS_RESULT (*TerminateHandle)(TSS_HCONTEXT, TCS_HANDLE); // XXX hack
 
 	/* This validates that the secret can be used */
 	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
@@ -54,8 +56,17 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 	if ((result = Init_AuthNonce(tspContext, cas, auth)))
 		return result;
 
+	/* XXX hack for opening a transport session */
+	if (cas) {
+		OIAP = RPC_OIAP;
+		TerminateHandle = RPC_TerminateHandle;
+	} else {
+		OIAP = TCS_API(tspContext)->OIAP;
+		TerminateHandle = TCS_API(tspContext)->TerminateHandle;
+	}
+
 	/* added retry logic */
-	if ((result = TCSP_OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven))) {
+	if ((result = OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven))) {
 		if (result == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
@@ -64,7 +75,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 
 				nanosleep(&t, NULL);
 
-				result = TCSP_OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven);
+				result = OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven);
 			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
@@ -101,7 +112,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 	}
 
 	if (result) {
-		TCSP_TerminateHandle(tspContext, auth->AuthHandle);
+		TerminateHandle(tspContext, auth->AuthHandle);
 		return result;
 	}
 
@@ -188,9 +199,9 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		 * because there are commands such as CreateKey, which require an auth
 		 * session even when creating no-auth keys. A secret of all 0's will be
 		 * used in this case. */
-		if ((result = TCSP_OSAP(tspContext, osapType, osapData,
-					auth->NonceOdd,	&auth->AuthHandle,
-					&auth->NonceEven, nonceEvenOSAP)))
+		if ((result = TCS_API(tspContext)->OSAP(tspContext, osapType, osapData,
+							&auth->NonceOdd, &auth->AuthHandle,
+							&auth->NonceEven, nonceEvenOSAP)))
 			return result;
 
 		if ((result = obj_policy_do_xor(hPolicy, hOSAPObject,
@@ -200,7 +211,7 @@ secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 						auth->NonceOdd.nonce, 20,
 						encAuthUsage->authdata,
 						encAuthMig->authdata))) {
-			TCSP_TerminateHandle(tspContext, auth->AuthHandle);
+			TCS_API(tspContext)->TerminateHandle(tspContext, auth->AuthHandle);
 			return result;
 		}
 	}
@@ -369,7 +380,6 @@ OSAP_Calc(TSS_HCONTEXT tspContext, UINT16 EntityType, UINT32 EntityValue,
 	  TCPA_ENCAUTH * encAuthUsage, TCPA_ENCAUTH * encAuthMig,
 	  BYTE * sharedSecret, TPM_AUTH * auth)
 {
-
 	TSS_RESULT rc;
 	TCPA_NONCE nonceEvenOSAP;
 	UINT64 offset;
@@ -386,8 +396,8 @@ OSAP_Calc(TSS_HCONTEXT tspContext, UINT16 EntityType, UINT32 EntityValue,
 	}
 	auth->fContinueAuthSession = 0x00;
 
-	if ((rc = TCSP_OSAP(tspContext, EntityType, EntityValue, auth->NonceOdd,
-					&auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP))) {
+	if ((rc = TCS_API(tspContext)->OSAP(tspContext, EntityType, EntityValue, &auth->NonceOdd,
+					    &auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP))) {
 		if (rc == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
@@ -396,8 +406,9 @@ OSAP_Calc(TSS_HCONTEXT tspContext, UINT16 EntityType, UINT32 EntityValue,
 
 				nanosleep(&t, NULL);
 
-				rc = TCSP_OSAP(tspContext, EntityType, EntityValue, auth->NonceOdd,
-						&auth->AuthHandle, &auth->NonceEven, &nonceEvenOSAP);
+				rc = TCS_API(tspContext)->OSAP(tspContext, EntityType, EntityValue,
+							       &auth->NonceOdd, &auth->AuthHandle,
+							       &auth->NonceEven, &nonceEvenOSAP);
 			} while (rc == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 
@@ -480,3 +491,73 @@ obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_
 	return result;
 }
 
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT
+Transport_OIAP(TSS_HCONTEXT    tspContext,   /* in */
+	       TCS_AUTHHANDLE* authHandle,   /* out */
+	       TPM_NONCE*      nonce0)       /* out */
+{
+	TSS_RESULT result;
+	UINT32 decLen = 0;
+	BYTE *dec = NULL;
+	UINT64 offset;
+	TCS_HANDLE handlesLen = 0;
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_OIAP, 0, NULL, NULL,
+						    &handlesLen, NULL, NULL, NULL, &decLen, &dec)))
+		return result;
+
+	if (decLen != sizeof(TCS_AUTHHANDLE) + sizeof(TPM_NONCE))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, authHandle, dec);
+	Trspi_UnloadBlob_NONCE(&offset, dec, nonce0);
+
+	return result;
+}
+
+TSS_RESULT
+Transport_OSAP(TSS_HCONTEXT    tspContext,	/* in */
+	       TPM_ENTITY_TYPE entityType,	/* in */
+	       UINT32          entityValue,	/* in */
+	       TPM_NONCE*      nonceOddOSAP,	/* in */
+	       TCS_AUTHHANDLE* authHandle,	/* out */
+	       TPM_NONCE*      nonceEven,	/* out */
+	       TPM_NONCE*      nonceEvenOSAP)	/* out */
+{
+	TSS_RESULT result;
+	UINT32 decLen = 0;
+	BYTE *dec = NULL;
+	UINT64 offset;
+	TCS_HANDLE handlesLen = 0;
+	BYTE data[sizeof(UINT16) + sizeof(UINT32) + sizeof(TPM_NONCE)];
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	offset = 0;
+	Trspi_LoadBlob_UINT16(&offset, entityType, data);
+	Trspi_LoadBlob_UINT32(&offset, entityValue, data);
+	Trspi_LoadBlob_NONCE(&offset, data, nonceOddOSAP);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_OSAP, sizeof(data), data,
+						    NULL, &handlesLen, NULL, NULL, NULL, &decLen,
+						    &dec)))
+		return result;
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, authHandle, dec);
+	Trspi_UnloadBlob_NONCE(&offset, dec, nonceEven);
+	Trspi_UnloadBlob_NONCE(&offset, dec, nonceEvenOSAP);
+
+	return TSS_SUCCESS;
+}
+#endif

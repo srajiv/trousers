@@ -42,7 +42,7 @@ Tspi_TPM_SetOperatorAuth(TSS_HTPM    hTpm,		/* in */
 	if ((result = obj_policy_get_secret(hOperatorPolicy, TR_SECRET_CTX_NEW, &operatorAuth)))
 		return result;
 
-	if ((result = TCSP_SetOperatorAuth(tspContext, &operatorAuth)))
+	if ((result = TCS_API(tspContext)->SetOperatorAuth(tspContext, &operatorAuth)))
 		return result;
 
 	if ((result = obj_tpm_set_policy(hTpm, hOperatorPolicy)))

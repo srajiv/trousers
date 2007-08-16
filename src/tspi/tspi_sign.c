@@ -71,8 +71,8 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		pPrivAuth = NULL;
 	}
 
-	if ((result = TCSP_Sign(tspContext, tcsKeyHandle, ulDataLen, data, pPrivAuth,
-				pulSignatureLength, prgbSignature)))
+	if ((result = TCS_API(tspContext)->Sign(tspContext, tcsKeyHandle, ulDataLen, data,
+						pPrivAuth, pulSignatureLength, prgbSignature)))
 		goto done;
 
 	if (usesAuth) {

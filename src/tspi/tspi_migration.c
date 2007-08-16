@@ -101,9 +101,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	/* Send command */
-	if ((result = TCSP_AuthorizeMigrationKey(tspContext, migrationScheme, pubKeySize,
-						 pubKeyBlob, &ownerAuth, pulMigTicketLength,
-						 prgbMigTicket)))
+	if ((result = TCS_API(tspContext)->AuthorizeMigrationKey(tspContext, migrationScheme,
+								 pubKeySize, pubKeyBlob, &ownerAuth,
+								 pulMigTicketLength,
+								 prgbMigTicket)))
 		return result;
 
 	/* Validate Auth */
@@ -228,11 +229,14 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hParentKey, &parentHandle)))
 		return result;
 
-	if ((result = TCSP_CreateMigrationBlob(tspContext, parentHandle, migAuth.migrationScheme,
-					       ulMigTicketLength, rgbMigTicket, tcpaKey.encSize,
-					       tcpaKey.encData, pParentAuth, &entityAuth,
-					       pulRandomLength, prgbRandom, pulMigrationBlobLength,
-					       prgbMigrationBlob))) {
+	if ((result = TCS_API(tspContext)->CreateMigrationBlob(tspContext, parentHandle,
+							       migAuth.migrationScheme,
+							       ulMigTicketLength, rgbMigTicket,
+							       tcpaKey.encSize, tcpaKey.encData,
+							       pParentAuth, &entityAuth,
+							       pulRandomLength, prgbRandom,
+							       pulMigrationBlobLength,
+							       prgbMigrationBlob))) {
 		free_key_refs(&tcpaKey);
 		return result;
 	}
@@ -354,9 +358,11 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		pParentAuth = NULL;
 	}
 
-	if ((result = TCSP_ConvertMigrationBlob(tspContext, parentHandle, ulMigrationBlobLength,
-				     rgbMigrationBlob, ulRandomLength, rgbRandom, pParentAuth,
-				     &outDataSize, &outData)))
+	if ((result = TCS_API(tspContext)->ConvertMigrationBlob(tspContext, parentHandle,
+								ulMigrationBlobLength,
+								rgbMigrationBlob, ulRandomLength,
+								rgbRandom, pParentAuth,
+								&outDataSize, &outData)))
 		return result;
 
 	/* add validation */
