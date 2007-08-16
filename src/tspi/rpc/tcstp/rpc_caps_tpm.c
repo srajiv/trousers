@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_GetCapability_TP(struct host_table_entry *hte,
+RPC_GetTPMCapability_TP(struct host_table_entry *hte,
 		      TCPA_CAPABILITY_AREA capArea,	/* in */
 		      UINT32 subCapSize,		/* in */
 		      BYTE * subCap,			/* in */
@@ -76,7 +76,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetCapabilitySigned_TP(struct host_table_entry *hte,
+RPC_GetCapabilitySigned_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE keyHandle,	/* in */
 					TCPA_NONCE antiReplay,	/* in */
 					TCPA_CAPABILITY_AREA capArea,	/* in */
@@ -93,7 +93,7 @@ TCSP_GetCapabilitySigned_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte,
+RPC_GetCapabilityOwner_TP(struct host_table_entry *hte,
 				       TPM_AUTH * pOwnerAuth,	/* out */
 				       TCPA_VERSION * pVersion,	/* out */
 				       UINT32 * pNonVolatileFlags,	/* out */
@@ -130,7 +130,7 @@ TCSP_GetCapabilityOwner_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_SetCapability_TP(struct host_table_entry *hte,
+RPC_SetCapability_TP(struct host_table_entry *hte,
 		      TCPA_CAPABILITY_AREA capArea,	/* in */
 		      UINT32 subCapSize,	/* in */
 		      BYTE * subCap,	/* in */

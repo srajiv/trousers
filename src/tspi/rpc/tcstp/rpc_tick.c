@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_ReadCurrentTicks_TP(struct host_table_entry* hte,
+RPC_ReadCurrentTicks_TP(struct host_table_entry* hte,
 			 UINT32*                  pulCurrentTime,	/* out */
 			 BYTE**                   prgbCurrentTime)	/* out */
 {
@@ -71,7 +71,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_TickStampBlob_TP(struct host_table_entry* hte,
+RPC_TickStampBlob_TP(struct host_table_entry* hte,
 		      TCS_KEY_HANDLE           hKey,			/* in */
 		      TPM_NONCE*               antiReplay,		/* in */
 		      TPM_DIGEST*              digestToStamp,		/* in */

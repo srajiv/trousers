@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_SelfTestFull_TP(struct host_table_entry *hte)
+RPC_SelfTestFull_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -46,7 +46,7 @@ TCSP_SelfTestFull_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_CertifySelfTest_TP(struct host_table_entry *hte,
+RPC_CertifySelfTest_TP(struct host_table_entry *hte,
 			TCS_KEY_HANDLE keyHandle,	/* in */
 			TCPA_NONCE antiReplay,	/* in */
 			TPM_AUTH * privAuth,	/* in, out */
@@ -109,7 +109,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetTestResult_TP(struct host_table_entry *hte,
+RPC_GetTestResult_TP(struct host_table_entry *hte,
 		      UINT32 * outDataSize,	/* out */
 		      BYTE ** outData)	/* out */
 {
@@ -119,7 +119,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte,
 	hte->comm.hdr.u.ordinal = TCSD_ORD_GETTESTRESULT;
 	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
-	LogDebug("TCSP_GetTestResult_TP");
+	LogDebug("RPC_GetTestResult_TP");
 	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
@@ -148,7 +148,7 @@ TCSP_GetTestResult_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
-	LogDebug("TCSP_GetTestResult_TP exit");
+	LogDebug("RPC_GetTestResult_TP exit");
 
 done:
 	return result;

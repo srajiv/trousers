@@ -23,14 +23,14 @@
 
 
 TSS_RESULT
-TCSP_Delegate_Manage_TP(struct host_table_entry *hte,
-			TPM_FAMILY_ID familyID,		/* in */
-			TPM_FAMILY_OPERATION opFlag,	/* in */
-			UINT32 opDataSize,		/* in */
-			BYTE *opData,			/* in */
-			TPM_AUTH *ownerAuth,		/* in/out */
-			UINT32 *retDataSize,		/* out */
-			BYTE **retData)			/* out */
+RPC_Delegate_Manage_TP(struct host_table_entry *hte,
+		       TPM_FAMILY_ID familyID,		/* in */
+		       TPM_FAMILY_OPERATION opFlag,	/* in */
+		       UINT32 opDataSize,		/* in */
+		       BYTE *opData,			/* in */
+		       TPM_AUTH *ownerAuth,		/* in/out */
+		       UINT32 *retDataSize,		/* out */
+		       BYTE **retData)			/* out */
 {
 	TSS_RESULT result;
 	int i;
@@ -88,14 +88,14 @@ TCSP_Delegate_Manage_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte,
-				     TCS_KEY_HANDLE hKey,		/* in */
-				     UINT32 publicInfoSize,		/* in */
-				     BYTE *publicInfo,			/* in */
-				     TPM_ENCAUTH encDelAuth,		/* in */
-				     TPM_AUTH *keyAuth,			/* in/out */
-				     UINT32 *blobSize,			/* out */
-				     BYTE **blob)			/* out */
+RPC_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte,
+				    TCS_KEY_HANDLE hKey,		/* in */
+				    UINT32 publicInfoSize,		/* in */
+				    BYTE *publicInfo,			/* in */
+				    TPM_ENCAUTH encDelAuth,		/* in */
+				    TPM_AUTH *keyAuth,			/* in/out */
+				    UINT32 *blobSize,			/* out */
+				    BYTE **blob)			/* out */
 {
 	TSS_RESULT result;
 	int i;
@@ -153,14 +153,14 @@ TCSP_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte,
-				       TSS_BOOL increment,		/* in */
-				       UINT32 publicInfoSize,		/* in */
-				       BYTE *publicInfo,		/* in */
-				       TPM_ENCAUTH encDelAuth,		/* in */
-				       TPM_AUTH *ownerAuth,		/* in/out */
-				       UINT32 *blobSize,		/* out */
-				       BYTE **blob)			/* out */
+RPC_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte,
+				      TSS_BOOL increment,		/* in */
+				      UINT32 publicInfoSize,		/* in */
+				      BYTE *publicInfo,		/* in */
+				      TPM_ENCAUTH encDelAuth,		/* in */
+				      TPM_AUTH *ownerAuth,		/* in/out */
+				      UINT32 *blobSize,		/* out */
+				      BYTE **blob)			/* out */
 {
 	TSS_RESULT result;
 	int i;
@@ -218,11 +218,11 @@ TCSP_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte,
-				     TPM_DELEGATE_INDEX index,		/* in */
-				     UINT32 blobSize,			/* in */
-				     BYTE *blob,			/* in */
-				     TPM_AUTH *ownerAuth)		/* in/out */
+RPC_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte,
+				    TPM_DELEGATE_INDEX index,		/* in */
+				    UINT32 blobSize,			/* in */
+				    BYTE *blob,			/* in */
+				    TPM_AUTH *ownerAuth)		/* in/out */
 {
 	TSS_RESULT result;
 
@@ -265,11 +265,11 @@ TCSP_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_ReadTable_TP(struct host_table_entry *hte,
-			   UINT32 *familyTableSize,	/* out */
-			   BYTE **familyTable,		/* out */
-			   UINT32 *delegateTableSize,	/* out */
-			   BYTE **delegateTable)	/* out */
+RPC_Delegate_ReadTable_TP(struct host_table_entry *hte,
+			  UINT32 *familyTableSize,	/* out */
+			  BYTE **familyTable,		/* out */
+			  UINT32 *delegateTableSize,	/* out */
+			  BYTE **delegateTable)	/* out */
 {
 	TSS_RESULT result;
 
@@ -319,12 +319,12 @@ TCSP_Delegate_ReadTable_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte,
-					 UINT32 inputSize,		/* in */
-					 BYTE *input,			/* in */
-					 TPM_AUTH *ownerAuth,		/* in/out */
-					 UINT32 *outputSize,		/* out */
-					 BYTE **output)			/* out */
+RPC_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte,
+					UINT32 inputSize,		/* in */
+					BYTE *input,			/* in */
+					TPM_AUTH *ownerAuth,		/* in/out */
+					UINT32 *outputSize,		/* out */
+					BYTE **output)			/* out */
 {
 	TSS_RESULT result;
 	int i;
@@ -378,9 +378,9 @@ TCSP_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_Delegate_VerifyDelegation_TP(struct host_table_entry *hte,
-				  UINT32 delegateSize,		/* in */
-				  BYTE *delegate)		/* in */
+RPC_Delegate_VerifyDelegation_TP(struct host_table_entry *hte,
+				 UINT32 delegateSize,		/* in */
+				 BYTE *delegate)		/* in */
 {
 	TSS_RESULT result;
 

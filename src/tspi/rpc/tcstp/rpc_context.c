@@ -24,7 +24,7 @@
 
 
 TSS_RESULT
-TCS_OpenContext_RPC_TP(struct host_table_entry* hte,
+RPC_OpenContext_TP(struct host_table_entry* hte,
 		       UINT32*                  tpm_version,
 		       TCS_CONTEXT_HANDLE*      tcsContext)
 {
@@ -51,7 +51,7 @@ TCS_OpenContext_RPC_TP(struct host_table_entry* hte,
 }
 
 TSS_RESULT
-TCS_CloseContext_TP(struct host_table_entry *hte)
+RPC_CloseContext_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -71,7 +71,7 @@ TCS_CloseContext_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCS_FreeMemory_TP(struct host_table_entry *hte,
+RPC_FreeMemory_TP(struct host_table_entry *hte,
 		  BYTE * pMemory)		/*  in */
 {
 	free(pMemory);

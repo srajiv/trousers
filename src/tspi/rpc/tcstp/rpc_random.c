@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_GetRandom_TP(struct host_table_entry *hte,
+RPC_GetRandom_TP(struct host_table_entry *hte,
 		  UINT32 bytesRequested,	/* in */
 		  BYTE ** randomBytes)	/* out */
 {
@@ -68,7 +68,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_StirRandom_TP(struct host_table_entry *hte,
+RPC_StirRandom_TP(struct host_table_entry *hte,
 		   UINT32 inDataSize,	/* in */
 		   BYTE * inData)	/* in */
 {

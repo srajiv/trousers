@@ -23,7 +23,7 @@
 
 
 TSS_RESULT
-TCSP_SetOperatorAuth_TP(struct host_table_entry *hte,
+RPC_SetOperatorAuth_TP(struct host_table_entry *hte,
 			TCPA_SECRET *operatorAuth)	/* in */
 {
 	TSS_RESULT result;

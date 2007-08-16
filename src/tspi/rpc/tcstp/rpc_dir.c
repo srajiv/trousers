@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_DirWriteAuth_TP(struct host_table_entry *hte,
+RPC_DirWriteAuth_TP(struct host_table_entry *hte,
 				 TCPA_DIRINDEX dirIndex,	/* in */
 				 TCPA_DIRVALUE newContents,	/* in */
 				 TPM_AUTH * ownerAuth	/* in, out */
@@ -60,7 +60,7 @@ TCSP_DirWriteAuth_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_DirRead_TP(struct host_table_entry *hte,
+RPC_DirRead_TP(struct host_table_entry *hte,
 			    TCPA_DIRINDEX dirIndex,	/* in */
 			    TCPA_DIRVALUE * dirValue	/* out */
     ) {

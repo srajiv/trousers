@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Sign_TP(struct host_table_entry *hte,
+RPC_Sign_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 UINT32 areaToSignSize,	/* in */
 			 BYTE * areaToSign,	/* in */

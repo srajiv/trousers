@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Extend_TP(struct host_table_entry *hte,
+RPC_Extend_TP(struct host_table_entry *hte,
 			   TCPA_PCRINDEX pcrNum,	/* in */
 			   TCPA_DIGEST inDigest,	/* in */
 			   TCPA_PCRVALUE * outDigest	/* out */
@@ -58,7 +58,7 @@ TCSP_Extend_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PcrRead_TP(struct host_table_entry *hte,
+RPC_PcrRead_TP(struct host_table_entry *hte,
 			    TCPA_PCRINDEX pcrNum,	/* in */
 			    TCPA_PCRVALUE * outDigest	/* out */
     ) {
@@ -87,7 +87,7 @@ TCSP_PcrRead_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PcrReset_TP(struct host_table_entry *hte,
+RPC_PcrReset_TP(struct host_table_entry *hte,
 		 UINT32 pcrDataSizeIn,		 /* in */
 		 BYTE * pcrDataIn)		 /* in */
 {

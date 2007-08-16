@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCS_LogPcrEvent_TP(struct host_table_entry *hte,
+RPC_LogPcrEvent_TP(struct host_table_entry *hte,
 			       TSS_PCR_EVENT Event,	/*  in  */
 			       UINT32 * pNumber	/*  out */
     ) {
@@ -56,7 +56,7 @@ TCS_LogPcrEvent_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCS_GetPcrEvent_TP(struct host_table_entry *hte,
+RPC_GetPcrEvent_TP(struct host_table_entry *hte,
 			       UINT32 PcrIndex,	/* in */
 			       UINT32 * pNumber,	/* in, out */
 			       TSS_PCR_EVENT ** ppEvent	/* out */
@@ -113,7 +113,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetPcrEventsByPcr_TP(struct host_table_entry *hte,
+RPC_GetPcrEventsByPcr_TP(struct host_table_entry *hte,
 				     UINT32 PcrIndex,	/* in */
 				     UINT32 FirstEvent,	/* in */
 				     UINT32 * pEventCount,	/* in, out */
@@ -177,7 +177,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetPcrEventLog_TP(struct host_table_entry *hte,
+RPC_GetPcrEventLog_TP(struct host_table_entry *hte,
 				  UINT32 * pEventCount,	/* out */
 				  TSS_PCR_EVENT ** ppEvents	/* out */
     ) {

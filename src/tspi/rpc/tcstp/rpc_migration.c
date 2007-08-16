@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateMigrationBlob_TP(struct host_table_entry *hte,
+RPC_CreateMigrationBlob_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE parentHandle,	/* in */
 					TSS_MIGRATE_SCHEME migrationType,	/* in */
 					UINT32 MigrationKeyAuthSize,	/* in */
@@ -140,7 +140,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ConvertMigrationBlob_TP(struct host_table_entry *hte,
+RPC_ConvertMigrationBlob_TP(struct host_table_entry *hte,
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 UINT32 inDataSize,	/* in */
 					 BYTE * inData,	/* in */
@@ -211,7 +211,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_AuthorizeMigrationKey_TP(struct host_table_entry *hte,
+RPC_AuthorizeMigrationKey_TP(struct host_table_entry *hte,
 					  TSS_MIGRATE_SCHEME migrateScheme,	/* in */
 					  UINT32 MigrationKeySize,	/* in */
 					  BYTE * MigrationKey,	/* in */

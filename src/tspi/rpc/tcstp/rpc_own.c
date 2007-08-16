@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_TakeOwnership_TP(struct host_table_entry *hte,
+RPC_TakeOwnership_TP(struct host_table_entry *hte,
 		      UINT16 protocolID,	/* in */
 		      UINT32 encOwnerAuthSize,	/* in */
 		      BYTE * encOwnerAuth,	/* in */
@@ -96,7 +96,7 @@ done:
 
 
 TSS_RESULT
-TCSP_OwnerClear_TP(struct host_table_entry *hte,
+RPC_OwnerClear_TP(struct host_table_entry *hte,
 		   TPM_AUTH * ownerAuth)	/* in, out */
 {
         TSS_RESULT result;

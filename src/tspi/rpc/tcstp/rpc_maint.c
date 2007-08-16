@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
+RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 					     TSS_BOOL generateRandom,	/* in */
 					     TPM_AUTH * ownerAuth,	/* in, out */
 					     UINT32 * randomSize,	/* out */
@@ -102,7 +102,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_LoadMaintenanceArchive_TP(struct host_table_entry *hte,
+RPC_LoadMaintenanceArchive_TP(struct host_table_entry *hte,
 					   UINT32 dataInSize,	/* in */
 					   BYTE * dataIn,	/* in */
 					   TPM_AUTH * ownerAuth,	/* in, out */
@@ -157,7 +157,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte,
+RPC_KillMaintenanceFeature_TP(struct host_table_entry *hte,
 					   TPM_AUTH * ownerAuth	/* in , out */
     ) {
 	TSS_RESULT result;
@@ -185,7 +185,7 @@ TCSP_KillMaintenanceFeature_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte,
+RPC_LoadManuMaintPub_TP(struct host_table_entry *hte,
 				     TCPA_NONCE antiReplay,	/* in */
 				     UINT32 PubKeySize,	/* in */
 				     BYTE * PubKey,	/* in */
@@ -220,7 +220,7 @@ TCSP_LoadManuMaintPub_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ReadManuMaintPub_TP(struct host_table_entry *hte,
+RPC_ReadManuMaintPub_TP(struct host_table_entry *hte,
 				     TCPA_NONCE antiReplay,	/* in */
 				     TCPA_DIGEST * checksum	/* out */
     ) {

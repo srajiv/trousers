@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_CreateEndorsementKeyPair_TP(struct host_table_entry *hte,
+RPC_CreateEndorsementKeyPair_TP(struct host_table_entry *hte,
 					     TCPA_NONCE antiReplay,	/* in */
 					     UINT32 endorsementKeyInfoSize,	/* in */
 					     BYTE * endorsementKeyInfo,	/* in */
@@ -83,7 +83,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ReadPubek_TP(struct host_table_entry *hte,
+RPC_ReadPubek_TP(struct host_table_entry *hte,
 			      TCPA_NONCE antiReplay,	/* in */
 			      UINT32 * pubEndorsementKeySize,	/* out */
 			      BYTE ** pubEndorsementKey,	/* out */
@@ -133,7 +133,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_DisablePubekRead_TP(struct host_table_entry *hte,
+RPC_DisablePubekRead_TP(struct host_table_entry *hte,
 				     TPM_AUTH * ownerAuth	/* in, out */
     ) {
 	TSS_RESULT result;
@@ -162,7 +162,7 @@ TCSP_DisablePubekRead_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_OwnerReadPubek_TP(struct host_table_entry *hte,
+RPC_OwnerReadPubek_TP(struct host_table_entry *hte,
 				   TPM_AUTH * ownerAuth,	/* in, out */
 				   UINT32 * pubEndorsementKeySize,	/* out */
 				   BYTE ** pubEndorsementKey	/* out */
@@ -214,15 +214,15 @@ done:
 }
 
 TSS_RESULT
-TCSP_CreateRevocableEndorsementKeyPair_TP(struct host_table_entry *hte,
-					  TPM_NONCE antiReplay,		/* in */
-					  UINT32 endorsementKeyInfoSize,/* in */
-					  BYTE * endorsementKeyInfo,	/* in */
-					  TSS_BOOL genResetAuth,	/* in */
-					  TPM_DIGEST * eKResetAuth,	/* in, out */
-					  UINT32 * endorsementKeySize,	/* out */
-					  BYTE ** endorsementKey,	/* out */
-					  TPM_DIGEST * checksum)	/* out */
+RPC_CreateRevocableEndorsementKeyPair_TP(struct host_table_entry *hte,
+					 TPM_NONCE antiReplay,		/* in */
+					 UINT32 endorsementKeyInfoSize,/* in */
+					 BYTE * endorsementKeyInfo,	/* in */
+					 TSS_BOOL genResetAuth,	/* in */
+					 TPM_DIGEST * eKResetAuth,	/* in, out */
+					 UINT32 * endorsementKeySize,	/* out */
+					 BYTE ** endorsementKey,	/* out */
+					 TPM_DIGEST * checksum)	/* out */
 {
 	TSS_RESULT result;
 
@@ -279,8 +279,8 @@ done:
 }
 
 TSS_RESULT
-TCSP_RevokeEndorsementKeyPair_TP(struct host_table_entry *hte,
-				 TPM_DIGEST *EKResetAuth)	/* in */
+RPC_RevokeEndorsementKeyPair_TP(struct host_table_entry *hte,
+				TPM_DIGEST *EKResetAuth)	/* in */
 {
 	TSS_RESULT result;
 

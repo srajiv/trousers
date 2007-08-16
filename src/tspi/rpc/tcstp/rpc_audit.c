@@ -23,10 +23,10 @@
 
 
 TSS_RESULT
-TCSP_SetOrdinalAuditStatus_TP(struct host_table_entry *hte,
-			      TPM_AUTH *ownerAuth,	/* in/out */
-			      UINT32 ulOrdinal,		/* in */
-			      TSS_BOOL bAuditState)	/* in */
+RPC_SetOrdinalAuditStatus_TP(struct host_table_entry *hte,
+			     TPM_AUTH *ownerAuth,	/* in/out */
+			     UINT32 ulOrdinal,		/* in */
+			     TSS_BOOL bAuditState)	/* in */
 {
 	TSS_RESULT result;
 
@@ -57,14 +57,14 @@ TCSP_SetOrdinalAuditStatus_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_GetAuditDigest_TP(struct host_table_entry *hte,
-		       UINT32 startOrdinal,		/* in */
-		       TPM_DIGEST *auditDigest,		/* out */
-		       UINT32 *counterValueSize,	/* out */
-		       BYTE **counterValue,		/* out */
-		       TSS_BOOL *more,			/* out */
-		       UINT32 *ordSize,			/* out */
-		       UINT32 **ordList)		/* out */
+RPC_GetAuditDigest_TP(struct host_table_entry *hte,
+		      UINT32 startOrdinal,		/* in */
+		      TPM_DIGEST *auditDigest,		/* out */
+		      UINT32 *counterValueSize,	/* out */
+		      BYTE **counterValue,		/* out */
+		      TSS_BOOL *more,			/* out */
+		      UINT32 *ordSize,			/* out */
+		      UINT32 **ordList)		/* out */
 {
 	TSS_RESULT result;
 
@@ -132,17 +132,17 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetAuditDigestSigned_TP(struct host_table_entry *hte,
-			     TCS_KEY_HANDLE keyHandle,		/* in */
-			     TSS_BOOL closeAudit,		/* in */
-			     TPM_NONCE antiReplay,		/* in */
-			     TPM_AUTH *privAuth,		/* in/out */
-			     UINT32 *counterValueSize,		/* out */
-			     BYTE **counterValue,		/* out */
-			     TPM_DIGEST *auditDigest,		/* out */
-			     TPM_DIGEST *ordinalDigest,		/* out */
-			     UINT32 *sigSize,			/* out */
-			     BYTE **sig)			/* out */
+RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte,
+			    TCS_KEY_HANDLE keyHandle,		/* in */
+			    TSS_BOOL closeAudit,		/* in */
+			    TPM_NONCE antiReplay,		/* in */
+			    TPM_AUTH *privAuth,		/* in/out */
+			    UINT32 *counterValueSize,		/* out */
+			    BYTE **counterValue,		/* out */
+			    TPM_DIGEST *auditDigest,		/* out */
+			    TPM_DIGEST *ordinalDigest,		/* out */
+			    UINT32 *sigSize,			/* out */
+			    BYTE **sig)			/* out */
 {
 	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
 	TPM_AUTH null_auth;

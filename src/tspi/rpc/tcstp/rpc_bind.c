@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_UnBind_TP(struct host_table_entry *hte,
+RPC_UnBind_TP(struct host_table_entry *hte,
 			   TCS_KEY_HANDLE keyHandle,	/* in */
 			   UINT32 inDataSize,	/* in */
 			   BYTE * inData,	/* in */

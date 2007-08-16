@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
+RPC_LoadKeyByBlob_TP(struct host_table_entry *hte,
 		      TCS_KEY_HANDLE hUnwrappingKey,	/* in */
 		      UINT32 cWrappedKeyBlobSize,	/* in */
 		      BYTE * rgbWrappedKeyBlob,	/* in */
@@ -79,7 +79,7 @@ TCSP_LoadKeyByBlob_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_EvictKey_TP(struct host_table_entry *hte,
+RPC_EvictKey_TP(struct host_table_entry *hte,
 		 TCS_KEY_HANDLE hKey)	/* in */
 {
 	TSS_RESULT result;
@@ -102,7 +102,7 @@ TCSP_EvictKey_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_CreateWrapKey_TP(struct host_table_entry *hte,
+RPC_CreateWrapKey_TP(struct host_table_entry *hte,
 		      TCS_KEY_HANDLE hWrappingKey,	/* in */
 		      TCPA_ENCAUTH KeyUsageAuth,	/* in */
 		      TCPA_ENCAUTH KeyMigrationAuth,	/* in */
@@ -166,7 +166,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_GetPubKey_TP(struct host_table_entry *hte,
+RPC_GetPubKey_TP(struct host_table_entry *hte,
 		  TCS_KEY_HANDLE hKey,	/* in */
 		  TPM_AUTH * pAuth,	/* in, out */
 		  UINT32 * pcPubKeySize,	/* out */
@@ -223,7 +223,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_TerminateHandle_TP(struct host_table_entry *hte,
+RPC_TerminateHandle_TP(struct host_table_entry *hte,
 			TCS_AUTHHANDLE handle)	/* in */
 {
 	TSS_RESULT result;
@@ -246,7 +246,7 @@ TCSP_TerminateHandle_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_OwnerReadInternalPub_TP(struct host_table_entry *hte,
+RPC_OwnerReadInternalPub_TP(struct host_table_entry *hte,
 			     TCS_KEY_HANDLE hKey,	/* in */
 			     TPM_AUTH * pOwnerAuth,	/* in, out */
 			     UINT32 * punPubKeySize,	/* out */

@@ -40,7 +40,7 @@
 #include "rpc_tcstp_tsp.h"
 
 TSS_RESULT
-TCSP_NV_DefineOrReleaseSpace_TP(struct host_table_entry *hte,	/* in */
+RPC_NV_DefineOrReleaseSpace_TP(struct host_table_entry *hte,	/* in */
 				UINT32 cPubInfoSize,	/* in */
 				BYTE* pPubInfo,			/* in */
 				TCPA_ENCAUTH encAuth,		/* in */
@@ -85,7 +85,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_NV_WriteValue_TP(struct host_table_entry *hte,	/* in */
+RPC_NV_WriteValue_TP(struct host_table_entry *hte,	/* in */
 		      TSS_NV_INDEX hNVStore,		/* in */
 		      UINT32 offset,			/* in */
 		      UINT32 ulDataLength,		/* in */
@@ -133,7 +133,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_NV_WriteValueAuth_TP(struct host_table_entry *hte,	/* in */
+RPC_NV_WriteValueAuth_TP(struct host_table_entry *hte,	/* in */
 			  TSS_NV_INDEX hNVStore,	/* in */
 			  UINT32 offset,		/* in */
 			  UINT32 ulDataLength,		/* in */
@@ -181,7 +181,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_NV_ReadValue_TP(struct host_table_entry *hte,	/* in */
+RPC_NV_ReadValue_TP(struct host_table_entry *hte,	/* in */
 		     TSS_NV_INDEX hNVStore,		/* in */
 		     UINT32 offset,			/* in */
 		     UINT32* pulDataLength,		/* in,out */
@@ -249,7 +249,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_NV_ReadValueAuth_TP(struct host_table_entry *hte,	/* in */
+RPC_NV_ReadValueAuth_TP(struct host_table_entry *hte,	/* in */
 			 TSS_NV_INDEX hNVStore,		/* in */
 			 UINT32 offset,			/* in */
 			 UINT32* pulDataLength,		/* in,out */

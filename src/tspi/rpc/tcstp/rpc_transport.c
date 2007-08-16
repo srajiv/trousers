@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_EstablishTransport_TP(struct host_table_entry *hte,
+RPC_EstablishTransport_TP(struct host_table_entry *hte,
 			   UINT32                  ulTransControlFlags,
 			   TCS_KEY_HANDLE          hEncKey,
 			   UINT32                  ulTransSessionInfoSize,
@@ -119,7 +119,7 @@ done:
 
 
 TSS_RESULT
-TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
+RPC_ExecuteTransport_TP(struct host_table_entry *hte,
 			 TPM_COMMAND_CODE        unWrappedCommandOrdinal,
 			 UINT32                  ulWrappedCmdParamInSize,
 			 BYTE*                   rgbWrappedCmdParamIn,
@@ -136,7 +136,7 @@ TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
 {
 	TSS_RESULT result;
 	TPM_AUTH null_auth;
-	UINT32 i;
+	UINT32 i = 0;
 
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 
@@ -144,35 +144,37 @@ TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
 	hte->comm.hdr.u.ordinal = TCSD_ORD_EXECUTETRANSPORT;
 	LogDebugFn("IN: TCS Context: 0x%x", hte->tcsContext);
 
-	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &hte->tcsContext, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &unWrappedCommandOrdinal, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &unWrappedCommandOrdinal, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &ulWrappedCmdParamInSize, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &ulWrappedCmdParamInSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, rgbWrappedCmdParamIn, ulWrappedCmdParamInSize,
+	if (setData(TCSD_PACKET_TYPE_PBYTE, i++, rgbWrappedCmdParamIn, ulWrappedCmdParamInSize,
 		    &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_UINT32, 4, pulHandleListSize, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_UINT32, i++, pulHandleListSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, *rghHandles, *pulHandleListSize * sizeof(UINT32),
-		    &hte->comm))
+	if (*pulHandleListSize) {
+		if (setData(TCSD_PACKET_TYPE_PBYTE, i++, *rghHandles,
+			    *pulHandleListSize * sizeof(UINT32), &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 	if (pWrappedCmdAuth1) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pWrappedCmdAuth1, 0, &hte->comm))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth1, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 6, &null_auth, 0, &hte->comm))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (pWrappedCmdAuth2) {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, pWrappedCmdAuth2, 0, &hte->comm))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth2, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else {
-		if (setData(TCSD_PACKET_TYPE_AUTH, 7, &null_auth, 0, &hte->comm))
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (setData(TCSD_PACKET_TYPE_AUTH, 8, pTransAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_AUTH, i++, pTransAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);
@@ -185,7 +187,9 @@ TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pulHandleListSize, 0, &hte->comm))
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 
-		free(*rghHandles);
+		if (rghHandles)
+			free(*rghHandles);
+
 		if (*pulHandleListSize) {
 			*rghHandles = malloc(*pulHandleListSize * sizeof(UINT32));
 			if (*rghHandles == NULL) {
@@ -194,76 +198,100 @@ TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *rghHandles,
 						*pulHandleListSize * sizeof(UINT32), &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 		if (pWrappedCmdAuth1) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth1, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 		if (pWrappedCmdAuth2) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth2, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 		if (getData(TCSD_PACKET_TYPE_AUTH, i++, pTransAuth, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT64, i++, punCurrentTicks, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pbLocality, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pulWrappedCmdReturnCode, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, ulWrappedCmdParamOutSize, 0,
 			    &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (*ulWrappedCmdParamOutSize) {
 			*rgbWrappedCmdParamOut = malloc(*ulWrappedCmdParamOutSize);
 			if (*rgbWrappedCmdParamOut == NULL) {
 				*ulWrappedCmdParamOutSize = 0;
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *rgbWrappedCmdParamOut,
 				    *ulWrappedCmdParamOutSize, &hte->comm)) {
 				free(*rgbWrappedCmdParamOut);
-				free(*rghHandles);
-				*rghHandles = NULL;
+				if (rghHandles) {
+					free(*rghHandles);
+					*rghHandles = NULL;
+				}
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else
@@ -274,7 +302,7 @@ TCSP_ExecuteTransport_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ReleaseTransportSigned_TP(struct host_table_entry *hte,
+RPC_ReleaseTransportSigned_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE          hSignatureKey,
 			       TPM_NONCE*              AntiReplayNonce,
 			       TPM_AUTH*               pKeyAuth,		/* in, out */

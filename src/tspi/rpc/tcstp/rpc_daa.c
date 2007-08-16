@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_DaaJoin_TP(struct host_table_entry *hte,
+RPC_DaaJoin_TP(struct host_table_entry *hte,
 		TPM_HANDLE handle, // in
 		BYTE stage, // in
 		UINT32 inputSize0, // in
@@ -104,7 +104,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_DaaSign_TP(struct host_table_entry *hte,
+RPC_DaaSign_TP(struct host_table_entry *hte,
 		TPM_HANDLE handle, // in
 		BYTE stage, // in
 		UINT32 inputSize0, // in

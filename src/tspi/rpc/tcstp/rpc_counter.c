@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_ReadCounter_TP(struct host_table_entry* hte,
+RPC_ReadCounter_TP(struct host_table_entry* hte,
 		    TSS_COUNTER_ID           idCounter,		/* in */
 		    TPM_COUNTER_VALUE*       counterValue)	/* out */
 {
@@ -55,7 +55,7 @@ TCSP_ReadCounter_TP(struct host_table_entry* hte,
 }
 
 TSS_RESULT
-TCSP_CreateCounter_TP(struct host_table_entry* hte,
+RPC_CreateCounter_TP(struct host_table_entry* hte,
 		      UINT32                   LabelSize,	/* in (=4) */
 		      BYTE*                    pLabel,		/* in */
 		      TPM_ENCAUTH              CounterAuth,	/* in */
@@ -104,7 +104,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_IncrementCounter_TP(struct host_table_entry* hte,
+RPC_IncrementCounter_TP(struct host_table_entry* hte,
 			 TSS_COUNTER_ID           idCounter,	/* in */
 			 TPM_AUTH*                pCounterAuth,	/* in, out */
 			 TPM_COUNTER_VALUE*       counterValue)	/* out */
@@ -142,7 +142,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ReleaseCounter_TP(struct host_table_entry* hte,
+RPC_ReleaseCounter_TP(struct host_table_entry* hte,
 		       TSS_COUNTER_ID           idCounter,	/* in */
 		       TPM_AUTH*                pCounterAuth)	/* in, out */
 {
@@ -173,7 +173,7 @@ TCSP_ReleaseCounter_TP(struct host_table_entry* hte,
 }
 
 TSS_RESULT
-TCSP_ReleaseCounterOwner_TP(struct host_table_entry* hte,
+RPC_ReleaseCounterOwner_TP(struct host_table_entry* hte,
 			    TSS_COUNTER_ID           idCounter,		/* in */
 			    TPM_AUTH*                pOwnerAuth)	/* in, out */
 {

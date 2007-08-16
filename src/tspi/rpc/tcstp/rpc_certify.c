@@ -26,10 +26,10 @@
 
 
 TSS_RESULT
-TCSP_CertifyKey_TP(struct host_table_entry *hte,
+RPC_CertifyKey_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE certHandle,	/* in */
 			       TCS_KEY_HANDLE keyHandle,	/* in */
-			       TCPA_NONCE antiReplay,	/* in */
+			       TPM_NONCE * antiReplay,	/* in */
 			       TPM_AUTH * certAuth,	/* in, out */
 			       TPM_AUTH * keyAuth,	/* in, out */
 			       UINT32 * CertifyInfoSize,	/* out */
@@ -53,7 +53,7 @@ TCSP_CertifyKey_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &antiReplay, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (certAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, certAuth, 0, &hte->comm))

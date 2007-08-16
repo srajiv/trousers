@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCS_GetCapability_TP(struct host_table_entry *hte,
+RPC_GetCapability_TP(struct host_table_entry *hte,
 				 TCPA_CAPABILITY_AREA capArea,	/* in */
 				 UINT32 subCapSize,	/* in */
 				 BYTE * subCap,	/* in */

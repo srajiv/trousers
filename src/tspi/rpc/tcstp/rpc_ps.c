@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
+RPC_GetRegisteredKeyByPublicInfo_TP(struct host_table_entry *hte,
 				     TCPA_ALGORITHM_ID algID,	/* in */
 				     UINT32 ulPublicInfoLength,	/* in */
 				     BYTE * rgbPublicInfo,	/* in */
@@ -76,7 +76,7 @@ done:
 }
 
 TSS_RESULT
-TCS_RegisterKey_TP(struct host_table_entry *hte,
+RPC_RegisterKey_TP(struct host_table_entry *hte,
 			       TSS_UUID WrappingKeyUUID,	/* in */
 			       TSS_UUID KeyUUID,	/* in */
 			       UINT32 cKeySize,	/* in */
@@ -114,7 +114,7 @@ TCS_RegisterKey_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_UnregisterKey_TP(struct host_table_entry *hte,
+RPC_UnregisterKey_TP(struct host_table_entry *hte,
 				  TSS_UUID KeyUUID	/* in */
     ) {
 	TSS_RESULT result;
@@ -137,7 +137,7 @@ TCSP_UnregisterKey_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCS_EnumRegisteredKeys_TP(struct host_table_entry *hte,
+RPC_EnumRegisteredKeys_TP(struct host_table_entry *hte,
 				      TSS_UUID * pKeyUUID,	/* in */
 				      UINT32 * pcKeyHierarchySize,	/* out */
 				      TSS_KM_KEYINFO ** ppKeyHierarchy	/* out */
@@ -195,7 +195,7 @@ done:
 }
 
 TSS_RESULT
-TCS_EnumRegisteredKeys_TP2(struct host_table_entry *hte,
+RPC_EnumRegisteredKeys2_TP(struct host_table_entry *hte,
 				      TSS_UUID * pKeyUUID,	/* in */
 				      UINT32 * pcKeyHierarchySize,	/* out */
 				      TSS_KM_KEYINFO2 ** ppKeyHierarchy	/* out */
@@ -254,7 +254,7 @@ done:
 }
 
 TSS_RESULT
-TCS_GetRegisteredKey_TP(struct host_table_entry *hte,
+RPC_GetRegisteredKey_TP(struct host_table_entry *hte,
 				    TSS_UUID KeyUUID,	/* in */
 				    TSS_KM_KEYINFO ** ppKeyInfo	/* out */
     ) {
@@ -262,7 +262,7 @@ TCS_GetRegisteredKey_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCS_GetRegisteredKeyBlob_TP(struct host_table_entry *hte,
+RPC_GetRegisteredKeyBlob_TP(struct host_table_entry *hte,
 					TSS_UUID KeyUUID,	/* in */
 					UINT32 * pcKeySize,	/* out */
 					BYTE ** prgbKey	/* out */
@@ -306,7 +306,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_LoadKeyByUUID_TP(struct host_table_entry *hte,
+RPC_LoadKeyByUUID_TP(struct host_table_entry *hte,
 				  TSS_UUID KeyUUID,	/* in */
 				  TCS_LOADKEY_INFO * pLoadKeyInfo,	/* in, out */
 				  TCS_KEY_HANDLE * phKeyTCSI	/* out */

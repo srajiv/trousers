@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_Quote_TP(struct host_table_entry *hte,
+RPC_Quote_TP(struct host_table_entry *hte,
 			  TCS_KEY_HANDLE keyHandle,	/* in */
 			  TCPA_NONCE antiReplay,	/* in */
 			  UINT32 pcrDataSizeIn,	/* in */

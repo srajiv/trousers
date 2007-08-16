@@ -100,7 +100,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_Seal_TP(struct host_table_entry *hte,
+RPC_Seal_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TCPA_ENCAUTH encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
@@ -117,7 +117,7 @@ TCSP_Seal_TP(struct host_table_entry *hte,
 
 #ifdef TSS_BUILD_SEALX
 TSS_RESULT
-TCSP_Sealx_TP(struct host_table_entry *hte,
+RPC_Sealx_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TCPA_ENCAUTH encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
@@ -134,7 +134,7 @@ TCSP_Sealx_TP(struct host_table_entry *hte,
 #endif
 
 TSS_RESULT
-TCSP_Unseal_TP(struct host_table_entry *hte,
+RPC_Unseal_TP(struct host_table_entry *hte,
 			   TCS_KEY_HANDLE parentHandle,	/* in */
 			   UINT32 SealedDataSize,	/* in */
 			   BYTE * SealedData,	/* in */

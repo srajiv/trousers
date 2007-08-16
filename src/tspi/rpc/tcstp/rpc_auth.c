@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_OIAP_TP(struct host_table_entry *hte,
+RPC_OIAP_TP(struct host_table_entry *hte,
 			 TCS_AUTHHANDLE * authHandle,	/* out */
 			 TCPA_NONCE * nonce0	/* out */
     ) {
@@ -55,10 +55,10 @@ TCSP_OIAP_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_OSAP_TP(struct host_table_entry *hte,
+RPC_OSAP_TP(struct host_table_entry *hte,
 			 TCPA_ENTITY_TYPE entityType,	/* in */
 			 UINT32 entityValue,	/* in */
-			 TCPA_NONCE nonceOddOSAP,	/* in */
+			 TCPA_NONCE * nonceOddOSAP,	/* in */
 			 TCS_AUTHHANDLE * authHandle,	/* out */
 			 TCPA_NONCE * nonceEven,	/* out */
 			 TCPA_NONCE * nonceEvenOSAP	/* out */
@@ -75,7 +75,7 @@ TCSP_OSAP_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &entityValue, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &nonceOddOSAP, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, nonceOddOSAP, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 
 	result = sendTCSDPacket(hte);

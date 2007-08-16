@@ -26,14 +26,8 @@
 
 
 TSS_RESULT
-TSC_PhysicalPresence_TP(UINT16 physPres)
-{
-	return TSPERR(TSS_E_NOTIMPL);
-}
-
-TSS_RESULT
-TCSP_SetOwnerInstall_TP(struct host_table_entry *hte,
-			TSS_BOOL state)	/* in */
+RPC_SetOwnerInstall_TP(struct host_table_entry *hte,
+		       TSS_BOOL state)	/* in */
 {
 	TSS_RESULT result;
 
@@ -55,8 +49,8 @@ TCSP_SetOwnerInstall_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_DisableOwnerClear_TP(struct host_table_entry *hte,
-			  TPM_AUTH * ownerAuth)	/* in, out */
+RPC_DisableOwnerClear_TP(struct host_table_entry *hte,
+			 TPM_AUTH * ownerAuth)	/* in, out */
 {
 	TSS_RESULT result;
 
@@ -84,7 +78,7 @@ TCSP_DisableOwnerClear_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ForceClear_TP(struct host_table_entry *hte)
+RPC_ForceClear_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -104,7 +98,7 @@ TCSP_ForceClear_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_DisableForceClear_TP(struct host_table_entry *hte)
+RPC_DisableForceClear_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -124,7 +118,7 @@ TCSP_DisableForceClear_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_PhysicalDisable_TP(struct host_table_entry *hte)
+RPC_PhysicalDisable_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -144,7 +138,7 @@ TCSP_PhysicalDisable_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_PhysicalEnable_TP(struct host_table_entry *hte)
+RPC_PhysicalEnable_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -164,9 +158,9 @@ TCSP_PhysicalEnable_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
-			TSS_BOOL disableState,     /*  in */
-			TPM_AUTH * ownerAuth)   /*  in, out */
+RPC_OwnerSetDisable_TP(struct host_table_entry *hte,
+		       TSS_BOOL disableState,     /*  in */
+		       TPM_AUTH * ownerAuth)   /*  in, out */
 {
 	TSS_RESULT result;
 
@@ -195,8 +189,8 @@ TCSP_OwnerSetDisable_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
-			       TSS_BOOL state)	/* in */
+RPC_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
+			      TSS_BOOL state)	/* in */
 {
 	TSS_RESULT result;
 
@@ -218,8 +212,8 @@ TCSP_PhysicalSetDeactivated_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_PhysicalPresence_TP(struct host_table_entry *hte,
-			 TCPA_PHYSICAL_PRESENCE fPhysicalPresence)	/* in */
+RPC_PhysicalPresence_TP(struct host_table_entry *hte,
+			TCPA_PHYSICAL_PRESENCE fPhysicalPresence)	/* in */
 {
 	TSS_RESULT result;
 
@@ -241,7 +235,7 @@ TCSP_PhysicalPresence_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_SetTempDeactivated_TP(struct host_table_entry *hte)
+RPC_SetTempDeactivated_TP(struct host_table_entry *hte)
 {
 	TSS_RESULT result;
 
@@ -261,8 +255,8 @@ TCSP_SetTempDeactivated_TP(struct host_table_entry *hte)
 }
 
 TSS_RESULT
-TCSP_SetTempDeactivated2_TP(struct host_table_entry *hte,
-			    TPM_AUTH *operatorAuth)		/* in/out */
+RPC_SetTempDeactivated2_TP(struct host_table_entry *hte,
+			   TPM_AUTH *operatorAuth)		/* in/out */
 {
 	TSS_RESULT result;
 
@@ -299,30 +293,30 @@ TCSP_SetTempDeactivated2_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_FieldUpgrade_TP(struct host_table_entry *hte,
-		     UINT32 dataInSize,	/* in */
-		     BYTE * dataIn,	/* in */
-		     UINT32 * dataOutSize,	/* out */
-		     BYTE ** dataOut,	/* out */
-		     TPM_AUTH * ownerAuth)	/* in, out */
+RPC_FieldUpgrade_TP(struct host_table_entry *hte,
+		    UINT32 dataInSize,	/* in */
+		    BYTE * dataIn,	/* in */
+		    UINT32 * dataOutSize,	/* out */
+		    BYTE ** dataOut,	/* out */
+		    TPM_AUTH * ownerAuth)	/* in, out */
 {
 	return TSPERR(TSS_E_NOTIMPL);
 }
 
 TSS_RESULT
-TCSP_SetRedirection_TP(struct host_table_entry *hte,
-		       TCS_KEY_HANDLE keyHandle,	/* in */
-		       UINT32 c1,	/* in */
-		       UINT32 c2,	/* in */
-		       TPM_AUTH * privAuth)	/* in, out */
+RPC_SetRedirection_TP(struct host_table_entry *hte,
+		      TCS_KEY_HANDLE keyHandle,	/* in */
+		      UINT32 c1,	/* in */
+		      UINT32 c2,	/* in */
+		      TPM_AUTH * privAuth)	/* in, out */
 {
 	return TSPERR(TSS_E_NOTIMPL);
 
 }
 
 TSS_RESULT
-TCSP_ResetLockValue_TP(struct host_table_entry *hte,
-		       TPM_AUTH * ownerAuth)   /* in, out */
+RPC_ResetLockValue_TP(struct host_table_entry *hte,
+		      TPM_AUTH * ownerAuth)   /* in, out */
 {
 	TSS_RESULT result;
 

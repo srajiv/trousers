@@ -26,7 +26,7 @@
 
 
 TSS_RESULT
-TCSP_ChangeAuth_TP(struct host_table_entry *hte,
+RPC_ChangeAuth_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE parentHandle,	/* in */
 			       TCPA_PROTOCOL_ID protocolID,	/* in */
 			       TCPA_ENCAUTH newAuth,	/* in */
@@ -99,7 +99,7 @@ done:
 }
 
 TSS_RESULT
-TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte,
+RPC_ChangeAuthOwner_TP(struct host_table_entry *hte,
 				    TCPA_PROTOCOL_ID protocolID,	/* in */
 				    TCPA_ENCAUTH newAuth,	/* in */
 				    TCPA_ENTITY_TYPE entityType,	/* in */
@@ -136,7 +136,7 @@ TCSP_ChangeAuthOwner_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *hte,
+RPC_ChangeAuthAsymStart_TP(struct host_table_entry *hte,
 					TCS_KEY_HANDLE idHandle,	/* in */
 					TCPA_NONCE antiReplay,	/* in */
 					UINT32 KeySizeIn,	/* in */
@@ -154,7 +154,7 @@ TCSP_ChangeAuthAsymStart_TP(struct host_table_entry *hte,
 }
 
 TSS_RESULT
-TCSP_ChangeAuthAsymFinish_TP(struct host_table_entry *hte,
+RPC_ChangeAuthAsymFinish_TP(struct host_table_entry *hte,
 					 TCS_KEY_HANDLE parentHandle,	/* in */
 					 TCS_KEY_HANDLE ephHandle,	/* in */
 					 TCPA_ENTITY_TYPE entityType,	/* in */
