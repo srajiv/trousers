@@ -1790,6 +1790,7 @@ obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	struct obj_list *list = &rsakey_list;
 	struct tr_rsakey_obj *rsakey;
 
+	/* XXX why is the macro not being used? */
 	pthread_mutex_lock(&list->lock);
 
 	for (obj = list->head; obj; prev = obj, obj = obj->next) {
@@ -1804,9 +1805,11 @@ obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 			rsakey->migPolicy = NULL_HPOLICY;
 	}
 
+	/* XXX why is the macro not being used? */
 	pthread_mutex_unlock(&list->lock);
 }
 
+#if 0
 TSS_RESULT
 obj_rsakey_get_transport_attribs(TSS_HKEY hKey, TCS_KEY_HANDLE *hTCSKey, TPM_DIGEST *pubDigest)
 {
@@ -1829,3 +1832,4 @@ obj_rsakey_get_transport_attribs(TSS_HKEY hKey, TCS_KEY_HANDLE *hTCSKey, TPM_DIG
 
 	return result;
 }
+#endif
