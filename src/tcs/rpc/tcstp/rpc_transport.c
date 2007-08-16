@@ -138,21 +138,21 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 	TCS_CONTEXT_HANDLE hContext;
 	TPM_COMMAND_CODE unWrappedCommandOrdinal;
 	TCS_HANDLE *rghHandles;
-	UINT32 ulWrappedCmdDataInSize, pulHandleListSize, ulWrappedCmdDataOutSize;
+	UINT32 ulWrappedCmdDataInSize, pulHandleListSize, ulWrappedCmdDataOutSize, i = 0;
 	BYTE *rgbWrappedCmdDataIn, *rgbWrappedCmdDataOut;
 	TPM_MODIFIER_INDICATOR pbLocality;
 	TPM_AUTH pWrappedCmdAuth1, pWrappedCmdAuth2, pTransAuth, *pAuth1, *pAuth2, null_auth;
 	UINT64 punCurrentTicks;
 	TSS_RESULT result, pulWrappedCmdReturnCode;
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+	if (getData(TCSD_PACKET_TYPE_UINT32, i++, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &unWrappedCommandOrdinal, 0, &data->comm))
+	if (getData(TCSD_PACKET_TYPE_UINT32, i++, &unWrappedCommandOrdinal, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
-	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &ulWrappedCmdDataInSize, 0, &data->comm))
+	if (getData(TCSD_PACKET_TYPE_UINT32, i++, &ulWrappedCmdDataInSize, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	rgbWrappedCmdDataIn = malloc(ulWrappedCmdDataInSize);
@@ -160,44 +160,46 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 		LogError("malloc of %u bytes failed", ulWrappedCmdDataInSize);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbWrappedCmdDataIn, ulWrappedCmdDataInSize,
+	if (getData(TCSD_PACKET_TYPE_PBYTE, i++, rgbWrappedCmdDataIn, ulWrappedCmdDataInSize,
 		    &data->comm)) {
 		free(rgbWrappedCmdDataIn);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &pulHandleListSize, 0, &data->comm)) {
+	if (getData(TCSD_PACKET_TYPE_UINT32, i++, &pulHandleListSize, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	rghHandles = (TCS_HANDLE *)malloc(pulHandleListSize * sizeof(UINT32));
-	if (rghHandles == NULL) {
-		free(rgbWrappedCmdDataIn);
-		LogError("malloc of %zd bytes failed.", pulHandleListSize * sizeof(UINT32));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	if (getData(TCSD_PACKET_TYPE_PBYTE, 5, rghHandles, pulHandleListSize * sizeof(UINT32),
-		    &data->comm)) {
-		free(rgbWrappedCmdDataIn);
-		free(rghHandles);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (pulHandleListSize) {
+		rghHandles = (TCS_HANDLE *)malloc(pulHandleListSize * sizeof(UINT32));
+		if (rghHandles == NULL) {
+			free(rgbWrappedCmdDataIn);
+			LogError("malloc of %zd bytes failed.", pulHandleListSize * sizeof(UINT32));
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, rghHandles,
+			    pulHandleListSize * sizeof(UINT32), &data->comm)) {
+			free(rgbWrappedCmdDataIn);
+			free(rghHandles);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 	}
 
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 	memset(&pWrappedCmdAuth1, 0, sizeof(TPM_AUTH));
 	memset(&pWrappedCmdAuth2, 0, sizeof(TPM_AUTH));
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &pWrappedCmdAuth1, 0, &data->comm)) {
+	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pWrappedCmdAuth1, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
 		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 7, &pWrappedCmdAuth2, 0, &data->comm)) {
+	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pWrappedCmdAuth2, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
 		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 8, &pTransAuth, 0, &data->comm)) {
+	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pTransAuth, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
 		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -227,14 +229,15 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 	free(rgbWrappedCmdDataIn);
 
 	if (result == TSS_SUCCESS) {
+		i = 0;
 		initData(&data->comm, 10);
-		if (setData(TCSD_PACKET_TYPE_UINT32, 0, &pulHandleListSize, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pulHandleListSize, 0, &data->comm)) {
 			free(rghHandles);
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (pulHandleListSize) {
-			if (setData(TCSD_PACKET_TYPE_PBYTE, 1, rghHandles,
+			if (setData(TCSD_PACKET_TYPE_PBYTE, i++, rghHandles,
 				    pulHandleListSize * sizeof(UINT32), &data->comm)) {
 				free(rghHandles);
 				free(rgbWrappedCmdDataOut);
@@ -243,50 +246,52 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 			free(rghHandles);
 		}
 		if (pAuth1) {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 2, pAuth1, 0, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pAuth1, 0, &data->comm)) {
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 2, &null_auth, 0, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &data->comm)) {
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
 		if (pAuth2) {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 3, pAuth2, 0, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pAuth2, 0, &data->comm)) {
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		} else {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 3, &null_auth, 0, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &data->comm)) {
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
-		if (setData(TCSD_PACKET_TYPE_AUTH, 4, &pTransAuth, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, i++, &pTransAuth, 0, &data->comm)) {
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT64, 5, &punCurrentTicks, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_UINT64, i++, &punCurrentTicks, 0, &data->comm)) {
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 6, &pbLocality, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pbLocality, 0, &data->comm)) {
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 7, &pulWrappedCmdReturnCode, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pulWrappedCmdReturnCode, 0,
+			    &data->comm)) {
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
-		if (setData(TCSD_PACKET_TYPE_UINT32, 8, &ulWrappedCmdDataOutSize, 0, &data->comm)) {
+		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &ulWrappedCmdDataOutSize, 0,
+			    &data->comm)) {
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (ulWrappedCmdDataOutSize) {
-			if (setData(TCSD_PACKET_TYPE_PBYTE, 9, rgbWrappedCmdDataOut,
-						ulWrappedCmdDataOutSize, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_PBYTE, i++, rgbWrappedCmdDataOut,
+				    ulWrappedCmdDataOutSize, &data->comm)) {
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
