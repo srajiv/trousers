@@ -31,6 +31,7 @@ struct tr_context_obj {
 	BYTE *machineName;
 	UINT32 machineNameLength;
 	UINT32 connection_policy, current_connection;
+	struct tcs_api_table *tcs_api;
 	/* transport session support */
 	TSS_HKEY transKey;
 	TPM_TRANSPORT_PUBLIC transPub;
@@ -73,6 +74,10 @@ TSS_RESULT obj_context_transport_close(TSS_HCONTEXT, TSS_HKEY, TSS_HPOLICY, TSS_
 TSS_RESULT obj_context_set_tpm_version(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_context_get_tpm_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
+
+struct tcs_api_table *obj_context_get_tcs_api();
+#define TCS_API(c) obj_context_get_tcs_api(c)
+
 
 #define CONTEXT_LIST_DECLARE		struct obj_list context_list
 #define CONTEXT_LIST_DECLARE_EXTERN	extern struct obj_list context_list
