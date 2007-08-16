@@ -162,9 +162,9 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 	}
 
 	if ((result = tpm_rqu_build(TPM_ORD_ExecuteTransport, &wrappedOffset,
-				    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], pVal1, pVal2,
-				    ulWrappedCmdParamInSize, rgbWrappedCmdParamIn, pWrappedCmdAuth1,
-				    pWrappedCmdAuth2)))
+				    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], unWrappedCommandOrdinal,
+				    pVal1, pVal2, ulWrappedCmdParamInSize, rgbWrappedCmdParamIn,
+				    pWrappedCmdAuth1, pWrappedCmdAuth2)))
 		return result;
 
 	/* The blob we'll load here looks like this:
@@ -260,7 +260,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 	}
 
 	result = tpm_rsp_parse(TPM_ORD_ExecuteTransport, &txBlob[wrappedOffset], paramSize,
-			       ulWrappedCmdParamOutSize, pVal1, pVal2, rgbWrappedCmdParamOut,
+			       pVal1, pVal2, ulWrappedCmdParamOutSize, rgbWrappedCmdParamOut,
 			       pWrappedCmdAuth1, pWrappedCmdAuth2);
 
 	switch (unWrappedCommandOrdinal) {
