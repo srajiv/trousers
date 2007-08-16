@@ -391,6 +391,19 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					       BYTE ** prgbConformanceCredential	/* out */
 	    );
 
+	TSS_RESULT TCSP_MakeIdentity2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
+					       TCPA_ENCAUTH identityAuth,	/* in */
+					       TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+					       UINT32 idKeyInfoSize,	/*in */
+					       BYTE * idKeyInfo,	/*in */
+					       TPM_AUTH * pSrkAuth,	/* in, out */
+					       TPM_AUTH * pOwnerAuth,	/* in, out */
+					       UINT32 * idKeySize,	/* out */
+					       BYTE ** idKey,	/* out */
+					       UINT32 * pcIdentityBindingSize,	/* out */
+					       BYTE ** prgbIdentityBinding	/* out */
+	    );
+
 	TSS_RESULT TCS_GetCredential_Internal(TCS_CONTEXT_HANDLE hContext,	/* in  */
 					      UINT32 ulCredentialType,		/* in */
 					      UINT32 ulCredentialAccessMode,	/* in */
