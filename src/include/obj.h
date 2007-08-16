@@ -57,6 +57,9 @@ void		   obj_connectContext(TSS_HCONTEXT, TCS_CONTEXT_HANDLE);
 void		   obj_close_context(TSS_HCONTEXT);
 void               obj_lists_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 
+/* prototypes for functions that may traverse more than one list */
+TSS_RESULT	   obj_tcskey_get_pubkeyhash(TCS_KEY_HANDLE, BYTE *);
+
 #include "obj_tpm.h"
 #include "obj_context.h"
 #include "obj_hash.h"
