@@ -558,6 +558,40 @@ TSS_RESULT RPC_MakeIdentity(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT RPC_MakeIdentity2(TSS_HCONTEXT tspContext,	/* in */
+			     TCPA_ENCAUTH identityAuth,	/* in */
+			     TCPA_CHOSENID_HASH IDLabel_PrivCAHash,	/* in */
+			     UINT32 idKeyInfoSize,	/* in */
+			     BYTE * idKeyInfo,	/* in */
+			     TPM_AUTH * pSrkAuth,	/* in, out */
+			     TPM_AUTH * pOwnerAuth,	/* in, out */
+			     UINT32 * idKeySize,	/* out */
+			     BYTE ** idKey,	/* out */
+			     UINT32 * pcIdentityBindingSize,	/* out */
+			     BYTE ** prgbIdentityBinding)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_MakeIdentity2_TP(entry, identityAuth, IDLabel_PrivCAHash,
+						      idKeyInfoSize, idKeyInfo, pSrkAuth,
+						      pOwnerAuth, idKeySize, idKey,
+						      pcIdentityBindingSize, prgbIdentityBinding);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT RPC_GetCredential(TSS_HCONTEXT tspContext,	/* in */
 			     UINT32 ulCredentialType,          /* in */
 			     UINT32 ulCredentialAccessMode,    /* in */
