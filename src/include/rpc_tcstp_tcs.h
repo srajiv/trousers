@@ -226,6 +226,11 @@ DECLARE_TCSTP_FUNC(CertifyKey);
 DECLARE_TCSTP_FUNC(MakeIdentity);
 DECLARE_TCSTP_FUNC(GetCredential);
 DECLARE_TCSTP_FUNC(ActivateIdentity);
+#ifdef TSS_BUILD_TSS12
+DECLARE_TCSTP_FUNC(MakeIdentity2);
+#else
+#define tcs_wrap_MakeIdentity2		tcs_wrap_Error
+#endif
 #else
 #define tcs_wrap_MakeIdentity		tcs_wrap_Error
 #define tcs_wrap_GetCredential		tcs_wrap_Error
