@@ -835,6 +835,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	}
 	case TPM_ORD_ExecuteTransport:
 	{
+		UINT32 ord1 = va_arg(ap, UINT32);
 		UINT32 *keyslot1 = va_arg(ap, UINT32 *);
 		UINT32 *keyslot2 = va_arg(ap, UINT32 *);
 		UINT32 in_len1 = va_arg(ap, UINT32);
@@ -848,22 +849,22 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 			LoadBlob_UINT32(outOffset, *keyslot1, out_blob);
 		if (keyslot2)
 			LoadBlob_UINT32(outOffset, *keyslot2, out_blob);
-		LoadBlob_UINT32(outOffset, in_len1, out_blob);
+		//LoadBlob_UINT32(outOffset, in_len1, out_blob);
 		if (in_blob1)
 			LoadBlob(outOffset, in_len1, out_blob, in_blob1);
 
 		if (auth1 && auth2) {
 			LoadBlob_Auth(outOffset, out_blob, auth1);
 			LoadBlob_Auth(outOffset, out_blob, auth2);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, *outOffset, ordinal, out_blob);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH2_COMMAND, *outOffset, ord1, out_blob);
 		} else if (auth1) {
 			LoadBlob_Auth(outOffset, out_blob, auth1);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ord1, out_blob);
 		} else if (auth2) {
 			LoadBlob_Auth(outOffset, out_blob, auth2);
-			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ord1, out_blob);
 		} else {
-			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ord1, out_blob);
 		}
 
 		result = TSS_SUCCESS;
