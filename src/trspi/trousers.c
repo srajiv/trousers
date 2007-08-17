@@ -221,6 +221,15 @@ Trspi_LoadBlob_TSS_VERSION(UINT64 *offset, BYTE *blob, TSS_VERSION version)
 void
 Trspi_UnloadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 {
+	if (!out) {
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+
+		return;
+	}
+
 	Trspi_UnloadBlob_BYTE(offset, &out->major, blob);
 	Trspi_UnloadBlob_BYTE(offset, &out->minor, blob);
 	Trspi_UnloadBlob_BYTE(offset, &out->revMajor, blob);
@@ -586,6 +595,15 @@ Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *sto
 void
 Trspi_UnloadBlob_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
 {
+	if (!out) {
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+
+		return;
+	}
+
 	Trspi_UnloadBlob_BYTE(offset, &out->major, blob);
 	Trspi_UnloadBlob_BYTE(offset, &out->minor, blob);
 	Trspi_UnloadBlob_BYTE(offset, &out->revMajor, blob);
