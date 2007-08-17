@@ -45,6 +45,7 @@ TSS_RESULT Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
 void       Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest);
 TSS_RESULT Trspi_UnloadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey);
 TSS_RESULT Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key);
+TSS_RESULT Trspi_UnloadBlob_KEY12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key);
 TSS_RESULT Trspi_UnloadBlob_MigrationKeyAuth(UINT64 *offset, BYTE *blob, TCPA_MIGRATIONKEYAUTH *migAuth);
 TSS_RESULT Trspi_UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 TSS_RESULT Trspi_UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info);
@@ -88,6 +89,7 @@ void Trspi_LoadBlob_PCR_SELECTION(UINT64 *offset, BYTE *blob, TCPA_PCR_SELECTION
 void Trspi_LoadBlob_STORED_DATA(UINT64 *offset, BYTE *blob, TCPA_STORED_DATA *data);
 void Trspi_LoadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey);
 void Trspi_LoadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key);
+void Trspi_LoadBlob_KEY12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key);
 void Trspi_LoadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags);
 void Trspi_LoadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyInfo);
 void Trspi_LoadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store);
