@@ -34,7 +34,7 @@ void
 Trspi_UnloadBlob_NONCE(UINT64 *offset, BYTE *blob, TPM_NONCE *n)
 {
 	if (!n) {
-		offset += TPM_SHA1_160_HASH_LEN;
+		(*offset) += TPM_SHA1_160_HASH_LEN;
 		return;
 	}
 
@@ -57,7 +57,7 @@ void
 Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *digest)
 {
 	if (!digest) {
-		offset += TPM_SHA1_160_HASH_LEN;
+		(*offset) += TPM_SHA1_160_HASH_LEN;
 		return;
 	}
 
@@ -98,7 +98,7 @@ Trspi_LoadBlob(UINT64 *offset, size_t size, BYTE *to, BYTE *from)
 		return;
 	if (to)
 		memcpy(&to[(*offset)], from, size);
-	*offset += size;
+	(*offset) += size;
 }
 
 void
@@ -107,7 +107,7 @@ Trspi_UnloadBlob(UINT64 *offset, size_t size, BYTE *from, BYTE *to)
 	if (size <= 0)
 		return;
 	memcpy(to, &from[*offset], size);
-	*offset += size;
+	(*offset) += size;
 }
 
 void
@@ -147,7 +147,7 @@ Trspi_LoadBlob_UINT64(UINT64 *offset, UINT64 in, BYTE *blob)
 {
 	if (blob)
 		UINT64ToArray(in, &blob[*offset]);
-	*offset += sizeof(UINT64);
+	(*offset) += sizeof(UINT64);
 }
 
 void
@@ -155,7 +155,7 @@ Trspi_LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE *blob)
 {
 	if (blob)
 		UINT32ToArray(in, &blob[*offset]);
-	*offset += sizeof(UINT32);
+	(*offset) += sizeof(UINT32);
 }
 
 void
@@ -163,14 +163,14 @@ Trspi_LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE *blob)
 {
 	if (blob)
 		UINT16ToArray(in, &blob[*offset]);
-	*offset += sizeof(UINT16);
+	(*offset) += sizeof(UINT16);
 }
 
 void
 Trspi_UnloadBlob_UINT64(UINT64 *offset, UINT64 *out, BYTE *blob)
 {
 	*out = Decode_UINT64(&blob[*offset]);
-	*offset += sizeof(UINT64);
+	(*offset) += sizeof(UINT64);
 }
 
 void
@@ -178,7 +178,7 @@ Trspi_UnloadBlob_UINT32(UINT64 *offset, UINT32 *out, BYTE *blob)
 {
 	if (out)
 		*out = Decode_UINT32(&blob[*offset]);
-	*offset += sizeof(UINT32);
+	(*offset) += sizeof(UINT32);
 }
 
 void
@@ -186,7 +186,7 @@ Trspi_UnloadBlob_UINT16(UINT64 *offset, UINT16 *out, BYTE *blob)
 {
 	if (out)
 		*out = Decode_UINT16(&blob[*offset]);
-	*offset += sizeof(UINT16);
+	(*offset) += sizeof(UINT16);
 }
 
 void
@@ -464,7 +464,7 @@ Trspi_UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
 		Trspi_UnloadBlob_UINT32(offset, &parmSize, blob);
 
-		offset += parmSize;
+		(*offset) += parmSize;
 
 		return TSS_SUCCESS;
 	}
@@ -1874,7 +1874,7 @@ Trspi_UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TPM_CERTIFY_INFO *c)
 		Trspi_UnloadBlob_BOOL(offset, NULL, blob);
 		Trspi_UnloadBlob_UINT32(offset, &pcrInfoSize, blob);
 
-		offset += pcrInfoSize;
+		(*offset) += pcrInfoSize;
 
 		return TSS_SUCCESS;
 	}
