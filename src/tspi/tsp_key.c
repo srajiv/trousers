@@ -214,7 +214,7 @@ Transport_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 	}
 
 	offset = 0;
-	Trspi_UnloadBlob(&offset, *CertifyInfoSize, *CertifyInfo, dec);
+	Trspi_UnloadBlob(&offset, *CertifyInfoSize, dec, *CertifyInfo);
 	Trspi_UnloadBlob_UINT32(&offset, outDataSize, dec);
 
 	if ((*outData = malloc(*outDataSize)) == NULL) {
@@ -226,7 +226,7 @@ Transport_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 		LogError("malloc of %u bytes failed", *outDataSize);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
-	Trspi_UnloadBlob(&offset, *outDataSize, *outData, dec);
+	Trspi_UnloadBlob(&offset, *outDataSize, dec, *outData);
 
 	free(dec);
 
