@@ -290,17 +290,14 @@ Transport_CreateWrapKey(TSS_HCONTEXT tspContext,	/* in */
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_CreateWrapKey,
 						    (2 * sizeof(TPM_ENCAUTH) + keyInfoSize), data,
 						    &pubKeyHash, &handlesLen, &handles, pAuth, NULL,
-						    &decLen, &dec))) {
-		free(data);
-		free(handles);
-		return result;
-	}
-
-	free(data);
-	free(handles);
+						    &decLen, &dec)))
+		goto done;
 
 	*keyDataSize = decLen;
 	*keyData = dec;
+done:
+	free(data);
+	free(handles);
 
 	return result;
 }
