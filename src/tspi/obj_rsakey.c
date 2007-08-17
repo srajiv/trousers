@@ -63,14 +63,14 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		}
 	}
 
+	offset = 0;
 	switch (initFlags & TSS_KEY_STRUCT_BITMASK) {
 		case TSS_KEY_STRUCT_KEY:
-			memcpy(&rsakey->key.u.key11.ver, &ver, sizeof(TPM_VERSION));
+			memcpy(&rsakey->key.u.ver, &ver, sizeof(TPM_VERSION));
 			rsakey->type = TSS_KEY_STRUCT_KEY;
 			break;
 		case TSS_KEY_STRUCT_KEY12:
-			Trspi_LoadBlob_UINT16(&offset, TPM_TAG_KEY12,
-					      (BYTE *)&rsakey->key.u.key12.tag);
+			rsakey->key.u.key12.tag = TPM_TAG_KEY12;
 			rsakey->key.u.key12.fill = 0;
 			rsakey->type = TSS_KEY_STRUCT_KEY12;
 			break;
@@ -1030,7 +1030,10 @@ obj_rsakey_get_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	Trspi_LoadBlob_KEY(&offset, temp, (TCPA_KEY *)&rsakey->key);
+	if (rsakey->type == TSS_KEY_STRUCT_KEY12)
+		Trspi_LoadBlob_KEY12(&offset, temp, (TPM_KEY12 *)&rsakey->key);
+	else
+		Trspi_LoadBlob_KEY(&offset, temp, (TCPA_KEY *)&rsakey->key);
 
 	if (offset > 2048) {
 		LogError("memory corruption");
@@ -1225,7 +1228,7 @@ obj_rsakey_get_version(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	Trspi_LoadBlob_TCPA_VERSION(&offset, temp, *(TCPA_VERSION *)&rsakey->key.u.key11.ver);
+	Trspi_LoadBlob_TCPA_VERSION(&offset, temp, *(TCPA_VERSION *)&rsakey->key.u.ver);
 
 	if (offset > 128) {
 		LogError("memory corruption");
@@ -1454,8 +1457,13 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, data, (TCPA_KEY *)&rsakey->key)))
-		goto done;
+	if (rsakey->type == TSS_KEY_STRUCT_KEY12) {
+		if ((result = Trspi_UnloadBlob_KEY12(&offset, data, (TPM_KEY12 *)&rsakey->key)))
+			goto done;
+	} else {
+		if ((result = Trspi_UnloadBlob_KEY(&offset, data, (TCPA_KEY *)&rsakey->key)))
+			goto done;
+	}
 
 	if (rsakey->key.authDataUsage)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
