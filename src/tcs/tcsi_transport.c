@@ -127,6 +127,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize, wrappedSize, val1 = 0, val2 = 0, *pVal1 = NULL, *pVal2 = NULL;
+	TCS_HANDLE handle1, handle2;
 	UINT64 offset, wrappedOffset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -147,25 +148,50 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		if ((result = auth_mgr_check(hContext, &pWrappedCmdAuth2->AuthHandle)))
 			goto done;
 
+	if (*pulHandleListSize == 2) {
+		handle2 = *rghHandles[1];
+
+		if ((result = get_slot_lite(hContext, handle2, &val2))) {
+			*pulHandleListSize = 0;
+			free(*rghHandles);
+			*rghHandles = NULL;
+			goto done;
+		}
+
+		pVal2 = &val2;
+	}
+
 	if (*pulHandleListSize >= 1) {
-		if ((result = get_slot_lite(hContext, *rghHandles[0], &val1)))
+		handle1 = *rghHandles[0];
+
+		*pulHandleListSize = 0;
+		free(*rghHandles);
+		*rghHandles = NULL;
+
+		if ((result = get_slot_lite(hContext, handle1, &val1)))
 			goto done;
 
 		pVal1 = &val1;
 	}
 
-	if (*pulHandleListSize == 2) {
-		if ((result = get_slot_lite(hContext, *rghHandles[1], &val2)))
-			goto done;
-
-		pVal2 = &val2;
+	switch (unWrappedCommandOrdinal) {
+	case TPM_ORD_OIAP:
+	case TPM_ORD_OSAP:
+		/* are the maximum number of auth sessions open? */
+		if (auth_mgr_req_new(hContext) == FALSE) {
+			if ((result = auth_mgr_swap_out(hContext)))
+				goto done;
+		}
+		break;
+	default:
+		break;
 	}
 
 	if ((result = tpm_rqu_build(TPM_ORD_ExecuteTransport, &wrappedOffset,
 				    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], unWrappedCommandOrdinal,
 				    pVal1, pVal2, ulWrappedCmdParamInSize, rgbWrappedCmdParamIn,
 				    pWrappedCmdAuth1, pWrappedCmdAuth2)))
-		return result;
+		goto done;
 
 	/* The blob we'll load here looks like this:
 	 *
@@ -235,7 +261,8 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 	/* Now parse through the returned response @ wrappedOffset */
 	if ((result = UnloadBlob_Header(&txBlob[wrappedOffset], &paramSize))) {
-		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
+		LogDebugFn("Wrapped command (Ordinal 0x%x) failed: rc=0x%x",
+			   unWrappedCommandOrdinal, result);
 
 		/* This is the result of the wrapped command. If its not success, return its value
 		 * in the pulWrappedCmdReturnCode variable and return indicating that the execute
@@ -252,6 +279,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 	pVal1 = pVal2 = NULL;
 	switch (unWrappedCommandOrdinal) {
+		/* The commands below have 1 outgoing handle */
 		case TPM_ORD_LoadKey2:
 			pVal1 = &val1;
 			break;
@@ -263,18 +291,33 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 			       pVal1, pVal2, ulWrappedCmdParamOutSize, rgbWrappedCmdParamOut,
 			       pWrappedCmdAuth1, pWrappedCmdAuth2);
 
+	offset = 0;
 	switch (unWrappedCommandOrdinal) {
 	case TPM_ORD_LoadKey2:
 	{
 		TCS_KEY_HANDLE tcs_handle = NULL_TCS_HANDLE;
 
-		if ((result = load_key_final(hContext, *rghHandles[0], &tcs_handle, NULL,
-					     val1)))
+		if ((result = load_key_final(hContext, handle1, &tcs_handle, NULL, val1)))
 			goto done;
 
+		if ((*rghHandles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+			LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
 		*rghHandles[0] = tcs_handle;
+		*pulHandleListSize = 1;
 		break;
 	}
+	case TPM_ORD_OSAP:
+	case TPM_ORD_OIAP:
+	{
+		UINT32 handle;
+
+		UnloadBlob_UINT32(&offset, &handle, *rgbWrappedCmdParamOut);
+		result = auth_mgr_add(hContext, handle);
+	}
+		break;
 	default:
 		break;
 	}
