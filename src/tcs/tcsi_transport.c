@@ -149,7 +149,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 			goto done;
 
 	if (*pulHandleListSize == 2) {
-		handle2 = *rghHandles[1];
+		handle2 = (*rghHandles)[1];
 
 		if ((result = get_slot_lite(hContext, handle2, &val2))) {
 			*pulHandleListSize = 0;
@@ -316,8 +316,8 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 		UnloadBlob_UINT32(&offset, &handle, *rgbWrappedCmdParamOut);
 		result = auth_mgr_add(hContext, handle);
-	}
 		break;
+	}
 	default:
 		break;
 	}
