@@ -18,13 +18,11 @@ struct tr_rsakey_obj {
 	int type;
 	struct {
 		union {
-			struct {
-				TPM_VERSION ver;
-			} key11;
+			TPM_VERSION ver;
 			struct {
 				TPM_STRUCTURE_TAG tag;
 				UINT16 fill;
-			} key12;
+			} key12 __attribute__((packed));
 		} u;
 		TPM_KEY_USAGE keyUsage;
 		TPM_KEY_FLAGS keyFlags;
