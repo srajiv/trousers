@@ -43,16 +43,6 @@ struct _auth_mgr
 
 MUTEX_DECLARE_INIT(auth_mgr_lock);
 
-TSS_RESULT auth_mgr_init();
-TSS_RESULT auth_mgr_final();
-TSS_RESULT auth_mgr_check(TCS_CONTEXT_HANDLE, TPM_AUTHHANDLE *);
-TSS_RESULT auth_mgr_release_auth_handle(TCS_AUTHHANDLE, TCS_CONTEXT_HANDLE, TSS_BOOL);
-void       auth_mgr_release_auth(TPM_AUTH *, TPM_AUTH *, TCS_CONTEXT_HANDLE);
-TSS_RESULT auth_mgr_oiap(TCS_CONTEXT_HANDLE, TCS_AUTHHANDLE *, TCPA_NONCE *);
-TSS_RESULT auth_mgr_osap(TCS_CONTEXT_HANDLE, TCPA_ENTITY_TYPE, UINT32, TCPA_NONCE,
-			 TCS_AUTHHANDLE *, TCPA_NONCE *, TCPA_NONCE *);
-TSS_RESULT auth_mgr_close_context(TCS_CONTEXT_HANDLE);
-
 TSS_RESULT TPM_SaveAuthContext(TPM_AUTHHANDLE, UINT32 *, BYTE **);
 TSS_RESULT TPM_LoadAuthContext(UINT32, BYTE *, TPM_AUTHHANDLE *);
 
