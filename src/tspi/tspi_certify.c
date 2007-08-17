@@ -31,8 +31,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	TCPA_RESULT result;
 	TPM_AUTH certAuth;
 	TPM_AUTH keyAuth;
-	UINT64 offset = 0;
-	//BYTE hashBlob[1024];
 	TCPA_DIGEST digest;
 	TCPA_NONCE antiReplay;
 	UINT32 CertifyInfoSize;
@@ -42,8 +40,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	TSS_HPOLICY hPolicy;
 	TSS_HPOLICY hCertPolicy;
 	TCS_KEY_HANDLE certifyTCSKeyHandle, keyTCSKeyHandle;
-	BYTE *keyData = NULL;
-	UINT32 keyDataSize;
 	TCPA_KEY keyContainer;
 	TSS_BOOL useAuthCert;
 	TSS_BOOL useAuthKey;
@@ -138,43 +134,27 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	}
 
 	if (pValidationData == NULL) {
-		if ((result = obj_rsakey_get_blob(hCertifyingKey, &keyDataSize, &keyData))) {
-			LogError("Error in calling GetAttribData internally");
-			return TSPERR(TSS_E_INTERNAL_ERROR);
-		}
-
-		memset(&keyContainer, 0, sizeof(TCPA_KEY));
-
-		offset = 0;
-		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
-			return result;
-
 		if ((result = Trspi_Hash(TSS_HASH_SHA1, CertifyInfoSize, CertifyInfo,
 					 digest.digest))) {
 			free_key_refs(&keyContainer);
 			return result;
 		}
 
-		if ((result = Trspi_Verify(TSS_HASH_SHA1, digest.digest, 20,
-					   keyContainer.pubKey.key,
-					   keyContainer.pubKey.keyLength,
-					   outData, outDataSize))) {
-			free_key_refs(&keyContainer);
+		if ((result = rsa_verify(hCertifyingKey, TSS_HASH_SHA1, TPM_SHA1_160_HASH_LEN,
+					 digest.digest, outDataSize, outData)))
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
-		}
-		free_key_refs(&keyContainer);
 	} else {
 		pValidationData->ulDataLength = CertifyInfoSize;
 		pValidationData->rgbData = calloc_tspi(tspContext, CertifyInfoSize);
 		if (pValidationData->rgbData == NULL) {
-			LogError("malloc of %d bytes failed.", CertifyInfoSize);
+			LogError("malloc of %u bytes failed.", CertifyInfoSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(pValidationData->rgbData, CertifyInfo, CertifyInfoSize);
 		pValidationData->ulValidationDataLength = outDataSize;
 		pValidationData->rgbValidationData = calloc_tspi(tspContext, outDataSize);
 		if (pValidationData->rgbValidationData == NULL) {
-			LogError("malloc of %d bytes failed.", outDataSize);
+			LogError("malloc of %u bytes failed.", outDataSize);
 			return TSPERR(TSS_E_OUTOFMEMORY);
 		}
 		memcpy(pValidationData->rgbValidationData, outData, outDataSize);
