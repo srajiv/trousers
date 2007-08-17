@@ -490,6 +490,7 @@ err_exit:
 	return result;
 }
 
+/* XXX this should be moved out of an RPC-specific file */
 short
 get_port(void)
 {
