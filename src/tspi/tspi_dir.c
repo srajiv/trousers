@@ -63,7 +63,7 @@ Tspi_TPM_DirWrite(TSS_HTPM hTPM,		/* in */
 					      &hashDigest, &auth)))
 		return result;
 
-	if ((result = TCS_API(tspContext)->DirWriteAuth(tspContext, ulDirIndex, dirValue, &auth)))
+	if ((result = TCS_API(tspContext)->DirWriteAuth(tspContext, ulDirIndex, &dirValue, &auth)))
 		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
