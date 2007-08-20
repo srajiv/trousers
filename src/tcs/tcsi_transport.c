@@ -127,7 +127,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 {
 	TSS_RESULT result;
 	UINT32 paramSize, wrappedSize, val1 = 0, val2 = 0, *pVal1 = NULL, *pVal2 = NULL;
-	TCS_HANDLE handle1, handle2;
+	TCS_HANDLE handle1 = 0, handle2 = 0;
 	UINT64 offset, wrappedOffset = 0;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
