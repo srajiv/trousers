@@ -60,7 +60,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		result |= Trspi_Hash_UINT32(&hashCtx, ulDataLen);
 		result |= Trspi_HashUpdate(&hashCtx, ulDataLen, data);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+			goto done;
 
 		pPrivAuth = &privAuth;
 
@@ -81,14 +81,19 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Sign);
 		result |= Trspi_Hash_UINT32(&hashCtx, *pulSignatureLength);
 		result |= Trspi_HashUpdate(&hashCtx, *pulSignatureLength, *prgbSignature);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+			free(*prgbSignature);
+			goto done;
+		}
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
-			free_tspi(tspContext, *prgbSignature);
+			free(*prgbSignature);
 			goto done;
 		}
 	}
+
+	if ((result = add_mem_entry(tspContext, *prgbSignature)))
+		free(*prgbSignature);
 
 done:
 	free_tspi(tspContext, data);
