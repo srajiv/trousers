@@ -38,6 +38,7 @@ TSS_RESULT obj_pcrs_set_value(TSS_HPCRS, UINT32, UINT32, BYTE *);
 TSS_RESULT obj_pcrs_set_values(TSS_HPCRS hPcrs, TCPA_PCR_COMPOSITE *);
 TSS_RESULT obj_pcrs_get_selection(TSS_HPCRS, UINT32 *, BYTE *);
 TSS_RESULT obj_pcrs_get_digest_at_release(TSS_HPCRS, UINT32 *, BYTE **);
+TSS_RESULT obj_pcrs_set_digest_at_release(TSS_HPCRS, TPM_COMPOSITE_HASH);
 TSS_RESULT obj_pcrs_create_info_type(TSS_HPCRS, UINT32, UINT32 *, BYTE **);
 TSS_RESULT obj_pcrs_create_info(TSS_HPCRS, UINT32 *, BYTE **);
 TSS_RESULT obj_pcrs_create_info_long(TSS_HPCRS, UINT32 *, BYTE **);
