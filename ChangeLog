@@ -1,4 +1,5 @@
 
+  Added the Quote2 Commands
 - Added new TSS 1.2 return codes to Trspi_Error_String.
 - Added Tspi_Context_GetRegisteredKeysByUUID2 functions
 to the persistent storage system
