@@ -98,14 +98,14 @@ RPC_CreateMigrationBlob_TP(struct host_table_entry *hte,
 		}
 
 		if (*randomSize > 0) {
-			*random = (BYTE *)calloc_tspi(hte->tspContext, *randomSize);
+			*random = (BYTE *)malloc(*randomSize);
 			if (*random == NULL) {
 				LogError("malloc of %u bytes failed.", *randomSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *random, *randomSize, &hte->comm)) {
-				free_tspi(hte->tspContext, *random);
+				free(*random);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -113,23 +113,23 @@ RPC_CreateMigrationBlob_TP(struct host_table_entry *hte,
 
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, outDataSize, 0, &hte->comm)) {
 			if (*randomSize > 0)
-				free_tspi(hte->tspContext, *random);
+				free(*random);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 
-		*outData = (BYTE *)calloc_tspi(hte->tspContext, *outDataSize);
+		*outData = (BYTE *)malloc(*outDataSize);
 		if (*outData == NULL) {
 			if (*randomSize > 0)
-				free_tspi(hte->tspContext, *random);
+				free(*random);
 			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
 			if (*randomSize > 0)
-				free_tspi(hte->tspContext, *random);
-			free_tspi(hte->tspContext, *outData);
+				free(*random);
+			free(*outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -251,7 +251,7 @@ RPC_AuthorizeMigrationKey_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*MigrationKeyAuth = (BYTE *)calloc_tspi(hte->tspContext, *MigrationKeyAuthSize);
+		*MigrationKeyAuth = (BYTE *)malloc(*MigrationKeyAuthSize);
 		if (*MigrationKeyAuth == NULL) {
 			LogError("malloc of %u bytes failed.", *MigrationKeyAuthSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
