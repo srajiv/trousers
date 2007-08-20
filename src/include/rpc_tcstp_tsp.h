@@ -179,7 +179,7 @@ TSS_RESULT RPC_Quote2_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE,UIN
 #endif
 
 #ifdef TSS_BUILD_DIR
-TSS_RESULT RPC_DirWriteAuth_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE,TPM_AUTH *);
+TSS_RESULT RPC_DirWriteAuth_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE *,TPM_AUTH *);
 TSS_RESULT RPC_DirRead_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE *);
 #else
 #define RPC_DirWriteAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
@@ -187,7 +187,7 @@ TSS_RESULT RPC_DirRead_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE 
 #endif
 
 #ifdef TSS_BUILD_SEAL
-TSS_RESULT RPC_Seal_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
+TSS_RESULT RPC_Seal_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH *,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
 TSS_RESULT RPC_Unseal_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **);
 #else
 #define RPC_Seal_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
@@ -195,7 +195,7 @@ TSS_RESULT RPC_Unseal_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,
 #endif
 
 #ifdef TSS_BUILD_SEALX
-TSS_RESULT RPC_Sealx_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
+TSS_RESULT RPC_Sealx_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH *,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
 #else
 #define RPC_Sealx_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
@@ -356,7 +356,7 @@ TSS_RESULT RPC_NV_ReadValueAuth_TP(struct host_table_entry *hte, TSS_NV_INDEX, U
 #ifdef TSS_BUILD_AUDIT
 TSS_RESULT RPC_SetOrdinalAuditStatus_TP(struct host_table_entry *hte, TPM_AUTH *, UINT32, TSS_BOOL);
 TSS_RESULT RPC_GetAuditDigest_TP(struct host_table_entry *hte, UINT32, TPM_DIGEST *, UINT32 *, BYTE **, TSS_BOOL *, UINT32 *, UINT32 **);
-TSS_RESULT RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TSS_BOOL, TPM_NONCE, TPM_AUTH *, UINT32 *, BYTE **, TPM_DIGEST *, TPM_DIGEST *, UINT32 *, BYTE **);
+TSS_RESULT RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TSS_BOOL, TPM_NONCE *, TPM_AUTH *, UINT32 *, BYTE **, TPM_DIGEST *, TPM_DIGEST *, UINT32 *, BYTE **);
 #else
 #define RPC_SetOrdinalAuditStatus_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_GetAuditDigest_TP(...)      TSPERR(TSS_E_INTERNAL_ERROR)

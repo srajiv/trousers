@@ -28,7 +28,7 @@
 TSS_RESULT
 RPC_DirWriteAuth_TP(struct host_table_entry *hte,
 				 TCPA_DIRINDEX dirIndex,	/* in */
-				 TCPA_DIRVALUE newContents,	/* in */
+				 TCPA_DIRVALUE *newContents,	/* in */
 				 TPM_AUTH * ownerAuth	/* in, out */
     ) {
 	TSS_RESULT result;
@@ -41,7 +41,7 @@ RPC_DirWriteAuth_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &dirIndex, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_DIGEST, 2, &newContents, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_DIGEST, 2, newContents, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_AUTH, 3, ownerAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

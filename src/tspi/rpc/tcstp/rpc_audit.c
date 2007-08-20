@@ -135,7 +135,7 @@ TSS_RESULT
 RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte,
 			    TCS_KEY_HANDLE keyHandle,		/* in */
 			    TSS_BOOL closeAudit,		/* in */
-			    TPM_NONCE antiReplay,		/* in */
+			    TPM_NONCE *antiReplay,		/* in */
 			    TPM_AUTH *privAuth,		/* in/out */
 			    UINT32 *counterValueSize,		/* out */
 			    BYTE **counterValue,		/* out */
@@ -160,7 +160,7 @@ RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_BOOL, 2, &closeAudit, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 3, &antiReplay, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (privAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 4, privAuth, 0, &hte->comm))

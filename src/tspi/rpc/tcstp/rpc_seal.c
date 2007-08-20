@@ -29,7 +29,7 @@ TSS_RESULT
 common_Seal_TP(UINT32 sealOrdinal,
 			 struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
-			 TCPA_ENCAUTH encAuth,	/* in */
+			 TCPA_ENCAUTH *encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
 			 BYTE * PcrInfo,	/* in */
 			 UINT32 inDataSize,	/* in */
@@ -49,7 +49,7 @@ common_Seal_TP(UINT32 sealOrdinal,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, i++, &encAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, i++, encAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pcrInfoSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -102,7 +102,7 @@ done:
 TSS_RESULT
 RPC_Seal_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
-			 TCPA_ENCAUTH encAuth,	/* in */
+			 TCPA_ENCAUTH *encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
 			 BYTE * PcrInfo,	/* in */
 			 UINT32 inDataSize,	/* in */
@@ -119,7 +119,7 @@ RPC_Seal_TP(struct host_table_entry *hte,
 TSS_RESULT
 RPC_Sealx_TP(struct host_table_entry *hte,
 			 TCS_KEY_HANDLE keyHandle,	/* in */
-			 TCPA_ENCAUTH encAuth,	/* in */
+			 TCPA_ENCAUTH *encAuth,	/* in */
 			 UINT32 pcrInfoSize,	/* in */
 			 BYTE * PcrInfo,	/* in */
 			 UINT32 inDataSize,	/* in */
@@ -189,14 +189,14 @@ RPC_Unseal_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*Data = (BYTE *) calloc_tspi(hte->tspContext, *DataSize);
+		*Data = (BYTE *) malloc(*DataSize);
 		if (*Data == NULL) {
 			LogError("malloc of %u bytes failed.", *DataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 3, *Data, *DataSize, &hte->comm)) {
-			free_tspi(hte->tspContext, *Data);
+			free(*Data);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

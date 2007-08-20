@@ -1053,7 +1053,7 @@ TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
 
 TSS_RESULT RPC_DirWriteAuth(TSS_HCONTEXT tspContext,	/* in */
 			    TCPA_DIRINDEX dirIndex,	/* in */
-			    TCPA_DIRVALUE newContents,	/* in */
+			    TCPA_DIRVALUE *newContents,	/* in */
 			    TPM_AUTH * ownerAuth)	/* in, out */
 {
 	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -1100,7 +1100,7 @@ TSS_RESULT RPC_DirRead(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_Seal(TSS_HCONTEXT tspContext,	/* in */
 		    TCS_KEY_HANDLE keyHandle,	/* in */
-		    TCPA_ENCAUTH encAuth,	/* in */
+		    TCPA_ENCAUTH *encAuth,	/* in */
 		    UINT32 pcrInfoSize,	/* in */
 		    BYTE * PcrInfo,	/* in */
 		    UINT32 inDataSize,	/* in */
@@ -1132,7 +1132,7 @@ TSS_RESULT RPC_Seal(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_Sealx(TSS_HCONTEXT tspContext,	/* in */
 		     TCS_KEY_HANDLE keyHandle,	/* in */
-		     TCPA_ENCAUTH encAuth,	/* in */
+		     TCPA_ENCAUTH *encAuth,	/* in */
 		     UINT32 pcrInfoSize,	/* in */
 		     BYTE * PcrInfo,	/* in */
 		     UINT32 inDataSize,	/* in */
@@ -2751,7 +2751,7 @@ RPC_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_SetOrdinalAuditStatus(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_SetOrdinalAuditStatus(TSS_HCONTEXT hContext,	/* in */
 			  TPM_AUTH *ownerAuth,		/* in/out */
 			  UINT32 ulOrdinal,		/* in */
 			  TSS_BOOL bAuditState)	/* in */
@@ -2777,7 +2777,7 @@ RPC_SetOrdinalAuditStatus(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_GetAuditDigest(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_GetAuditDigest(TSS_HCONTEXT hContext,	/* in */
 		   UINT32 startOrdinal,		/* in */
 		   TPM_DIGEST *auditDigest,		/* out */
 		   UINT32 *counterValueSize,		/* out */
@@ -2808,10 +2808,10 @@ RPC_GetAuditDigest(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_GetAuditDigestSigned(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_GetAuditDigestSigned(TSS_HCONTEXT hContext,		/* in */
 			 TCS_KEY_HANDLE keyHandle,	/* in */
 			 TSS_BOOL closeAudit,		/* in */
-			 TPM_NONCE antiReplay,		/* in */
+			 TPM_NONCE *antiReplay,		/* in */
 			 TPM_AUTH *privAuth,		/* in/out */
 			 UINT32 *counterValueSize,	/* out */
 			 BYTE **counterValue,		/* out */
@@ -2844,7 +2844,7 @@ RPC_GetAuditDigestSigned(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_SetOperatorAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_SetOperatorAuth(TSS_HCONTEXT hContext,	/* in */
 		    TCPA_SECRET *operatorAuth)		/* in */
 {
 	TSS_RESULT result = TSS_SUCCESS;
@@ -2867,7 +2867,7 @@ RPC_SetOperatorAuth(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_OwnerReadInternalPub(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_OwnerReadInternalPub(TSS_HCONTEXT hContext,	/* in */
 			 TCS_KEY_HANDLE hKey,		/* in */
 			 TPM_AUTH* pOwnerAuth,		/* in, out */
 			 UINT32* punPubKeySize,	/* out */

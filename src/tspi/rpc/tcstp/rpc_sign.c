@@ -73,7 +73,7 @@ RPC_Sign_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*sig = (BYTE *) calloc_tspi(hte->tspContext, *sigSize);
+		*sig = (BYTE *) malloc(*sigSize);
 		if (*sig == NULL) {
 			LogError("malloc of %u bytes failed.", *sigSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
