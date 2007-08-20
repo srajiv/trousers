@@ -112,11 +112,21 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_AuthorizeMigrationKey);
 	result |= Trspi_HashUpdate(&hashCtx, *pulMigTicketLength, *prgbMigTicket);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		*pulMigTicketLength = 0;
+		free(*prgbMigTicket);
 		return result;
+	}
 
 	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth))) {
-		free_tspi(tspContext, prgbMigTicket);
+		*pulMigTicketLength = 0;
+		free(*prgbMigTicket);
+		return result;
+	}
+
+	if ((result = add_mem_entry(tspContext, *prgbMigTicket))) {
+		*pulMigTicketLength = 0;
+		free(*prgbMigTicket);
 		return result;
 	}
 
@@ -250,7 +260,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, *pulMigrationBlobLength);
 	result |= Trspi_HashUpdate(&hashCtx, *pulMigrationBlobLength, *prgbMigrationBlob);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error;
 
 	if (parentUsesAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
@@ -261,6 +271,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		goto error;
 
 	if (migAuth.migrationScheme == TCPA_MS_REWRAP) {
+		/* XXX update all this mess */
 		if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
 			goto error;
 
@@ -296,11 +307,26 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 			goto error;
 	}
 
+	if (*pulRandomLength) {
+		if ((result = add_mem_entry(tspContext, *prgbRandom)))
+			goto error;
+	}
+
+	if ((result = add_mem_entry(tspContext, *prgbMigrationBlob))) {
+		free_tspi(tspContext, *prgbRandom);
+		*pulRandomLength = 0;
+		goto error2;
+	}
+
 	return result;
 error:
-	if (*pulRandomLength)
-		free_tspi(tspContext, prgbRandom);
-	free_tspi(tspContext, prgbMigrationBlob);
+	if (*pulRandomLength) {
+		*pulRandomLength = 0;
+		free(*prgbRandom);
+	}
+error2:
+	*pulMigrationBlobLength = 0;
+	free(*prgbMigrationBlob);
 	return result;
 }
 
@@ -371,8 +397,10 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ConvertMigrationBlob);
 	result |= Trspi_Hash_UINT32(&hashCtx, outDataSize);
 	result |= Trspi_HashUpdate(&hashCtx, outDataSize, outData);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		free(outData);
 		return result;
+	}
 
 	if (useAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth))) {
