@@ -62,3 +62,188 @@ done:
 	return result;
 }
 
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT
+Transport_Seal(TSS_HCONTEXT tspContext,    /* in */
+	       TCS_KEY_HANDLE keyHandle,   /* in */
+	       TCPA_ENCAUTH *encAuth,       /* in */
+	       UINT32 pcrInfoSize, /* in */
+	       BYTE * PcrInfo,     /* in */
+	       UINT32 inDataSize,  /* in */
+	       BYTE * inData,      /* in */
+	       TPM_AUTH * pubAuth, /* in, out */
+	       UINT32 * SealedDataSize,    /* out */
+	       BYTE ** SealedData) /* out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen, decLen, dataLen;
+	TCS_HANDLE *handles;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
+	UINT64 offset;
+	BYTE *data, *dec;
+
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_tcskey_get_pubkeyhash(keyHandle, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
+	handlesLen = 1;
+	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*handles = keyHandle;
+
+	dataLen = (2 * sizeof(UINT32)) + sizeof(TPM_ENCAUTH) + pcrInfoSize + inDataSize;
+	if ((data = malloc(dataLen)) == NULL) {
+		free(handles);
+		LogError("malloc of %u bytes failed", dataLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_DIGEST(&offset, data, (TPM_DIGEST *)encAuth);
+	Trspi_LoadBlob_UINT32(&offset, pcrInfoSize, data);
+	Trspi_LoadBlob(&offset, pcrInfoSize, data, PcrInfo);
+	Trspi_LoadBlob_UINT32(&offset, inDataSize, data);
+	Trspi_LoadBlob(&offset, inDataSize, data, inData);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Seal, dataLen, data,
+						    &pubKeyHash, &handlesLen, &handles, pubAuth,
+						    NULL, &decLen, &dec)))
+		return result;
+
+	*SealedDataSize = decLen;
+	*SealedData = dec;
+
+	return result;
+}
+
+TSS_RESULT
+Transport_Sealx(TSS_HCONTEXT tspContext,   /* in */
+		TCS_KEY_HANDLE keyHandle,  /* in */
+		TCPA_ENCAUTH *encAuth,      /* in */
+		UINT32 pcrInfoSize,        /* in */
+		BYTE * PcrInfo,    /* in */
+		UINT32 inDataSize, /* in */
+		BYTE * inData,     /* in */
+		TPM_AUTH * pubAuth,        /* in, out */
+		UINT32 * SealedDataSize,   /* out */
+		BYTE ** SealedData)        /* out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen, decLen, dataLen;
+	TCS_HANDLE *handles;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
+	UINT64 offset;
+	BYTE *data, *dec;
+
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_tcskey_get_pubkeyhash(keyHandle, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
+	handlesLen = 1;
+	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*handles = keyHandle;
+
+	dataLen = (2 * sizeof(UINT32)) + sizeof(TPM_ENCAUTH) + pcrInfoSize + inDataSize;
+	if ((data = malloc(dataLen)) == NULL) {
+		free(handles);
+		LogError("malloc of %u bytes failed", dataLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_NONCE(&offset, data, (TPM_NONCE *)encAuth);
+	Trspi_LoadBlob_UINT32(&offset, pcrInfoSize, data);
+	Trspi_LoadBlob(&offset, pcrInfoSize, data, PcrInfo);
+	Trspi_LoadBlob_UINT32(&offset, inDataSize, data);
+	Trspi_LoadBlob(&offset, inDataSize, data, inData);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Sealx, dataLen, data,
+						    &pubKeyHash, &handlesLen, &handles, pubAuth,
+						    NULL, &decLen, &dec)))
+		return result;
+
+	*SealedDataSize = decLen;
+	*SealedData = dec;
+
+	return result;
+}
+
+TSS_RESULT
+Transport_Unseal(TSS_HCONTEXT tspContext,  /* in */
+		 TCS_KEY_HANDLE parentHandle,      /* in */
+		 UINT32 SealedDataSize,    /* in */
+		 BYTE * SealedData,        /* in */
+		 TPM_AUTH * parentAuth,    /* in, out */
+		 TPM_AUTH * dataAuth,      /* in, out */
+		 UINT32 * DataSize,        /* out */
+		 BYTE ** Data)     /* out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen, decLen;
+	TCS_HANDLE *handles;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
+	BYTE *dec;
+
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_tcskey_get_pubkeyhash(parentHandle, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
+	handlesLen = 1;
+	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*handles = parentHandle;
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Sealx, SealedDataSize,
+						    SealedData, &pubKeyHash, &handlesLen, &handles,
+						    parentAuth, dataAuth, &decLen, &dec)))
+		return result;
+
+	*DataSize = decLen;
+	*Data = dec;
+
+	return result;
+}
+#endif
