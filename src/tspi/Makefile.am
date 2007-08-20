@@ -84,7 +84,7 @@ libtspi_la_SOURCES+=tspi_policy.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_POLICY
 endif
 if TSS_BUILD_DIR
-libtspi_la_SOURCES+=tspi_dir.c rpc/@RPC@/rpc_dir.c
+libtspi_la_SOURCES+=tspi_dir.c tsp_dir.c rpc/@RPC@/rpc_dir.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_DIR
 endif
 if TSS_BUILD_PCR_EVENTS
@@ -96,7 +96,7 @@ libtspi_la_SOURCES+=tspi_hash.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_HASH
 endif
 if TSS_BUILD_SIGN
-libtspi_la_SOURCES+=tspi_sign.c rpc/@RPC@/rpc_sign.c
+libtspi_la_SOURCES+=tspi_sign.c tsp_sign.c rpc/@RPC@/rpc_sign.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_SIGN
 endif
 if TSS_BUILD_QUOTE
@@ -116,7 +116,7 @@ libtspi_la_SOURCES+=tspi_changeauth.c tsp_changeauth.c rpc/@RPC@/rpc_changeauth.
 libtspi_la_CFLAGS+=-DTSS_BUILD_CHANGEAUTH
 endif
 if TSS_BUILD_BIND
-libtspi_la_SOURCES+=tspi_bind.c rpc/@RPC@/rpc_bind.c
+libtspi_la_SOURCES+=tspi_bind.c tsp_bind.c rpc/@RPC@/rpc_bind.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_BIND
 endif
 if TSS_BUILD_OWN
@@ -128,11 +128,11 @@ libtspi_la_SOURCES+=ps/ps_utils.c ps/tspps.c tspi_ps.c rpc/@RPC@/rpc_ps.c tsp_ps
 libtspi_la_CFLAGS+=-DTSS_BUILD_PS
 endif
 if TSS_BUILD_ADMIN
-libtspi_la_SOURCES+=tspi_admin.c rpc/@RPC@/rpc_admin.c
+libtspi_la_SOURCES+=tspi_admin.c tsp_admin.c rpc/@RPC@/rpc_admin.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_ADMIN
 endif
 if TSS_BUILD_AIK
-libtspi_la_SOURCES+=tspi_aik.c rpc/@RPC@/rpc_aik.c
+libtspi_la_SOURCES+=tspi_aik.c tsp_aik.c rpc/@RPC@/rpc_aik.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_AIK
 endif
 if TSS_BUILD_EK
@@ -140,7 +140,7 @@ libtspi_la_SOURCES+=tspi_ek.c rpc/@RPC@/rpc_ek.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_EK
 endif
 if TSS_BUILD_CERTIFY
-libtspi_la_SOURCES+=tspi_certify.c rpc/@RPC@/rpc_certify.c
+libtspi_la_SOURCES+=tspi_certify.c tsp_certify.c rpc/@RPC@/rpc_certify.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_CERTIFY
 endif
 if TSS_BUILD_KEY
