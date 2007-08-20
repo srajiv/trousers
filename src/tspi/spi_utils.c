@@ -33,51 +33,86 @@ TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
 
 struct tcs_api_table tcs_normal_api = {
 	.CloseContext = RPC_CloseContext,
+#ifdef TSS_BUILD_KEY
 	.LoadKeyByBlob = RPC_LoadKeyByBlob,
 	.EvictKey = RPC_EvictKey,
 	.CreateWrapKey = RPC_CreateWrapKey,
 	.GetPubKey = RPC_GetPubKey,
-	.SetOwnerInstall = RPC_SetOwnerInstall,
-	.TakeOwnership = RPC_TakeOwnership,
+	.OwnerReadInternalPub = RPC_OwnerReadInternalPub,
+#ifdef TSS_BUILD_CERTIFY
+	.CertifyKey = RPC_CertifyKey,
+#endif
+#endif
+#ifdef TSS_BUILD_OWN
+	.OwnerClear = RPC_OwnerClear,
+	.ForceClear = RPC_ForceClear,
+#endif
+#ifdef TSS_BUILD_AUTH
+	.TerminateHandle = RPC_TerminateHandle,
 	.OIAP = RPC_OIAP,
 	.OSAP = RPC_OSAP,
+#endif
+#ifdef TSS_BUILD_CHANGEAUTH
 	.ChangeAuth = RPC_ChangeAuth,
 	.ChangeAuthOwner = RPC_ChangeAuthOwner,
 	.ChangeAuthAsymStart = RPC_ChangeAuthAsymStart,
 	.ChangeAuthAsymFinish = RPC_ChangeAuthAsymFinish,
-	.TerminateHandle = RPC_TerminateHandle,
+#endif
+#ifdef TSS_BUILD_AIK
 	.ActivateTPMIdentity = RPC_ActivateTPMIdentity,
+#endif
+#ifdef TSS_BUILD_PCR_EXTEND
 	.Extend = RPC_Extend,
 	.PcrRead = RPC_PcrRead,
 	.PcrReset = RPC_PcrReset,
+#endif
+#ifdef TSS_BUILD_QUOTE
 	.Quote = RPC_Quote,
+#endif
+#ifdef TSS_BUILD_DIR
 	.DirWriteAuth = RPC_DirWriteAuth,
 	.DirRead = RPC_DirRead,
+#endif
+#ifdef TSS_BUILD_SEAL
 	.Seal = RPC_Seal,
 	.Sealx = RPC_Sealx,
 	.Unseal = RPC_Unseal,
+#endif
+#ifdef TSS_BUILD_BIND
 	.UnBind = RPC_UnBind,
+#endif
+#ifdef TSS_BUILD_MIGRATION
 	.CreateMigrationBlob = RPC_CreateMigrationBlob,
 	.ConvertMigrationBlob = RPC_ConvertMigrationBlob,
 	.AuthorizeMigrationKey = RPC_AuthorizeMigrationKey,
-	.CertifyKey = RPC_CertifyKey,
+#endif
+#ifdef TSS_BUILD_SIGN
 	.Sign = RPC_Sign,
+#endif
+#ifdef TSS_BUILD_RANDOM
 	.GetRandom = RPC_GetRandom,
 	.StirRandom = RPC_StirRandom,
+#endif
+#ifdef TSS_BUILD_CAPS_TPM
 	.SetCapability = RPC_SetCapability,
 	.GetCapabilityOwner = RPC_GetCapabilityOwner,
+#endif
+#ifdef TSS_BUILD_EK
 	.CreateEndorsementKeyPair = RPC_CreateEndorsementKeyPair,
 	.ReadPubek = RPC_ReadPubek,
-	.DisablePubekRead = RPC_DisablePubekRead,
 	.OwnerReadPubek = RPC_OwnerReadPubek,
+#endif
+#ifdef TSS_BUILD_SELFTEST
 	.SelfTestFull = RPC_SelfTestFull,
 	.CertifySelfTest = RPC_CertifySelfTest,
 	.GetTestResult = RPC_GetTestResult,
+#endif
+#ifdef TSS_BUILD_ADMIN
+	.SetOwnerInstall = RPC_SetOwnerInstall,
+	.DisablePubekRead = RPC_DisablePubekRead,
 	.OwnerSetDisable = RPC_OwnerSetDisable,
 	.ResetLockValue = RPC_ResetLockValue,
-	.OwnerClear = RPC_OwnerClear,
 	.DisableOwnerClear = RPC_DisableOwnerClear,
-	.ForceClear = RPC_ForceClear,
 	.DisableForceClear = RPC_DisableForceClear,
 	.PhysicalDisable = RPC_PhysicalDisable,
 	.PhysicalEnable = RPC_PhysicalEnable,
@@ -85,115 +120,178 @@ struct tcs_api_table tcs_normal_api = {
 	.PhysicalPresence = RPC_PhysicalPresence,
 	.SetTempDeactivated = RPC_SetTempDeactivated,
 	.SetTempDeactivated2 = RPC_SetTempDeactivated2,
-	.FieldUpgrade = RPC_FieldUpgrade,
-	.SetRedirection = RPC_SetRedirection,
+#endif
+#ifdef TSS_BUILD_MAINTENANCE
 	.CreateMaintenanceArchive = RPC_CreateMaintenanceArchive,
 	.LoadMaintenanceArchive = RPC_LoadMaintenanceArchive,
 	.KillMaintenanceFeature = RPC_KillMaintenanceFeature,
 	.LoadManuMaintPub = RPC_LoadManuMaintPub,
 	.ReadManuMaintPub = RPC_ReadManuMaintPub,
+#endif
+#ifdef TSS_BUILD_DAA
 	.DaaJoin = RPC_DaaJoin,
 	.DaaSign = RPC_DaaSign,
+#endif
+#ifdef TSS_BUILD_COUNTER
 	.ReadCounter = RPC_ReadCounter,
 	.CreateCounter = RPC_CreateCounter,
 	.IncrementCounter = RPC_IncrementCounter,
 	.ReleaseCounter = RPC_ReleaseCounter,
 	.ReleaseCounterOwner = RPC_ReleaseCounterOwner,
+#endif
+#ifdef TSS_BUILD_TICK
 	.ReadCurrentTicks = RPC_ReadCurrentTicks,
 	.TickStampBlob = RPC_TickStampBlob,
+#endif
+#ifdef TSS_BUILD_NV
 	.NV_DefineOrReleaseSpace = RPC_NV_DefineOrReleaseSpace,
 	.NV_WriteValue = RPC_NV_WriteValue,
 	.NV_WriteValueAuth = RPC_NV_WriteValueAuth,
 	.NV_ReadValue = RPC_NV_ReadValue,
 	.NV_ReadValueAuth = RPC_NV_ReadValueAuth,
+#endif
+#ifdef TSS_BUILD_AUDIT
 	.SetOrdinalAuditStatus = RPC_SetOrdinalAuditStatus,
 	.GetAuditDigest = RPC_GetAuditDigest,
 	.GetAuditDigestSigned = RPC_GetAuditDigestSigned,
+#endif
+#ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = RPC_SetOperatorAuth,
-	.OwnerReadInternalPub = RPC_OwnerReadInternalPub
+#endif
+	.FieldUpgrade = RPC_FieldUpgrade,
+	.SetRedirection = RPC_SetRedirection,
 };
 
 struct tcs_api_table tcs_transport_api = {
 	.CloseContext = RPC_CloseContext,
+#ifdef TSS_BUILD_KEY
 	.LoadKeyByBlob = Transport_LoadKeyByBlob,
 	.EvictKey = Transport_EvictKey,
 	.CreateWrapKey = Transport_CreateWrapKey,
 	.GetPubKey = Transport_GetPubKey,
-	.SetOwnerInstall = RPC_SetOwnerInstall,
-	.TakeOwnership = RPC_TakeOwnership,
+	.OwnerReadInternalPub = Transport_OwnerReadInternalPub,
+#ifdef TSS_BUILD_CERTIFY
+	.CertifyKey = Transport_CertifyKey,
+#endif
+#endif
+#ifdef TSS_BUILD_OWN
+	.OwnerClear = RPC_OwnerClear,
+	.ForceClear = RPC_ForceClear,
+#endif
+#ifdef TSS_BUILD_AUTH
 	.OIAP = Transport_OIAP,
 	.OSAP = Transport_OSAP,
+	.TerminateHandle = RPC_TerminateHandle,
+#endif
+#ifdef TSS_BUILD_CHANGEAUTH
 	.ChangeAuth = RPC_ChangeAuth,
 	.ChangeAuthOwner = RPC_ChangeAuthOwner,
 	.ChangeAuthAsymStart = RPC_ChangeAuthAsymStart,
 	.ChangeAuthAsymFinish = RPC_ChangeAuthAsymFinish,
-	.TerminateHandle = RPC_TerminateHandle,
-	.ActivateTPMIdentity = RPC_ActivateTPMIdentity,
+#endif
+#ifdef TSS_BUILD_AIK
+	.ActivateTPMIdentity = Transport_ActivateTPMIdentity,
+#endif
+#ifdef TSS_BUILD_PCR_EXTEND
 	.Extend = RPC_Extend,
 	.PcrRead = RPC_PcrRead,
 	.PcrReset = RPC_PcrReset,
+#endif
+#ifdef TSS_BUILD_QUOTE
 	.Quote = RPC_Quote,
-	.DirWriteAuth = RPC_DirWriteAuth,
-	.DirRead = RPC_DirRead,
-	.Seal = RPC_Seal,
-	.Sealx = RPC_Sealx,
-	.Unseal = RPC_Unseal,
+#endif
+#ifdef TSS_BUILD_DIR
+	.DirWriteAuth = Transport_DirWriteAuth,
+	.DirRead = Transport_DirRead,
+#endif
+#ifdef TSS_BUILD_SEAL
+	.Seal = Transport_Seal,
+	.Sealx = Transport_Sealx,
+	.Unseal = Transport_Unseal,
+#endif
+#ifdef TSS_BUILD_BIND
 	.UnBind = RPC_UnBind,
+#endif
+#ifdef TSS_BUILD_MIGRATION
 	.CreateMigrationBlob = RPC_CreateMigrationBlob,
 	.ConvertMigrationBlob = RPC_ConvertMigrationBlob,
 	.AuthorizeMigrationKey = RPC_AuthorizeMigrationKey,
-	.CertifyKey = Transport_CertifyKey,
-	.Sign = RPC_Sign,
+#endif
+#ifdef TSS_BUILD_SIGN
+	.Sign = Transport_Sign,
+#endif
+#ifdef TSS_BUILD_RANDOM
 	.GetRandom = Transport_GetRandom,
 	.StirRandom = Transport_StirRandom,
+#endif
+#ifdef TSS_BUILD_CAPS_TPM
 	.GetTPMCapability = Transport_GetTPMCapability,
 	.SetCapability = RPC_SetCapability,
 	.GetCapabilityOwner = RPC_GetCapabilityOwner,
+#endif
+#ifdef TSS_BUILD_EK
 	.CreateEndorsementKeyPair = RPC_CreateEndorsementKeyPair,
 	.ReadPubek = RPC_ReadPubek,
-	.DisablePubekRead = RPC_DisablePubekRead,
 	.OwnerReadPubek = RPC_OwnerReadPubek,
+#endif
+#ifdef TSS_BUILD_SELFTEST
 	.SelfTestFull = RPC_SelfTestFull,
 	.CertifySelfTest = RPC_CertifySelfTest,
 	.GetTestResult = RPC_GetTestResult,
-	.OwnerSetDisable = RPC_OwnerSetDisable,
-	.ResetLockValue = RPC_ResetLockValue,
-	.OwnerClear = RPC_OwnerClear,
-	.DisableOwnerClear = RPC_DisableOwnerClear,
-	.ForceClear = RPC_ForceClear,
-	.DisableForceClear = RPC_DisableForceClear,
-	.PhysicalDisable = RPC_PhysicalDisable,
-	.PhysicalEnable = RPC_PhysicalEnable,
-	.PhysicalSetDeactivated = RPC_PhysicalSetDeactivated,
-	.PhysicalPresence = RPC_PhysicalPresence,
-	.SetTempDeactivated = RPC_SetTempDeactivated,
-	.SetTempDeactivated2 = RPC_SetTempDeactivated2,
-	.FieldUpgrade = RPC_FieldUpgrade,
-	.SetRedirection = RPC_SetRedirection,
+#endif
+#ifdef TSS_BUILD_ADMIN
+	.SetOwnerInstall = Transport_SetOwnerInstall,
+	.DisablePubekRead = Transport_DisablePubekRead,
+	.OwnerSetDisable = Transport_OwnerSetDisable,
+	.ResetLockValue = Transport_ResetLockValue,
+	.DisableOwnerClear = Transport_DisableOwnerClear,
+	.DisableForceClear = Transport_DisableForceClear,
+	.PhysicalDisable = Transport_PhysicalDisable,
+	.PhysicalEnable = Transport_PhysicalEnable,
+	.PhysicalSetDeactivated = Transport_PhysicalSetDeactivated,
+	.PhysicalPresence = Transport_PhysicalPresence,
+	.SetTempDeactivated = Transport_SetTempDeactivated,
+	.SetTempDeactivated2 = Transport_SetTempDeactivated2,
+#endif
+#ifdef TSS_BUILD_MAINTENANCE
 	.CreateMaintenanceArchive = RPC_CreateMaintenanceArchive,
 	.LoadMaintenanceArchive = RPC_LoadMaintenanceArchive,
 	.KillMaintenanceFeature = RPC_KillMaintenanceFeature,
 	.LoadManuMaintPub = RPC_LoadManuMaintPub,
 	.ReadManuMaintPub = RPC_ReadManuMaintPub,
+#endif
+#ifdef TSS_BUILD_DAA
 	.DaaJoin = RPC_DaaJoin,
 	.DaaSign = RPC_DaaSign,
+#endif
+#ifdef TSS_BUILD_COUNTER
 	.ReadCounter = Transport_ReadCounter,
 	.CreateCounter = RPC_CreateCounter,
 	.IncrementCounter = RPC_IncrementCounter,
 	.ReleaseCounter = RPC_ReleaseCounter,
 	.ReleaseCounterOwner = RPC_ReleaseCounterOwner,
+#endif
+#ifdef TSS_BUILD_TICK
 	.ReadCurrentTicks = Transport_ReadCurrentTicks,
 	.TickStampBlob = Transport_TickStampBlob,
+#endif
+#ifdef TSS_BUILD_NV
 	.NV_DefineOrReleaseSpace = RPC_NV_DefineOrReleaseSpace,
 	.NV_WriteValue = RPC_NV_WriteValue,
 	.NV_WriteValueAuth = RPC_NV_WriteValueAuth,
 	.NV_ReadValue = RPC_NV_ReadValue,
 	.NV_ReadValueAuth = RPC_NV_ReadValueAuth,
-	.SetOrdinalAuditStatus = RPC_SetOrdinalAuditStatus,
-	.GetAuditDigest = RPC_GetAuditDigest,
-	.GetAuditDigestSigned = RPC_GetAuditDigestSigned,
+#endif
+#ifdef TSS_BUILD_AUDIT
+	.SetOrdinalAuditStatus = Transport_SetOrdinalAuditStatus,
+	.GetAuditDigest = Transport_GetAuditDigest,
+	.GetAuditDigestSigned = Transport_GetAuditDigestSigned,
+#endif
+#ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = RPC_SetOperatorAuth,
-	.OwnerReadInternalPub = RPC_OwnerReadInternalPub
+#endif
+	.FieldUpgrade = RPC_FieldUpgrade,
+	.SetRedirection = RPC_SetRedirection,
 };
 
 UINT16
