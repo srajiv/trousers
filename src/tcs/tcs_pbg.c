@@ -22,7 +22,6 @@
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
-#include "trousers_types.h"
 #include "tcs_tsp.h"
 #include "tcs_utils.h"
 #include "tcs_int_literals.h"
@@ -171,6 +170,79 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		}
 		UnloadBlob(&offset1, *len2, b, *blob2);
 
+		break;
+	}
+	/* TPM BLOB: TPM_PCR_INFO_SHORT, (UINT32, BLOB,) UINT32, BLOB, 1 optional AUTH */
+	case TPM_ORD_Quote2:
+	{
+		UINT32 *len1 = va_arg(ap, UINT32 *); /* pcrDataSizeOut */
+		BYTE **blob1 = va_arg(ap, BYTE **);  /* pcrDataOut */
+		TSS_BOOL *addVersion = va_arg(ap, TSS_BOOL *); /* addVersion */
+		UINT32 *len2 = va_arg(ap, UINT32 *); /* versionInfoSize */
+		BYTE **blob2 = va_arg(ap, BYTE **);  /* versionInfo */
+		UINT32 *len3 = va_arg(ap, UINT32 *); /* sigSize */
+		BYTE **blob3 = va_arg(ap, BYTE **);  /* sig */
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *); /* privAuth */
+		va_end(ap);
+
+		if (!len1 || !blob1 || !len2 || !blob2 || !len3 || !blob3 || !addVersion) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		if (auth1) {
+			offset1 = len - TSS_TPM_RSP_BLOB_AUTH_LEN;
+			UnloadBlob_Auth(&offset1, b, auth1);
+		}
+
+		offset1 = offset2 = TSS_TPM_TXBLOB_HDR_LEN;
+		/* Adjust the offset to take the TPM_PCR_INFO_SHORT size:
+		 * need to allocate this size into blob1
+		 */
+		UnloadBlob_PCR_INFO_SHORT(&offset2, b, NULL);
+
+		/* Get the size of the TSS_TPM_INFO_SHORT
+		 * and copy it into blob1 */
+		*len1 = offset2 - offset1;
+		LogDebugFn("QUOTE2 Core: PCR_INFO_SHORT is %u size", *len1);
+		if ((*blob1 = malloc(*len1)) == NULL) {
+			LogError("malloc of %u bytes failed", *len1);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		UnloadBlob(&offset1, *len1, b, *blob1); /* TPM_PCR_INFO_SHORT */
+
+		UnloadBlob_UINT32(&offset1, len2,b); /* versionInfoSize */
+		LogDebugFn("QUOTE2 Core: versionInfoSize=%u", *len2);
+		if ((*blob2 = malloc(*len2)) == NULL) {
+			LogError("malloc of %u bytes failed", *len2);
+			free(*blob1);
+			*blob1 = NULL;
+			*len1 = 0;
+			*len2 = 0;
+			*len3 = 0;
+			*blob3 = NULL;
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		UnloadBlob(&offset1, *len2, b, *blob2);
+
+		/* Take the sigSize */
+		UnloadBlob_UINT32(&offset1, len3, b);
+		LogDebugFn("QUOTE2 Core: sigSize=%u", *len3);
+		/* sig */
+		if ((*blob3 = malloc(*len3)) == NULL) {
+			LogError("malloc of %u bytes failed", *len3);
+			free(*blob1);
+			*blob1 = NULL;
+			if (*len2 > 0){
+				free(*blob2);
+				*blob2 = NULL;
+			}
+			*len1 = 0;
+			*len2 = 0;
+			*len3 = 0;
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		UnloadBlob(&offset1, *len3, b, *blob3);
 		break;
 	}
 	/* TPM BLOB: TPM_CERTIFY_INFO, UINT32, BLOB, 2 optional AUTHs
@@ -1332,6 +1404,40 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
 
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 1 20-byte blob, 1 BLOB, 1 BOOL, 1 optional AUTH */
+	case TPM_ORD_Quote2:
+	{
+		/* Input vars */
+		UINT32 keySlot1 = va_arg(ap, UINT32);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		TSS_BOOL* addVersion = va_arg(ap,TSS_BOOL *);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+		
+		if (!keySlot1 || !digest1 || !in_blob1 || !addVersion) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+		
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		
+		/* Load the addVersion Bool */
+		LoadBlob_BOOL(outOffset,*addVersion,out_blob);
+		
 		if (auth1) {
 			LoadBlob_Auth(outOffset, out_blob, auth1);
 			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);

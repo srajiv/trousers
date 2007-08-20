@@ -172,6 +172,12 @@ TSS_RESULT RPC_Quote_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE,UINT
 #define RPC_Quote_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_QUOTE2
+TSS_RESULT RPC_Quote2_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE,UINT32,BYTE *,TSS_BOOL,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
+#else
+#define RPC_Quote2_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #ifdef TSS_BUILD_DIR
 TSS_RESULT RPC_DirWriteAuth_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE,TPM_AUTH *);
 TSS_RESULT RPC_DirRead_TP(struct host_table_entry *,TCPA_DIRINDEX,TCPA_DIRVALUE *);

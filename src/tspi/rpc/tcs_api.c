@@ -1016,6 +1016,41 @@ TSS_RESULT RPC_Quote(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
+				TCS_KEY_HANDLE keyHandle, /* in */
+				TCPA_NONCE antiReplay, /* in */
+				UINT32 pcrDataSizeIn, /* in */
+				BYTE * pcrDataIn, /* in */
+				TSS_BOOL addVersion, /* in */
+				TPM_AUTH * privAuth, /* in,out */
+				UINT32 * pcrDataSizeOut, /* out */
+				BYTE ** pcrDataOut, /* out */
+				UINT32 * versionInfoSize, /* out */
+				BYTE ** versionInfo, /* out */
+				UINT32 * sigSize, /* out */
+				BYTE ** sig) /* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(tspContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+	case CONNECTION_TYPE_TCP_PERSISTANT:
+		result = RPC_Quote2_TP(entry, keyHandle, antiReplay, pcrDataSizeIn, pcrDataIn,
+				       addVersion,privAuth, pcrDataSizeOut, pcrDataOut,
+				       versionInfoSize, versionInfo,sigSize, sig);
+		break;
+	default:
+		break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
 TSS_RESULT RPC_DirWriteAuth(TSS_HCONTEXT tspContext,	/* in */
 			    TCPA_DIRINDEX dirIndex,	/* in */
 			    TCPA_DIRVALUE newContents,	/* in */

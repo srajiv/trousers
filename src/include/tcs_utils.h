@@ -235,6 +235,8 @@ void UnloadBlob_AUTHDATA(UINT64 *, BYTE *, TPM_AUTHDATA *);
 #define LoadBlob_ENCAUTH(a, b, c)	LoadBlob_AUTHDATA(a, b, c)
 #define UnloadBlob_ENCAUTH(a, b, c)	UnloadBlob_AUTHDATA(a, b, c)
 
+TSS_RESULT UnloadBlob_PCR_INFO_SHORT(UINT64 *, BYTE *, TPM_PCR_INFO_SHORT *);
+
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
 void free_external_events(UINT32, TSS_PCR_EVENT *);
 
@@ -537,6 +539,21 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 					UINT32 * sigSize,	/* out */
 					BYTE ** sig	/* out */
 	    );
+	
+	TSS_RESULT TCSP_Quote2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+						TCS_KEY_HANDLE keyHandle,	/* in */
+						TCPA_NONCE antiReplay,	/* in */
+						UINT32 pcrDataSizeIn,	/* in */
+						BYTE * pcrDataIn,	/* in */
+						TSS_BOOL addVersion, /* in */
+						TPM_AUTH * privAuth,	/* in, out */
+						UINT32 * pcrDataSizeOut,	/* out */
+						BYTE ** pcrDataOut,	/* out */
+						UINT32 * versionInfoSize, /* out */
+						BYTE ** versionInfo, /* out */
+						UINT32 * sigSize,	/* out */
+						BYTE ** sig	/* out */
+		    );
 
 	TSS_RESULT TCSP_DirWriteAuth_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 					       TCPA_DIRINDEX dirIndex,	/* in */

@@ -160,6 +160,12 @@ DECLARE_TCSTP_FUNC(Quote);
 #define tcs_wrap_Quote	tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_QUOTE2
+DECLARE_TCSTP_FUNC(Quote2);
+#else
+#define tcs_wrap_Quote2		tcs_wrap_Error
+#endif
+
 #ifdef TSS_BUILD_PCR_EVENTS
 DECLARE_TCSTP_FUNC(LogPcrEvent);
 DECLARE_TCSTP_FUNC(GetPcrEvent);
@@ -224,6 +230,7 @@ DECLARE_TCSTP_FUNC(CertifyKey);
 
 #ifdef TSS_BUILD_AIK
 DECLARE_TCSTP_FUNC(MakeIdentity);
+DECLARE_TCSTP_FUNC(MakeIdentity2);
 DECLARE_TCSTP_FUNC(GetCredential);
 DECLARE_TCSTP_FUNC(ActivateIdentity);
 #ifdef TSS_BUILD_TSS12
@@ -233,6 +240,7 @@ DECLARE_TCSTP_FUNC(MakeIdentity2);
 #endif
 #else
 #define tcs_wrap_MakeIdentity		tcs_wrap_Error
+#define tcs_wrap_MakeIdentity2      tcs_wrap_Error
 #define tcs_wrap_GetCredential		tcs_wrap_Error
 #define tcs_wrap_ActivateIdentity	tcs_wrap_Error
 #endif
