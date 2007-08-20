@@ -191,7 +191,7 @@ done1:
 			pAuth = NULL;
 
 		if ((result = TCS_API(tspContext)->GetAuditDigestSigned(tspContext, tcsKeyHandle,
-									closeAudit, antiReplay,
+									closeAudit, &antiReplay,
 									pAuth, &counterValueSize,
 									&counterValue, &auditDigest,
 									&ordinalDigest, &sigSize,
