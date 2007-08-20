@@ -560,4 +560,26 @@ Transport_OSAP(TSS_HCONTEXT    tspContext,	/* in */
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+Transport_TerminateHandle(TSS_HCONTEXT tspContext, /* in */
+			  TCS_AUTHHANDLE handle)   /* in */
+{
+	TSS_RESULT result;
+	TCS_HANDLE handlesLen = 0, *handles;
+
+	/* Call ExecuteTransport */
+	handlesLen = 1;
+	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*handles = handle;
+
+	result = obj_context_transport_execute(tspContext, TPM_ORD_Terminate_Handle, 0, NULL,
+					       NULL, &handlesLen, &handles, NULL, NULL, NULL, NULL);
+
+	return result;
+}
 #endif
