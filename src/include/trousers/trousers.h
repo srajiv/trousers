@@ -74,7 +74,7 @@ TSS_RESULT Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blo
 /* Blob loading functions */
 void Trspi_LoadBlob_BOUND_DATA(UINT64 *, TCPA_BOUND_DATA, UINT32, BYTE *);
 void Trspi_LoadBlob_CHANGEAUTH_VALIDATE(UINT64 *, BYTE *, TPM_CHANGEAUTH_VALIDATE *);
-void Trspi_LoadBlob(UINT64 *offset, size_t size, BYTE *container, BYTE *object);
+void Trspi_LoadBlob(UINT64 *offset, size_t size, BYTE *to, BYTE *from);
 void Trspi_LoadBlob_UINT32(UINT64 *offset, UINT32 in, BYTE *blob);
 void Trspi_LoadBlob_UINT16(UINT64 *offset, UINT16 in, BYTE *blob);
 void Trspi_LoadBlob_BYTE(UINT64 *offset, BYTE data, BYTE *blob);
