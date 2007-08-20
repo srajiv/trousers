@@ -140,12 +140,12 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 
 #ifdef TSS_BUILD_SEALX
 	if (sealOrdinal == TPM_ORD_Seal) {
-		if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, encAuthUsage,
+		if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, &encAuthUsage,
 							pcrDataSize, pcrData, ulDataLength,
 							sealData, &auth, &encDataSize, &encData)))
 			return result;
 	} else if (sealOrdinal == TPM_ORD_Sealx) {
-		result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, encAuthUsage,
+		result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, &encAuthUsage,
 						    pcrDataSize, pcrData, ulDataLength, sealData,
 						    &auth, &encDataSize, &encData);
 		free(sealData);
@@ -155,8 +155,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	} else
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 #else
-	if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, encAuthUsage, pcrDataSize,
-						pcrData, ulDataLength, sealData, &auth,
+	if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, &encAuthUsage,
+						pcrDataSize, pcrData, ulDataLength, sealData, &auth,
 						&encDataSize, &encData)))
 		return result;
 #endif
@@ -165,8 +165,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
 	result |= Trspi_Hash_UINT32(&hashCtx, sealOrdinal);
 	result |= Trspi_HashUpdate(&hashCtx, encDataSize, encData);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		free(encData);
 		return result;
+	}
 
 	if ((result = secret_ValidateAuth_OSAP(hEncKey, TPM_ORD_Seal, hPolicy, hEncPolicy,
 					       hEncPolicy, sharedSecret, &auth, digest.digest,
@@ -176,8 +178,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	}
 
 	/* Need to set the object with the blob and the pcr's */
-	if ((result = obj_encdata_set_data(hEncData, encDataSize, encData)))
+	if ((result = obj_encdata_set_data(hEncData, encDataSize, encData))) {
+		free(encData);
 		return result;
+	}
 
 	free(encData);
 
@@ -249,16 +253,23 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Unseal);
 	result |= Trspi_Hash_UINT32(&hashCtx, *pulUnsealedDataLength);
 	result |= Trspi_HashUpdate(&hashCtx, *pulUnsealedDataLength, *prgbUnsealedData);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		free(*prgbUnsealedData);
 		return result;
+	}
 
 	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
-		free_tspi(tspContext, *prgbUnsealedData);
+		free(*prgbUnsealedData);
 		return result;
 	}
 
 	if ((result = obj_policy_validate_auth_oiap(hEncPolicy, &digest, &privAuth2))) {
-		free_tspi(tspContext, *prgbUnsealedData);
+		free(*prgbUnsealedData);
+		return result;
+	}
+
+	if ((result = add_mem_entry(tspContext, *prgbUnsealedData))) {
+		free(*prgbUnsealedData);
 		return result;
 	}
 
