@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004, 2005
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -160,3 +160,37 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 	return TSS_SUCCESS;
 }
+
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT
+Transport_OwnerClear(TSS_HCONTEXT tspContext,	/* in */
+		     TPM_AUTH * ownerAuth)	/* in, out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen = 0;
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	return obj_context_transport_execute(tspContext, TPM_ORD_OwnerClear, 0, NULL, NULL,
+					     &handlesLen, NULL, ownerAuth, NULL, NULL, NULL);
+}
+
+TSS_RESULT
+Transport_ForceClear(TSS_HCONTEXT tspContext)	/* in */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen = 0;
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	return obj_context_transport_execute(tspContext, TPM_ORD_ForceClear, 0, NULL, NULL,
+					     &handlesLen, NULL, NULL, NULL, NULL, NULL);
+}
+#endif
+
