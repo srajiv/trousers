@@ -110,9 +110,10 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 	}
 
 	/* Send to TCS */
-	if ((result = RPC_Quote2(tspContext, tcsKeyHandle, antiReplay, pcrDataSize, pcrData,
-				 fAddVersion, pPrivAuth, &pcrDataOutSize, &pcrDataOut,
-				 versionInfoSize, versionInfo,&sigSize,&sig)))
+	if ((result = TCS_API(tspContext)->Quote2(tspContext, tcsKeyHandle, &antiReplay,
+						  pcrDataSize, pcrData, fAddVersion, pPrivAuth,
+						  &pcrDataOutSize, &pcrDataOut, versionInfoSize,
+						  versionInfo, &sigSize, &sig)))
 		return result;
 
 #ifdef TSS_DEBUG
