@@ -32,7 +32,6 @@ TSS_UUID NULL_UUID = { 0, 0, 0, 0, 0, { 0, 0, 0, 0, 0, 0 } };
 TSS_VERSION VERSION_1_1 = { 1, 1, 0, 0 };
 
 struct tcs_api_table tcs_normal_api = {
-	.CloseContext = RPC_CloseContext,
 #ifdef TSS_BUILD_KEY
 	.LoadKeyByBlob = RPC_LoadKeyByBlob,
 	.EvictKey = RPC_EvictKey,
@@ -166,7 +165,6 @@ struct tcs_api_table tcs_normal_api = {
 };
 
 struct tcs_api_table tcs_transport_api = {
-	.CloseContext = RPC_CloseContext,
 #ifdef TSS_BUILD_KEY
 	.LoadKeyByBlob = Transport_LoadKeyByBlob,
 	.EvictKey = Transport_EvictKey,
@@ -178,17 +176,17 @@ struct tcs_api_table tcs_transport_api = {
 #endif
 #endif
 #ifdef TSS_BUILD_OWN
-	.OwnerClear = RPC_OwnerClear,
-	.ForceClear = RPC_ForceClear,
+	.OwnerClear = Transport_OwnerClear,
+	.ForceClear = Transport_ForceClear,
 #endif
 #ifdef TSS_BUILD_AUTH
 	.OIAP = Transport_OIAP,
 	.OSAP = Transport_OSAP,
-	.TerminateHandle = RPC_TerminateHandle,
+	.TerminateHandle = Transport_TerminateHandle,
 #endif
 #ifdef TSS_BUILD_CHANGEAUTH
-	.ChangeAuth = RPC_ChangeAuth,
-	.ChangeAuthOwner = RPC_ChangeAuthOwner,
+	.ChangeAuth = Transport_ChangeAuth,
+	.ChangeAuthOwner = Transport_ChangeAuthOwner,
 	.ChangeAuthAsymStart = RPC_ChangeAuthAsymStart,
 	.ChangeAuthAsymFinish = RPC_ChangeAuthAsymFinish,
 #endif
@@ -196,15 +194,15 @@ struct tcs_api_table tcs_transport_api = {
 	.ActivateTPMIdentity = Transport_ActivateTPMIdentity,
 #endif
 #ifdef TSS_BUILD_PCR_EXTEND
-	.Extend = RPC_Extend,
-	.PcrRead = RPC_PcrRead,
-	.PcrReset = RPC_PcrReset,
+	.Extend = Transport_Extend,
+	.PcrRead = Transport_PcrRead,
+	.PcrReset = Transport_PcrReset,
 #endif
 #ifdef TSS_BUILD_QUOTE
-	.Quote = RPC_Quote,
+	.Quote = Transport_Quote,
 #endif
 #ifdef TSS_BUILD_QUOTE2
-	.Quote2 = RPC_Quote2,
+	.Quote2 = Transport_Quote2,
 #endif
 #ifdef TSS_BUILD_DIR
 	.DirWriteAuth = Transport_DirWriteAuth,
@@ -216,7 +214,7 @@ struct tcs_api_table tcs_transport_api = {
 	.Unseal = Transport_Unseal,
 #endif
 #ifdef TSS_BUILD_BIND
-	.UnBind = RPC_UnBind,
+	.UnBind = Transport_UnBind,
 #endif
 #ifdef TSS_BUILD_MIGRATION
 	.CreateMigrationBlob = RPC_CreateMigrationBlob,
@@ -260,11 +258,11 @@ struct tcs_api_table tcs_transport_api = {
 	.SetTempDeactivated2 = Transport_SetTempDeactivated2,
 #endif
 #ifdef TSS_BUILD_MAINTENANCE
-	.CreateMaintenanceArchive = RPC_CreateMaintenanceArchive,
-	.LoadMaintenanceArchive = RPC_LoadMaintenanceArchive,
-	.KillMaintenanceFeature = RPC_KillMaintenanceFeature,
-	.LoadManuMaintPub = RPC_LoadManuMaintPub,
-	.ReadManuMaintPub = RPC_ReadManuMaintPub,
+	.CreateMaintenanceArchive = Transport_CreateMaintenanceArchive,
+	.LoadMaintenanceArchive = Transport_LoadMaintenanceArchive,
+	.KillMaintenanceFeature = Transport_KillMaintenanceFeature,
+	.LoadManuMaintPub = Transport_LoadManuMaintPub,
+	.ReadManuMaintPub = Transport_ReadManuMaintPub,
 #endif
 #ifdef TSS_BUILD_DAA
 	.DaaJoin = RPC_DaaJoin,
@@ -282,11 +280,11 @@ struct tcs_api_table tcs_transport_api = {
 	.TickStampBlob = Transport_TickStampBlob,
 #endif
 #ifdef TSS_BUILD_NV
-	.NV_DefineOrReleaseSpace = RPC_NV_DefineOrReleaseSpace,
-	.NV_WriteValue = RPC_NV_WriteValue,
-	.NV_WriteValueAuth = RPC_NV_WriteValueAuth,
-	.NV_ReadValue = RPC_NV_ReadValue,
-	.NV_ReadValueAuth = RPC_NV_ReadValueAuth,
+	.NV_DefineOrReleaseSpace = Transport_NV_DefineOrReleaseSpace,
+	.NV_WriteValue = Transport_NV_WriteValue,
+	.NV_WriteValueAuth = Transport_NV_WriteValueAuth,
+	.NV_ReadValue = Transport_NV_ReadValue,
+	.NV_ReadValueAuth = Transport_NV_ReadValueAuth,
 #endif
 #ifdef TSS_BUILD_AUDIT
 	.SetOrdinalAuditStatus = Transport_SetOrdinalAuditStatus,
@@ -294,7 +292,7 @@ struct tcs_api_table tcs_transport_api = {
 	.GetAuditDigestSigned = Transport_GetAuditDigestSigned,
 #endif
 #ifdef TSS_BUILD_TSS12
-	.SetOperatorAuth = RPC_SetOperatorAuth,
+	.SetOperatorAuth = Transport_SetOperatorAuth,
 #endif
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
