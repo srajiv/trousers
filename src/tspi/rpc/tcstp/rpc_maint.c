@@ -59,7 +59,7 @@ RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		if (*randomSize > 0) {
-			*random = calloc_tspi(hte->tspContext, *randomSize);
+			*random = malloc(*randomSize);
 			if (*random == NULL) {
 				LogError("malloc of %u bytes failed.", *randomSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -67,7 +67,7 @@ RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 			}
 
 			if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *random, *randomSize, &hte->comm)) {
-				free_tspi(hte->tspContext, *random);
+				free(*random);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
@@ -80,7 +80,7 @@ RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		if (*archiveSize > 0) {
-			*archive = calloc_tspi(hte->tspContext, *archiveSize);
+			*archive = malloc(*archiveSize);
 			if (*archive == NULL) {
 				LogError("malloc of %u bytes failed.", *archiveSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -88,8 +88,8 @@ RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 			}
 
 			if (getData(TCSD_PACKET_TYPE_PBYTE, 4, *archive, *archiveSize, &hte->comm)) {
-				free_tspi(hte->tspContext, *random);
-				free_tspi(hte->tspContext, *archive);
+				free(*random);
+				free(*archive);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
