@@ -70,3 +70,117 @@ Trspi_LoadBlob_STORED_DATA(UINT64 *offset, BYTE *blob, TCPA_STORED_DATA *data)
 	Trspi_LoadBlob_UINT32(offset, data->encDataSize, blob);
 	Trspi_LoadBlob(offset, data->encDataSize, blob, data->encData);
 }
+
+#ifdef TSS_BUILD_TRANSPORT
+TSS_RESULT
+Transport_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
+		     TCS_KEY_HANDLE parentHandle,	/* in */
+		     TCPA_PROTOCOL_ID protocolID,	/* in */
+		     TCPA_ENCAUTH *newAuth,	/* in */
+		     TCPA_ENTITY_TYPE entityType,	/* in */
+		     UINT32 encDataSize,	/* in */
+		     BYTE * encData,	/* in */
+		     TPM_AUTH * ownerAuth,	/* in, out */
+		     TPM_AUTH * entityAuth,	/* in, out */
+		     UINT32 * outDataSize,	/* out */
+		     BYTE ** outData)	/* out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen, dataLen, decLen;
+	TCS_HANDLE *handles;
+	BYTE *dec = NULL;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
+	UINT64 offset;
+	BYTE *data;
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_tcskey_get_pubkeyhash(parentHandle, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
+	handlesLen = 1;
+	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	*handles = parentHandle;
+
+	dataLen = sizeof(TCPA_PROTOCOL_ID) + sizeof(TCPA_ENCAUTH)
+					   + sizeof(TCPA_ENTITY_TYPE)
+					   + sizeof(UINT32)
+					   + encDataSize;
+	if ((data = malloc(dataLen)) == NULL) {
+		free(handles);
+		LogError("malloc of %u bytes failed", dataLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_UINT16(&offset, protocolID, data);
+	Trspi_LoadBlob(&offset, sizeof(TCPA_ENCAUTH), data, newAuth->authdata);
+	Trspi_LoadBlob_UINT16(&offset, entityType, data);
+	Trspi_LoadBlob_UINT16(&offset, encDataSize, data);
+	Trspi_LoadBlob(&offset, encDataSize, data, encData);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_ChangeAuth, dataLen, data,
+						    &pubKeyHash, &handlesLen, &handles,
+						    ownerAuth, entityAuth, &decLen, &dec))) {
+		free(data);
+		free(handles);
+		return result;
+	}
+	free(data);
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, outDataSize, dec);
+
+	if ((*outData = malloc(*outDataSize)) == NULL) {
+		free(dec);
+		LogError("malloc of %u bytes failed", *outDataSize);
+		*outDataSize = 0;
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(&offset, *outDataSize, dec, *outData);
+
+	free(dec);
+
+	return result;
+}
+
+TSS_RESULT
+Transport_ChangeAuthOwner(TSS_HCONTEXT tspContext,	/* in */
+			  TCPA_PROTOCOL_ID protocolID,	/* in */
+			  TCPA_ENCAUTH *newAuth,	/* in */
+			  TCPA_ENTITY_TYPE entityType,	/* in */
+			  TPM_AUTH * ownerAuth)	/* in, out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen;
+	UINT64 offset;
+	BYTE data[sizeof(TCPA_PROTOCOL_ID) + sizeof(TCPA_ENCAUTH) + sizeof(TCPA_ENTITY_TYPE)];
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	offset = 0;
+	Trspi_LoadBlob_UINT16(&offset, protocolID, data);
+	Trspi_LoadBlob(&offset, sizeof(TCPA_ENCAUTH), data, newAuth->authdata);
+	Trspi_LoadBlob_UINT16(&offset, entityType, data);
+
+	return obj_context_transport_execute(tspContext, TPM_ORD_ChangeAuthOwner, sizeof(data),
+					     data, NULL, &handlesLen, NULL, ownerAuth, NULL, NULL,
+					     NULL);
+}
+#endif
