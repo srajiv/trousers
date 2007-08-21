@@ -75,12 +75,25 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, *pulArchiveDataLength);
 	result |= Trspi_HashUpdate(&hashCtx, *pulArchiveDataLength, *prgbArchiveData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error1;
 
 	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
-		return result;
+		goto error1;
+
+	if ((result = add_mem_entry(tspContext, *prgbRndNumber)))
+		goto error1;
+
+	if ((result = add_mem_entry(tspContext, *prgbArchiveData))) {
+		free_tspi(tspContext, *prgbRndNumber);
+		goto error2;
+	}
 
 	return TSS_SUCCESS;
+error1:
+	free(*prgbRndNumber);
+error2:
+	free(*prgbArchiveData);
+	return result;
 }
 
 TSS_RESULT
