@@ -980,27 +980,30 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 		goto done;
 	}
 
-	/* decrypt the returned wrapped data if necessary */
-	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
-		if ((*out = malloc(ulWrappedDataLen)) == NULL) {
-			LogError("malloc of %u bytes failed", ulWrappedDataLen);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*outLen = ulWrappedDataLen;
+	if (outLen) {
+		/* decrypt the returned wrapped data if necessary */
+		if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+			if ((*out = malloc(ulWrappedDataLen)) == NULL) {
+				LogError("malloc of %u bytes failed", ulWrappedDataLen);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			*outLen = ulWrappedDataLen;
 
-		if ((result = Trspi_SymDecrypt((UINT16)context->transPub.algId,
-					       context->transPub.encScheme,
-					       context->transSecret.authData.authdata, iv,
-					       rgbWrappedData, ulWrappedDataLen, *out, outLen))) {
-			free(*out);
-			*out = NULL;
-			*outLen = 0;
-			goto done;
+			if ((result = Trspi_SymDecrypt((UINT16)context->transPub.algId,
+							context->transPub.encScheme,
+							context->transSecret.authData.authdata, iv,
+							rgbWrappedData, ulWrappedDataLen, *out,
+							outLen))) {
+				free(*out);
+				*out = NULL;
+				*outLen = 0;
+				goto done;
+			}
+		} else {
+			*outLen = ulWrappedDataLen;
+			*out = rgbWrappedData;
 		}
-	} else {
-		*outLen = ulWrappedDataLen;
-		*out = rgbWrappedData;
 	}
 
 	/* TPM Commands spec rev106 step 14 */
@@ -1013,7 +1016,8 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 		case TPM_ORD_OIAP:
 			break;
 		default:
-			result |= Trspi_HashUpdate(&hashCtx, *outLen, *out);
+			if (outLen)
+				result |= Trspi_HashUpdate(&hashCtx, *outLen, *out);
 			break;
 	}
 
@@ -1026,10 +1030,11 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
 	result |= Trspi_Hash_UINT64(&hashCtx, context->transLogOut.currentTicks.currentTicks);
 	result |= Trspi_Hash_UINT32(&hashCtx, context->transMod);
-	result |= Trspi_Hash_UINT32(&hashCtx, *outLen + TSS_TPM_TXBLOB_HDR_LEN
-						      + (*handlesLen * sizeof(UINT32))
-						      + (pAuth1 ? TPM_AUTH_RSP_SIZE : 0)
-						      + (pAuth2 ? TPM_AUTH_RSP_SIZE : 0));
+	result |= Trspi_Hash_UINT32(&hashCtx, outLen? *outLen : 0
+					      + TSS_TPM_TXBLOB_HDR_LEN
+					      + (*handlesLen * sizeof(UINT32))
+					      + (pAuth1 ? TPM_AUTH_RSP_SIZE : 0)
+					      + (pAuth2 ? TPM_AUTH_RSP_SIZE : 0));
 	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
 	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
 		goto done;
