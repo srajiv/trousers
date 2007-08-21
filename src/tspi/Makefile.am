@@ -160,7 +160,7 @@ libtspi_la_SOURCES+=tspi_pcr_extend.c tsp_pcr_extend.c rpc/@RPC@/rpc_pcr_extend.
 libtspi_la_CFLAGS+=-DTSS_BUILD_PCR_EXTEND
 endif
 if TSS_BUILD_SELFTEST
-libtspi_la_SOURCES+=tspi_selftest.c rpc/@RPC@/rpc_selftest.c
+libtspi_la_SOURCES+=tspi_selftest.c tsp_selftest.c rpc/@RPC@/rpc_selftest.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_SELFTEST
 endif
 if TSS_BUILD_DAA
