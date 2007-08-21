@@ -46,7 +46,7 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	/* Have the TCS do its thing */
-	result = TCS_API(tspContext)->CloseContext(tspContext);
+	result = RPC_CloseContext(tspContext);
 
 	/* Note: Memory that was returned to the app that was alloc'd by this
 	 * context isn't free'd here.  Any memory that the app doesn't explicitly
