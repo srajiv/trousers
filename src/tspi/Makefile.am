@@ -41,7 +41,7 @@ endif
 if TSS_BUILD_TSS12
 # This is for individual APIs that exist outside TSS 1.2, but may have some TSS 1.2 internal
 # features/options such as Tspi_TPM_SetStatus
-libtspi_la_SOURCES+=tspi_oper.c rpc/@RPC@/rpc_oper.c
+libtspi_la_SOURCES+=tspi_oper.c tsp_oper.c rpc/@RPC@/rpc_oper.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_TSS12
 endif
 if TSS_BUILD_TRANSPORT
@@ -156,7 +156,7 @@ libtspi_la_SOURCES+=tspi_migration.c tsp_migration.c rpc/@RPC@/rpc_migration.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_MIGRATION
 endif
 if TSS_BUILD_PCR_EXTEND
-libtspi_la_SOURCES+=tspi_pcr_extend.c rpc/@RPC@/rpc_pcr_extend.c
+libtspi_la_SOURCES+=tspi_pcr_extend.c tsp_pcr_extend.c rpc/@RPC@/rpc_pcr_extend.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_PCR_EXTEND
 endif
 if TSS_BUILD_SELFTEST
@@ -217,7 +217,7 @@ libtspi_la_SOURCES+=gtk/main.c gtk/support.c gtk/interface.c gtk/callbacks.c
 endif
 
 if TSS_BUILD_NV
-libtspi_la_SOURCES+=tspi_nv.c obj_nv.c rpc/@RPC@/rpc_nv.c
+libtspi_la_SOURCES+=tspi_nv.c obj_nv.c tsp_nv.c rpc/@RPC@/rpc_nv.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_NV
 endif
 if TSS_BUILD_DELEGATION
