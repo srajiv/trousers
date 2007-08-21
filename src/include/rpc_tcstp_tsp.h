@@ -167,13 +167,13 @@ TSS_RESULT RPC_PcrReset_TP(struct host_table_entry *,UINT32,BYTE *);
 #endif
 
 #ifdef TSS_BUILD_QUOTE
-TSS_RESULT RPC_Quote_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **);
+TSS_RESULT RPC_Quote_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **);
 #else
 #define RPC_Quote_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_QUOTE2
-TSS_RESULT RPC_Quote2_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE,UINT32,BYTE *,TSS_BOOL,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
+TSS_RESULT RPC_Quote2_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_NONCE *,UINT32,BYTE *,TSS_BOOL,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
 #else
 #define RPC_Quote2_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif

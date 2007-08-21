@@ -27,16 +27,16 @@
 
 TSS_RESULT
 RPC_Quote_TP(struct host_table_entry *hte,
-			  TCS_KEY_HANDLE keyHandle,	/* in */
-			  TCPA_NONCE antiReplay,	/* in */
-			  UINT32 pcrDataSizeIn,	/* in */
-			  BYTE * pcrDataIn,	/* in */
-			  TPM_AUTH * privAuth,	/* in, out */
-			  UINT32 * pcrDataSizeOut,	/* out */
-			  BYTE ** pcrDataOut,	/* out */
-			  UINT32 * sigSize,	/* out */
-			  BYTE ** sig	/* out */
-    ) {
+	     TCS_KEY_HANDLE keyHandle,	/* in */
+	     TCPA_NONCE *antiReplay,	/* in */
+	     UINT32 pcrDataSizeIn,	/* in */
+	     BYTE * pcrDataIn,	/* in */
+	     TPM_AUTH * privAuth,	/* in, out */
+	     UINT32 * pcrDataSizeOut,	/* out */
+	     BYTE ** pcrDataOut,	/* out */
+	     UINT32 * sigSize,	/* out */
+	     BYTE ** sig)	/* out */
+{
 	TSS_RESULT result;
 	int i;
 
@@ -49,7 +49,7 @@ RPC_Quote_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &keyHandle, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_NONCE, 2, &antiReplay, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_NONCE, 2, antiReplay, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &pcrDataSizeIn, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

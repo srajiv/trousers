@@ -986,7 +986,7 @@ TSS_RESULT RPC_PcrReset(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_Quote(TSS_HCONTEXT tspContext,	/* in */
 		     TCS_KEY_HANDLE keyHandle,	/* in */
-		     TCPA_NONCE antiReplay,	/* in */
+		     TCPA_NONCE *antiReplay,	/* in */
 		     UINT32 pcrDataSizeIn,	/* in */
 		     BYTE * pcrDataIn,	/* in */
 		     TPM_AUTH * privAuth,	/* in, out */
@@ -1017,18 +1017,18 @@ TSS_RESULT RPC_Quote(TSS_HCONTEXT tspContext,	/* in */
 }
 
 TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
-				TCS_KEY_HANDLE keyHandle, /* in */
-				TCPA_NONCE antiReplay, /* in */
-				UINT32 pcrDataSizeIn, /* in */
-				BYTE * pcrDataIn, /* in */
-				TSS_BOOL addVersion, /* in */
-				TPM_AUTH * privAuth, /* in,out */
-				UINT32 * pcrDataSizeOut, /* out */
-				BYTE ** pcrDataOut, /* out */
-				UINT32 * versionInfoSize, /* out */
-				BYTE ** versionInfo, /* out */
-				UINT32 * sigSize, /* out */
-				BYTE ** sig) /* out */
+		      TCS_KEY_HANDLE keyHandle, /* in */
+		      TCPA_NONCE *antiReplay, /* in */
+		      UINT32 pcrDataSizeIn, /* in */
+		      BYTE * pcrDataIn, /* in */
+		      TSS_BOOL addVersion, /* in */
+		      TPM_AUTH * privAuth, /* in,out */
+		      UINT32 * pcrDataSizeOut, /* out */
+		      BYTE ** pcrDataOut, /* out */
+		      UINT32 * versionInfoSize, /* out */
+		      BYTE ** versionInfo, /* out */
+		      UINT32 * sigSize, /* out */
+		      BYTE ** sig) /* out */
 {
 	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
 	struct host_table_entry *entry = get_table_entry(tspContext);
