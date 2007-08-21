@@ -29,7 +29,7 @@ TSS_RESULT
 RPC_ChangeAuth_TP(struct host_table_entry *hte,
 			       TCS_KEY_HANDLE parentHandle,	/* in */
 			       TCPA_PROTOCOL_ID protocolID,	/* in */
-			       TCPA_ENCAUTH newAuth,	/* in */
+			       TCPA_ENCAUTH *newAuth,	/* in */
 			       TCPA_ENTITY_TYPE entityType,	/* in */
 			       UINT32 encDataSize,	/* in */
 			       BYTE * encData,	/* in */
@@ -50,7 +50,7 @@ RPC_ChangeAuth_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 2, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &newAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, newAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 4, &entityType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -101,7 +101,7 @@ done:
 TSS_RESULT
 RPC_ChangeAuthOwner_TP(struct host_table_entry *hte,
 				    TCPA_PROTOCOL_ID protocolID,	/* in */
-				    TCPA_ENCAUTH newAuth,	/* in */
+				    TCPA_ENCAUTH *newAuth,	/* in */
 				    TCPA_ENTITY_TYPE entityType,	/* in */
 				    TPM_AUTH * ownerAuth	/* in, out */
     ) {
@@ -115,7 +115,7 @@ RPC_ChangeAuthOwner_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &newAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, newAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT16, 3, &entityType, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

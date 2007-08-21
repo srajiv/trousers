@@ -109,7 +109,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			return result;
 
 		if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext, TCPA_PID_ADCP,
-								   encAuthUsage, TCPA_ET_OWNER,
+								   &encAuthUsage, TCPA_ET_OWNER,
 								   &auth1)))
 			return result;
 
@@ -170,7 +170,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 
 			if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext,
 									   TCPA_PID_ADCP,
-									   encAuthUsage, TPM_ET_SRK,
+									   &encAuthUsage,
+									   TPM_ET_SRK,
 									   &auth1)))
 				return result;
 
@@ -256,7 +257,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle,
-								      TPM_PID_ADCP, encAuthUsage,
+								      TPM_PID_ADCP, &encAuthUsage,
 								      TPM_ET_KEY,
 								      keyToChange.encSize,
 								      keyToChange.encData, &auth1,
@@ -361,7 +362,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		}
 
 		if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
-							      encAuthUsage, TPM_ET_DATA,
+							      &encAuthUsage, TPM_ET_DATA,
 							      storedData.encDataSize,
 							      storedData.encData, &auth1, &auth2,
 							      &newEncSize, &newEncData))) {

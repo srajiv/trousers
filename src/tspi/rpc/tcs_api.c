@@ -729,7 +729,7 @@ TSS_RESULT RPC_OSAP(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 			  TCS_KEY_HANDLE parentHandle,	/* in */
 			  TCPA_PROTOCOL_ID protocolID,	/* in */
-			  TCPA_ENCAUTH newAuth,	/* in */
+			  TCPA_ENCAUTH *newAuth,	/* in */
 			  TCPA_ENTITY_TYPE entityType,	/* in */
 			  UINT32 encDataSize,	/* in */
 			  BYTE * encData,	/* in */
@@ -761,7 +761,7 @@ TSS_RESULT RPC_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_ChangeAuthOwner(TSS_HCONTEXT tspContext,	/* in */
 				TCPA_PROTOCOL_ID protocolID,	/* in */
-				TCPA_ENCAUTH newAuth,	/* in */
+				TCPA_ENCAUTH *newAuth,	/* in */
 				TCPA_ENTITY_TYPE entityType,	/* in */
 				TPM_AUTH * ownerAuth)	/* in, out */
 {
