@@ -69,6 +69,9 @@ struct tcs_api_table tcs_normal_api = {
 #ifdef TSS_BUILD_QUOTE
 	.Quote = RPC_Quote,
 #endif
+#ifdef TSS_BUILD_QUOTE2
+	.Quote2 = RPC_Quote2,
+#endif
 #ifdef TSS_BUILD_DIR
 	.DirWriteAuth = RPC_DirWriteAuth,
 	.DirRead = RPC_DirRead,
@@ -199,6 +202,9 @@ struct tcs_api_table tcs_transport_api = {
 #endif
 #ifdef TSS_BUILD_QUOTE
 	.Quote = RPC_Quote,
+#endif
+#ifdef TSS_BUILD_QUOTE2
+	.Quote2 = RPC_Quote2,
 #endif
 #ifdef TSS_BUILD_DIR
 	.DirWriteAuth = Transport_DirWriteAuth,
