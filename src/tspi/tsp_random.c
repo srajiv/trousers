@@ -69,20 +69,30 @@ Transport_StirRandom(TSS_HCONTEXT tspContext,	/* in */
 {
 	TSS_RESULT result;
         UINT64 offset;
+	UINT32 dataLen;
 	TCS_HANDLE handlesLen = 0;
-        BYTE data[sizeof(UINT32) + 256]; /* 256 is the max entropy size allowed */
+        BYTE *data;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
 
         LogDebugFn("Executing in a transport session");
 
+	dataLen = sizeof(UINT32) + inDataSize;
+	if ((data = malloc(dataLen)) == NULL) {
+                LogError("malloc of %u bytes failed", dataLen);
+                return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
         offset = 0;
         Trspi_LoadBlob_UINT32(&offset, inDataSize, data);
         Trspi_LoadBlob(&offset, inDataSize, data, inData);
 
-	return obj_context_transport_execute(tspContext, TPM_ORD_StirRandom, sizeof(data), data,
-					     NULL, &handlesLen, NULL, NULL, NULL, NULL, NULL);
+	result = obj_context_transport_execute(tspContext, TPM_ORD_StirRandom, dataLen, data, NULL,
+					       &handlesLen, NULL, NULL, NULL, NULL, NULL);
+	free(data);
+
+	return result;
 }
 #endif
 
