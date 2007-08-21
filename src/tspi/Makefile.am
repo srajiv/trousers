@@ -206,7 +206,7 @@ libtspi_la_SOURCES+=tsp_seal.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_SEALX
 endif
 if TSS_BUILD_QUOTE2
-libtspi_la_SOURCES+=tspi_quote2.c rpc/@RPC@/rpc_quote2.c
+libtspi_la_SOURCES+=tspi_quote2.c tsp_quote2.c rpc/@RPC@/rpc_quote2.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_QUOTE2
 endif
 
