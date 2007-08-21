@@ -160,6 +160,15 @@ struct tcs_api_table tcs_normal_api = {
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = RPC_SetOperatorAuth,
 #endif
+#ifdef TSS_BUILD_DELEGATE
+	.Delegate_Manage = RPC_Delegate_Manage,
+	.Delegate_CreateKeyDelegation = RPC_Delegate_CreateKeyDelegation,
+	.Delegate_CreateOwnerDelegation = RPC_Delegate_CreateOwnerDelegation,
+	.Delegate_LoadOwnerDelegation = RPC_Delegate_LoadOwnerDelegation,
+	.Delegate_ReadTable = RPC_Delegate_ReadTable,
+	.Delegate_UpdateVerificationCount = RPC_Delegate_UpdateVerificationCount,
+	.Delegate_VerifyDelegation = RPC_Delegate_VerifyDelegation,
+#endif
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
 };
@@ -217,9 +226,9 @@ struct tcs_api_table tcs_transport_api = {
 	.UnBind = Transport_UnBind,
 #endif
 #ifdef TSS_BUILD_MIGRATION
-	.CreateMigrationBlob = RPC_CreateMigrationBlob,
-	.ConvertMigrationBlob = RPC_ConvertMigrationBlob,
-	.AuthorizeMigrationKey = RPC_AuthorizeMigrationKey,
+	.CreateMigrationBlob = Transport_CreateMigrationBlob,
+	.ConvertMigrationBlob = Transport_ConvertMigrationBlob,
+	.AuthorizeMigrationKey = Transport_AuthorizeMigrationKey,
 #endif
 #ifdef TSS_BUILD_SIGN
 	.Sign = Transport_Sign,
@@ -230,18 +239,17 @@ struct tcs_api_table tcs_transport_api = {
 #endif
 #ifdef TSS_BUILD_CAPS_TPM
 	.GetTPMCapability = Transport_GetTPMCapability,
-	.SetCapability = RPC_SetCapability,
-	.GetCapabilityOwner = RPC_GetCapabilityOwner,
+	.SetCapability = Transport_SetCapability,
+	.GetCapabilityOwner = Transport_GetCapabilityOwner,
 #endif
 #ifdef TSS_BUILD_EK
-	.CreateEndorsementKeyPair = RPC_CreateEndorsementKeyPair,
 	.ReadPubek = RPC_ReadPubek,
 	.OwnerReadPubek = RPC_OwnerReadPubek,
 #endif
 #ifdef TSS_BUILD_SELFTEST
-	.SelfTestFull = RPC_SelfTestFull,
-	.CertifySelfTest = RPC_CertifySelfTest,
-	.GetTestResult = RPC_GetTestResult,
+	.SelfTestFull = Transport_SelfTestFull,
+	.CertifySelfTest = Transport_CertifySelfTest,
+	.GetTestResult = Transport_GetTestResult,
 #endif
 #ifdef TSS_BUILD_ADMIN
 	.SetOwnerInstall = Transport_SetOwnerInstall,
@@ -293,6 +301,15 @@ struct tcs_api_table tcs_transport_api = {
 #endif
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = Transport_SetOperatorAuth,
+#endif
+#ifdef TSS_BUILD_DELEGATE
+	.Delegate_Manage = Transport_Delegate_Manage,
+	.Delegate_CreateKeyDelegation = Transport_Delegate_CreateKeyDelegation,
+	.Delegate_CreateOwnerDelegation = Transport_Delegate_CreateOwnerDelegation,
+	.Delegate_LoadOwnerDelegation = Transport_Delegate_LoadOwnerDelegation,
+	.Delegate_ReadTable = Transport_Delegate_ReadTable,
+	.Delegate_UpdateVerificationCount = Transport_Delegate_UpdateVerificationCount,
+	.Delegate_VerifyDelegation = Transport_Delegate_VerifyDelegation,
 #endif
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
