@@ -32,7 +32,6 @@ Transport_ReadCurrentTicks(TSS_HCONTEXT tspContext,           /* in */
 	UINT32 decLen = 0;
 	BYTE *dec = NULL;
 	TCS_HANDLE handlesLen = 0;
-	UINT64 offset;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -44,14 +43,8 @@ Transport_ReadCurrentTicks(TSS_HCONTEXT tspContext,           /* in */
 						    &dec)))
 		return result;
 
-	offset = 0;
-	Trspi_UnloadBlob_UINT32(&offset, pulCurrentTime, dec);
-
-	if ((*prgbCurrentTime = malloc(*pulCurrentTime)) == NULL) {
-		LogError("malloc of %u bytes failed", *pulCurrentTime);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-	Trspi_UnloadBlob(&offset, *pulCurrentTime, dec, *prgbCurrentTime);
+	*pulCurrentTime = decLen;
+	*prgbCurrentTime = dec;
 
 	return TSS_SUCCESS;
 }
