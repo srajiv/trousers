@@ -107,9 +107,9 @@ Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	Trspi_UnloadBlob_UINT32(&offset, randomSize, dec);
 
 	if ((*random = malloc(*randomSize)) == NULL) {
-		*randomSize = 0;
 		free(dec);
 		LogError("malloc of %u bytes failed", *randomSize);
+		*randomSize = 0;
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	Trspi_UnloadBlob(&offset, *randomSize, dec, *random);
@@ -117,12 +117,12 @@ Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	Trspi_UnloadBlob_UINT32(&offset, outDataSize, dec);
 
 	if ((*outData = malloc(*outDataSize)) == NULL) {
-		*outDataSize = 0;
 		free(random);
 		*random = NULL;
 		*randomSize = 0;
 		free(dec);
 		LogError("malloc of %u bytes failed", *outDataSize);
+		*outDataSize = 0;
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 	Trspi_UnloadBlob(&offset, *outDataSize, dec, *outData);
