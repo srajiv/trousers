@@ -39,7 +39,7 @@ extern int foreground;
 	do { \
 		if (k.hdr.key12.tag == TPM_TAG_KEY12) \
 			LogDebugFn("Tag: %hu", k.hdr.key12.tag); \
-		else
+		else \
 			LogDebugFn("Version: %hhu.%hhu.%hhu.%hhu", \
 			   k.hdr.key11.ver.major, k.hdr.key11.ver.minor, \
 			   k.hdr.key11.ver.revMajor, k.hdr.key11.ver.revMinor); \
