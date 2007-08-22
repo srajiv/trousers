@@ -1424,20 +1424,20 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		TSS_BOOL* addVersion = va_arg(ap,TSS_BOOL *);
 		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
-		
+
 		if (!keySlot1 || !digest1 || !in_blob1 || !addVersion) {
 			LogError("Internal error for ordinal 0x%x", ordinal);
 			break;
 		}
-		
+
 		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
 		LoadBlob_UINT32(outOffset, keySlot1, out_blob);
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
-		
+
 		/* Load the addVersion Bool */
 		LoadBlob_BOOL(outOffset,*addVersion,out_blob);
-		
+
 		if (auth1) {
 			LoadBlob_Auth(outOffset, out_blob, auth1);
 			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
