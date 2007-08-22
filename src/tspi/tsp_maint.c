@@ -42,7 +42,7 @@ Transport_CreateMaintenanceArchive(TSS_HCONTEXT tspContext,	/* in */
 	LogDebugFn("Executing in a transport session");
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_CreateMaintenanceArchive,
-						    sizeof(TSS_BOOL), &generateRandom, NULL,
+						    sizeof(TSS_BOOL), (BYTE *)&generateRandom, NULL,
 						    &handlesLen, NULL, ownerAuth, NULL, &decLen,
 						    &dec)))
 		return result;
