@@ -148,7 +148,7 @@ libtspi_la_SOURCES+=tspi_key.c rpc/@RPC@/rpc_key.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_KEY
 endif
 if TSS_BUILD_MAINT
-libtspi_la_SOURCES+=tspi_maint.c rpc/@RPC@/rpc_maint.c
+libtspi_la_SOURCES+=tspi_maint.c tsp_maint.c rpc/@RPC@/rpc_maint.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_MAINT
 endif
 if TSS_BUILD_MIGRATION
