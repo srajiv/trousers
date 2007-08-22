@@ -40,7 +40,6 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 	TSS_HPOLICY hPolicy;
 	TSS_HPOLICY hCertPolicy;
 	TCS_KEY_HANDLE certifyTCSKeyHandle, keyTCSKeyHandle;
-	TCPA_KEY keyContainer;
 	TSS_BOOL useAuthCert;
 	TSS_BOOL useAuthKey;
 	TPM_AUTH *pCertAuth = &certAuth;
@@ -135,10 +134,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 
 	if (pValidationData == NULL) {
 		if ((result = Trspi_Hash(TSS_HASH_SHA1, CertifyInfoSize, CertifyInfo,
-					 digest.digest))) {
-			free_key_refs(&keyContainer);
+					 digest.digest)))
 			return result;
-		}
 
 		if ((result = rsa_verify(hCertifyingKey, TSS_HASH_SHA1, TPM_SHA1_160_HASH_LEN,
 					 digest.digest, outDataSize, outData)))

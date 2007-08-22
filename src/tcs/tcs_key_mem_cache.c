@@ -291,7 +291,7 @@ mc_update_encdata(BYTE *encData, BYTE *newEncData)
 TSS_RESULT
 mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 	     TCPA_KEY_HANDLE tpm_handle,
-	     TCPA_KEY *key_blob)
+	     TSS_KEY *key_blob)
 {
 	struct key_mem_cache *entry, *tmp;
 
@@ -320,13 +320,13 @@ mc_add_entry(TCS_KEY_HANDLE tcs_handle,
 		goto add;
 
 	/* allocate space for the blob */
-	entry->blob = calloc(1, sizeof(TCPA_KEY));
+	entry->blob = calloc(1, sizeof(TSS_KEY));
 	if (entry->blob == NULL) {
-		LogError("malloc of %zd bytes failed.", sizeof(TCPA_KEY));
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_KEY));
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	memcpy(entry->blob, key_blob, sizeof(TCPA_KEY));
+	memcpy(entry->blob, key_blob, sizeof(TSS_KEY));
 
 	/* allocate space for the key parameters if necessary */
 	if (key_blob->algorithmParms.parmSize) {
@@ -444,7 +444,7 @@ mc_remove_entry(TCS_KEY_HANDLE tcs_handle)
 TSS_RESULT
 mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 		 TCPA_KEY_HANDLE tpm_handle,
-		 TCPA_KEY *key_blob)
+		 TSS_KEY *key_blob)
 {
 	struct key_mem_cache *entry, *tmp;
 
@@ -471,13 +471,13 @@ mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 	entry->tpm_handle = tpm_handle;
 
 	/* allocate space for the blob */
-	entry->blob = malloc(sizeof(TCPA_KEY));
+	entry->blob = malloc(sizeof(TSS_KEY));
 	if (entry->blob == NULL) {
-		LogError("malloc of %zd bytes failed.", sizeof(TCPA_KEY));
+		LogError("malloc of %zd bytes failed.", sizeof(TSS_KEY));
 		free(entry);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
-	memcpy(entry->blob, key_blob, sizeof(TCPA_KEY));
+	memcpy(entry->blob, key_blob, sizeof(TSS_KEY));
 
 	/* allocate space for the key parameters if necessary */
 	if (key_blob->algorithmParms.parmSize) {
@@ -818,7 +818,7 @@ mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *pub)
 
 /* only called from load key paths, so no locking */
 TSS_RESULT
-mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TCPA_KEY **ret_key)
+mc_get_blob_by_pub(TCPA_STORE_PUBKEY *pub, TSS_KEY **ret_key)
 {
 	struct key_mem_cache *tmp;
 
@@ -962,7 +962,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	TCPA_KEY_HANDLE keySlot;
 	TCPA_KEY_HANDLE parentSlot;
 	TCS_KEY_HANDLE tcsKeyHandle;
-	TCPA_KEY *myKey;
+	TSS_KEY *myKey;
 	UINT64 offset;
 	TCS_KEY_HANDLE parentHandle;
 	BYTE keyBlob[1024];
@@ -1019,7 +1019,7 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 			return TCSERR(TCS_E_KM_LOADFAILED);
 
 		offset = 0;
-		LoadBlob_KEY(&offset, keyBlob, myKey);
+		LoadBlob_TSS_KEY(&offset, keyBlob, myKey);
 		if ((result = TCSP_LoadKeyByBlob_Internal(hContext, parentHandle, offset, keyBlob,
 							  NULL, &tcsKeyHandle, slotOut)))
 			return result;

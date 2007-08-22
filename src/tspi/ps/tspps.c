@@ -414,7 +414,7 @@ psfile_write_key(int fd,
 		 UINT16 key_blob_size)
 {
 	TSS_RESULT result;
-	TCPA_KEY key;
+	TSS_KEY key;
 	UINT32 zero = 0;
 	UINT64 offset;
 	UINT16 pub_key_size, cache_flags = 0;
@@ -446,7 +446,7 @@ psfile_write_key(int fd,
 
 	/* Unload the blob to get the public key */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, key_blob, &key)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, key_blob, &key)))
 		return result;
 
 	pub_key_size = key.pubKey.keyLength;
@@ -706,7 +706,7 @@ err_exit:
 TSS_RESULT
 copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 {
-	TCPA_KEY key;
+	TSS_KEY key;
 	BYTE blob[4096];
 	UINT64 offset;
 	TSS_RESULT result;
@@ -727,10 +727,16 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 
 	/* Expand the blob into a useable form */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &key)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, blob, &key)))
 		return result;
 
-	memcpy(&ki->versionInfo, &key.ver, sizeof(TSS_VERSION));
+	if (key.hdr.key12.tag == TPM_TAG_KEY12) {
+		ki->versionInfo.bMajor = TSS_SPEC_MAJOR;
+		ki->versionInfo.bMinor = TSS_SPEC_MINOR;
+		ki->versionInfo.bRevMajor = 0;
+		ki->versionInfo.bRevMinor = 0;
+	} else
+		memcpy(&ki->versionInfo, &key.hdr.key11.ver, sizeof(TSS_VERSION));
 	memcpy(&ki->keyUUID, &c->uuid, sizeof(TSS_UUID));
 	memcpy(&ki->parentKeyUUID, &c->parent_uuid, sizeof(TSS_UUID));
 	ki->bAuthDataUsage = key.authDataUsage;
@@ -743,7 +749,7 @@ copy_key_info(int fd, TSS_KM_KEYINFO *ki, struct key_disk_cache *c)
 TSS_RESULT
 copy_key_info2(int fd, TSS_KM_KEYINFO2 *ki, struct key_disk_cache *c)
 {
-	TCPA_KEY key;
+	TSS_KEY key;
 	BYTE blob[4096];
 	UINT64 offset;
 	TSS_RESULT result;
@@ -764,10 +770,16 @@ copy_key_info2(int fd, TSS_KM_KEYINFO2 *ki, struct key_disk_cache *c)
 
 	/* Expand the blob into a useable form */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &key)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, blob, &key)))
 		return result;
 
-	memcpy(&ki->versionInfo, &key.ver, sizeof(TSS_VERSION));
+	if (key.hdr.key12.tag == TPM_TAG_KEY12) {
+		ki->versionInfo.bMajor = TSS_SPEC_MAJOR;
+		ki->versionInfo.bMinor = TSS_SPEC_MINOR;
+		ki->versionInfo.bRevMajor = 0;
+		ki->versionInfo.bRevMinor = 0;
+	} else
+		memcpy(&ki->versionInfo, &key.hdr.key11.ver, sizeof(TSS_VERSION));
 	memcpy(&ki->keyUUID, &c->uuid, sizeof(TSS_UUID));
 	memcpy(&ki->parentKeyUUID, &c->parent_uuid, sizeof(TSS_UUID));
 

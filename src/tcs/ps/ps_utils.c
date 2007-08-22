@@ -335,7 +335,7 @@ init_disk_cache(int fd)
 	int rc = 0, offset;
 	struct key_disk_cache *tmp, *prev = NULL;
 	BYTE srk_blob[2048];
-	TCPA_KEY srk_key;
+	TSS_KEY srk_key;
 #ifdef TSS_DEBUG
 	int valid_keys = 0;
 #endif
@@ -440,7 +440,7 @@ init_disk_cache(int fd)
 			}
 
 			tmp_offset = 0;
-			if ((rc = UnloadBlob_KEY(&tmp_offset, srk_blob, &srk_key)))
+			if ((rc = UnloadBlob_TSS_KEY(&tmp_offset, srk_blob, &srk_key)))
 				goto err_exit;
 			/* add to the mem cache */
 			if ((rc = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE,

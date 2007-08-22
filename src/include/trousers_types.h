@@ -85,4 +85,30 @@ extern TSS_UUID	SRK_UUID;
 #define TSS_TPM_SF_PHYSICALPRESENCELOCK_BIT (1 << (TPM_SF_PHYSICALPRESENCELOCK - 1))
 #define TSS_TPM_SF_GLOBALLOCK_BIT	    (1 << (TPM_SF_GLOBALLOCK - 1))
 
+// Trousers key formats to ease use of the different TPM_KEY structs
+typedef struct tdTSS_KEY11_HDR {
+	TPM_STRUCT_VER ver;
+} TSS_KEY11_HDR;
+
+typedef struct tdTSS_KEY12_HDR {
+	TPM_STRUCTURE_TAG tag;
+	UINT16 fill;
+} __attribute__((packed)) TSS_KEY12_HDR;
+
+typedef struct tdTSS_KEY {
+	union {
+		TSS_KEY11_HDR key11;
+		TSS_KEY12_HDR key12;
+	} hdr;
+	TPM_KEY_USAGE keyUsage;
+	TPM_KEY_FLAGS keyFlags;
+	TPM_AUTH_DATA_USAGE authDataUsage;
+	TPM_KEY_PARMS algorithmParms;
+	UINT32 PCRInfoSize;
+	BYTE *PCRInfo;
+	TPM_STORE_PUBKEY pubKey;
+	UINT32 encSize;
+	BYTE *encData;
+} TSS_KEY;
+
 #endif

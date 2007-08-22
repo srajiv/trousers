@@ -16,6 +16,7 @@
 #include "threads.h"
 #include "tcs_context.h"
 #include "tcs_tsp.h"
+#include "trousers_types.h"
 
 struct key_mem_cache
 {
@@ -26,7 +27,7 @@ struct key_mem_cache
 	UINT32 time_stamp;
 	TSS_UUID uuid;
 	TSS_UUID p_uuid;
-	TCPA_KEY *blob;
+	TSS_KEY *blob;
 	struct key_mem_cache *parent;
 	struct key_mem_cache *next, *prev;
 };
@@ -112,8 +113,8 @@ TSS_RESULT mc_update_encdata(BYTE *, BYTE *);
 TSS_RESULT initDiskCache(void);
 void replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
 
-TSS_RESULT mc_add_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
-TSS_RESULT mc_add_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TCPA_KEY *);
+TSS_RESULT mc_add_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TSS_KEY *);
+TSS_RESULT mc_add_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TSS_KEY *);
 TSS_RESULT mc_remove_entry(TCS_KEY_HANDLE);
 TSS_RESULT mc_set_slot_by_slot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
 TSS_RESULT mc_set_slot_by_handle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
@@ -123,7 +124,7 @@ TCPA_KEY_HANDLE mc_get_slot_by_pub(TCPA_STORE_PUBKEY *);
 TCS_KEY_HANDLE mc_get_handle_by_pub(TCPA_STORE_PUBKEY *, TCS_KEY_HANDLE);
 TCPA_STORE_PUBKEY *mc_get_parent_pub_by_pub(TCPA_STORE_PUBKEY *);
 TSS_BOOL isKeyRegistered(TCPA_STORE_PUBKEY *);
-TSS_RESULT mc_get_blob_by_pub(TCPA_STORE_PUBKEY *, TCPA_KEY **);
+TSS_RESULT mc_get_blob_by_pub(TCPA_STORE_PUBKEY *, TSS_KEY **);
 TSS_RESULT evictFirstKey(TCS_KEY_HANDLE);
 TSS_RESULT getParentUUIDByUUID(TSS_UUID *, TSS_UUID *);
 TSS_RESULT getRegisteredKeyByUUID(TSS_UUID *, BYTE *, UINT16 *);
@@ -134,7 +135,7 @@ TSS_BOOL isKeyLoaded(TCPA_KEY_HANDLE);
 TSS_RESULT LoadKeyShim(TCS_CONTEXT_HANDLE, TCPA_STORE_PUBKEY *, TSS_UUID *,TCPA_KEY_HANDLE *);
 TSS_RESULT mc_set_parent_by_handle(TCS_KEY_HANDLE, TCS_KEY_HANDLE);
 TSS_RESULT isUUIDRegistered(TSS_UUID *, TSS_BOOL *);
-void destroy_key_refs(TCPA_KEY *);
+void destroy_key_refs(TSS_KEY *);
 
 /* cxt.c */
 TSS_RESULT context_close_auth(TCS_CONTEXT_HANDLE);
@@ -205,8 +206,10 @@ TSS_RESULT UnloadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
 void LoadBlob_STORE_PUBKEY(UINT64 *, BYTE *, TCPA_STORE_PUBKEY *);
 void UnloadBlob_VERSION(UINT64 *, BYTE *, TPM_VERSION *);
 void LoadBlob_VERSION(UINT64 *, BYTE *, TPM_VERSION *);
-TSS_RESULT UnloadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
-void LoadBlob_KEY(UINT64 *, BYTE *, TCPA_KEY *);
+void UnloadBlob_TCPA_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
+void LoadBlob_TCPA_VERSION(UINT64 *, BYTE *, TCPA_VERSION *);
+TSS_RESULT UnloadBlob_TSS_KEY(UINT64 *, BYTE *, TSS_KEY *);
+void LoadBlob_TSS_KEY(UINT64 *, BYTE *, TSS_KEY *);
 void LoadBlob_PUBKEY(UINT64 *, BYTE *, TCPA_PUBKEY *);
 TSS_RESULT UnloadBlob_PUBKEY(UINT64 *, BYTE *, TCPA_PUBKEY *);
 void LoadBlob_SYMMETRIC_KEY(UINT64 *, BYTE *, TCPA_SYMMETRIC_KEY *);

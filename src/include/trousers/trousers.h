@@ -98,6 +98,7 @@ void Trspi_LoadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *
 void Trspi_LoadBlob_STORE_ASYMKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_ASYMKEY *store);
 void Trspi_LoadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 void Trspi_LoadBlob_PRIVKEY_DIGEST(UINT64 *offset, BYTE *blob, TCPA_KEY *key);
+void Trspi_LoadBlob_PRIVKEY_DIGEST12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key);
 void Trspi_LoadBlob_SYMMETRIC_KEY(UINT64 *offset, BYTE *blob, TCPA_SYMMETRIC_KEY *key);
 void Trspi_LoadBlob_SYM_CA_ATTESTATION(UINT64 *offset, BYTE *blob, TCPA_SYM_CA_ATTESTATION *sym);
 void Trspi_LoadBlob_ASYM_CA_CONTENTS(UINT64 *offset, BYTE *blob, TCPA_ASYM_CA_CONTENTS *asym);
@@ -146,12 +147,14 @@ TSS_RESULT Trspi_Hash_VERSION(Trspi_HashCtx *c, TSS_VERSION *version);
 TSS_RESULT Trspi_Hash_STORED_DATA(Trspi_HashCtx *c, TCPA_STORED_DATA *data);
 TSS_RESULT Trspi_Hash_PCR_SELECTION(Trspi_HashCtx *c, TCPA_PCR_SELECTION *pcr);
 TSS_RESULT Trspi_Hash_KEY(Trspi_HashCtx *c, TCPA_KEY *key);
+TSS_RESULT Trspi_Hash_KEY12(Trspi_HashCtx *c, TPM_KEY12 *key);
 TSS_RESULT Trspi_Hash_KEY_FLAGS(Trspi_HashCtx *c, TCPA_KEY_FLAGS *flags);
 TSS_RESULT Trspi_Hash_KEY_PARMS(Trspi_HashCtx *c, TCPA_KEY_PARMS *keyInfo);
 TSS_RESULT Trspi_Hash_STORE_PUBKEY(Trspi_HashCtx *c, TCPA_STORE_PUBKEY *store);
 TSS_RESULT Trspi_Hash_UUID(Trspi_HashCtx *c, TSS_UUID uuid);
 TSS_RESULT Trspi_Hash_PCR_EVENT(Trspi_HashCtx *c, TSS_PCR_EVENT *event);
 TSS_RESULT Trspi_Hash_PRIVKEY_DIGEST(Trspi_HashCtx *c, TCPA_KEY *key);
+TSS_RESULT Trspi_Hash_PRIVKEY_DIGEST12(Trspi_HashCtx *c, TPM_KEY12 *key);
 TSS_RESULT Trspi_Hash_SYMMETRIC_KEY(Trspi_HashCtx *c, TCPA_SYMMETRIC_KEY *key);
 TSS_RESULT Trspi_Hash_IDENTITY_REQ(Trspi_HashCtx *c, TCPA_IDENTITY_REQ *req);
 TSS_RESULT Trspi_Hash_CHANGEAUTH_VALIDATE(Trspi_HashCtx *c, TPM_CHANGEAUTH_VALIDATE *caValidate);
@@ -163,7 +166,6 @@ TSS_RESULT Trspi_Hash_TRANSPORT_LOG_IN(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_IN *l
 TSS_RESULT Trspi_Hash_TRANSPORT_LOG_OUT(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_OUT *l);
 TSS_RESULT Trspi_Hash_CURRENT_TICKS(Trspi_HashCtx *c, TPM_CURRENT_TICKS *t);
 TSS_RESULT Trspi_Hash_SIGN_INFO(Trspi_HashCtx *c, TPM_SIGN_INFO *s);
-
 #define Trspi_Hash_DIGEST(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_NONCE(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_ENCAUTH(c, d)	Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)

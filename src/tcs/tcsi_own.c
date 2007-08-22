@@ -40,7 +40,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT64 offset;
 	UINT32 paramSize;
 	TSS_RESULT result;
-	TCPA_KEY srkKeyContainer;
+	TSS_KEY srkKeyContainer;
 	BYTE oldAuthDataUsage;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -52,7 +52,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	/* Check on the Atmel Bug Patch */
 	offset = 0;
-	UnloadBlob_KEY(&offset, srkInfo, &srkKeyContainer);
+	UnloadBlob_TSS_KEY(&offset, srkInfo, &srkKeyContainer);
 	oldAuthDataUsage = srkKeyContainer.authDataUsage;
 	LogDebug("auth data usage is %.2X", oldAuthDataUsage);
 
@@ -72,7 +72,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 
 		offset = 0;
-		if ((result = UnloadBlob_KEY(&offset, *srkKey, &srkKeyContainer))) {
+		if ((result = UnloadBlob_TSS_KEY(&offset, *srkKey, &srkKeyContainer))) {
 			*srkKeySize = 0;
 			free(*srkKey);
 			goto done;

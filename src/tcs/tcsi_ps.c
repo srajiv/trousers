@@ -414,7 +414,7 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT64 offset;
 	BYTE tcpaKeyBlob[1024];
-	TCPA_KEY tcpaKey;
+	TSS_KEY tcpaKey;
 	UINT16 keySize = sizeof (tcpaKeyBlob);
 	TSS_UUID parentUUID;
 
@@ -438,16 +438,23 @@ TCS_GetRegisteredKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	}
 
 	offset = 0;
-	UnloadBlob_KEY(&offset, tcpaKeyBlob, &tcpaKey);
+	UnloadBlob_TSS_KEY(&offset, tcpaKeyBlob, &tcpaKey);
 
 	(*ppKeyInfo)->bAuthDataUsage = tcpaKey.authDataUsage;
 
 	(*ppKeyInfo)->fIsLoaded = FALSE;
 
-	(*ppKeyInfo)->versionInfo.bMajor = tcpaKey.ver.major;
-	(*ppKeyInfo)->versionInfo.bMinor = tcpaKey.ver.minor;
-	(*ppKeyInfo)->versionInfo.bRevMajor = tcpaKey.ver.revMajor;
-	(*ppKeyInfo)->versionInfo.bRevMinor = tcpaKey.ver.revMinor;
+	if (tcpaKey.hdr.key12.tag == TPM_TAG_KEY12) {
+		(*ppKeyInfo)->versionInfo.bMajor = TSS_SPEC_MAJOR;
+		(*ppKeyInfo)->versionInfo.bMinor = TSS_SPEC_MINOR;
+		(*ppKeyInfo)->versionInfo.bRevMajor = 0;
+		(*ppKeyInfo)->versionInfo.bRevMinor = 0;
+	} else {
+		(*ppKeyInfo)->versionInfo.bMajor = tcpaKey.hdr.key11.ver.major;
+		(*ppKeyInfo)->versionInfo.bMinor = tcpaKey.hdr.key11.ver.minor;
+		(*ppKeyInfo)->versionInfo.bRevMajor = tcpaKey.hdr.key11.ver.revMajor;
+		(*ppKeyInfo)->versionInfo.bRevMinor = tcpaKey.hdr.key11.ver.revMinor;
+	}
 
 	memcpy(&((*ppKeyInfo)->keyUUID), KeyUUID, sizeof(TSS_UUID));
 

@@ -325,7 +325,7 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	BYTE encPrivKey[256];
 	UINT32 newPrivKeyLen = 214, encPrivKeyLen = 256;
 	UINT64 offset;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	//BYTE hashBlob[1024];
 	TCPA_DIGEST digest;
 	TSS_HCONTEXT tspContext;
@@ -364,16 +364,16 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	if ((result = obj_policy_get_secret(hMigPolicy, TR_SECRET_CTX_NEW, &migration)))
 		goto done;
 
-	memset(&keyContainer, 0, sizeof(TCPA_KEY));
+	memset(&keyContainer, 0, sizeof(TSS_KEY));
 
 	/* unload the key to be wrapped's blob */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &keyContainer)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyBlob, &keyContainer)))
 		return result;
 
 	/* load the key's attributes into an object and get its hash value */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-	result |= Trspi_Hash_PRIVKEY_DIGEST(&hashCtx, &keyContainer);
+	result |= Hash_TSS_PRIVKEY_DIGEST(&hashCtx, &keyContainer);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
@@ -419,8 +419,8 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 	TSS_RESULT result;
 	UINT32 keyslot;
 	TSS_HPOLICY hPolicy;
-	TCS_KEY_HANDLE myTCSKeyHandle;
-	TCPA_KEY keyContainer;
+	TCS_KEY_HANDLE tcsParentHandle, myTCSKeyHandle;
+	TSS_KEY keyContainer;
 	TSS_BOOL useAuth;
 	TPM_AUTH *pAuth;
 	TSS_FLAG initFlags;
@@ -439,8 +439,11 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 	if ((result = obj_context_get_loadkey_ordinal(tspContext, &ordinal)))
 		return result;
 
+	if ((result = obj_rsakey_get_tcs_handle(hUnwrappingKey, &tcsParentHandle)))
+		return result;
+
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, rgbBlobData, &keyContainer)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, rgbBlobData, &keyContainer)))
 		return result;
 	realKeyBlobSize = offset;
 	pubLen = keyContainer.pubKey.keyLength;
@@ -468,7 +471,7 @@ Tspi_Context_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 		pAuth = NULL;
 	}
 
-	if ((result = TCS_API(tspContext)->LoadKeyByBlob(tspContext, hUnwrappingKey, ulBlobLength,
+	if ((result = TCS_API(tspContext)->LoadKeyByBlob(tspContext, tcsParentHandle, ulBlobLength,
 							 rgbBlobData, pAuth, &myTCSKeyHandle,
 							 &keyslot)))
 		return result;

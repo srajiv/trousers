@@ -639,7 +639,7 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 #ifdef TSS_BUILD_RSAKEY_LIST
 		if (attribFlag == TSS_TSPATTRIB_KEY_BLOB) {
 			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-				/* A TCPA_KEY structure, in blob form */
+				/* A TPM_KEY(12) structure, in blob form */
 				result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize,
 								rgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
@@ -780,7 +780,7 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 #ifdef TSS_BUILD_RSAKEY_LIST
 		if (attribFlag == TSS_TSPATTRIB_KEY_BLOB) {
 			if (subFlag == TSS_TSPATTRIB_KEYBLOB_BLOB) {
-				/* A TCPA_KEY structure, in blob form */
+				/* A TPM_KEY(12) structure, in blob form */
 				result = obj_rsakey_get_blob(hObject, pulAttribDataSize,
 							     prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PRIVATE_KEY) {

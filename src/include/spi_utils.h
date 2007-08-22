@@ -15,6 +15,9 @@
 #include "threads.h"
 #include <netinet/in.h> // for endian routines
 
+#include "trousers_types.h"
+#include "trousers/trousers.h"
+
 struct key_mem_cache
 {
 	TCS_KEY_HANDLE tcs_handle;
@@ -23,7 +26,7 @@ struct key_mem_cache
 	UINT32 time_stamp;
 	TSS_UUID uuid;
 	TSS_UUID p_uuid;
-	TCPA_KEY *blob;
+	TSS_KEY *blob;
 	struct key_mem_cache *parent;
 	struct key_mem_cache *next;
 };
@@ -72,7 +75,7 @@ TSS_RESULT secret_TakeOwnership(TSS_HKEY, TSS_HTPM, TSS_HKEY, TPM_AUTH *,
 /* spi_utils.c */
 
 UINT16 get_num_pcrs(TSS_HCONTEXT);
-void   free_key_refs(TCPA_KEY *);
+void   free_key_refs(TSS_KEY *);
 
 #define UI_MAX_SECRET_STRING_LENGTH	256
 #define UI_MAX_POPUP_STRING_LENGTH	256
@@ -151,6 +154,11 @@ void LoadBlob_AUTH(UINT64 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_AUTH(UINT64 *, BYTE *, TPM_AUTH *);
 void LoadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
 void UnloadBlob_LOADKEY_INFO(UINT64 *, BYTE *, TCS_LOADKEY_INFO *);
+void LoadBlob_TSS_KEY(UINT64 *, BYTE *, TSS_KEY *);
+TSS_RESULT UnloadBlob_TSS_KEY(UINT64 *, BYTE *, TSS_KEY *);
+TSS_RESULT Hash_TSS_KEY(Trspi_HashCtx *, TSS_KEY *);
+void LoadBlob_TSS_PRIVKEY_DIGEST(UINT64 *, BYTE *, TSS_KEY *);
+TSS_RESULT Hash_TSS_PRIVKEY_DIGEST(Trspi_HashCtx *, TSS_KEY *);
 
 TSS_RESULT TSP_SetCapability(TSS_HCONTEXT, TSS_HTPM, TSS_HPOLICY, TPM_CAPABILITY_AREA,
 			     UINT32, TSS_BOOL);

@@ -384,31 +384,13 @@ Trspi_LoadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 void
 Trspi_LoadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 {
-	UINT32 tempFlag = 0;
-
-	if (*flags & migratable)
-		tempFlag |= TSS_FLAG_MIGRATABLE;
-	if (*flags & redirection)
-		tempFlag |= TSS_FLAG_REDIRECTION;
-	if (*flags & volatileKey)
-		tempFlag |= TSS_FLAG_VOLATILE;
-	Trspi_LoadBlob_UINT32(offset, tempFlag, blob);
+	Trspi_LoadBlob_UINT32(offset, *flags, blob);
 }
 
 void
 Trspi_UnloadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 {
-	UINT32 tempFlag = 0;
-	memset(flags, 0x00, sizeof(TCPA_KEY_FLAGS));
-
-	Trspi_UnloadBlob_UINT32(offset, &tempFlag, blob);
-
-	if (tempFlag & TSS_FLAG_REDIRECTION)
-		*flags |= redirection;
-	if (tempFlag & TSS_FLAG_MIGRATABLE)
-		*flags |= migratable;
-	if (tempFlag & TSS_FLAG_VOLATILE)
-		*flags |= volatileKey;
+	Trspi_UnloadBlob_UINT32(offset, flags, blob);
 }
 
 void
@@ -715,8 +697,27 @@ Trspi_UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 }
 
 /* loads a blob with the info needed to hash when creating the private key area
- * of a TCPA_KEY from an external source
+ * of a TPM_KEY(12) from an external source
  */
+void
+Trspi_LoadBlob_PRIVKEY_DIGEST12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key)
+{
+	Trspi_LoadBlob_UINT16(offset, key->tag, blob);
+	Trspi_LoadBlob_UINT16(offset, key->fill, blob);
+	Trspi_LoadBlob_UINT16(offset, key->keyUsage, blob);
+	Trspi_LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
+	Trspi_LoadBlob_BYTE(offset, key->authDataUsage, blob);
+	Trspi_LoadBlob_KEY_PARMS(offset, blob, &key->algorithmParms);
+
+	Trspi_LoadBlob_UINT32(offset, key->PCRInfoSize, blob);
+	/* exclude pcrInfo when PCRInfoSize is 0 as spec'd in TPM 1.1b spec p.71 */
+	if (key->PCRInfoSize != 0)
+		Trspi_LoadBlob(offset, key->PCRInfoSize, blob, key->PCRInfo);
+
+	Trspi_LoadBlob_STORE_PUBKEY(offset, blob, &key->pubKey);
+	/* exclude encSize, encData as spec'd in TPM 1.1b spec p.71 */
+}
+
 void
 Trspi_LoadBlob_PRIVKEY_DIGEST(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 {
@@ -1568,15 +1569,27 @@ Trspi_Hash_PCR_SELECTION(Trspi_HashCtx *c, TCPA_PCR_SELECTION *pcr)
 TSS_RESULT
 Trspi_Hash_KEY_FLAGS(Trspi_HashCtx *c, TCPA_KEY_FLAGS *flags)
 {
-	UINT32 tempFlag = 0;
+	return Trspi_Hash_UINT32(c, *flags);
+}
 
-	if (*flags & migratable)
-		tempFlag |= TSS_FLAG_MIGRATABLE;
-	if (*flags & redirection)
-		tempFlag |= TSS_FLAG_REDIRECTION;
-	if (*flags & volatileKey)
-		tempFlag |= TSS_FLAG_VOLATILE;
-	return Trspi_Hash_UINT32(c, tempFlag);
+TSS_RESULT
+Trspi_Hash_KEY12(Trspi_HashCtx *c, TPM_KEY12 *key)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, key->tag);
+	result |= Trspi_Hash_UINT16(c, key->fill);
+	result |= Trspi_Hash_UINT16(c, key->keyUsage);
+	result |= Trspi_Hash_KEY_FLAGS(c, &key->keyFlags);
+	result |= Trspi_Hash_BYTE(c, key->authDataUsage);
+	result |= Trspi_Hash_KEY_PARMS(c, &key->algorithmParms);
+	result |= Trspi_Hash_UINT32(c, key->PCRInfoSize);
+	result |= Trspi_HashUpdate(c, key->PCRInfoSize, key->PCRInfo);
+	result |= Trspi_Hash_STORE_PUBKEY(c, &key->pubKey);
+	result |= Trspi_Hash_UINT32(c, key->encSize);
+	result |= Trspi_HashUpdate(c, key->encSize, key->encData);
+
+	return result;
 }
 
 TSS_RESULT
@@ -1630,6 +1643,29 @@ Trspi_Hash_PCR_EVENT(Trspi_HashCtx *c, TSS_PCR_EVENT *event)
 	if (event->ulEventLength > 0)
 		result |= Trspi_HashUpdate(c, event->ulEventLength, event->rgbEvent);
 
+
+	return result;
+}
+
+TSS_RESULT
+Trspi_Hash_PRIVKEY_DIGEST12(Trspi_HashCtx *c, TPM_KEY12 *key)
+{
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT16(c, key->tag);
+	result |= Trspi_Hash_UINT16(c, key->fill);
+	result |= Trspi_Hash_UINT16(c, key->keyUsage);
+	result |= Trspi_Hash_KEY_FLAGS(c, &key->keyFlags);
+	result |= Trspi_Hash_BYTE(c, key->authDataUsage);
+	result |= Trspi_Hash_KEY_PARMS(c, &key->algorithmParms);
+
+	result |= Trspi_Hash_UINT32(c, key->PCRInfoSize);
+	/* exclude pcrInfo when PCRInfoSize is 0 as spec'd in TPM 1.1b spec p.71 */
+	if (key->PCRInfoSize != 0)
+		result |= Trspi_HashUpdate(c, key->PCRInfoSize, key->PCRInfo);
+
+	Trspi_Hash_STORE_PUBKEY(c, &key->pubKey);
+	/* exclude encSize, encData as spec'd in TPM 1.1b spec p.71 */
 
 	return result;
 }

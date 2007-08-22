@@ -32,7 +32,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	TSS_RESULT result;
 	UINT32 ekSize;
 	BYTE *ek;
-	TCPA_KEY dummyKey;
+	TSS_KEY dummyKey;
 	UINT64 offset;
 	TCPA_DIGEST hash;
 	UINT32 newEKSize;
@@ -42,7 +42,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 	Trspi_HashCtx hashCtx;
 
 	memset(&pubEK, 0, sizeof(TCPA_PUBKEY));
-	memset(&dummyKey, 0, sizeof(TCPA_KEY));
+	memset(&dummyKey, 0, sizeof(TSS_KEY));
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
@@ -51,7 +51,7 @@ Tspi_TPM_CreateEndorsementKey(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, ek, &dummyKey)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, ek, &dummyKey)))
 		return result;
 
 	offset = 0;
@@ -297,7 +297,7 @@ Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 	TSS_RESULT result;
 	UINT32 ekSize;
 	BYTE *ek;
-	TPM_KEY dummyKey;
+	TSS_KEY dummyKey;
 	UINT64 offset;
 	TSS_BOOL genResetAuth;
 	TPM_DIGEST eKResetAuth;
@@ -309,7 +309,7 @@ Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 	Trspi_HashCtx hashCtx;
 
 	memset(&pubEK, 0, sizeof(TPM_PUBKEY));
-	memset(&dummyKey, 0, sizeof(TPM_KEY));
+	memset(&dummyKey, 0, sizeof(TSS_KEY));
 	memset(&eKResetAuth, 0xff, sizeof(eKResetAuth));
 
 	if (!pulEkResetDataLength || !prgbEkResetData)
@@ -338,7 +338,7 @@ Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, ek, &dummyKey)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, ek, &dummyKey)))
 		return result;
 
 	offset = 0;

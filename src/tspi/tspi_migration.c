@@ -35,7 +35,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	TSS_HPOLICY hOwnerPolicy;
 	UINT32 migrationKeySize;
 	BYTE *migrationKeyBlob;
-	TCPA_KEY tcpaKey;
+	TSS_KEY tcpaKey;
 	BYTE pubKeyBlob[0x1000];
 	TPM_AUTH ownerAuth;
 	UINT32 pubKeySize;
@@ -72,10 +72,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_rsakey_get_blob(hMigrationKey, &migrationKeySize, &migrationKeyBlob)))
 		return result;
 
-	/* First, turn the keyBlob into a TCPA_KEY structure */
+	/* First, turn the keyBlob into a TSS_KEY structure */
 	offset = 0;
-	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
-	if ((result = Trspi_UnloadBlob_KEY(&offset, migrationKeyBlob, &tcpaKey))) {
+	memset(&tcpaKey, 0, sizeof(TSS_KEY));
+	if ((result = UnloadBlob_TSS_KEY(&offset, migrationKeyBlob, &tcpaKey))) {
 		free_tspi(tspContext, migrationKeyBlob);
 		return result;
 	}
@@ -156,12 +156,12 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	TSS_HPOLICY hParentPolicy;
 	TSS_HPOLICY hMigratePolicy;
 	TCPA_MIGRATIONKEYAUTH migAuth;
-	TCPA_KEY tcpaKey;
+	TSS_KEY tcpaKey;
 	TCS_KEY_HANDLE parentHandle;
 	TSS_BOOL parentUsesAuth;
 	UINT32 blobSize;
 	BYTE *blob;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
 
@@ -202,10 +202,10 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	free(migAuth.migrationKey.pubKey.key);
 	migAuth.migrationKey.pubKey.keyLength = 0;
 
-	memset(&tcpaKey, 0, sizeof(TCPA_KEY));
+	memset(&tcpaKey, 0, sizeof(TSS_KEY));
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyToMigrateBlob, &tcpaKey)))
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyToMigrateBlob, &tcpaKey)))
 		return result;
 
 	/* Generate the Authorization data */
@@ -275,10 +275,10 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
 			goto error;
 
-		memset(&keyContainer, 0, sizeof(TCPA_KEY));
+		memset(&keyContainer, 0, sizeof(TSS_KEY));
 
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_KEY(&offset, blob, &keyContainer)))
+		if ((result = UnloadBlob_TSS_KEY(&offset, blob, &keyContainer)))
 			goto error;
 
 		if (keyContainer.encSize > 0)
@@ -288,7 +288,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 		keyContainer.encData = *prgbMigrationBlob;
 
 		offset = 0;
-		Trspi_LoadBlob_KEY(&offset, hashblob, &keyContainer);
+		LoadBlob_TSS_KEY(&offset, hashblob, &keyContainer);
 
 		/* Free manually here since free_key_refs() would free encData, ugh. */
 		free(keyContainer.algorithmParms.parms);

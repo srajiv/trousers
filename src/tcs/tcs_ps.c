@@ -46,7 +46,7 @@ fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO 
 {
 	BYTE tmp_blob[2048];
 	UINT16 tmp_blob_size = 2048;
-	TCPA_KEY tmp_key;
+	TSS_KEY tmp_key;
 	UINT64 offset;
 	TSS_RESULT result;
 
@@ -59,10 +59,16 @@ fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO 
 
 		offset = 0;
 		/* XXX add a real context handle here */
-		if ((result = UnloadBlob_KEY(&offset, tmp_blob, &tmp_key)))
+		if ((result = UnloadBlob_TSS_KEY(&offset, tmp_blob, &tmp_key)))
 			return result;
 
-		memcpy(&key_info->versionInfo, &tmp_key.ver, sizeof(TSS_VERSION));
+		if (tmp_key.hdr.key12.tag == TPM_TAG_KEY12) {
+			key_info->versionInfo.bMajor = TSS_SPEC_MAJOR;
+			key_info->versionInfo.bMinor = TSS_SPEC_MINOR;
+			key_info->versionInfo.bRevMajor = 0;
+			key_info->versionInfo.bRevMajor = 0;
+		} else
+			memcpy(&key_info->versionInfo, &tmp_key.hdr.key11.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &tmp_key.authDataUsage,
 		       sizeof(TCPA_AUTH_DATA_USAGE));
 		destroy_key_refs(&tmp_key);
@@ -72,7 +78,13 @@ fill_key_info(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO 
 		else
 			key_info->fIsLoaded = TRUE;
 
-		memcpy(&key_info->versionInfo, &m->blob->ver, sizeof(TSS_VERSION));
+		if (m->blob->hdr.key12.tag == TPM_TAG_KEY12) {
+			key_info->versionInfo.bMajor = TSS_SPEC_MAJOR;
+			key_info->versionInfo.bMinor = TSS_SPEC_MINOR;
+			key_info->versionInfo.bRevMajor = 0;
+			key_info->versionInfo.bRevMajor = 0;
+		} else
+			memcpy(&key_info->versionInfo, &m->blob->hdr.key11.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &m->blob->authDataUsage,
 		       sizeof(TCPA_AUTH_DATA_USAGE));
 	}
@@ -88,7 +100,7 @@ fill_key_info2(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO
 {
 	BYTE tmp_blob[2048];
 	UINT16 tmp_blob_size = 2048;
-	TCPA_KEY tmp_key;
+	TSS_KEY tmp_key;
 	UINT64 offset;
 	TSS_RESULT result;
 
@@ -101,10 +113,16 @@ fill_key_info2(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO
 
 		offset = 0;
 		/* XXX add a real context handle here */
-		if ((result = UnloadBlob_KEY(&offset, tmp_blob, &tmp_key)))
+		if ((result = UnloadBlob_TSS_KEY(&offset, tmp_blob, &tmp_key)))
 			return result;
 
-		memcpy(&key_info->versionInfo, &tmp_key.ver, sizeof(TSS_VERSION));
+		if (tmp_key.hdr.key12.tag == TPM_TAG_KEY12) {
+			key_info->versionInfo.bMajor = TSS_SPEC_MAJOR;
+			key_info->versionInfo.bMinor = TSS_SPEC_MINOR;
+			key_info->versionInfo.bRevMajor = 0;
+			key_info->versionInfo.bRevMajor = 0;
+		} else
+			memcpy(&key_info->versionInfo, &tmp_key.hdr.key11.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &tmp_key.authDataUsage,
 		       sizeof(TCPA_AUTH_DATA_USAGE));
 		destroy_key_refs(&tmp_key);
@@ -114,7 +132,13 @@ fill_key_info2(struct key_disk_cache *d, struct key_mem_cache *m, TSS_KM_KEYINFO
 		else
 			key_info->fIsLoaded = TRUE;
 
-		memcpy(&key_info->versionInfo, &m->blob->ver, sizeof(TSS_VERSION));
+		if (m->blob->hdr.key12.tag == TPM_TAG_KEY12) {
+			key_info->versionInfo.bMajor = TSS_SPEC_MAJOR;
+			key_info->versionInfo.bMinor = TSS_SPEC_MINOR;
+			key_info->versionInfo.bRevMajor = 0;
+			key_info->versionInfo.bRevMajor = 0;
+		} else
+			memcpy(&key_info->versionInfo, &m->blob->hdr.key11.ver, sizeof(TSS_VERSION));
 		memcpy(&key_info->bAuthDataUsage, &m->blob->authDataUsage,
 		       sizeof(TCPA_AUTH_DATA_USAGE));
 	}

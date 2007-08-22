@@ -34,13 +34,13 @@ add_cache_entry(TCS_CONTEXT_HANDLE hContext,
 	UINT64 offset;
 	TSS_RESULT result;
 	TCS_KEY_HANDLE tcsHandle;
-	TPM_KEY key, *pKey;
+	TSS_KEY key, *pKey;
 
 	if (!blob) {
 		pKey = NULL;
 	} else {
 		offset = 0;
-		if ((result = UnloadBlob_KEY(&offset, blob, &key)))
+		if ((result = UnloadBlob_TSS_KEY(&offset, blob, &key)))
 			return result;
 
 		if ((tcsHandle = mc_get_handle_by_pub(&key.pubKey, hParent)) == NULL_TCS_HANDLE) {
@@ -150,7 +150,7 @@ load_key_init(TPM_COMMAND_CODE   ord,
 	      TPM_KEY_HANDLE*    slot)
 {
 	TSS_RESULT result = TSS_SUCCESS;
-	TPM_KEY key;
+	TSS_KEY key;
 	UINT64 offset;
 	TPM_KEY_HANDLE tpm_slot;
 	TCS_KEY_HANDLE tcs_handle;
@@ -159,8 +159,8 @@ load_key_init(TPM_COMMAND_CODE   ord,
 
 	if (!encrypted) {
 		offset = 0;
-		memset(&key, 0, sizeof(TPM_KEY));
-		if ((result = UnloadBlob_KEY(&offset, blob, &key)))
+		memset(&key, 0, sizeof(TSS_KEY));
+		if ((result = UnloadBlob_TSS_KEY(&offset, blob, &key)))
 			return result;
 	}
 
@@ -412,13 +412,15 @@ LoadBlob_STORE_PUBKEY(UINT64 *offset, BYTE * blob, TCPA_STORE_PUBKEY * store)
 }
 
 TSS_RESULT
-UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
+UnloadBlob_TSS_KEY(UINT64 *offset, BYTE *blob, TSS_KEY *key)
 {
 	TSS_RESULT rc;
 
 	if (!key) {
 		UINT32 size;
 
+		/* TPM_KEY's ver and TPM_KEY12's tag/file are
+		   the same size, so... */
 		UnloadBlob_VERSION(offset, blob, NULL);
 		UnloadBlob_UINT16(offset, NULL, blob);
 		UnloadBlob_KEY_FLAGS(offset, blob, NULL);
@@ -441,7 +443,11 @@ UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 		return TSS_SUCCESS;
 	}
 
-	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&key->ver);
+	if (key->hdr.key12.tag == TPM_TAG_KEY12) {
+		UnloadBlob_UINT16(offset, &key->hdr.key12.tag, blob);
+		UnloadBlob_UINT16(offset, &key->hdr.key12.fill, blob);
+	} else
+		UnloadBlob_TCPA_VERSION(offset, blob, &key->hdr.key11.ver);
 	UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	UnloadBlob_BOOL(offset, (TSS_BOOL *)&key->authDataUsage, blob);
@@ -500,9 +506,13 @@ UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 }
 
 void
-LoadBlob_KEY(UINT64 *offset, BYTE * blob, TCPA_KEY * key)
+LoadBlob_TSS_KEY(UINT64 *offset, BYTE * blob, TSS_KEY * key)
 {
-	LoadBlob_VERSION(offset, blob, (TPM_VERSION *)&key->ver);
+	if (key->hdr.key12.tag == TPM_TAG_KEY12) {
+		LoadBlob_UINT16(offset, key->hdr.key12.tag, blob);
+		LoadBlob_UINT16(offset, key->hdr.key12.fill, blob);
+	} else
+		LoadBlob_TCPA_VERSION(offset, blob, &key->hdr.key11.ver);
 	LoadBlob_UINT16(offset, key->keyUsage, blob);
 	LoadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
 	LoadBlob_BOOL(offset, key->authDataUsage, blob);
@@ -546,19 +556,11 @@ UnloadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *key)
 void
 LoadBlob_KEY_FLAGS(UINT64 *offset, BYTE * blob, TCPA_KEY_FLAGS * flags)
 {
-	UINT32 tempFlag = 0;
-
-	if ((*flags) & migratable)
-		tempFlag |= TSS_FLAG_MIGRATABLE;
-	if ((*flags) & redirection)
-		tempFlag |= TSS_FLAG_REDIRECTION;
-	if ((*flags) & volatileKey)
-		tempFlag |= TSS_FLAG_VOLATILE;
-	LoadBlob_UINT32(offset, tempFlag, blob);
+	LoadBlob_UINT32(offset, *flags, blob);
 }
 
 void
-destroy_key_refs(TCPA_KEY *key)
+destroy_key_refs(TSS_KEY *key)
 {
 	free(key->algorithmParms.parms);
 	key->algorithmParms.parms = NULL;

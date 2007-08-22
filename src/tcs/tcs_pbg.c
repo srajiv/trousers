@@ -521,7 +521,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		}
 
 		offset1 = offset2 = TSS_TPM_TXBLOB_HDR_LEN;
-		UnloadBlob_KEY(&offset1, b, NULL);
+		UnloadBlob_TSS_KEY(&offset1, b, NULL);
 		offset1 -= TSS_TPM_TXBLOB_HDR_LEN;
 
 		if ((*blob1 = malloc(offset1)) == NULL) {

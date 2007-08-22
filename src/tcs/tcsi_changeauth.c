@@ -162,7 +162,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	TSS_RESULT result;
 	UINT32 keySlot;
 	TCPA_CERTIFY_INFO certifyInfo;
-	TCPA_KEY tempKey;
+	TSS_KEY tempKey;
 	UINT32 tempSize;
 	TCPA_KEY_PARMS keyParmsContainer;
 	TSS_BOOL canLoad;
@@ -243,7 +243,7 @@ TCSP_ChangeAuthAsymStart_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		UnloadBlob(&offset, *sigSize, txBlob, *sig);
 		UnloadBlob_UINT32(&offset, ephHandle, txBlob);
 		tempSize = offset;
-		UnloadBlob_KEY(&offset, txBlob, &tempKey);
+		UnloadBlob_TSS_KEY(&offset, txBlob, &tempKey);
 		*KeySizeOut = offset - tempSize;
 		*KeyDataOut = malloc(*KeySizeOut);
 		if (*KeyDataOut == NULL) {
@@ -289,7 +289,7 @@ TCSP_ChangeAuthAsymFinish_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 keySlot;
 #if 0
 	TCPA_CERTIFY_INFO certifyInfo;
-	TCPA_KEY tempKey;
+	TSS_KEY tempKey;
 	UINT32 tempSize;
 	TSS_UUID *uuidKeyToEvict;
 #endif

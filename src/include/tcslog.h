@@ -37,9 +37,12 @@ extern int foreground;
 #define LogBlob(sz,blb)		LogBlobData(APPID, sz, blb)
 #define LogDebugKey(k) \
 	do { \
-		LogDebugFn("Version: %hhu.%hhu.%hhu.%hhu", \
-			   k.ver.major, k.ver.minor, \
-			   k.ver.revMajor, k.ver.revMinor); \
+		if (k.hdr.key12.tag == TPM_TAG_KEY12) \
+			LogDebugFn("Tag: %hu", k.hdr.key12.tag); \
+		else
+			LogDebugFn("Version: %hhu.%hhu.%hhu.%hhu", \
+			   k.hdr.key11.ver.major, k.hdr.key11.ver.minor, \
+			   k.hdr.key11.ver.revMajor, k.hdr.key11.ver.revMinor); \
 		LogDebugFn("keyUsage: 0x%hx", k.keyUsage); \
 		LogDebugFn("keyFlags: 0x%x", k.keyFlags); \
 		LogDebugFn("authDatausage: %hhu", k.authDataUsage); \
@@ -48,9 +51,9 @@ extern int foreground;
 	} while (0)
 #define LogDebugUnrollKey(b) \
 	do { \
-			TCPA_KEY tmpkey; \
+			TSS_KEY tmpkey; \
 			UINT64 offset = 0; \
-			if (!UnloadBlob_KEY(&offset, b, &tmpkey)) { \
+			if (!UnloadBlob_TSS_KEY(&offset, b, &tmpkey)) { \
 				LogDebugKey(tmpkey); \
 				destroy_key_refs(&tmpkey); \
 			} else { \

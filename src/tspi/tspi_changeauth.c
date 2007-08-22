@@ -46,7 +46,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	TCPA_STORED_DATA storedData;
 	UINT32 keyToChangeHandle;
 	UINT32 objectLength;
-	TCPA_KEY keyToChange;
+	TSS_KEY keyToChange;
 	BYTE *keyBlob;
 	UINT32 newEncSize;
 	BYTE *newEncData;
@@ -207,9 +207,8 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 				return result;
 
 			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob,
-							   &keyToChange))) {
-				LogDebug("Trspi_UnloadBlob_KEY failed. "
+			if ((result = UnloadBlob_TSS_KEY(&offset, keyBlob, &keyToChange))) {
+				LogDebug("UnloadBlob_TSS_KEY failed. "
 						"result=0x%x", result);
 				return result;
 			}
@@ -293,7 +292,7 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 			free(newEncData);
 
 			offset = 0;
-			Trspi_LoadBlob_KEY(&offset, keyBlob, &keyToChange);
+			LoadBlob_TSS_KEY(&offset, keyBlob, &keyToChange);
 			objectLength = offset;
 
 			if ((result = obj_rsakey_set_tcpakey(hObjectToChange,
@@ -459,7 +458,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	BYTE seed[20];
 	BYTE a1[256];
 	UINT32 a1Size;
-	TCPA_KEY ephemeralKey;
+	TSS_KEY ephemeralKey;
 	TCPA_DIGEST newAuthLink;
 	UINT32 encObjectSize;
 	BYTE *encObject = NULL;
@@ -471,7 +470,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 	UINT32 caValidSize;
 	UINT32 keyObjectSize;
 	BYTE *keyObject;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	TCPA_STORED_DATA dataContainer;
 	BYTE *dataObject;
 	UINT32 dataObjectSize;
@@ -614,8 +613,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 			caValidSize = offset;
 
 			offset = 0;
-			if ((result = Trspi_UnloadBlob_KEY(&offset, KeyDataOut,
-						&ephemeralKey)))
+			if ((result = UnloadBlob_TSS_KEY(&offset, KeyDataOut, &ephemeralKey)))
 				return result;
 
 			Trspi_RSA_Encrypt(hashBlob, caValidSize, a1, &a1Size,
@@ -633,12 +631,12 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 						   &keyObjectSize, &keyObject)))
 					return result;
 
-				memset(&keyContainer, 0, sizeof(TCPA_KEY));
+				memset(&keyContainer, 0, sizeof(TSS_KEY));
 
 				offset = 0;
-				if ((result = Trspi_UnloadBlob_KEY(&offset,
-								   keyObject,
-								   &keyContainer)))
+				if ((result = UnloadBlob_TSS_KEY(&offset,
+								 keyObject,
+								 &keyContainer)))
 					return result;
 
 				encObjectSize = keyContainer.encSize;
@@ -741,7 +739,7 @@ Tspi_ChangeAuthAsym(TSS_HOBJECT hObjectToChange,	/* in */
 				keyContainer.encSize = encDataSizeOut;
 
 				offset = 0;
-				Trspi_LoadBlob_KEY(&offset, keyObject, &keyContainer);
+				LoadBlob_TSS_KEY(&offset, keyObject, &keyContainer);
 				free_key_refs(&keyContainer);
 				if ((result = obj_rsakey_set_tcpakey(hObjectToChange, offset,
 								     keyObject))) {

@@ -289,7 +289,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 	TSS_RESULT result;
 	TSS_HKEY keyOutHandle;
 	UINT32 flag = 0;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	UINT64 offset;
 
 	if (phKey == NULL)
@@ -322,7 +322,7 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 	/* need to setup the init flags of the create object based on
 	 * the size of the blob's pubkey */
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyBlob, &keyContainer))) {
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyBlob, &keyContainer))) {
 		free(keyBlob);
 		return result;
 	}

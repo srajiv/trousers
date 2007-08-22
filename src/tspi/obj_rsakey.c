@@ -31,7 +31,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	TCPA_RSA_KEY_PARMS rsaKeyParms;
 	TSS_FLAG flags = 0;
 	struct tr_rsakey_obj *rsakey = calloc(1, sizeof(struct tr_rsakey_obj));
-	TPM_VERSION ver = { 1, 1, 0, 0 };  // Must be 1.1.0.0 for 1.2 TPMs
+	TPM_STRUCT_VER ver = { 1, 1, 0, 0 };  // Must be 1.1.0.0 for 1.2 TPMs
 	UINT32 ctx_ver;
 
 	if (rsakey == NULL) {
@@ -66,12 +66,12 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	offset = 0;
 	switch (initFlags & TSS_KEY_STRUCT_BITMASK) {
 		case TSS_KEY_STRUCT_KEY:
-			memcpy(&rsakey->key.u.ver, &ver, sizeof(TPM_VERSION));
+			rsakey->key.hdr.key11.ver = ver;
 			rsakey->type = TSS_KEY_STRUCT_KEY;
 			break;
 		case TSS_KEY_STRUCT_KEY12:
-			rsakey->key.u.key12.tag = TPM_TAG_KEY12;
-			rsakey->key.u.key12.fill = 0;
+			rsakey->key.hdr.key12.tag = TPM_TAG_KEY12;
+			rsakey->key.hdr.key12.fill = 0;
 			rsakey->type = TSS_KEY_STRUCT_KEY12;
 			break;
 		default:
@@ -189,7 +189,7 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FL
 	memcpy(&rsakey->uuid, uuid, sizeof(TSS_UUID));
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, key, (TCPA_KEY *)&rsakey->key))) {
+	if ((result = UnloadBlob_TSS_KEY(&offset, key, &rsakey->key))) {
 		free(rsakey);
 		return result;
 	}
@@ -204,7 +204,7 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FL
 	}
 
 	if ((result = obj_list_add(&rsakey_list, tspContext, flags, rsakey, phKey))) {
-		free_key_refs((TCPA_KEY *)&rsakey->key);
+		free_key_refs(&rsakey->key);
 		free(rsakey);
 		return result;
 	}
@@ -1022,7 +1022,6 @@ obj_rsakey_get_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
 	UINT64 offset;
-	BYTE temp[2048];
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -1030,25 +1029,18 @@ obj_rsakey_get_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	if (rsakey->type == TSS_KEY_STRUCT_KEY12)
-		Trspi_LoadBlob_KEY12(&offset, temp, (TPM_KEY12 *)&rsakey->key);
-	else
-		Trspi_LoadBlob_KEY(&offset, temp, (TCPA_KEY *)&rsakey->key);
+	LoadBlob_TSS_KEY(&offset, NULL, &rsakey->key);
 
-	if (offset > 2048) {
-		LogError("memory corruption");
-		result = TSPERR(TSS_E_INTERNAL_ERROR);
+	*data = calloc_tspi(obj->tspContext, offset);
+	if (*data == NULL) {
+		LogError("malloc of %" PRIu64 " bytes failed.", offset);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
-	} else {
-		*data = calloc_tspi(obj->tspContext, offset);
-		if (*data == NULL) {
-			LogError("malloc of %" PRIu64 " bytes failed.", offset);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = offset;
-		memcpy(*data, temp, offset);
 	}
+
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, *data, &rsakey->key);
+	*size = offset;
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1062,23 +1054,20 @@ obj_rsakey_get_priv_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	offset = rsakey->key.encSize;
-
-	*data = calloc_tspi(obj->tspContext, offset);
+	*data = calloc_tspi(obj->tspContext, rsakey->key.encSize);
 	if (*data == NULL) {
-		LogError("malloc of %" PRIu64 " bytes failed.", offset);
+		LogError("malloc of %u bytes failed.", rsakey->key.encSize);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
-	*size = offset;
-	memcpy(*data, rsakey->key.encData, offset);
+	*size = rsakey->key.encSize;
+	memcpy(*data, rsakey->key.encData, rsakey->key.encSize);
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1092,14 +1081,11 @@ obj_rsakey_get_modulus(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-
-	offset = rsakey->key.pubKey.keyLength;
 
 	/* if this key object represents the SRK and the public key
 	 * data here is all 0's, then we shouldn't return it, we
@@ -1108,20 +1094,20 @@ obj_rsakey_get_modulus(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
 		BYTE zeroBlob[2048] = { 0, };
 
-		if (!memcmp(rsakey->key.pubKey.key, zeroBlob, offset)) {
+		if (!memcmp(rsakey->key.pubKey.key, zeroBlob, rsakey->key.pubKey.keyLength)) {
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 			goto done;
 		}
 	}
 
-	*data = calloc_tspi(obj->tspContext, offset);
+	*data = calloc_tspi(obj->tspContext, rsakey->key.pubKey.keyLength);
 	if (*data == NULL) {
-		LogError("malloc of %" PRIu64 " bytes failed.", offset);
+		LogError("malloc of %u bytes failed.", rsakey->key.pubKey.keyLength);
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
-	*size = offset;
-	memcpy(*data, rsakey->key.pubKey.key, offset);
+	*size = rsakey->key.pubKey.keyLength;
+	memcpy(*data, rsakey->key.pubKey.key, rsakey->key.pubKey.keyLength);
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1171,15 +1157,12 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-	BYTE blob[1024];
 	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-
-	offset = rsakey->key.pubKey.keyLength;
 
 	/* if this key object represents the SRK and the public key
 	 * data here is all 0's, then we shouldn't return it, we
@@ -1188,15 +1171,15 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
 		BYTE zeroBlob[2048] = { 0, };
 
-		if (!memcmp(rsakey->key.pubKey.key, zeroBlob, offset)) {
+		if (!memcmp(rsakey->key.pubKey.key, zeroBlob, rsakey->key.pubKey.keyLength)) {
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 			goto done;
 		}
 	}
 
 	offset = 0;
-	Trspi_LoadBlob_KEY_PARMS(&offset, blob, &rsakey->key.algorithmParms);
-	Trspi_LoadBlob_STORE_PUBKEY(&offset, blob, &rsakey->key.pubKey);
+	Trspi_LoadBlob_KEY_PARMS(&offset, NULL, &rsakey->key.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, NULL, &rsakey->key.pubKey);
 
 	*data = calloc_tspi(obj->tspContext, offset);
 	if (*data == NULL) {
@@ -1204,8 +1187,11 @@ obj_rsakey_get_pub_blob(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
+
+	offset = 0;
+	Trspi_LoadBlob_KEY_PARMS(&offset, *data, &rsakey->key.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, *data, &rsakey->key.pubKey);
 	*size = offset;
-	memcpy(*data, blob, offset);
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1220,30 +1206,31 @@ obj_rsakey_get_version(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
 	UINT64 offset;
-	BYTE temp[128];
+	TPM_STRUCT_VER ver = {1, 2, 0, 0}, *pVer;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	offset = 0;
-	Trspi_LoadBlob_TCPA_VERSION(&offset, temp, *(TCPA_VERSION *)&rsakey->key.u.ver);
+	if (rsakey->key.hdr.key12.tag == TPM_TAG_KEY12)
+		pVer = &ver;
+	else
+		pVer = &rsakey->key.hdr.key11.ver;
 
-	if (offset > 128) {
-		LogError("memory corruption");
-		result = TSPERR(TSS_E_INTERNAL_ERROR);
+	offset = 0;
+	Trspi_LoadBlob_TCPA_VERSION(&offset, NULL, *pVer);
+
+	*data = calloc_tspi(obj->tspContext, offset);
+	if (*data == NULL) {
+		LogError("malloc of %" PRIu64 " bytes failed.", offset);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
-	} else {
-		*data = calloc_tspi(obj->tspContext, offset);
-		if (*data == NULL) {
-			LogError("malloc of %" PRIu64 " bytes failed.", offset);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = offset;
-		memcpy(*data, temp, offset);
 	}
+
+	offset = 0;
+	Trspi_LoadBlob_TCPA_VERSION(&offset, *data, *pVer);
+	*size = offset;
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1340,7 +1327,6 @@ obj_rsakey_get_uuid(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-	BYTE temp[128];
 	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
@@ -1349,13 +1335,7 @@ obj_rsakey_get_uuid(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
 	offset = 0;
-	Trspi_LoadBlob_UUID(&offset, temp, rsakey->uuid);
-
-	if (offset > 128) {
-		LogError("memory corruption");
-		result = TSPERR(TSS_E_INTERNAL_ERROR);
-		goto done;
-	}
+	Trspi_LoadBlob_UUID(&offset, NULL, rsakey->uuid);
 
 	*data = calloc_tspi(obj->tspContext, offset);
 	if (*data == NULL) {
@@ -1363,8 +1343,10 @@ obj_rsakey_get_uuid(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 		result = TSPERR(TSS_E_OUTOFMEMORY);
 		goto done;
 	}
+
+	offset = 0;
+	Trspi_LoadBlob_UUID(&offset, *data, rsakey->uuid);
 	*size = offset;
-	memcpy(*data, temp, offset);
 
 done:
 	obj_list_put(&rsakey_list);
@@ -1456,14 +1438,11 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
+	free_key_refs(&rsakey->key);
+
 	offset = 0;
-	if (rsakey->type == TSS_KEY_STRUCT_KEY12) {
-		if ((result = Trspi_UnloadBlob_KEY12(&offset, data, (TPM_KEY12 *)&rsakey->key)))
-			goto done;
-	} else {
-		if ((result = Trspi_UnloadBlob_KEY(&offset, data, (TCPA_KEY *)&rsakey->key)))
-			goto done;
-	}
+	if ((result = UnloadBlob_TSS_KEY(&offset, data, &rsakey->key)))
+		goto done;
 
 	if (rsakey->key.authDataUsage)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;

@@ -44,10 +44,11 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	BYTE *pcrDataOut;
 	UINT32 keyDataSize;
 	BYTE *keyData;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	BYTE quoteinfo[1024];
 	TSS_BOOL usesAuth;
 	TSS_HCONTEXT tspContext;
+	TCPA_VERSION version = {1, 1, 0, 0};
 	Trspi_HashCtx hashCtx;
 
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
@@ -147,8 +148,8 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 
 	/* create the validation data */
 	offset = 0;
-	memset(&keyContainer, 0, sizeof(TCPA_KEY));
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+	memset(&keyContainer, 0, sizeof(TSS_KEY));
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyData, &keyContainer)))
 		return result;
 
 	/*  creating pcrCompositeHash */
@@ -158,7 +159,10 @@ Tspi_TPM_Quote(TSS_HTPM hTPM,				/* in */
 	/* generate Quote_info struct */
 	/* 1. add version */
 	offset = 0;
-	Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.ver);
+	if (keyContainer.hdr.key12.tag == TPM_TAG_KEY12)
+		Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, version);
+	else
+		Trspi_LoadBlob_TCPA_VERSION(&offset, quoteinfo, keyContainer.hdr.key11.ver);
 	/* 2. add "QUOT" */
 	quoteinfo[offset++] = 'Q';
 	quoteinfo[offset++] = 'U';

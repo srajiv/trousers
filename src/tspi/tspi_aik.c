@@ -45,7 +45,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	UINT32 caKeyBlobSize, idKeySize, idPubSize;
 	BYTE *caKeyBlob, *idKey, *newIdKey, *idPub;
 	TCPA_NONCE nonceEvenOSAP;
-	TCPA_KEY caKey;
+	TSS_KEY caKey;
 	TCPA_CHOSENID_HASH chosenIDHash = { { 0, } };
 	UINT32 pcIdentityBindingSize;
 	BYTE *prgbIdentityBinding = NULL;
@@ -156,8 +156,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		return result;
 
 	offset = 0;
-	memset(&caKey, 0, sizeof(TCPA_KEY));
-	if ((result = Trspi_UnloadBlob_KEY(&offset, caKeyBlob, &caKey)))
+	memset(&caKey, 0, sizeof(TSS_KEY));
+	if ((result = UnloadBlob_TSS_KEY(&offset, caKeyBlob, &caKey)))
 		return result;
 
 	/* ChosenID hash =  SHA1(label || TCPA_PUBKEY(CApub)) */

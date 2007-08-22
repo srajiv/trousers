@@ -36,7 +36,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 	UINT64 offset;
 	BYTE bdblob[256];
 	TCPA_RESULT result;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	TSS_HCONTEXT tspContext;
 
 	if (rgbDataToBind == NULL)
@@ -53,7 +53,7 @@ Tspi_Data_Bind(TSS_HENCDATA hEncData,	/* in */
 		return result;
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer))) {
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyData, &keyContainer))) {
 		free_tspi(tspContext, keyData);
 		return result;
 	}

@@ -67,7 +67,7 @@ LoadKeyByBlob_Internal(UINT32 ord,	/* The ordinal to use, LoadKey or LoadKey2 */
 	TPM_KEY_HANDLE parentSlot, newSlot;
 	TCS_KEY_HANDLE newHandle = NULL_TCS_HANDLE;
 	TSS_BOOL canLoad;
-	TPM_KEY key;
+	TSS_KEY key;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
 	if ((result = ctx_verify_context(hContext)))
@@ -80,8 +80,8 @@ LoadKeyByBlob_Internal(UINT32 ord,	/* The ordinal to use, LoadKey or LoadKey2 */
 		return result;
 
 	offset = 0;
-	memset(&key, 0, sizeof(TPM_KEY));
-	if ((result = UnloadBlob_KEY(&offset, rgbWrappedKeyBlob, &key)))
+	memset(&key, 0, sizeof(TSS_KEY));
+	if ((result = UnloadBlob_TSS_KEY(&offset, rgbWrappedKeyBlob, &key)))
 		return result;
 
 	if (!pAuth) {

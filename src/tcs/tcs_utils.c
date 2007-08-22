@@ -296,6 +296,29 @@ LoadBlob_VERSION(UINT64 *offset, BYTE *blob, TPM_VERSION *ver)
 	LoadBlob_BYTE(offset, ver->revMinor, blob);
 }
 
+void
+UnloadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *out)
+{
+	if (!out) {
+		*offset += (sizeof(BYTE) * 4);
+		return;
+	}
+
+	UnloadBlob_BYTE(offset, &out->major, blob);
+	UnloadBlob_BYTE(offset, &out->minor, blob);
+	UnloadBlob_BYTE(offset, &out->revMajor, blob);
+	UnloadBlob_BYTE(offset, &out->revMinor, blob);
+}
+
+void
+LoadBlob_TCPA_VERSION(UINT64 *offset, BYTE *blob, TCPA_VERSION *ver)
+{
+	LoadBlob_BYTE(offset, ver->major, blob);
+	LoadBlob_BYTE(offset, ver->minor, blob);
+	LoadBlob_BYTE(offset, ver->revMajor, blob);
+	LoadBlob_BYTE(offset, ver->revMinor, blob);
+}
+
 TSS_RESULT
 UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 {
@@ -337,24 +360,13 @@ UnloadBlob_KEY_PARMS(UINT64 *offset, BYTE *blob, TCPA_KEY_PARMS *keyParms)
 void
 UnloadBlob_KEY_FLAGS(UINT64 *offset, BYTE *blob, TCPA_KEY_FLAGS *flags)
 {
-	UINT32 tempFlag = 0;
-
 	if (!flags) {
 		UnloadBlob_UINT32(offset, NULL, blob);
 
 		return;
 	}
 
-	memset(flags, 0x00, sizeof (TCPA_KEY_FLAGS));
-
-	UnloadBlob_UINT32(offset, &tempFlag, blob);
-
-	if (tempFlag & redirection)
-		*flags |= redirection;
-	if (tempFlag & migratable)
-		*flags |= migratable;
-	if (tempFlag & volatileKey)
-		*flags |= volatileKey;
+	UnloadBlob_UINT32(offset, flags, blob);
 }
 
 TSS_RESULT

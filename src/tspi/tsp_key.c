@@ -22,7 +22,7 @@
 
 
 void
-free_key_refs(TCPA_KEY *key)
+free_key_refs(TSS_KEY *key)
 {
 	free(key->algorithmParms.parms);
 	key->algorithmParms.parms = NULL;
@@ -39,6 +39,66 @@ free_key_refs(TCPA_KEY *key)
 	free(key->PCRInfo);
 	key->PCRInfo = NULL;
 	key->PCRInfoSize = 0;
+}
+
+void
+LoadBlob_TSS_KEY(UINT64 *offset, BYTE *blob, TSS_KEY *key)
+{
+	if (key->hdr.key12.tag == TPM_TAG_KEY12)
+		Trspi_LoadBlob_KEY12(offset, blob, (TPM_KEY12 *)key);
+	else
+		Trspi_LoadBlob_KEY(offset, blob, (TCPA_KEY *)key);
+}
+
+TSS_RESULT
+UnloadBlob_TSS_KEY(UINT64 *offset, BYTE *blob, TSS_KEY *key)
+{
+	UINT16 tag;
+	UINT64 keyOffset = *offset;
+	TSS_RESULT result;
+
+	Trspi_UnloadBlob_UINT16(&keyOffset, &tag, blob);
+	if (tag == TPM_TAG_KEY12)
+		result = Trspi_UnloadBlob_KEY12(offset, blob, (TPM_KEY12 *)key);
+	else
+		result = Trspi_UnloadBlob_KEY(offset, blob, (TCPA_KEY *)key);
+
+	return result;
+}
+
+TSS_RESULT
+Hash_TSS_KEY(Trspi_HashCtx *c, TSS_KEY *key)
+{
+	TSS_RESULT result;
+
+	if (key->hdr.key12.tag == TPM_TAG_KEY12)
+		result = Trspi_Hash_KEY12(c, (TPM_KEY12 *)key);
+	else
+		result = Trspi_Hash_KEY(c, (TCPA_KEY *)key);
+
+	return result;
+}
+
+void
+LoadBlob_TSS_PRIVKEY_DIGEST(UINT64 *offset, BYTE *blob, TSS_KEY *key)
+{
+	if (key->hdr.key12.tag == TPM_TAG_KEY12)
+		Trspi_LoadBlob_PRIVKEY_DIGEST12(offset, blob, (TPM_KEY12 *)key);
+	else
+		Trspi_LoadBlob_PRIVKEY_DIGEST(offset, blob, (TCPA_KEY *)key);
+}
+
+TSS_RESULT
+Hash_TSS_PRIVKEY_DIGEST(Trspi_HashCtx *c, TSS_KEY *key)
+{
+	TSS_RESULT result;
+
+	if (key->hdr.key12.tag == TPM_TAG_KEY12)
+		result = Trspi_Hash_PRIVKEY_DIGEST12(c, (TPM_KEY12 *)key);
+	else
+		result = Trspi_Hash_PRIVKEY_DIGEST(c, (TCPA_KEY *)key);
+
+	return result;
 }
 
 #ifdef TSS_BUILD_TRANSPORT

@@ -50,7 +50,7 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 	TCS_KEY_HANDLE keyTCSKeyHandle;
 	BYTE *keyData = NULL;
 	UINT32 keyDataSize;
-	TCPA_KEY keyContainer;
+	TSS_KEY keyContainer;
 	TPM_AUTH *pKeyAuth;
 	TSS_BOOL useAuth;
 	TSS_HCONTEXT tspContext;
@@ -125,8 +125,8 @@ Tspi_TPM_CertifySelfTest(TSS_HTPM hTPM,				/* in */
 		}
 
 		offset = 0;
-		memset(&keyContainer, 0, sizeof(TCPA_KEY));
-		if ((result = Trspi_UnloadBlob_KEY(&offset, keyData, &keyContainer)))
+		memset(&keyContainer, 0, sizeof(TSS_KEY));
+		if ((result = UnloadBlob_TSS_KEY(&offset, keyData, &keyContainer)))
 			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);

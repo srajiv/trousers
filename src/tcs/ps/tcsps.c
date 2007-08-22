@@ -523,7 +523,7 @@ psfile_write_key(int fd,
 		BYTE *key_blob,
 		UINT16 key_blob_size)
 {
-	TCPA_KEY key;
+	TSS_KEY key;
 	UINT16 pub_key_size, cache_flags = CACHE_FLAG_VALID;
 	UINT64 offset;
 	int rc = 0;
@@ -534,7 +534,7 @@ psfile_write_key(int fd,
 
 	/* Unload the blob to get the public key */
 	offset = 0;
-	if ((rc = UnloadBlob_KEY(&offset, key_blob, &key)))
+	if ((rc = UnloadBlob_TSS_KEY(&offset, key_blob, &key)))
 		return rc;
 
 	pub_key_size = key.pubKey.keyLength;

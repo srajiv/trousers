@@ -35,7 +35,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	TSS_RESULT result;
 	UINT32 endorsementKeySize;
 	BYTE *endorsementKey;
-	TCPA_KEY dummyKey;
+	TSS_KEY dummyKey;
 	UINT64 offset;
 	TCPA_SECRET ownerSecret;
 	TCPA_SECRET srkSecret;
@@ -88,7 +88,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 
 		/* now stick it in a Key Structure */
 		offset = 0;
-		if ((result = Trspi_UnloadBlob_KEY(&offset, endorsementKey, &dummyKey))) {
+		if ((result = UnloadBlob_TSS_KEY(&offset, endorsementKey, &dummyKey))) {
 			free_tspi(tspContext, endorsementKey);
 			return result;
 		}
