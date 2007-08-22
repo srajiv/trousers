@@ -96,6 +96,7 @@ struct tcs_api_table tcs_normal_api = {
 	.StirRandom = RPC_StirRandom,
 #endif
 #ifdef TSS_BUILD_CAPS_TPM
+	.GetTPMCapability = RPC_GetTPMCapability,
 	.SetCapability = RPC_SetCapability,
 	.GetCapabilityOwner = RPC_GetCapabilityOwner,
 #endif
@@ -123,7 +124,7 @@ struct tcs_api_table tcs_normal_api = {
 	.SetTempDeactivated = RPC_SetTempDeactivated,
 	.SetTempDeactivated2 = RPC_SetTempDeactivated2,
 #endif
-#ifdef TSS_BUILD_MAINTENANCE
+#ifdef TSS_BUILD_MAINT
 	.CreateMaintenanceArchive = RPC_CreateMaintenanceArchive,
 	.LoadMaintenanceArchive = RPC_LoadMaintenanceArchive,
 	.KillMaintenanceFeature = RPC_KillMaintenanceFeature,
@@ -265,7 +266,7 @@ struct tcs_api_table tcs_transport_api = {
 	.SetTempDeactivated = Transport_SetTempDeactivated,
 	.SetTempDeactivated2 = Transport_SetTempDeactivated2,
 #endif
-#ifdef TSS_BUILD_MAINTENANCE
+#ifdef TSS_BUILD_MAINT
 	.CreateMaintenanceArchive = Transport_CreateMaintenanceArchive,
 	.LoadMaintenanceArchive = Transport_LoadMaintenanceArchive,
 	.KillMaintenanceFeature = Transport_KillMaintenanceFeature,
