@@ -56,7 +56,7 @@ ctx_has_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 	MUTEX_LOCK(tcs_ctx_lock);
 
 	c = get_context(ctx_handle);
-	if(c == NULL) {
+	if (c == NULL) {
 		MUTEX_UNLOCK(tcs_ctx_lock);
 		return FALSE;
 	}
@@ -73,13 +73,12 @@ ctx_has_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 	return FALSE;
 }
 
-/* Traverse loaded keys list and if matching key handle is found remove it 
- */
+/* Traverse loaded keys list and if matching key handle is found remove it */
 TSS_RESULT
 ctx_remove_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 {
 	struct tcs_context *c;
-	struct keys_loaded *cur, *head, *prev;
+	struct keys_loaded *cur, *prev;
 
 	MUTEX_LOCK(tcs_ctx_lock);
 
@@ -88,24 +87,18 @@ ctx_remove_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 		MUTEX_UNLOCK(tcs_ctx_lock);
 		return TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 	}
-	for (cur = head = c->keys; cur;) {
-		if (cur == NULL) {
-			MUTEX_UNLOCK(tcs_ctx_lock);
-			return TCSERR(TCS_E_INVALID_KEY);
-		} else if (cur->key_handle == key_handle) {
-			if (cur == head) {
+
+	for (prev = cur = c->keys; cur; prev = cur, cur = cur->next) {
+		if (cur->key_handle == key_handle) {
+			if (prev == c->keys)
 				c->keys = cur->next;
-				free(cur);
-				MUTEX_UNLOCK(tcs_ctx_lock);
-				return TCS_SUCCESS;
-			}
-			prev->next = cur->next;
+			else
+				prev->next = cur->next;
+
 			free(cur);
 			MUTEX_UNLOCK(tcs_ctx_lock);
 			return TCS_SUCCESS;
 		}
-		prev = cur;
-		cur = cur->next;
 	}
 
 	MUTEX_UNLOCK(tcs_ctx_lock);
