@@ -196,8 +196,14 @@ Transport_ConvertMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	offset = 0;
 	Trspi_UnloadBlob_UINT32(&offset, outDataSize, dec);
 
-	/* sacrifice 4 bytes */
-	*outData = &dec[offset];
+	if ((*outData = malloc(*outDataSize)) == NULL) {
+		free(dec);
+		LogError("malloc of %u bytes failed", *outDataSize);
+		*outDataSize = 0;
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(&offset, *outDataSize, dec, *outData);
+	free(dec);
 
 	return result;
 }
