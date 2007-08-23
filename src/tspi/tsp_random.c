@@ -47,16 +47,7 @@ Transport_GetRandom(TSS_HCONTEXT tspContext,	/* in */
 						    &decLen, &dec)))
                 return result;
 
-        if ((*randomBytes = malloc(bytesRequested)) == NULL) {
-                free(dec);
-                LogError("malloc of %u bytes failed", bytesRequested);
-                return TSPERR(TSS_E_OUTOFMEMORY);
-        }
-
-        offset = 0;
-        Trspi_UnloadBlob(&offset, bytesRequested, dec, *randomBytes);
-
-        free(dec);
+	*randomBytes = dec;
 
         return result;
 
