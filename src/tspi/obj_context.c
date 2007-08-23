@@ -878,6 +878,7 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	Trspi_HashCtx hashCtx;
 	TPM_DIGEST etDigest, wDigest;
 	TPM_AUTH *pTransAuth;
+	UINT64 currentTicks;
 
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -954,7 +955,7 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
 	result |= Trspi_Hash_UINT32(&hashCtx, encLen + TSS_TPM_TXBLOB_HDR_LEN
-						     + *handlesLen * sizeof(UINT32)
+						     + (*handlesLen * sizeof(UINT32))
 						     + (pAuth1 ? TPM_AUTH_RQU_SIZE : 0)
 						     + (pAuth2 ? TPM_AUTH_RQU_SIZE : 0));
 	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
@@ -965,8 +966,7 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	HMAC_Auth(context->transSecret.authData.authdata, etDigest.digest, pTransAuth);
 
 	if ((result = RPC_ExecuteTransport(tspContext, ordinal, encLen, pEnc, handlesLen, handles,
-					   pAuth1, pAuth2, pTransAuth,
-					   &context->transLogOut.currentTicks.currentTicks,
+					   pAuth1, pAuth2, pTransAuth, &currentTicks,
 					   &context->transMod, &tpmResult, &ulWrappedDataLen,
 					   &rgbWrappedData))) {
 		LogDebugFn("Execute Transport failed: %s", Trspi_Error_String(result));
@@ -1028,9 +1028,9 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
-	result |= Trspi_Hash_UINT64(&hashCtx, context->transLogOut.currentTicks.currentTicks);
+	result |= Trspi_Hash_UINT64(&hashCtx, currentTicks);
 	result |= Trspi_Hash_UINT32(&hashCtx, context->transMod);
-	result |= Trspi_Hash_UINT32(&hashCtx, outLen? *outLen : 0
+	result |= Trspi_Hash_UINT32(&hashCtx, (outLen ? *outLen : 0)
 					      + TSS_TPM_TXBLOB_HDR_LEN
 					      + (*handlesLen * sizeof(UINT32))
 					      + (pAuth1 ? TPM_AUTH_RSP_SIZE : 0)
@@ -1046,6 +1046,8 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	}
 
 	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_AUTHENTIC) {
+		context->transLogOut.currentTicks.currentTicks = currentTicks;
+
 		/* TPM Commands spec rev106 step 16.b */
 		memcpy(context->transLogOut.parameters.digest, wDigest.digest, sizeof(TPM_DIGEST));
 		/* TPM Commands spec rev106 step 16.c done above */
