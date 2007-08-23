@@ -22,25 +22,6 @@
 #include "obj.h"
 
 
-TSS_RESULT
-Trspi_UnloadBlob_PCR_COMPOSITE(UINT64 *offset, BYTE *blob, TCPA_PCR_COMPOSITE *out)
-{
-	TSS_RESULT result;
-
-	if ((result = Trspi_UnloadBlob_PCR_SELECTION(offset, blob, &out->select)))
-		return result;
-
-	Trspi_UnloadBlob_UINT32(offset, &out->valueSize, blob);
-	out->pcrValue = malloc(out->valueSize);
-	if (out->pcrValue == NULL) {
-		LogError("malloc of %u bytes failed.", out->valueSize);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-	Trspi_UnloadBlob(offset, out->valueSize, blob, (BYTE *)out->pcrValue);
-
-	return TSS_SUCCESS;
-}
-
 #ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT
 Transport_Quote(TSS_HCONTEXT tspContext,	/* in */
