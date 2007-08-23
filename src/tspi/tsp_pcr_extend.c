@@ -78,7 +78,7 @@ Transport_PcrRead(TSS_HCONTEXT tspContext,	/* in */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, pcrNum, data);
 
-	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_PCR_Reset, sizeof(data),
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_PcrRead, sizeof(data),
 						    data, NULL, &handlesLen, NULL, NULL, NULL,
 						    &decLen, &dec)))
 		return result;
