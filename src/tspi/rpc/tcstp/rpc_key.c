@@ -206,14 +206,14 @@ RPC_GetPubKey_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*prgbPubKey = (BYTE *) calloc_tspi(hte->tspContext, *pcPubKeySize);
+		*prgbPubKey = (BYTE *) malloc(*pcPubKeySize);
 		if (*prgbPubKey == NULL) {
 			LogError("malloc of %u bytes failed.", *pcPubKeySize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPubKey, *pcPubKeySize, &hte->comm)) {
-			free_tspi(hte->tspContext, *prgbPubKey);
+			free(*prgbPubKey);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

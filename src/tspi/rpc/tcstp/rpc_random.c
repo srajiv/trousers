@@ -51,14 +51,14 @@ RPC_GetRandom_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		*randomBytes = (BYTE *) calloc_tspi(hte->tspContext, bytesRequested);
+		*randomBytes = (BYTE *) malloc(bytesRequested);
 		if (*randomBytes == NULL) {
 			LogError("malloc of %u bytes failed.", bytesRequested);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *randomBytes, bytesRequested, &hte->comm)) {
-			free_tspi(hte->tspContext, *randomBytes);
+			free(*randomBytes);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}

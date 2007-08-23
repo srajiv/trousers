@@ -135,7 +135,7 @@ RPC_GetTestResult_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*outData = calloc_tspi(hte->tspContext, *outDataSize);
+		*outData = malloc(*outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -143,7 +143,7 @@ RPC_GetTestResult_TP(struct host_table_entry *hte,
 		}
 
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 1, *outData, *outDataSize, &hte->comm)) {
-			free_tspi(hte->tspContext, *outData);
+			free(*outData);
 			*outData = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}

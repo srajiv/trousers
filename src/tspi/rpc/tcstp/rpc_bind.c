@@ -73,14 +73,14 @@ RPC_UnBind_TP(struct host_table_entry *hte,
 			goto done;
 		}
 
-		*outData = (BYTE *) calloc_tspi(hte->tspContext, *outDataSize);
+		*outData = (BYTE *) malloc(*outDataSize);
 		if (*outData == NULL) {
 			LogError("malloc of %u bytes failed.", *outDataSize);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outData, *outDataSize, &hte->comm)) {
-			free_tspi(hte->tspContext, *outData);
+			free(*outData);
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
