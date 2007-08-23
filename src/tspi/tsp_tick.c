@@ -89,30 +89,34 @@ Transport_TickStampBlob(TSS_HCONTEXT   tspContext,            /* in */
 	*handles = hKey;
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_TickStampBlob, sizeof(data),
 						    data, &pubKeyHash, &handlesLen, &handles,
-						    privAuth, NULL, &decLen, &dec)))
+						    privAuth, NULL, &decLen, &dec))) {
+		free(handles);
 		return result;
+	}
+	free(handles);
 
 	offset = 0;
-	Trspi_UnloadBlob_UINT32(&offset, pulSignatureLength, dec);
-	if ((*prgbSignature = malloc(*pulSignatureLength)) == NULL) {
-		free(handles);
-		free(dec);
-		LogError("malloc of %u bytes failed", *pulSignatureLength);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-	Trspi_UnloadBlob(&offset, *pulSignatureLength, dec, *prgbSignature);
-
-	Trspi_UnloadBlob_UINT32(&offset, pulTickCountLength, dec);
+	Trspi_UnloadBlob_CURRENT_TICKS(&offset, dec, NULL);
+	*pulTickCountLength = (UINT32)offset;
 	if ((*prgbTickCount = malloc(*pulTickCountLength)) == NULL) {
-		free(*prgbSignature);
-		free(handles);
 		free(dec);
 		LogError("malloc of %u bytes failed", *pulTickCountLength);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
+	offset = 0;
 	Trspi_UnloadBlob(&offset, *pulTickCountLength, dec, *prgbTickCount);
 
-	free(handles);
+	Trspi_UnloadBlob_UINT32(&offset, pulSignatureLength, dec);
+	if ((*prgbSignature = malloc(*pulSignatureLength)) == NULL) {
+		free(dec);
+		free(*prgbTickCount);
+		*pulTickCountLength = 0;
+		LogError("malloc of %u bytes failed", *pulSignatureLength);
+		*pulSignatureLength = 0;
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(&offset, *pulSignatureLength, dec, *prgbSignature);
+
 	free(dec);
 
 	return result;
