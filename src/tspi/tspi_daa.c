@@ -40,7 +40,7 @@
 static void *tss_alloc( size_t size, TSS_HOBJECT hContext) {
 	void *ret = calloc_tspi( hContext, size);
 
-	LogDebug("[intern_alloc (%d)] -> %d\n", (int)size, (int)ret);
+	LogDebug("[intern_alloc (%d)] -> %d", (int)size, (int)ret);
 	return ret;
 }
 
@@ -115,7 +115,7 @@ Tspi_TPM_DAA_JoinInit(TSS_HDAA                 hDAA,				// in
 #ifdef 	TSS_DEBUG
 	LogDebug("TSPI_TPM_DAA_joinInit ALLOC DELTA:%d",mallinfo().uordblks-before);
 #endif
-	LogDebug("<- TSPI_TPM_DAA_joinInit result=%d\n", result);
+	LogDebug("<- TSPI_TPM_DAA_joinInit result=%d", result);
 	return result;
 }
 
@@ -157,7 +157,7 @@ Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 	int before = mallinfo().uordblks;
 #endif
 
-	LogDebug( "TSPI_DAA_IssueSetup hDAA=%d  \n",hDAA);
+	LogDebug( "TSPI_DAA_IssueSetup hDAA=%d  ",hDAA);
 	// TODO: lock access to _hContext
 	if ((result = obj_daa_get_tsp_context(hDAA, &hContext)))
 		return result;
@@ -168,7 +168,7 @@ Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 						&key_proof);
 	if( result != TSS_SUCCESS) return result;
 	LogDebug("TSPI_DAA_IssueSetup convert internal structure to public allocated using tspi_alloc");
-	LogDebug("key_proof->proof->length_challenge=%d  key_proof->proof->length_response=%d\n",
+	LogDebug("key_proof->proof->length_challenge=%d  key_proof->proof->length_response=%d",
 			key_proof->proof->length_challenge, key_proof->proof->length_response);
 	// prepare out parameters
 	*publicKeyProof = i_2_e_TSS_DAA_PK_PROOF( key_proof->proof, &tss_alloc, hContext);
@@ -191,7 +191,7 @@ close:
 #ifdef 	TSS_DEBUG
 	LogDebug("TSPI_DAA_IssueSetup ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
-	LogDebug( "TSPI_DAA_IssueSetup end return=%d \n",result);
+	LogDebug( "TSPI_DAA_IssueSetup end return=%d ",result);
 	return result;
 }
 
@@ -265,11 +265,11 @@ Tspi_DAA_IssuerKeyVerification(TSS_HDAA          hDAA,		// in
 	int before = mallinfo().uordblks;
 #endif
 
-	LogDebug("TSPI_DAA_IssuerKeyVerification hDAA=%ld issuerPk=%ld issuerPkProof=%ld\n",
+	LogDebug("TSPI_DAA_IssuerKeyVerification hDAA=%ld issuerPk=%ld issuerPkProof=%ld",
 		(long)hDAA, (long)issuerPk, (long)issuerPkProof);
 	TSS_DAA_PK_internal *pk_internal = e_2_i_TSS_DAA_PK( (TSS_DAA_PK *)issuerPk);
 	TSS_DAA_PK_PROOF_internal *proof_internal = e_2_i_TSS_DAA_PK_PROOF( issuerPkProof);
-	LogDebug( "challenge=[%s]\n", dump_byte_array( proof_internal->length_challenge,
+	LogDebug( "challenge=[%s]", dump_byte_array( proof_internal->length_challenge,
 							proof_internal->challenge));
 	result = is_pk_correct( pk_internal, proof_internal, &is_correct );
 	if( is_correct) *isCorrect = TRUE;
@@ -584,7 +584,7 @@ Tspi_TPM_DAA_Sign(TSS_HDAA                 hDAA,			// in
 	int before = mallinfo().uordblks;
 #endif
 
-	LogDebug("-> TSPI_TPM_DAA_Sign hDAA=%ld hTPM=%ld \n", (long)hDAA, (long)hTPM);
+	LogDebug("-> TSPI_TPM_DAA_Sign hDAA=%ld hTPM=%ld ", (long)hDAA, (long)hTPM);
 
 	result = Tspi_TPM_DAA_Sign_internal(hDAA,
 					hTPM,

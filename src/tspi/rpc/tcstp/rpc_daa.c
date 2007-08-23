@@ -52,12 +52,12 @@ RPC_DaaJoin_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	LogDebugFn("inputSize0=<network>=%d <host>=%d\n", inputSize0, inputSize0);
+	LogDebugFn("inputSize0=<network>=%d <host>=%d", inputSize0, inputSize0);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	LogDebugFn("inputSize1=<network>=%d <host>=%d\n", inputSize1, inputSize1);
+	LogDebugFn("inputSize1=<network>=%d <host>=%d", inputSize1, inputSize1);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if( ownerAuth) {
@@ -130,12 +130,12 @@ RPC_DaaSign_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	LogDebugFn("inputSize0=<network>=%d <host>=%d\n", inputSize0, inputSize0);
+	LogDebugFn("inputSize0=<network>=%d <host>=%d", inputSize0, inputSize0);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 4, inputData0, inputSize0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	LogDebugFn("inputSize1=<network>=%d <host>=%d\n", inputSize1, inputSize1);
+	LogDebugFn("inputSize1=<network>=%d <host>=%d", inputSize1, inputSize1);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 6, inputData1, inputSize1, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if( ownerAuth) {

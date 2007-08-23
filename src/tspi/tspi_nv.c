@@ -471,7 +471,7 @@ Tspi_NV_WriteValue(TSS_HNVSTORE hNvstore,	/* in */
 				return result;
 		}
 	} else {
-		LogDebug("no policy, so noauthentication\n");
+		LogDebug("no policy, so noauthentication");
 		if ((result = TCS_API(tspContext)->NV_WriteValue(tspContext, nv_data_public.nvIndex,
 								 offset, ulDataLength,
 								 rgbDataToWrite, NULL)))

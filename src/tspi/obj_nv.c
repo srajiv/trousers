@@ -688,7 +688,7 @@ obj_nvstore_create_pcrshortinfo(TSS_HNVSTORE hNvstore,
 
 	if (hPcrComposite) {
 		if ((result = obj_pcrs_get_selection(hPcrComposite, &dataLen, pdata))) {
-			LogDebug("get_selection error from hReadPcrComposite\n");
+			LogDebug("get_selection error from hReadPcrComposite");
 			goto out;
 		}
 
@@ -703,7 +703,7 @@ obj_nvstore_create_pcrshortinfo(TSS_HNVSTORE hNvstore,
 		if (pcrSelect.sizeOfSelect != 0) {
 			if ((result = obj_pcrs_get_digest_at_release(hPcrComposite,
 								     &dataLen, &ppbHashData))) {
-				LogDebug("get_composite error from hReadPcrComposite\n");
+				LogDebug("get_composite error from hReadPcrComposite");
 				goto out;
 			}
 			memcpy(digAtRelease, ppbHashData, dataLen);
