@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -189,9 +189,6 @@ Transport_GetPubKey(TSS_HCONTEXT tspContext,
 	}
 
 	free(handles);
-
-	if ((result = add_mem_entry(tspContext, dec)))
-		return result;
 
 	*prgbPubKey = dec;
 	*pcPubKeySize = decLen;
