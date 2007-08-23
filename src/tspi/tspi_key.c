@@ -179,12 +179,15 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 			goto error;
 	}
 
+	if ((result = add_mem_entry(tspContext, *prgbPubKey)))
+		goto error;
+
 	if (tcsKeyHandle == TPM_KEYHND_SRK)
 		obj_rsakey_set_pubkey(hKey, TRUE, *prgbPubKey);
 
 	return TSS_SUCCESS;
 error:
-	free_tspi(tspContext, *prgbPubKey);
+	free(*prgbPubKey);
 	*prgbPubKey = NULL;
 	*pulPubKeyLength = 0;
 	return result;

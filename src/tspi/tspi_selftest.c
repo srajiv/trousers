@@ -191,6 +191,16 @@ Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	return TCS_API(tspContext)->GetTestResult(tspContext, pulTestResultLength, prgbTestResult);
+	if ((result = TCS_API(tspContext)->GetTestResult(tspContext, pulTestResultLength,
+							 prgbTestResult)))
+		return result;
+
+	if ((result = add_mem_entry(tspContext, *prgbTestResult))) {
+		free(*prgbTestResult);
+		*prgbTestResult = NULL;
+		*pulTestResultLength = 0;
+	}
+
+	return TSS_SUCCESS;
 }
 

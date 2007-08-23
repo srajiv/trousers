@@ -198,14 +198,20 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		result |= Trspi_Hash_UINT32(&hashCtx, *pulUnboundDataLength);
 		result |= Trspi_HashUpdate(&hashCtx, *pulUnboundDataLength, *prgbUnboundData);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+			goto error;
 
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
-			free_tspi(tspContext, *prgbUnboundData);
-			return result;
-		}
+		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth)))
+			goto error;
 	}
 
+	if ((result = add_mem_entry(tspContext, *prgbUnboundData)))
+		goto error;
+
 	return TSS_SUCCESS;
+error:
+	free(*prgbUnboundData);
+	*prgbUnboundData = NULL;
+	*pulUnboundDataLength = 0;
+	return result;
 }
 
