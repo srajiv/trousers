@@ -1563,6 +1563,7 @@ obj_rsakey_get_pcr_selection(TSS_HKEY hKey, UINT32 *size, BYTE **data)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
+	/* XXX Why? */
 	if (rsakey->type != TSS_KEY_STRUCT_KEY) {
 		result = TSPERR(TSS_E_BAD_PARAMETER);
 		goto done;
