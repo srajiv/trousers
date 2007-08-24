@@ -1865,6 +1865,15 @@ Trspi_Hash_SIGN_INFO(Trspi_HashCtx *c, TPM_SIGN_INFO *s)
 void
 Trspi_UnloadBlob_COUNTER_VALUE(UINT64 *offset, BYTE *blob, TPM_COUNTER_VALUE *ctr)
 {
+	if (!ctr) {
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		/* '4' is hard-coded in the spec */
+		Trspi_UnloadBlob(offset, 4, blob, NULL);
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+
+		return;
+	}
+
 	Trspi_UnloadBlob_UINT16(offset, &ctr->tag, blob);
 	/* '4' is hard-coded in the spec */
 	Trspi_UnloadBlob(offset, 4, blob, (BYTE *)&ctr->label);
