@@ -363,8 +363,7 @@ send_init(struct host_table_entry *hte)
 	if (hEnt == NULL) {
 		/* if by hostname fails, try by dot notation */
 		if (inet_aton((char *)hte->hostname, &addr.sin_addr) == 0) {
-			LogError("hostname %s does not resolve to a valid address.",
-					hte->hostname);
+			LogError("hostname %s does not resolve to a valid address.", hte->hostname);
 			result = TSPERR(TSS_E_CONNECTION_FAILED);
 			goto err_exit;
 		}
