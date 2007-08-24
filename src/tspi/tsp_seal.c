@@ -197,6 +197,7 @@ Transport_Unseal(TSS_HCONTEXT tspContext,  /* in */
 		 UINT32 * DataSize,        /* out */
 		 BYTE ** Data)     /* out */
 {
+	UINT64 offset;
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen;
 	TCS_HANDLE *handles, handle;
@@ -227,8 +228,17 @@ Transport_Unseal(TSS_HCONTEXT tspContext,  /* in */
 						    parentAuth, dataAuth, &decLen, &dec)))
 		return result;
 
-	*DataSize = decLen;
-	*Data = dec;
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, DataSize, dec);
+
+	if ((*Data = malloc(*DataSize)) == NULL) {
+		free(dec);
+		LogError("malloc of %u bytes failed", *DataSize);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(&offset, *DataSize, dec, *Data);
+
+	free(dec);
 
 	return result;
 }
