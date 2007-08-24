@@ -77,7 +77,10 @@ Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	handle = parentHandle;
 	handles = &handle;
 
-	dataLen = sizeof(TCPA_MIGRATE_SCHEME) + MigrationKeyAuthSize + encDataSize;
+	dataLen = sizeof(TCPA_MIGRATE_SCHEME)
+		  + MigrationKeyAuthSize
+		  + sizeof(UINT32)
+		  + encDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
@@ -208,9 +211,9 @@ Transport_AuthorizeMigrationKey(TSS_HCONTEXT tspContext,	/* in */
 				BYTE ** MigrationKeyAuth)	/* out */
 {
 	UINT64 offset;
+	UINT16 tpmMigrateScheme;
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, dataLen, decLen;
-	TPM_DIGEST pubKeyHash;
 	BYTE *data, *dec;
 
 
@@ -219,6 +222,24 @@ Transport_AuthorizeMigrationKey(TSS_HCONTEXT tspContext,	/* in */
 
 	LogDebugFn("Executing in a transport session");
 
+	/* The TSS_MIGRATE_SCHEME must be changed to a TPM_MIGRATE_SCHEME here, since the TCS
+	 * expects a TSS migrate scheme, but this could be wrapped by the TSP before it gets to the
+	 * TCS. */
+	switch (migrateScheme) {
+		case TSS_MS_MIGRATE:
+			tpmMigrateScheme = TCPA_MS_MIGRATE;
+			break;
+		case TSS_MS_REWRAP:
+			tpmMigrateScheme = TCPA_MS_REWRAP;
+			break;
+		case TSS_MS_MAINT:
+			tpmMigrateScheme = TCPA_MS_MAINT;
+			break;
+		default:
+			return TSPERR(TSS_E_BAD_PARAMETER);
+			break;
+	}
+
 	dataLen = sizeof(TCPA_MIGRATE_SCHEME) + MigrationKeySize;
 	if ((data = malloc(dataLen)) == NULL) {
 		LogError("malloc of %u bytes failed", dataLen);
@@ -226,11 +247,11 @@ Transport_AuthorizeMigrationKey(TSS_HCONTEXT tspContext,	/* in */
 	}
 
 	offset = 0;
-	Trspi_LoadBlob_UINT16(&offset, migrateScheme, data);
+	Trspi_LoadBlob_UINT16(&offset, tpmMigrateScheme, data);
 	Trspi_LoadBlob(&offset, MigrationKeySize, data, MigrationKey);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_AuthorizeMigrationKey,
-						    dataLen, data, &pubKeyHash, &handlesLen, NULL,
+						    dataLen, data, NULL, &handlesLen, NULL,
 						    ownerAuth, NULL, &decLen, &dec))) {
 		free(data);
 		return result;
