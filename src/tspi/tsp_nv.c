@@ -77,7 +77,7 @@ Transport_NV_WriteValue(TSS_HCONTEXT tspContext,	/* in */
 
 	LogDebugFn("Executing in a transport session");
 
-	dataLen = sizeof(TSS_NV_INDEX) + 2 * sizeof(UINT32) + ulDataLength;
+	dataLen = sizeof(TSS_NV_INDEX) + (2 * sizeof(UINT32)) + ulDataLength;
 	if ((data = malloc(dataLen)) == NULL) {
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
@@ -115,7 +115,7 @@ Transport_NV_WriteValueAuth(TSS_HCONTEXT tspContext,	/* in */
 
 	LogDebugFn("Executing in a transport session");
 
-	dataLen = sizeof(TSS_NV_INDEX) + 2 * sizeof(UINT32) + ulDataLength;
+	dataLen = sizeof(TSS_NV_INDEX) + (2 * sizeof(UINT32)) + ulDataLength;
 	if ((data = malloc(dataLen)) == NULL) {
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
