@@ -176,13 +176,38 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 	switch (unWrappedCommandOrdinal) {
 	case TPM_ORD_OIAP:
-	case TPM_ORD_OSAP:
 		/* are the maximum number of auth sessions open? */
 		if (auth_mgr_req_new(hContext) == FALSE) {
 			if ((result = auth_mgr_swap_out(hContext)))
 				goto done;
 		}
+
 		break;
+	case TPM_ORD_OSAP:
+	{
+		UINT16 entityType;
+		UINT32 entityValue, newEntValue;
+
+		/* are the maximum number of auth sessions open? */
+		if (auth_mgr_req_new(hContext) == FALSE) {
+			if ((result = auth_mgr_swap_out(hContext)))
+				goto done;
+		}
+
+		offset = 0;
+		UnloadBlob_UINT16(&offset, &entityType, rgbWrappedCmdParamIn);
+		UnloadBlob_UINT32(&offset, &entityValue, rgbWrappedCmdParamIn);
+
+		if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
+			if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
+				return TCSERR(TSS_E_FAIL);
+
+			offset = sizeof(UINT16);
+			LoadBlob_UINT32(&offset, newEntValue, rgbWrappedCmdParamIn);
+		}
+
+		break;
+	}
 	default:
 		break;
 	}
