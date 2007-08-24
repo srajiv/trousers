@@ -129,7 +129,7 @@ Transport_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 	Trspi_LoadBlob_UINT16(&offset, protocolID, data);
 	Trspi_LoadBlob(&offset, sizeof(TCPA_ENCAUTH), data, newAuth->authdata);
 	Trspi_LoadBlob_UINT16(&offset, entityType, data);
-	Trspi_LoadBlob_UINT16(&offset, encDataSize, data);
+	Trspi_LoadBlob_UINT32(&offset, encDataSize, data);
 	Trspi_LoadBlob(&offset, encDataSize, data, encData);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_ChangeAuth, dataLen, data,
