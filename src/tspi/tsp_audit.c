@@ -120,7 +120,7 @@ Transport_GetAuditDigest(TSS_HCONTEXT tspContext,       /* in */
 			 UINT32 **ordList)                    /* out */
 {
         TSS_RESULT result;
-        UINT32 handlesLen = 0, decLen, i;
+        UINT32 handlesLen = 0, decLen;
         BYTE *dec = NULL;
         UINT64 offset;
         BYTE data[sizeof(UINT32)];
@@ -134,7 +134,7 @@ Transport_GetAuditDigest(TSS_HCONTEXT tspContext,       /* in */
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, startOrdinal, data);
 
-	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_GetAuditDigestSigned,
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_GetAuditDigest,
 						    sizeof(data), data, NULL, &handlesLen, NULL,
 						    NULL, NULL, &decLen, &dec)))
 		return result;
@@ -163,12 +163,12 @@ Transport_GetAuditDigest(TSS_HCONTEXT tspContext,       /* in */
 		*counterValue = NULL;
 		*counterValueSize = 0;
 		LogError("malloc of %u bytes failed", *ordSize);
-		*counterValueSize = 0;
+		*ordSize = 0;
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
-	for (i = 0; i < *ordSize / sizeof(UINT32); i++)
-		Trspi_UnloadBlob_UINT32(&offset, (UINT32 *)&ordList[i * sizeof(UINT32)], dec);
+	Trspi_UnloadBlob(&offset, *ordSize, dec, *(BYTE **)ordList);
+	*ordSize /= sizeof(UINT32);
 
 	return TSS_SUCCESS;
 }
@@ -249,6 +249,7 @@ Transport_GetAuditDigestSigned(TSS_HCONTEXT tspContext,       /* in */
 		*counterValueSize = 0;
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
+	Trspi_UnloadBlob(&offset, *sigSize, dec, *sig);
 
 	return TSS_SUCCESS;
 }
