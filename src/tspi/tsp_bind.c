@@ -33,7 +33,7 @@ Transport_UnBind(TSS_HCONTEXT tspContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, dataLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	BYTE *dec, *data;
@@ -53,16 +53,11 @@ Transport_UnBind(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	dataLen = sizeof(UINT32) + inDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -74,11 +69,9 @@ Transport_UnBind(TSS_HCONTEXT tspContext,	/* in */
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_UnBind, dataLen, data,
 						    &pubKeyHash, &handlesLen, &handles,
 						    privAuth, NULL, &decLen, &dec))) {
-		free(handles);
 		free(data);
 		return result;
 	}
-	free(handles);
 	free(data);
 
 	offset = 0;

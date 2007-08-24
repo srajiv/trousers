@@ -87,7 +87,7 @@ Transport_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, dataLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	BYTE *dec = NULL;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
@@ -108,19 +108,14 @@ Transport_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = parentHandle;
+	handle = parentHandle;
+	handles = &handle;
 
 	dataLen = sizeof(TCPA_PROTOCOL_ID) + sizeof(TCPA_ENCAUTH)
 					   + sizeof(TCPA_ENTITY_TYPE)
 					   + sizeof(UINT32)
 					   + encDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -136,7 +131,6 @@ Transport_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 						    &pubKeyHash, &handlesLen, &handles,
 						    ownerAuth, entityAuth, &decLen, &dec))) {
 		free(data);
-		free(handles);
 		return result;
 	}
 	free(data);
@@ -165,7 +159,7 @@ Transport_ChangeAuthOwner(TSS_HCONTEXT tspContext,	/* in */
 			  TPM_AUTH * ownerAuth)	/* in, out */
 {
 	TSS_RESULT result;
-	UINT32 handlesLen;
+	UINT32 handlesLen = 0;
 	UINT64 offset;
 	BYTE data[sizeof(TCPA_PROTOCOL_ID) + sizeof(TCPA_ENCAUTH) + sizeof(TCPA_ENTITY_TYPE)];
 

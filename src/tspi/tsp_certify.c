@@ -36,7 +36,7 @@ Transport_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle[2];
 	BYTE *dec = NULL;
 	TPM_DIGEST pubKeyHash1, pubKeyHash2;
 	Trspi_HashCtx hashCtx;
@@ -61,24 +61,18 @@ Transport_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash1.digest)))
 		return result;
 
-	handlesLen = 2;
-	if ((handles = malloc(2 * sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", 2 * sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	handles[0] = certHandle;
-	handles[1] = keyHandle;
+	handlesLen = 1;
+	handle[0] = certHandle;
+	handle[1] = keyHandle;
+	handles = &handle[0];
 
 	offset = 0;
 	Trspi_LoadBlob_NONCE(&offset, data, antiReplay);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_CertifyKey, sizeof(data),
 						    data, &pubKeyHash1, &handlesLen, &handles,
-						    certAuth, keyAuth, &decLen, &dec))) {
-		free(handles);
+						    certAuth, keyAuth, &decLen, &dec)))
 		return result;
-	}
 
 	offset = 0;
 	Trspi_UnloadBlob_CERTIFY_INFO(&offset, dec, NULL);

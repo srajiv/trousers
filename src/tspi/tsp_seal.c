@@ -77,7 +77,7 @@ Transport_Seal(TSS_HCONTEXT tspContext,    /* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen, dataLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	UINT64 offset;
@@ -98,16 +98,11 @@ Transport_Seal(TSS_HCONTEXT tspContext,    /* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	dataLen = (2 * sizeof(UINT32)) + sizeof(TPM_ENCAUTH) + pcrInfoSize + inDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -144,7 +139,7 @@ Transport_Sealx(TSS_HCONTEXT tspContext,   /* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen, dataLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	UINT64 offset;
@@ -165,22 +160,17 @@ Transport_Sealx(TSS_HCONTEXT tspContext,   /* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	dataLen = (2 * sizeof(UINT32)) + sizeof(TPM_ENCAUTH) + pcrInfoSize + inDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	offset = 0;
-	Trspi_LoadBlob_NONCE(&offset, data, (TPM_NONCE *)encAuth);
+	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, encAuth->authdata);
 	Trspi_LoadBlob_UINT32(&offset, pcrInfoSize, data);
 	Trspi_LoadBlob(&offset, pcrInfoSize, data, PcrInfo);
 	Trspi_LoadBlob_UINT32(&offset, inDataSize, data);
@@ -209,7 +199,7 @@ Transport_Unseal(TSS_HCONTEXT tspContext,  /* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	BYTE *dec;
@@ -229,14 +219,10 @@ Transport_Unseal(TSS_HCONTEXT tspContext,  /* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
+	handle = parentHandle;
+	handles = &handle;
 
-	*handles = parentHandle;
-
-	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Sealx, SealedDataSize,
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Unseal, SealedDataSize,
 						    SealedData, &pubKeyHash, &handlesLen, &handles,
 						    parentAuth, dataAuth, &decLen, &dec)))
 		return result;

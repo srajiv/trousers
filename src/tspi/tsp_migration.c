@@ -54,7 +54,7 @@ Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	UINT64 offset;
 	TSS_RESULT result;
 	UINT32 handlesLen, dataLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	BYTE *data, *dec;
@@ -74,16 +74,11 @@ Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = parentHandle;
+	handle = parentHandle;
+	handles = &handle;
 
 	dataLen = sizeof(TCPA_MIGRATE_SCHEME) + MigrationKeyAuthSize + encDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -145,7 +140,7 @@ Transport_ConvertMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 	UINT64 offset;
 	TSS_RESULT result;
 	UINT32 handlesLen, dataLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	BYTE *data, *dec;
@@ -165,16 +160,11 @@ Transport_ConvertMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = parentHandle;
+	handle = parentHandle;
+	handles = &handle;
 
 	dataLen = (2 * sizeof(UINT32)) + randomSize + inDataSize;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}

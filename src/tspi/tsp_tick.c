@@ -62,7 +62,7 @@ Transport_TickStampBlob(TSS_HCONTEXT   tspContext,            /* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen = 0;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	BYTE *dec = NULL;
 	UINT64 offset;
 	TPM_DIGEST pubKeyHash;
@@ -81,19 +81,13 @@ Transport_TickStampBlob(TSS_HCONTEXT   tspContext,            /* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
+	handle = hKey;
+	handles = &handle;
 
-	*handles = hKey;
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_TickStampBlob, sizeof(data),
 						    data, &pubKeyHash, &handlesLen, &handles,
-						    privAuth, NULL, &decLen, &dec))) {
-		free(handles);
+						    privAuth, NULL, &decLen, &dec)))
 		return result;
-	}
-	free(handles);
 
 	offset = 0;
 	Trspi_UnloadBlob_CURRENT_TICKS(&offset, dec, NULL);

@@ -34,7 +34,7 @@ Transport_ActivateTPMIdentity(TSS_HCONTEXT tspContext,
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	BYTE *dec;
@@ -52,14 +52,9 @@ Transport_ActivateTPMIdentity(TSS_HCONTEXT tspContext,
 	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
 		return result;
 
-	/* Call ExecuteTransport */
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = idKey;
+	handle = idKey;
+	handles = &handle;
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_ActivateIdentity, blobSize,
 						    blob, &pubKeyHash, &handlesLen, &handles,

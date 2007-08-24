@@ -47,12 +47,12 @@ Transport_CertifySelfTest(TSS_HCONTEXT tspContext,	/* in */
 			  BYTE ** sig)	/* out */
 {
 	TSS_RESULT result;
-	UINT32 decLen = 0;
+	UINT32 handlesLen, decLen = 0;
 	BYTE *dec = NULL;
 	UINT64 offset;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
-	TCS_HANDLE handlesLen = 0, *handles;
+	TCS_HANDLE *handles, handle;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -66,12 +66,8 @@ Transport_CertifySelfTest(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	LogDebugFn("Executing in a transport session");
 

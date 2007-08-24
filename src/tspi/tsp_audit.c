@@ -188,7 +188,7 @@ Transport_GetAuditDigestSigned(TSS_HCONTEXT tspContext,       /* in */
 {
         TSS_RESULT result;
         UINT32 handlesLen, decLen;
-        TCS_HANDLE *handles;
+        TCS_HANDLE *handles, handle;
         BYTE *dec = NULL;
         TPM_DIGEST pubKeyHash;
         Trspi_HashCtx hashCtx;
@@ -210,12 +210,8 @@ Transport_GetAuditDigestSigned(TSS_HCONTEXT tspContext,       /* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	offset = 0;
 	Trspi_LoadBlob_BOOL(&offset, closeAudit, data);

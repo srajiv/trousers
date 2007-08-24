@@ -37,7 +37,7 @@ Transport_Quote(TSS_HCONTEXT tspContext,	/* in */
 {
 	TSS_RESULT result;
 	UINT32 handlesLen, dataLen, decLen;
-	TCS_HANDLE *handles;
+	TCS_HANDLE *handles, handle;
 	BYTE *dec = NULL;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
@@ -59,16 +59,11 @@ Transport_Quote(TSS_HCONTEXT tspContext,	/* in */
 		return result;
 
 	handlesLen = 1;
-	if ((handles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-		LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*handles = keyHandle;
+	handle = keyHandle;
+	handles = &handle;
 
 	dataLen = sizeof(TCPA_NONCE) + pcrDataSizeIn;
 	if ((data = malloc(dataLen)) == NULL) {
-		free(handles);
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
@@ -81,7 +76,6 @@ Transport_Quote(TSS_HCONTEXT tspContext,	/* in */
 						    &pubKeyHash, &handlesLen, &handles,
 						    privAuth, NULL, &decLen, &dec))) {
 		free(data);
-		free(handles);
 		return result;
 	}
 	free(data);
