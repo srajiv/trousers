@@ -1039,9 +1039,9 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
 		goto done;
 
-	if ((result = validateReturnAuth(context->transSecret.authData.authdata, etDigest.digest,
-					 pTransAuth))) {
-		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+	if (validateReturnAuth(context->transSecret.authData.authdata, etDigest.digest,
+			       pTransAuth)) {
+		result = TSPERR(TSS_E_TSP_TRANS_AUTHFAIL);
 		goto done;
 	}
 
@@ -1146,7 +1146,7 @@ obj_context_transport_close(TSS_HCONTEXT   tspContext,
 	/* validate again using the transport session's auth */
 	if ((result = validateReturnAuth(context->transSecret.authData.authdata, digest.digest,
 					 &context->transAuth))) {
-		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+		result = TSPERR(TSS_E_TSP_TRANS_AUTHFAIL);
 		goto done_disabled;
 	}
 
