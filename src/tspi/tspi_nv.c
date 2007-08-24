@@ -73,6 +73,8 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	if((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
 		return result;
 
+	memset(&nv_data_public, 0, sizeof(NV_DATA_PUBLIC));
+
 	if ((result = obj_nvstore_get_index(hNvstore, &nv_data_public.nvIndex)))
 		return result;
 
