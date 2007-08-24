@@ -61,7 +61,7 @@ Transport_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash1.digest)))
 		return result;
 
-	handlesLen = 1;
+	handlesLen = 2;
 	handle[0] = certHandle;
 	handle[1] = keyHandle;
 	handles = &handle[0];
