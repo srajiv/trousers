@@ -188,91 +188,83 @@ RPC_ExecuteTransport_TP(struct host_table_entry *hte,
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 
 		if (*pulHandleListSize) {
-			free(*rghHandles);
-
 			*rghHandles = malloc(*pulHandleListSize * sizeof(UINT32));
 			if (*rghHandles == NULL) {
 				*pulHandleListSize = 0;
 				return TSPERR(TSS_E_INTERNAL_ERROR);
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *rghHandles,
-						*pulHandleListSize * sizeof(UINT32), &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				    *pulHandleListSize * sizeof(UINT32), &hte->comm)) {
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		}
 		if (pWrappedCmdAuth1) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth1, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		} else {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		}
 		if (pWrappedCmdAuth2) {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, pWrappedCmdAuth2, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		} else {
 			if (getData(TCSD_PACKET_TYPE_AUTH, i++, &null_auth, 0, &hte->comm)) {
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		}
 		if (getData(TCSD_PACKET_TYPE_AUTH, i++, pTransAuth, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT64, i++, punCurrentTicks, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pbLocality, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pulWrappedCmdReturnCode, 0, &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, ulWrappedCmdParamOutSize, 0,
 			    &hte->comm)) {
-			free(*rghHandles);
-			*rghHandles = NULL;
-			return TSPERR(TSS_E_INTERNAL_ERROR);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto error;
 		}
 		if (*ulWrappedCmdParamOutSize) {
 			*rgbWrappedCmdParamOut = malloc(*ulWrappedCmdParamOutSize);
 			if (*rgbWrappedCmdParamOut == NULL) {
 				*ulWrappedCmdParamOutSize = 0;
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 			if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *rgbWrappedCmdParamOut,
 				    *ulWrappedCmdParamOutSize, &hte->comm)) {
 				free(*rgbWrappedCmdParamOut);
-				free(*rghHandles);
-				*rghHandles = NULL;
-				return TSPERR(TSS_E_INTERNAL_ERROR);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto error;
 			}
 		} else
 			*rgbWrappedCmdParamOut = NULL;
 	}
 
+	return result;
+error:
+	if (*pulHandleListSize) {
+		free(*rghHandles);
+		*rghHandles = NULL;
+	}
 	return result;
 }
 
