@@ -372,15 +372,22 @@ Tspi_Context_GetKeyByPublicInfo(TSS_HCONTEXT tspContext,	/* in */
 	else
 		flag |= TSS_KEY_AUTHORIZATION;
 
-	if (keyContainer.keyFlags & migratable)
+	if (keyContainer.keyFlags & TPM_MIGRATABLE)
 		flag |= TSS_KEY_MIGRATABLE;
 	else
 		flag |= TSS_KEY_NOT_MIGRATABLE;
 
-	if (keyContainer.keyFlags & volatileKey)
+	if (keyContainer.keyFlags & TPM_VOLATILE)
 		flag |= TSS_KEY_VOLATILE;
 	else
 		flag |= TSS_KEY_NON_VOLATILE;
+
+#ifdef TSS_BUILD_CMK
+	if (keyContainer.keyFlags & TPM_MIGRATEAUTHORITY)
+		flag |= TSS_KEY_CERTIFIED_MIGRATABLE;
+	else
+		flag |= TSS_KEY_NOT_CERTIFIED_MIGRATABLE;
+#endif
 
 	/* Create a new Key Object */
 	if ((result = obj_rsakey_add(tspContext, flag, &keyOutHandle))) {
