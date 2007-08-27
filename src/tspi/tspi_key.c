@@ -212,8 +212,14 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	UINT32 keySize;
 	TCPA_NONCE nonceEvenOSAP;
 	UINT32 newKeySize;
-	BYTE *newKey;
+	BYTE *newKey = NULL;
 	TSS_BOOL usesAuth;
+	TSS_BOOL isCmk = FALSE;
+	UINT32 blobSize;
+	BYTE *blob;
+	TPM_HMAC msaApproval;
+	TPM_DIGEST msaDigest;
+	UINT32 ordinal;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
 
@@ -245,7 +251,22 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		return result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hWrappingKey, &parentTCSKeyHandle)))
-		return result;
+		goto done;
+
+#ifdef TSS_BUILD_CMK
+	isCmk = obj_rsakey_is_cmk(hKey);
+	if (isCmk) {
+		if ((result = obj_rsakey_get_msa_approval(hKey, &blobSize, &blob)))
+			goto done;
+		memcpy(msaApproval.digest, blob, sizeof(msaApproval.digest));
+		free_tspi(tspContext, blob);
+
+		if ((result = obj_rsakey_get_msa_digest(hKey, &blobSize, &blob)))
+			goto done;
+		memcpy(msaDigest.digest, blob, sizeof(msaDigest.digest));
+		free_tspi(tspContext, blob);
+	}
+#endif
 
 	/*****************************************
 	 * To create the authorization, the first step is to call
@@ -265,52 +286,76 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 
 	/* Setup the Hash Data for the HMAC */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_CreateWrapKey);
-	result |= Trspi_HashUpdate(&hashCtx, sizeof(encAuthUsage.authdata), encAuthUsage.authdata);
-	result |= Trspi_HashUpdate(&hashCtx, sizeof(encAuthMig.authdata), encAuthMig.authdata);
-	result |= Trspi_HashUpdate(&hashCtx, keySize, keyBlob);
+	if (isCmk) {
+		ordinal = TPM_ORD_CMK_CreateKey;
+		result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+		result |= Trspi_HashUpdate(&hashCtx, sizeof(encAuthUsage.authdata), encAuthUsage.authdata);
+		result |= Trspi_HashUpdate(&hashCtx, keySize, keyBlob);
+		result |= Trspi_Hash_HMAC(&hashCtx, msaApproval.digest);
+		result |= Trspi_Hash_DIGEST(&hashCtx, msaDigest.digest);
+	} else {
+		ordinal = TPM_ORD_CreateWrapKey;
+		result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+		result |= Trspi_HashUpdate(&hashCtx, sizeof(encAuthUsage.authdata), encAuthUsage.authdata);
+		result |= Trspi_HashUpdate(&hashCtx, sizeof(encAuthMig.authdata), encAuthMig.authdata);
+		result |= Trspi_HashUpdate(&hashCtx, keySize, keyBlob);
+	}
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto done;
 
 	/* Complete the Auth Structure */
 	if ((result = secret_PerformAuth_OSAP(hWrappingKey,
-					      TPM_ORD_CreateWrapKey,
+					      ordinal,
 					      hWrapPolicy, hUsagePolicy,
 					      hMigPolicy, sharedSecret, &auth,
 					      digest.digest, &nonceEvenOSAP)))
-		return result;
+		goto done;
 
 	/* Now call the function */
-	if ((result = TCS_API(tspContext)->CreateWrapKey(tspContext, parentTCSKeyHandle,
-							 encAuthUsage, encAuthMig, keySize, keyBlob,
-							 &newKeySize, &newKey, &auth)))
-		return result;
+	if (isCmk) {
+		if ((newKey = malloc(keySize)) == NULL) {
+			LogError("malloc of %u bytes failed.", keySize);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+		memcpy(newKey, keyBlob, keySize);
+		newKeySize = keySize;
+
+		if ((result = RPC_CMK_CreateKey(tspContext, parentTCSKeyHandle, encAuthUsage,
+						msaApproval, msaDigest, &newKeySize, &newKey,
+						&auth)))
+			goto done;
+	} else {
+		if ((result = TCS_API(tspContext)->CreateWrapKey(tspContext, parentTCSKeyHandle,
+								 encAuthUsage, encAuthMig, keySize,
+								 keyBlob, &newKeySize, &newKey,
+								 &auth)))
+			goto done;
+	}
 
 	/* Validate the Authorization before using the new key */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
-	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_CreateWrapKey);
+	result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
 	result |= Trspi_HashUpdate(&hashCtx, newKeySize, newKey);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto done;
 
 	if ((result = secret_ValidateAuth_OSAP(hWrappingKey,
-					       TPM_ORD_CreateWrapKey,
+					       ordinal,
 					       hWrapPolicy, hUsagePolicy,
 					       hMigPolicy, sharedSecret, &auth,
 					       digest.digest,
-					       &nonceEvenOSAP))) {
-		free(newKey);
-		return result;
-	}
+					       &nonceEvenOSAP)))
+		goto done;
 
 	/* Push the new key into the existing object */
-	if ((result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey))) {
-		free(newKey);
-		return result;
-	}
+	result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey);
 
+done:
+	free_tspi(tspContext, keyBlob);
 	free(newKey);
+
 	return result;
 }
 
