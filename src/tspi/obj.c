@@ -35,6 +35,7 @@ ENCDATA_LIST_DECLARE;
 DAA_LIST_DECLARE;
 NVSTORE_LIST_DECLARE;
 DELFAMILY_LIST_DECLARE;
+MIGDATA_LIST_DECLARE;
 
 void
 list_init(struct obj_list *list)
@@ -56,6 +57,7 @@ obj_list_init()
 	DAA_LIST_INIT();
 	NVSTORE_LIST_INIT();
 	DELFAMILY_LIST_INIT();
+	MIGDATA_LIST_INIT();
 }
 
 TSS_HOBJECT
@@ -240,6 +242,7 @@ obj_close_context(TSS_HCONTEXT tspContext)
 	DAA_LIST_CLOSE(tspContext);
 	NVSTORE_LIST_CLOSE(tspContext);
 	DELFAMILY_LIST_CLOSE(tspContext);
+	MIGDATA_LIST_CLOSE(tspContext);
 }
 
 /* When a policy object is closed, all references to it must be removed. This function

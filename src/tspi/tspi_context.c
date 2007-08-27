@@ -292,6 +292,15 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		result = obj_delfamily_add(tspContext, phObject);
 		break;
 #endif
+#ifdef TSS_BUILD_CMK
+	case TSS_OBJECT_TYPE_MIGDATA:
+		/* There are no valid flags for a MIGDATA object */
+		if (initFlags & ~(0UL))
+			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+	
+		result = obj_migdata_add(tspContext, phObject);
+		break;
+#endif
 	default:
 		LogDebug("Invalid Object type");
 		return TSPERR(TSS_E_INVALID_OBJECT_TYPE);
@@ -331,6 +340,10 @@ Tspi_Context_CloseObject(TSS_HCONTEXT tspContext,	/* in */
 	} else if (obj_is_delfamily(hObject)) {
 #ifdef TSS_BUILD_DELEGATION
 		result = obj_delfamily_remove(hObject, tspContext);
+#endif
+	} else if (obj_is_migdata(hObject)) {
+#ifdef TSS_BUILD_CMK
+		result = obj_migdata_remove(hObject, tspContext);
 #endif
 	} else {
 		result = TSPERR(TSS_E_INVALID_HANDLE);

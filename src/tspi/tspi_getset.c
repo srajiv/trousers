@@ -366,6 +366,11 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				if ((result = obj_rsakey_get_size(hObject, pulAttrib)))
 					return result;
 				break;
+#ifdef TSS_BUILD_CMK
+			case TSS_TSPATTRIB_KEYINFO_CMK:
+				*pulAttrib = obj_rsakey_is_cmk(hObject);
+				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
@@ -662,6 +667,18 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
+#ifdef TSS_BUILD_CMK
+		} else if (attribFlag == TSS_TSPATTRIB_KEY_CMKINFO) {
+			if (subFlag == TSS_TSPATTRIB_KEYINFO_CMK_MA_APPROVAL) {
+				result = obj_rsakey_set_msa_approval(hObject, ulAttribDataSize,
+						rgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_CMK_MA_DIGEST) {
+				result = obj_rsakey_set_msa_digest(hObject, ulAttribDataSize,
+						rgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+#endif
 		} else {
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		}
@@ -750,6 +767,69 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
+	} else if (obj_is_migdata(hObject)) {
+#ifdef TSS_BUILD_CMK
+		switch (attribFlag) {
+		case TSS_MIGATTRIB_MIGRATIONBLOB:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_MIG_MSALIST_PUBKEY_BLOB:
+			case TSS_MIGATTRIB_MIG_AUTHORITY_PUBKEY_BLOB:
+			case TSS_MIGATTRIB_MIG_DESTINATION_PUBKEY_BLOB:
+			case TSS_MIGATTRIB_MIG_SOURCE_PUBKEY_BLOB:
+				result = obj_migdata_set_migrationblob(hObject, subFlag,
+						ulAttribDataSize, rgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_MIGRATIONTICKET:
+			if (subFlag != 0)
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			result = obj_migdata_set_ticket_blob(hObject, ulAttribDataSize, rgbAttribData);
+			break;
+		case TSS_MIGATTRIB_AUTHORITY_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_AUTHORITY_DIGEST:
+			case TSS_MIGATTRIB_AUTHORITY_APPROVAL_HMAC:
+			case TSS_MIGATTRIB_AUTHORITY_MSALIST:
+				result = obj_migdata_set_authoritydata(hObject, subFlag,
+						ulAttribDataSize, rgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_MIG_AUTH_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_MIG_AUTH_AUTHORITY_DIGEST:
+			case TSS_MIGATTRIB_MIG_AUTH_DESTINATION_DIGEST:
+			case TSS_MIGATTRIB_MIG_AUTH_SOURCE_DIGEST:
+				result = obj_migdata_set_migauthdata(hObject, subFlag,
+						ulAttribDataSize, rgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_TICKET_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_TICKET_SIG_DIGEST:
+			case TSS_MIGATTRIB_TICKET_SIG_VALUE:
+			case TSS_MIGATTRIB_TICKET_SIG_TICKET:
+			case TSS_MIGATTRIB_TICKET_RESTRICT_TICKET:
+				result = obj_migdata_set_ticketdata(hObject, subFlag,
+						ulAttribDataSize, rgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+		}
+#endif
 	} else {
 		if (obj_is_pcrs(hObject) || obj_is_context(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
@@ -831,6 +911,18 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 						prgbAttribData);
 			} else
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+#ifdef TSS_BUILD_CMK
+		} else if (attribFlag == TSS_TSPATTRIB_KEY_CMKINFO) {
+			if (subFlag == TSS_TSPATTRIB_KEYINFO_CMK_MA_APPROVAL) {
+				result = obj_rsakey_get_msa_approval(hObject, pulAttribDataSize,
+						prgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYINFO_CMK_MA_DIGEST) {
+				result = obj_rsakey_get_msa_digest(hObject, pulAttribDataSize,
+						prgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+#endif
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
@@ -970,6 +1062,58 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;
 		}
+	} else if (obj_is_migdata(hObject)) {
+#ifdef TSS_BUILD_CMK
+		switch (attribFlag) {
+		case TSS_MIGATTRIB_MIGRATIONBLOB:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_MIG_XOR_BLOB:
+				result = obj_migdata_get_migrationblob(hObject, subFlag,
+						pulAttribDataSize, prgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_AUTHORITY_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_AUTHORITY_DIGEST:
+			case TSS_MIGATTRIB_AUTHORITY_APPROVAL_HMAC:
+			case TSS_MIGATTRIB_AUTHORITY_MSALIST:
+				result = obj_migdata_get_authoritydata(hObject, subFlag,
+						pulAttribDataSize, prgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_MIG_AUTH_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_MIG_AUTH_AUTHORITY_DIGEST:
+			case TSS_MIGATTRIB_MIG_AUTH_DESTINATION_DIGEST:
+			case TSS_MIGATTRIB_MIG_AUTH_SOURCE_DIGEST:
+				result = obj_migdata_get_migauthdata(hObject, subFlag,
+						pulAttribDataSize, prgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		case TSS_MIGATTRIB_TICKET_DATA:
+			switch (subFlag) {
+			case TSS_MIGATTRIB_TICKET_SIG_TICKET:
+				result = obj_migdata_get_ticketdata(hObject, subFlag,
+						pulAttribDataSize, prgbAttribData);
+				break;
+			default:
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+			break;
+		default:
+			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
+			break;
+		}
+#endif
 	} else {
 		if (obj_is_hash(hObject) || obj_is_pcrs(hObject))
 			result = TSPERR(TSS_E_BAD_PARAMETER);
