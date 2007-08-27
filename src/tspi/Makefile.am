@@ -224,3 +224,7 @@ if TSS_BUILD_DELEGATION
 libtspi_la_SOURCES+=tspi_delegate.c tsp_delegate.c obj_delfamily.c rpc/@RPC@/rpc_delegate.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_DELEGATION
 endif
+if TSS_BUILD_CMK
+libtspi_la_SOURCES+=tspi_cmk.c obj_migdata.c rpc/@RPC@/rpc_cmk.c
+libtspi_la_CFLAGS+=-DTSS_BUILD_CMK
+endif
