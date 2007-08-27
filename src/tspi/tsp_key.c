@@ -130,9 +130,8 @@ Transport_EvictKey(TSS_HCONTEXT tspContext,
 	handle = hKey;
 	handles = &handle;
 
-	result = obj_context_transport_execute(tspContext, TPM_ORD_Terminate_Handle, 0, NULL,
-					       &pubKeyHash, &handlesLen, &handles, NULL, NULL, NULL,
-					       NULL);
+	result = obj_context_transport_execute(tspContext, TPM_ORD_EvictKey, 0, NULL, &pubKeyHash,
+					       &handlesLen, &handles, NULL, NULL, NULL, NULL);
 
 	return result;
 }
