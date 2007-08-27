@@ -153,7 +153,7 @@ RPC_ConvertMigrationBlob_TP(struct host_table_entry *hte,
 	TSS_RESULT result;
 	UINT32 i;
 
-	initData(&hte->comm, 6);
+	initData(&hte->comm, 7);
 	hte->comm.hdr.u.ordinal = TCSD_ORD_CONVERTMIGRATIONBLOB;
 	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
 
