@@ -182,6 +182,15 @@ TCSP_AuthorizeMigrationKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		case TSS_MS_MAINT:
 			migrateScheme = TCPA_MS_MAINT;
 			break;
+#ifdef TSS_BUILD_CMK
+		case TSS_MS_RESTRICT_MIGRATE:
+			migrateScheme = TPM_MS_RESTRICT_MIGRATE;
+			break;
+
+		case TSS_MS_RESTRICT_APPROVE_DOUBLE:
+			migrateScheme = TPM_MS_RESTRICT_APPROVE_DOUBLE;
+			break;
+#endif
 		default:
 			/* Let the TPM return an error */
 			break;
