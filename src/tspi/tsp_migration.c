@@ -21,20 +21,6 @@
 #include "tsplog.h"
 #include "obj.h"
 
-TSS_RESULT
-Trspi_UnloadBlob_MigrationKeyAuth(UINT64 *offset, BYTE *blob, TCPA_MIGRATIONKEYAUTH *migAuth)
-{
-	TSS_RESULT result;
-
-	if ((result = Trspi_UnloadBlob_PUBKEY(offset, blob, &migAuth->migrationKey)))
-		return result;
-
-	Trspi_UnloadBlob_UINT16(offset, &migAuth->migrationScheme, blob);
-	Trspi_UnloadBlob_DIGEST(offset, blob, &migAuth->digest);
-
-	return TSS_SUCCESS;
-}
-
 #ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT
 Transport_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
@@ -235,6 +221,15 @@ Transport_AuthorizeMigrationKey(TSS_HCONTEXT tspContext,	/* in */
 		case TSS_MS_MAINT:
 			tpmMigrateScheme = TCPA_MS_MAINT;
 			break;
+#ifdef TSS_BUILD_CMK
+		case TSS_MS_RESTRICT_MIGRATE:
+			tpmMigrateScheme = TPM_MS_RESTRICT_MIGRATE;
+			break;
+
+		case TSS_MS_RESTRICT_APPROVE_DOUBLE:
+			tpmMigrateScheme = TPM_MS_RESTRICT_APPROVE_DOUBLE;
+			break;
+#endif
 		default:
 			return TSPERR(TSS_E_BAD_PARAMETER);
 			break;
