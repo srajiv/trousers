@@ -291,6 +291,8 @@ Transport_LoadKeyByBlob(TSS_HCONTEXT     tspContext,
 	return result;
 }
 
+/* This function both encrypts the handle of the pubkey being requested and requires the hash
+ * of that pubkey for the transport log when logging is enabled. */
 TSS_RESULT
 Transport_OwnerReadInternalPub(TSS_HCONTEXT tspContext,   /* in */
 			       TCS_KEY_HANDLE hKey,           /* in */
@@ -301,6 +303,8 @@ Transport_OwnerReadInternalPub(TSS_HCONTEXT tspContext,   /* in */
 	UINT64 offset;
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, decLen;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
 	BYTE *dec = NULL, data[sizeof(TCS_KEY_HANDLE)];
 
 
@@ -309,12 +313,20 @@ Transport_OwnerReadInternalPub(TSS_HCONTEXT tspContext,   /* in */
 
 	LogDebugFn("Executing in a transport session");
 
+	if ((result = obj_tcskey_get_pubkeyhash(hKey, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
 	offset = 0;
 	Trspi_LoadBlob_UINT32(&offset, hKey, data);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_OwnerReadInternalPub,
-						    sizeof(data), data, NULL, &handlesLen, NULL,
-						    pOwnerAuth, NULL, &decLen, &dec)))
+						    sizeof(data), data, &pubKeyHash, &handlesLen,
+						    NULL, pOwnerAuth, NULL, &decLen, &dec)))
 		return result;
 
 	*punPubKeySize = decLen;
