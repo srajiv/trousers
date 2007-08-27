@@ -175,7 +175,21 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 	}
 
 	switch (unWrappedCommandOrdinal) {
+	case TPM_ORD_EvictKey:
+	{
+		if ((result = ctx_remove_key_loaded(hContext, handle1)))
+			goto done;
+
+		if ((result = key_mgr_dec_ref_count(handle1)))
+			goto done;
+
+		/* we can't call key_mgr_ref_cnt() here since it calls TPM_EvictKey directly, but
+		 * it will be called lazily on context close */
+		break;
+
+	}
 	case TPM_ORD_OIAP:
+	{
 		/* are the maximum number of auth sessions open? */
 		if (auth_mgr_req_new(hContext) == FALSE) {
 			if ((result = auth_mgr_swap_out(hContext)))
@@ -183,6 +197,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		}
 
 		break;
+	}
 	case TPM_ORD_OSAP:
 	{
 		UINT16 entityType;
@@ -341,6 +356,11 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 		UnloadBlob_UINT32(&offset, &handle, *rgbWrappedCmdParamOut);
 		result = auth_mgr_add(hContext, handle);
+		break;
+	}
+	case TPM_ORD_EvictKey:
+	{
+		result = mc_set_slot_by_handle(handle1, NULL_TPM_HANDLE);
 		break;
 	}
 	default:
