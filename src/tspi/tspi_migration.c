@@ -63,6 +63,15 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		case TSS_MS_MAINT:
 			tpmMigrationScheme = TCPA_MS_MAINT;
 			break;
+#ifdef TSS_BUILD_CMK
+		case TSS_MS_RESTRICT_MIGRATE:
+			tpmMigrationScheme = TPM_MS_RESTRICT_MIGRATE;
+			break;
+
+		case TSS_MS_RESTRICT_APPROVE_DOUBLE:
+			tpmMigrationScheme = TPM_MS_RESTRICT_APPROVE_DOUBLE;
+			break;
+#endif
 		default:
 			return TSPERR(TSS_E_BAD_PARAMETER);
 			break;
@@ -193,7 +202,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	memset(&migAuth, 0, sizeof(TCPA_MIGRATIONKEYAUTH));
 
 	offset = 0;
-	if ((result = Trspi_UnloadBlob_MigrationKeyAuth(&offset, rgbMigTicket, &migAuth)))
+	if ((result = Trspi_UnloadBlob_MIGRATIONKEYAUTH(&offset, rgbMigTicket, &migAuth)))
 		return result;
 
 	/* free these now, since none are used below */
