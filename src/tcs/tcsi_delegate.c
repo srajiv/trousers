@@ -46,7 +46,7 @@ TCSP_Delegate_Manage_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if ((result = tpm_rqu_build(TPM_ORD_Delegate_Manage, &offset, txBlob, familyID, opFlag,
 				    opDataSize, opData, ownerAuth)))
-		return result;
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -96,7 +96,7 @@ TCSP_Delegate_CreateKeyDelegation_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if ((result = tpm_rqu_build(TPM_ORD_Delegate_CreateKeyDelegation, &offset, txBlob, keySlot,
 				    publicInfoSize, publicInfo, encDelAuth, keyAuth)))
-		return result;
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -142,7 +142,7 @@ TCSP_Delegate_CreateOwnerDelegation_Internal(TCS_CONTEXT_HANDLE hContext,	/* in 
 
 	if ((result = tpm_rqu_build(TPM_ORD_Delegate_CreateOwnerDelegation, &offset, txBlob,
 				    increment, publicInfoSize, publicInfo, encDelAuth, ownerAuth)))
-		return result;
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -185,7 +185,7 @@ TCSP_Delegate_LoadOwnerDelegation_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	if ((result = tpm_rqu_build(TPM_ORD_Delegate_LoadOwnerDelegation, &offset, txBlob, index,
 				    blobSize, blob, ownerAuth)))
-		return result;
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
@@ -264,7 +264,7 @@ TCSP_Delegate_UpdateVerificationCount_Internal(TCS_CONTEXT_HANDLE hContext,	/* i
 
 	if ((result = tpm_rqu_build(TPM_ORD_Delegate_UpdateVerification, &offset, txBlob, inputSize,
 				    inputSize, input, ownerAuth, NULL)))
-		return result;
+		goto done;
 
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
