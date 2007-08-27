@@ -193,7 +193,8 @@ Tspi_TPM_Delegate_CacheOwnerDelegation(TSS_HTPM    hTpm,	/* in */
 	} else
 		pAuth = NULL;
 
-	if ((result = RPC_Delegate_LoadOwnerDelegation(hContext, ulIndex, blobSize, blob, pAuth)))
+	if ((result = TCS_API(hContext)->Delegate_LoadOwnerDelegation(hContext, ulIndex, blobSize,
+								      blob, pAuth)))
 		goto done;
 
 	if (pAuth) {
@@ -280,8 +281,9 @@ Tspi_TPM_Delegate_UpdateVerificationCount(TSS_HTPM    hTpm,		/* in */
 	} else
 		pAuth = NULL;
 
-	if ((result = RPC_Delegate_UpdateVerificationCount(hContext, inputSize, input, pAuth,
-							   &outputSize, &output)))
+	if ((result = TCS_API(hContext)->Delegate_UpdateVerificationCount(hContext, inputSize,
+									  input, pAuth, &outputSize,
+									  &output)))
 		goto done;
 
 	if (pAuth) {
@@ -320,7 +322,7 @@ Tspi_TPM_Delegate_VerifyDelegation(TSS_HPOLICY hDelegation)	/* in, out */
 	if ((result = obj_policy_get_delegation_blob(hDelegation, 0, &delegateSize, &delegate)))
 		return result;
 
-	result = RPC_Delegate_VerifyDelegation(hContext, delegateSize, delegate);
+	result = TCS_API(hContext)->Delegate_VerifyDelegation(hContext, delegateSize, delegate);
 
 	free_tspi(hContext, delegate);
 
@@ -350,8 +352,9 @@ Tspi_TPM_Delegate_ReadTables(TSS_HCONTEXT                 hContext,		/* in */
 	if (!pulFamilyTableSize || !ppFamilyTable || !pulDelegateTableSize || !ppDelegateTable)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = RPC_Delegate_ReadTable(hContext, &tpmFamilyTableSize, &tpmFamilyTable,
-					     &tpmDelegateTableSize, &tpmDelegateTable)))
+	if ((result = TCS_API(hContext)->Delegate_ReadTable(hContext, &tpmFamilyTableSize,
+							    &tpmFamilyTable, &tpmDelegateTableSize,
+							    &tpmDelegateTable)))
 		return result;
 
 	if (tpmFamilyTableSize > 0) {
