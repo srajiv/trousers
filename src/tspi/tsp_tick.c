@@ -66,6 +66,7 @@ Transport_TickStampBlob(TSS_HCONTEXT   tspContext,            /* in */
 	BYTE *dec = NULL;
 	UINT64 offset;
 	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
 	BYTE data[sizeof(TPM_NONCE) + sizeof(TPM_DIGEST)];
 
 	if ((result = obj_context_transport_init(tspContext)))
@@ -73,16 +74,21 @@ Transport_TickStampBlob(TSS_HCONTEXT   tspContext,            /* in */
 
 	LogDebugFn("Executing in a transport session");
 
-	offset = 0;
-	Trspi_LoadBlob_NONCE(&offset, data, antiReplay);
-	Trspi_LoadBlob_DIGEST(&offset, data, digestToStamp);
-
 	if ((result = obj_tcskey_get_pubkeyhash(hKey, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
 		return result;
 
 	handlesLen = 1;
 	handle = hKey;
 	handles = &handle;
+
+	offset = 0;
+	Trspi_LoadBlob_NONCE(&offset, data, antiReplay);
+	Trspi_LoadBlob_DIGEST(&offset, data, digestToStamp);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_TickStampBlob, sizeof(data),
 						    data, &pubKeyHash, &handlesLen, &handles,
