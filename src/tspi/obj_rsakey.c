@@ -105,13 +105,23 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	/* End of all the default stuff */
 
 	if (initFlags & TSS_KEY_VOLATILE)
-		rsakey->key.keyFlags |= volatileKey;
+		rsakey->key.keyFlags |= TPM_VOLATILE;
 	if (initFlags & TSS_KEY_MIGRATABLE)
-		rsakey->key.keyFlags |= migratable;
+		rsakey->key.keyFlags |= TPM_MIGRATABLE;
 	if (initFlags & TSS_KEY_AUTHORIZATION) {
 		rsakey->key.authDataUsage = TPM_AUTH_ALWAYS;
 		flags |= TSS_OBJ_FLAG_USAGEAUTH;
 	}
+
+#ifdef TSS_BUILD_CMK
+	if (initFlags & TSS_KEY_CERTIFIED_MIGRATABLE) {
+		if (rsakey->type == TSS_KEY_STRUCT_KEY) {
+			free(rsakey);
+			return TSPERR(TSS_E_BAD_PARAMETER);
+		}
+		rsakey->key.keyFlags |= TPM_MIGRATEAUTHORITY;
+	}
+#endif
 
 	/* set the key length */
 	if ((initFlags & TSS_KEY_SIZE_MASK) == TSS_KEY_SIZE_512) {
@@ -193,6 +203,10 @@ obj_rsakey_add_by_key(TSS_HCONTEXT tspContext, TSS_UUID *uuid, BYTE *key, TSS_FL
 		free(rsakey);
 		return result;
 	}
+	if (rsakey->key.hdr.key12.tag == TPM_TAG_KEY12)
+		rsakey->type = TSS_KEY_STRUCT_KEY12;
+	else
+		rsakey->type = TSS_KEY_STRUCT_KEY;
 
 	flags |= TSS_OBJ_FLAG_KEY_SET;
 	if (rsakey->key.authDataUsage)
@@ -485,9 +499,9 @@ obj_rsakey_set_migratable(TSS_HKEY hKey, UINT32 mig)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (mig)
-		rsakey->key.keyFlags |= migratable;
+		rsakey->key.keyFlags |= TPM_MIGRATABLE;
 	else
-		rsakey->key.keyFlags &= (~migratable);
+		rsakey->key.keyFlags &= (~TPM_MIGRATABLE);
 done:
 	obj_list_put(&rsakey_list);
 
@@ -511,9 +525,9 @@ obj_rsakey_set_redirected(TSS_HKEY hKey, UINT32 redir)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (redir)
-		rsakey->key.keyFlags |= redirection;
+		rsakey->key.keyFlags |= TPM_REDIRECTION;
 	else
-		rsakey->key.keyFlags &= (~redirection);
+		rsakey->key.keyFlags &= (~TPM_REDIRECTION);
 done:
 	obj_list_put(&rsakey_list);
 
@@ -537,9 +551,9 @@ obj_rsakey_set_volatile(TSS_HKEY hKey, UINT32 vol)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 	if (vol)
-		rsakey->key.keyFlags |= volatileKey;
+		rsakey->key.keyFlags |= TPM_VOLATILE;
 	else
-		rsakey->key.keyFlags &= (~volatileKey);
+		rsakey->key.keyFlags &= (~TPM_VOLATILE);
 done:
 	obj_list_put(&rsakey_list);
 
@@ -908,7 +922,7 @@ obj_rsakey_is_migratable(TSS_HKEY hKey)
 		return answer;
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	if (rsakey->key.keyFlags & migratable)
+	if (rsakey->key.keyFlags & TPM_MIGRATABLE)
 		answer = TRUE;
 
 	obj_list_put(&rsakey_list);
@@ -927,7 +941,7 @@ obj_rsakey_is_redirected(TSS_HKEY hKey)
 		return answer;
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	if (rsakey->key.keyFlags & redirection)
+	if (rsakey->key.keyFlags & TPM_REDIRECTION)
 		answer = TRUE;
 
 	obj_list_put(&rsakey_list);
@@ -946,7 +960,7 @@ obj_rsakey_is_volatile(TSS_HKEY hKey)
 		return answer;
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
-	if (rsakey->key.keyFlags & volatileKey)
+	if (rsakey->key.keyFlags & TPM_VOLATILE)
 		answer = TRUE;
 
 	obj_list_put(&rsakey_list);
@@ -1443,6 +1457,11 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	offset = 0;
 	if ((result = UnloadBlob_TSS_KEY(&offset, data, &rsakey->key)))
 		goto done;
+	if (rsakey->key.hdr.key12.tag == TPM_TAG_KEY12)
+		rsakey->type = TSS_KEY_STRUCT_KEY12;
+	else
+		rsakey->type = TSS_KEY_STRUCT_KEY;
+
 
 	if (rsakey->key.authDataUsage)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
@@ -1816,6 +1835,161 @@ obj_rsakey_get_transport_attribs(TSS_HKEY hKey, TCS_KEY_HANDLE *hTCSKey, TPM_DIG
 	result |= Trspi_Hash_STORE_PUBKEY(&hashCtx, &rsakey->key.pubKey);
 	result |= Trspi_HashFinal(&hashCtx, pubDigest->digest);
 
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+#endif
+
+#ifdef TSS_BUILD_CMK
+TSS_BOOL
+obj_rsakey_is_cmk(TSS_HKEY hKey)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_BOOL answer = FALSE;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return answer;
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	if (rsakey->type != TSS_KEY_STRUCT_KEY) {
+		if (rsakey->key.keyFlags & TPM_MIGRATEAUTHORITY)
+			answer = TRUE;
+	}
+
+	obj_list_put(&rsakey_list);
+
+	return answer;
+}
+
+TSS_RESULT
+obj_rsakey_set_cmk(TSS_HKEY hKey, UINT32 cmk)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	if (obj->flags & TSS_OBJ_FLAG_KEY_SET) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	if (rsakey->type == TSS_KEY_STRUCT_KEY) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	if (cmk)
+		rsakey->key.keyFlags |= TPM_MIGRATEAUTHORITY;
+	else
+		rsakey->key.keyFlags &= (~TPM_MIGRATEAUTHORITY);
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_set_msa_approval(TSS_HKEY hKey, UINT32 blobSize, BYTE *blob)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if (blobSize != sizeof(rsakey->msaApproval.digest)) {
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+	memcpy(rsakey->msaApproval.digest, blob, sizeof(rsakey->msaApproval.digest));
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_get_msa_approval(TSS_HKEY hKey, UINT32 *blobSize, BYTE **blob)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if ((*blob = calloc_tspi(obj->tspContext, sizeof(rsakey->msaApproval.digest))) == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(rsakey->msaApproval.digest));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	memcpy(*blob, rsakey->msaApproval.digest, sizeof(rsakey->msaApproval.digest));
+	*blobSize = sizeof(rsakey->msaApproval.digest);
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_set_msa_digest(TSS_HKEY hKey, UINT32 blobSize, BYTE *blob)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if (blobSize != sizeof(rsakey->msaDigest.digest)) {
+		result = TSPERR(TSS_E_BAD_PARAMETER);
+		goto done;
+	}
+	memcpy(rsakey->msaDigest.digest, blob, sizeof(rsakey->msaDigest.digest));
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_get_msa_digest(TSS_HKEY hKey, UINT32 *blobSize, BYTE **blob)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if ((*blob = calloc_tspi(obj->tspContext, sizeof(rsakey->msaDigest.digest))) == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(rsakey->msaDigest.digest));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	memcpy(*blob, rsakey->msaDigest.digest, sizeof(rsakey->msaDigest.digest));
+	*blobSize = sizeof(rsakey->msaDigest.digest);
+
+done:
 	obj_list_put(&rsakey_list);
 
 	return result;
