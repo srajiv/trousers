@@ -9,6 +9,3 @@ endif
 if TSS_BUILD_SYM_CRYPTO
 libtrousers_la_SOURCES+=crypto/@CRYPTO_PACKAGE@/symmetric.c
 endif
-
-clean:
-	rm -f libtrousers.a *.o *.lo *.la crypto/*/*.o
