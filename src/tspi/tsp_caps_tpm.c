@@ -79,7 +79,7 @@ Transport_GetTPMCapability(TSS_HCONTEXT        tspContext,	/* in */
 			   BYTE**              resp)	/* out */
 {
 	TSS_RESULT result;
-	UINT32 decLen = 0;
+	UINT32 decLen = 0, dataLen;
 	BYTE *dec = NULL;
 	UINT64 offset;
 	TCS_HANDLE handlesLen = 0;
@@ -90,8 +90,9 @@ Transport_GetTPMCapability(TSS_HCONTEXT        tspContext,	/* in */
 
 	LogDebugFn("Executing in a transport session");
 
-	if ((data = malloc(2 * sizeof(UINT32) + subCapLen)) == NULL) {
-		LogError("malloc of %zd bytes failed", 2 * sizeof(UINT32) + subCapLen);
+	dataLen = (2 * sizeof(UINT32)) + subCapLen;
+	if ((data = malloc(dataLen)) == NULL) {
+		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
@@ -100,8 +101,7 @@ Transport_GetTPMCapability(TSS_HCONTEXT        tspContext,	/* in */
 	Trspi_LoadBlob_UINT32(&offset, subCapLen, data);
 	Trspi_LoadBlob(&offset, subCapLen, data, subCap);
 
-	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_GetCapability,
-						    (UINT32)(2 * sizeof(UINT32) + subCapLen),
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_GetCapability, dataLen,
 						    data, NULL, &handlesLen, NULL, NULL, NULL,
 						    &decLen, &dec))) {
 		free(data);
@@ -145,7 +145,7 @@ Transport_SetCapability(TSS_HCONTEXT tspContext,	/* in */
 
 	LogDebugFn("Executing in a transport session");
 
-	dataLen = 3 * sizeof(UINT32) + subCapSize + valueSize;
+	dataLen = (3 * sizeof(UINT32)) + subCapSize + valueSize;
 	if ((data = malloc(dataLen)) == NULL) {
 		LogError("malloc of %u bytes failed", dataLen);
 		return TSPERR(TSS_E_OUTOFMEMORY);
