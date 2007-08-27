@@ -135,4 +135,7 @@ if TSS_BUILD_QUOTE2
 libtcs_a_SOURCES+=tcsi_quote2.c tcs_quote2.c rpc/@RPC@/rpc_quote2.c
 libtcs_a_CFLAGS+=-DTSS_BUILD_QUOTE2
 endif
-
+if TSS_BUILD_CMK
+libtcs_a_SOURCES+=tcsi_cmk.c rpc/@RPC@/rpc_cmk.c
+libtcs_a_CFLAGS+=-DTSS_BUILD_CMK
+endif

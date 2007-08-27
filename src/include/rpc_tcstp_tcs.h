@@ -357,6 +357,22 @@ DECLARE_TCSTP_FUNC(Delegate_VerifyDelegation);
 #define tcs_wrap_Delegate_VerifyDelegation		tcs_wrap_Error
 #endif
 
+#ifdef TSS_BUILD_CMK
+DECLARE_TCSTP_FUNC(CMK_SetRestrictions);
+DECLARE_TCSTP_FUNC(CMK_ApproveMA);
+DECLARE_TCSTP_FUNC(CMK_CreateKey);
+DECLARE_TCSTP_FUNC(CMK_CreateTicket);
+DECLARE_TCSTP_FUNC(CMK_CreateBlob);
+DECLARE_TCSTP_FUNC(CMK_ConvertMigration);
+#else
+#define tcs_wrap_CMK_SetRestrictions	tcs_wrap_Error
+#define tcs_wrap_CMK_ApproveMA		tcs_wrap_Error
+#define tcs_wrap_CMK_CreateKey		tcs_wrap_Error
+#define tcs_wrap_CMK_CreateTicket	tcs_wrap_Error
+#define tcs_wrap_CMK_CreateBlob		tcs_wrap_Error
+#define tcs_wrap_CMK_ConvertMigration	tcs_wrap_Error
+#endif
+
 DECLARE_TCSTP_FUNC(dispatchCommand);
 
 void LoadBlob_Auth_Special(UINT64 *, BYTE *, TPM_AUTH *);

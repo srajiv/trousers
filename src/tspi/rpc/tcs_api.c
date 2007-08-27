@@ -3093,3 +3093,195 @@ RPC_Delegate_VerifyDelegation(TSS_HCONTEXT hContext,	/* in */
 	return result;
 }
 
+TSS_RESULT
+RPC_CMK_SetRestrictions(TCS_CONTEXT_HANDLE hContext,	/* in */
+			TSS_CMK_DELEGATE restriction,	/* in */
+			TPM_AUTH *ownerAuth)		/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_SetRestrictions_TP(entry, restriction, ownerAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_CMK_ApproveMA(TCS_CONTEXT_HANDLE hContext,		/* in */
+		  TPM_DIGEST migAuthorityDigest,	/* in */
+		  TPM_AUTH *ownerAuth,			/* in, out */
+		  TPM_HMAC *migAuthorityApproval)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_ApproveMA_TP(entry, migAuthorityDigest, ownerAuth,
+					migAuthorityApproval);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_CMK_CreateKey(TCS_CONTEXT_HANDLE hContext,		/* in */
+		  TCS_KEY_HANDLE hWrappingKey,		/* in */
+		  TPM_ENCAUTH keyUsageAuth,		/* in */
+		  TPM_HMAC migAuthorityApproval,	/* in */
+		  TPM_DIGEST migAuthorityDigest,	/* in */
+		  UINT32 *keyDataSize,			/* in, out */
+		  BYTE **keyData,			/* in, out */
+		  TPM_AUTH *pAuth)			/* in, out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_CreateKey_TP(entry, hWrappingKey, keyUsageAuth,
+					migAuthorityApproval, migAuthorityDigest, keyDataSize,
+					keyData, pAuth);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_CMK_CreateTicket(TCS_CONTEXT_HANDLE hContext,	/* in */
+		     UINT32 publicVerifyKeySize,	/* in */
+		     BYTE *publicVerifyKey,		/* in */
+		     TPM_DIGEST signedData,		/* in */
+		     UINT32 sigValueSize,		/* in */
+		     BYTE *sigValue,			/* in */
+		     TPM_AUTH *ownerAuth,		/* in, out */
+		     TPM_HMAC *sigTicket)		/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_CreateTicket_TP(entry, publicVerifyKeySize,
+					publicVerifyKey, signedData, sigValueSize, sigValue,
+					ownerAuth, sigTicket);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_CMK_CreateBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
+		   TCS_KEY_HANDLE hParentKey,		/* in */
+		   TSS_MIGRATE_SCHEME migrationType,	/* in */
+		   UINT32 migKeyAuthSize,		/* in */
+		   BYTE *migKeyAuth,			/* in */
+		   TPM_DIGEST pubSourceKeyDigest,	/* in */
+		   UINT32 msaListSize,			/* in */
+		   BYTE *msaList,			/* in */
+		   UINT32 restrictTicketSize,		/* in */
+		   BYTE *restrictTicket,		/* in */
+		   UINT32 sigTicketSize,		/* in */
+		   BYTE *sigTicket,			/* in */
+		   UINT32 encDataSize,			/* in */
+		   BYTE *encData,			/* in */
+		   TPM_AUTH *pAuth,			/* in, out */
+		   UINT32 *randomSize,			/* out */
+		   BYTE **random,			/* out */
+		   UINT32 *outDataSize,			/* out */
+		   BYTE **outData)			/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_CreateBlob_TP(entry, hParentKey, migrationType,
+					migKeyAuthSize, migKeyAuth, pubSourceKeyDigest,
+					msaListSize, msaList, restrictTicketSize, restrictTicket,
+					sigTicketSize, sigTicket, encDataSize, encData, pAuth,
+					randomSize, random, outDataSize, outData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_CMK_ConvertMigration(TCS_CONTEXT_HANDLE hContext,	/* in */
+			 TCS_KEY_HANDLE hParentHandle,	/* in */
+			 TPM_CMK_AUTH restrictTicket,	/* in */
+			 TPM_HMAC sigTicket,		/* in */
+			 UINT32 keyDataSize,		/* in */
+			 BYTE *keyData,			/* in */
+			 UINT32 msaListSize,		/* in */
+			 BYTE *msaList,			/* in */	
+			 UINT32 randomSize,		/* in */
+			 BYTE *random,			/* in */
+			 TPM_AUTH *pAuth,		/* in, out */
+			 UINT32 *outDataSize,		/* out */
+			 BYTE **outData)		/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_CMK_ConvertMigration_TP(entry, hParentHandle, restrictTicket,
+					sigTicket, keyDataSize, keyData, msaListSize, msaList,
+					randomSize, random, pAuth, outDataSize, outData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+

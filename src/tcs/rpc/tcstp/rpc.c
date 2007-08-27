@@ -601,7 +601,13 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_CreateRevocableEndorsementKeyPair,"CreateRevocableEndorsementKeyPair"}, /* 110 */
 	{tcs_wrap_RevokeEndorsementKeyPair,"RevokeEndorsementKeyPair"},
 	{tcs_wrap_MakeIdentity2,"MakeIdentity2"},
-	{tcs_wrap_Quote2,"Quote2"}
+	{tcs_wrap_Quote2,"Quote2"},
+	{tcs_wrap_CMK_SetRestrictions,"CMK_SetRestrictions"},
+	{tcs_wrap_CMK_ApproveMA,"CMK_ApproveMA"}, /* 115 */
+	{tcs_wrap_CMK_CreateKey,"CMK_CreateKey"},
+	{tcs_wrap_CMK_CreateTicket,"CMK_CreateTicket"},
+	{tcs_wrap_CMK_CreateBlob,"CMK_CreateBlob"},
+	{tcs_wrap_CMK_ConvertMigration,"CMK_ConvertMigration"},
 };
 
 int

@@ -387,4 +387,20 @@ TSS_RESULT RPC_Delegate_VerifyDelegation_TP(struct host_table_entry *hte, UINT32
 #define RPC_Delegate_VerifyDelegation_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
+#ifdef TSS_BUILD_CMK
+TSS_RESULT RPC_CMK_SetRestrictions_TP(struct host_table_entry *hte, TSS_CMK_DELEGATE, TPM_AUTH *);
+TSS_RESULT RPC_CMK_ApproveMA_TP(struct host_table_entry *hte, TPM_DIGEST, TPM_AUTH *, TPM_HMAC *);
+TSS_RESULT RPC_CMK_CreateKey_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TPM_ENCAUTH, TPM_HMAC, TPM_DIGEST, UINT32 *, BYTE **, TPM_AUTH *);
+TSS_RESULT RPC_CMK_CreateTicket_TP(struct host_table_entry *hte, UINT32, BYTE *, TPM_DIGEST, UINT32, BYTE *, TPM_AUTH *, TPM_HMAC *);
+TSS_RESULT RPC_CMK_CreateBlob_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TSS_MIGRATE_SCHEME, UINT32, BYTE *, TPM_DIGEST, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **);
+TSS_RESULT RPC_CMK_ConvertMigration_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TPM_CMK_AUTH, TPM_HMAC, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
+#else
+#define RPC_CMK_SetRestrictions_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_CMK_ApproveMA_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_CMK_CreateKey_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_CMK_CreateTicket_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_CMK_CreateBlob_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_CMK_ConvertMigration_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
+
 #endif

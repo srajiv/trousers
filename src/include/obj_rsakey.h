@@ -21,6 +21,10 @@ struct tr_rsakey_obj {
 	TSS_HPOLICY migPolicy;
 	TSS_UUID uuid;
 	TCS_KEY_HANDLE tcsHandle;
+#ifdef TSS_BUILD_CMK
+	TPM_HMAC msaApproval;
+	TPM_DIGEST msaDigest;
+#endif
 };
 
 /* obj_rsakey.c */
@@ -82,6 +86,14 @@ TSS_RESULT obj_rsakey_get_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE *);
 TSS_RESULT obj_rsakey_set_tcs_handle(TSS_HKEY, TCS_KEY_HANDLE);
 void       obj_rsakey_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 TSS_RESULT obj_rsakey_get_transport_attribs(TSS_HKEY, TCS_KEY_HANDLE *, TPM_DIGEST *);
+#ifdef TSS_BUILD_CMK
+TSS_BOOL   obj_rsakey_is_cmk(TSS_HKEY);
+TSS_RESULT obj_rsakey_set_cmk(TSS_HKEY, UINT32);
+TSS_RESULT obj_rsakey_set_msa_approval(TSS_HKEY, UINT32, BYTE *);
+TSS_RESULT obj_rsakey_get_msa_approval(TSS_HKEY, UINT32 *, BYTE **);
+TSS_RESULT obj_rsakey_set_msa_digest(TSS_HKEY, UINT32, BYTE *);
+TSS_RESULT obj_rsakey_get_msa_digest(TSS_HKEY, UINT32 *, BYTE **);
+#endif
 
 #define RSAKEY_LIST_DECLARE		struct obj_list rsakey_list
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list

@@ -70,6 +70,7 @@ TSS_RESULT	   obj_tcskey_get_pubkeyhash(TCS_KEY_HANDLE, BYTE *);
 #include "obj_daa.h"
 #include "obj_nv.h"
 #include "obj_delfamily.h"
+#include "obj_migdata.h"
 
 
 TPM_LIST_DECLARE_EXTERN;
@@ -82,5 +83,6 @@ ENCDATA_LIST_DECLARE_EXTERN;
 DAA_LIST_DECLARE_EXTERN;
 NVSTORE_LIST_DECLARE_EXTERN;
 DELFAMILY_LIST_DECLARE_EXTERN;
+MIGDATA_LIST_DECLARE_EXTERN;
 
 #endif

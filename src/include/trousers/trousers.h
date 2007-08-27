@@ -46,7 +46,7 @@ void       Trspi_UnloadBlob_DIGEST(UINT64 *offset, BYTE *blob, TPM_DIGEST *diges
 TSS_RESULT Trspi_UnloadBlob_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_PUBKEY *pubKey);
 TSS_RESULT Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key);
 TSS_RESULT Trspi_UnloadBlob_KEY12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key);
-TSS_RESULT Trspi_UnloadBlob_MigrationKeyAuth(UINT64 *offset, BYTE *blob, TCPA_MIGRATIONKEYAUTH *migAuth);
+TSS_RESULT Trspi_UnloadBlob_MIGRATIONKEYAUTH(UINT64 *offset, BYTE *blob, TPM_MIGRATIONKEYAUTH *migAuth);
 TSS_RESULT Trspi_UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event);
 TSS_RESULT Trspi_UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info);
 TSS_RESULT Trspi_UnloadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info);
@@ -119,6 +119,9 @@ void Trspi_LoadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGA
 void Trspi_LoadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TABLE_ENTRY *entry);
 void Trspi_LoadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT *pcr);
 void Trspi_LoadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry);
+void Trspi_LoadBlob_MIGRATIONKEYAUTH(UINT64 *offset, BYTE *blob, TPM_MIGRATIONKEYAUTH *migAuth);
+void Trspi_LoadBlob_MSA_COMPOSITE(UINT64 *offset, BYTE *blob, TPM_MSA_COMPOSITE *msaComp);
+void Trspi_LoadBlob_CMK_AUTH(UINT64 *offset, BYTE *blob, TPM_CMK_AUTH *cmkAuth);
 
 /* Cryptographic Functions */
 
@@ -166,9 +169,11 @@ TSS_RESULT Trspi_Hash_TRANSPORT_LOG_IN(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_IN *l
 TSS_RESULT Trspi_Hash_TRANSPORT_LOG_OUT(Trspi_HashCtx *c, TPM_TRANSPORT_LOG_OUT *l);
 TSS_RESULT Trspi_Hash_CURRENT_TICKS(Trspi_HashCtx *c, TPM_CURRENT_TICKS *t);
 TSS_RESULT Trspi_Hash_SIGN_INFO(Trspi_HashCtx *c, TPM_SIGN_INFO *s);
+TSS_RESULT Trspi_Hash_MSA_COMPOSITE(Trspi_HashCtx *c, TPM_MSA_COMPOSITE *m);
 #define Trspi_Hash_DIGEST(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_NONCE(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_ENCAUTH(c, d)	Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
+#define Trspi_Hash_HMAC(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 
 
 UINT32 Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE*Secret, UINT32 BufSize, BYTE*Buf, BYTE*hmacOut);

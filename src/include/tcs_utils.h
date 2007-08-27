@@ -196,7 +196,6 @@ void LoadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
 void UnloadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
 void LoadBlob_Header(UINT16, UINT32, UINT32, BYTE *);
 TSS_RESULT UnloadBlob_Header(BYTE *, UINT32 *);
-void LoadBlob_MIGRATIONKEYAUTH(UINT64 *, BYTE *, TCPA_MIGRATIONKEYAUTH *);
 TSS_RESULT UnloadBlob_MIGRATIONKEYAUTH(UINT64 *, BYTE *, TCPA_MIGRATIONKEYAUTH *);
 void LoadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
@@ -1092,6 +1091,73 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 	TSS_RESULT TCSP_Delegate_VerifyDelegation_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
 							   UINT32		delegateSize,	/* in */
 							   BYTE*		delegate	/* in */
+	);
+
+	TSS_RESULT TCSP_CMK_SetRestrictions_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+						     TSS_CMK_DELEGATE	Restriction,	/* in */
+						     TPM_AUTH*		ownerAuth	/* in */
+	);
+
+	TSS_RESULT TCSP_CMK_ApproveMA_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+					       TPM_DIGEST		migAuthorityDigest,	/* in */
+					       TPM_AUTH*		ownerAuth,		/* in, out */
+					       TPM_HMAC*		HmacMigAuthDigest	/* out */
+	);
+
+	TSS_RESULT TCSP_CMK_CreateKey_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+					       TCS_KEY_HANDLE		hWrappingKey,		/* in */
+					       TPM_ENCAUTH		KeyUsageAuth,		/* in */
+					       TPM_HMAC			MigAuthApproval,	/* in */
+					       TPM_DIGEST		MigAuthorityDigest,	/* in */
+					       UINT32*			keyDataSize,		/* in, out */
+					       BYTE**			prgbKeyData,		/* in, out */
+					       TPM_AUTH*		pAuth			/* in, out */
+	);
+
+	TSS_RESULT TCSP_CMK_CreateTicket_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						  UINT32		PublicVerifyKeySize,	/* in */
+						  BYTE*			PublicVerifyKey,	/* in */
+						  TPM_DIGEST		SignedData,		/* in */
+						  UINT32		SigValueSize,		/* in */
+						  BYTE*			SigValue,		/* in */
+						  TPM_AUTH*		pOwnerAuth,		/* in, out */
+						  TPM_HMAC*		SigTicket		/* out */
+	);
+
+	TSS_RESULT TCSP_CMK_CreateBlob_Internal(TCS_CONTEXT_HANDLE	hContext,		/* in */
+						TCS_KEY_HANDLE		parentHandle,		/* in */
+						TSS_MIGRATE_SCHEME	migrationType,		/* in */
+						UINT32			MigrationKeyAuthSize,	/* in */
+						BYTE*			MigrationKeyAuth,	/* in */
+						TPM_DIGEST		PubSourceKeyDigest,	/* in */
+						UINT32			msaListSize,		/* in */
+						BYTE*			msaList,		/* in */
+						UINT32			restrictTicketSize,	/* in */
+						BYTE*			restrictTicket,		/* in */
+						UINT32			sigTicketSize,		/* in */
+						BYTE*			sigTicket,		/* in */
+						UINT32			encDataSize,		/* in */
+						BYTE*			encData,		/* in */
+						TPM_AUTH*		parentAuth,		/* in, out */
+						UINT32*			randomSize,		/* out */
+						BYTE**			random,			/* out */
+						UINT32*			outDataSize,		/* out */
+						BYTE**			outData			/* out */
+	);
+
+	TSS_RESULT TCSP_CMK_ConvertMigration_Internal(TCS_CONTEXT_HANDLE	hContext,	/* in */
+						      TCS_KEY_HANDLE		parentHandle,	/* in */
+						      TPM_CMK_AUTH		restrictTicket,	/* in */
+						      TPM_HMAC			sigTicket,	/* in */
+						      UINT32			keyDataSize,	/* in */
+						      BYTE*			prgbKeyData,	/* in */
+						      UINT32			msaListSize,	/* in */
+						      BYTE*			msaList,	/* in */
+						      UINT32			randomSize,	/* in */
+						      BYTE*			random,		/* in */
+						      TPM_AUTH*			parentAuth,	/* in, out */
+						      UINT32*			outDataSize,	/* out */
+						      BYTE**			outData		/* out */
 	);
 
 #endif /*_TCS_UTILS_H_ */

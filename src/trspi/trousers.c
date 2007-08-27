@@ -2283,3 +2283,59 @@ Trspi_UnloadBlob_PCR_COMPOSITE(UINT64 *offset, BYTE *blob, TCPA_PCR_COMPOSITE *o
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+Trspi_UnloadBlob_MIGRATIONKEYAUTH(UINT64 *offset, BYTE *blob, TPM_MIGRATIONKEYAUTH *migAuth)
+{
+	TSS_RESULT result;
+
+	if ((result = Trspi_UnloadBlob_PUBKEY(offset, blob, &migAuth->migrationKey)))
+		return result;
+
+	Trspi_UnloadBlob_UINT16(offset, &migAuth->migrationScheme, blob);
+	Trspi_UnloadBlob_DIGEST(offset, blob, &migAuth->digest);
+
+	return TSS_SUCCESS;
+}
+
+void
+Trspi_LoadBlob_MIGRATIONKEYAUTH(UINT64 *offset, BYTE *blob, TPM_MIGRATIONKEYAUTH *migAuth)
+{
+	Trspi_LoadBlob_PUBKEY(offset, blob, &migAuth->migrationKey);
+	Trspi_LoadBlob_UINT16(offset, migAuth->migrationScheme, blob);
+	Trspi_LoadBlob_DIGEST(offset, blob, &migAuth->digest);
+}
+
+void
+Trspi_LoadBlob_MSA_COMPOSITE(UINT64 *offset, BYTE *blob, TPM_MSA_COMPOSITE *msaComp)
+{
+	UINT32 i;
+
+	Trspi_LoadBlob_UINT32(offset, msaComp->MSAlist, blob);
+	for (i = 0; i < msaComp->MSAlist; i++)
+		Trspi_LoadBlob_DIGEST(offset, blob, &msaComp->migAuthDigest[i]); 
+}
+
+void
+Trspi_LoadBlob_CMK_AUTH(UINT64 *offset, BYTE *blob, TPM_CMK_AUTH *cmkAuth)
+{
+	Trspi_LoadBlob_DIGEST(offset, blob, &cmkAuth->migrationAuthorityDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, &cmkAuth->destinationKeyDigest);
+	Trspi_LoadBlob_DIGEST(offset, blob, &cmkAuth->sourceKeyDigest);
+}
+
+TSS_RESULT
+Trspi_Hash_MSA_COMPOSITE(Trspi_HashCtx *c, TPM_MSA_COMPOSITE *m)
+{
+	UINT32 i;
+	TPM_DIGEST *digest;
+	TSS_RESULT result;
+
+	result = Trspi_Hash_UINT32(c, m->MSAlist);
+	digest = m->migAuthDigest;
+	for (i = 0; i < m->MSAlist; i++) {
+		result |= Trspi_Hash_DIGEST(c, digest->digest);
+		digest++;
+	}
+
+	return result;
+}
