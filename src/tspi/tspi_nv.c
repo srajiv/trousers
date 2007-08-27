@@ -70,7 +70,7 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	TSS_BOOL bExpired;
 	TCPA_SECRET usageSec;
 
-	if((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
+	if ((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
 		return result;
 
 	memset(&nv_data_public, 0, sizeof(NV_DATA_PUBLIC));
@@ -237,7 +237,9 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 	UINT32 mode;
 	TCPA_SECRET usageSec;
 
-	if((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
+	memset(&nv_data_public, 0, sizeof(NV_DATA_PUBLIC));
+
+	if ((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
 		return result;
 
 	if ((result = obj_nvstore_get_index(hNvstore, &nv_data_public.nvIndex)))
