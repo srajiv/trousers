@@ -31,12 +31,13 @@ Transport_Sign(TSS_HCONTEXT tspContext,    /* in */
 	       UINT32 * sigSize,   /* out */
 	       BYTE ** sig)        /* out */
 {
+	UINT64 offset;
 	TSS_RESULT result;
-	UINT32 handlesLen, decLen;
+	UINT32 handlesLen, decLen, dataLen;
 	TCS_HANDLE *handles, handle;
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
-	BYTE *dec;
+	BYTE *dec, *data;
 
 
 	if ((result = obj_context_transport_init(tspContext)))
@@ -56,13 +57,34 @@ Transport_Sign(TSS_HCONTEXT tspContext,    /* in */
 	handle = keyHandle;
 	handles = &handle;
 
-	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Sign, areaToSignSize,
-						    areaToSign, &pubKeyHash, &handlesLen, &handles,
-						    privAuth, NULL, &decLen, &dec)))
-		return result;
+	dataLen = sizeof(UINT32) + areaToSignSize;
+	if ((data = malloc(dataLen)) == NULL) {
+		LogError("malloc of %u bytes failed", dataLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
 
-	*sigSize = decLen;
-	*sig = dec;
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, areaToSignSize, data);
+	Trspi_LoadBlob(&offset, areaToSignSize, data, areaToSign);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_Sign, dataLen, data,
+						    &pubKeyHash, &handlesLen, &handles,
+						    privAuth, NULL, &decLen, &dec))) {
+		free(data);
+		return result;
+	}
+	free(data);
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, sigSize, dec);
+
+	if ((*sig = malloc(*sigSize)) == NULL) {
+		free(dec);
+		LogError("malloc of %u bytes failed", *sigSize);
+		*sigSize = 0;
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(&offset, *sigSize, dec, *sig);
 
 	return result;
 }
