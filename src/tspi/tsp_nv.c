@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2006
+ * (C) Copyright International Business Machines Corp. 2007
  *
  */
 
