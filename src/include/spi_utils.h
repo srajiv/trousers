@@ -578,7 +578,7 @@ struct tcs_api_table {
 #ifdef TSS_BUILD_TSS12
 	TSS_RESULT (*SetOperatorAuth)(TSS_HCONTEXT, TPM_SECRET *);
 #endif
-#ifdef TSS_BUILD_DELEGATE
+#ifdef TSS_BUILD_DELEGATION
 	TSS_RESULT (*Delegate_Manage)(TSS_HCONTEXT, TPM_FAMILY_ID, TPM_FAMILY_OPERATION, UINT32,
 				      BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
 	TSS_RESULT (*Delegate_CreateKeyDelegation)(TSS_HCONTEXT, TCS_KEY_HANDLE, UINT32, BYTE *,

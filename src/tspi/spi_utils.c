@@ -161,7 +161,7 @@ struct tcs_api_table tcs_normal_api = {
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = RPC_SetOperatorAuth,
 #endif
-#ifdef TSS_BUILD_DELEGATE
+#ifdef TSS_BUILD_DELEGATION
 	.Delegate_Manage = RPC_Delegate_Manage,
 	.Delegate_CreateKeyDelegation = RPC_Delegate_CreateKeyDelegation,
 	.Delegate_CreateOwnerDelegation = RPC_Delegate_CreateOwnerDelegation,
@@ -303,7 +303,7 @@ struct tcs_api_table tcs_transport_api = {
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = Transport_SetOperatorAuth,
 #endif
-#ifdef TSS_BUILD_DELEGATE
+#ifdef TSS_BUILD_DELEGATION
 	.Delegate_Manage = Transport_Delegate_Manage,
 	.Delegate_CreateKeyDelegation = Transport_Delegate_CreateKeyDelegation,
 	.Delegate_CreateOwnerDelegation = Transport_Delegate_CreateOwnerDelegation,
