@@ -110,6 +110,33 @@ obj_is_context(TSS_HOBJECT hObject)
 	return answer;
 }
 
+/* Clean up transport session if necessary. */
+void
+obj_context_close(TSS_HCONTEXT tspContext)
+{
+	struct tsp_object *obj;
+	struct tr_context_obj *context;
+
+	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
+		return;
+
+	context = (struct tr_context_obj *)obj->data;
+
+	if (context->transAuth.AuthHandle) {
+		RPC_FlushSpecific(tspContext, context->transAuth.AuthHandle, TPM_RT_TRANS);
+
+		memset(&context->transPub, 0, sizeof(TPM_TRANSPORT_PUBLIC));
+		memset(&context->transMod, 0, sizeof(TPM_MODIFIER_INDICATOR));
+		memset(&context->transSecret, 0, sizeof(TPM_TRANSPORT_AUTH));
+		memset(&context->transAuth, 0, sizeof(TPM_AUTH));
+		memset(&context->transLogIn, 0, sizeof(TPM_TRANSPORT_LOG_IN));
+		memset(&context->transLogOut, 0, sizeof(TPM_TRANSPORT_LOG_OUT));
+		memset(&context->transLogDigest, 0, sizeof(TPM_DIGEST));
+	}
+
+	obj_list_put(&context_list);
+}
+
 TSS_RESULT
 obj_context_get_policy(TSS_HCONTEXT tspContext, UINT32 policyType, TSS_HPOLICY *phPolicy)
 {
