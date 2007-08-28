@@ -149,8 +149,8 @@ TSS_BOOL ctx_has_key_loaded(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE);
 void       ctx_ref_count_keys(struct tcs_context *);
 struct tcs_context *get_context(TCS_CONTEXT_HANDLE);
 TSS_RESULT ctx_req_exclusive_transport(TCS_CONTEXT_HANDLE);
-TSS_RESULT ctx_set_transport_enabled(TCS_CONTEXT_HANDLE, UINT32);
-TSS_RESULT ctx_transport_is_encrypted(TCS_CONTEXT_HANDLE, UINT32 *);
+TSS_RESULT ctx_set_transport_enabled(TCS_CONTEXT_HANDLE, TPM_TRANSHANDLE);
+TSS_RESULT ctx_set_transport_disabled(TCS_CONTEXT_HANDLE, TCS_HANDLE *);
 
 #ifdef TSS_BUILD_KEY
 #define CTX_ref_count_keys(c)	ctx_ref_count_keys(c)
@@ -237,6 +237,7 @@ void UnloadBlob_AUTHDATA(UINT64 *, BYTE *, TPM_AUTHDATA *);
 #define LoadBlob_ENCAUTH(a, b, c)	LoadBlob_AUTHDATA(a, b, c)
 #define UnloadBlob_ENCAUTH(a, b, c)	UnloadBlob_AUTHDATA(a, b, c)
 
+void UnloadBlob_CURRENT_TICKS(UINT64 *, BYTE *, TPM_CURRENT_TICKS *);
 TSS_RESULT UnloadBlob_PCR_INFO_SHORT(UINT64 *, BYTE *, TPM_PCR_INFO_SHORT *);
 
 TSS_RESULT Hash(UINT32, UINT32, BYTE *, BYTE *);
@@ -260,6 +261,7 @@ TSS_RESULT load_key_final(TCS_CONTEXT_HANDLE, TCS_KEY_HANDLE, TCS_KEY_HANDLE *, 
 TSS_RESULT LoadKeyByBlob_Internal(UINT32,TCS_CONTEXT_HANDLE,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,
 				  TCS_KEY_HANDLE *,TCS_KEY_HANDLE *);
 TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
+TSS_RESULT TCSP_FlushSpecific_Common(UINT32, TPM_RESOURCE_TYPE);
 
 	TSS_RESULT TCSP_GetRegisteredKeyByPublicInfo_Internal(TCS_CONTEXT_HANDLE tcsContext, TCPA_ALGORITHM_ID algID,	/* in */
 							       UINT32 ulPublicInfoLength,	/* in */
@@ -1158,6 +1160,10 @@ TSS_RESULT TSC_PhysicalPresence_Internal(UINT16 physPres);
 						      TPM_AUTH*			parentAuth,	/* in, out */
 						      UINT32*			outDataSize,	/* out */
 						      BYTE**			outData		/* out */
+	);
+	TSS_RESULT TCSP_FlushSpecific_Internal(TCS_CONTEXT_HANDLE hContext,        /* in */
+					       TCS_HANDLE hResHandle,      /* in */
+					       TPM_RESOURCE_TYPE resourceType /* in */
 	);
 
 #endif /*_TCS_UTILS_H_ */
