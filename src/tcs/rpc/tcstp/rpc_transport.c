@@ -137,7 +137,7 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
 	TPM_COMMAND_CODE unWrappedCommandOrdinal;
-	TCS_HANDLE *rghHandles;
+	TCS_HANDLE *rghHandles = NULL, handles[2];
 	UINT32 ulWrappedCmdDataInSize, pulHandleListSize, ulWrappedCmdDataOutSize, i = 0;
 	BYTE *rgbWrappedCmdDataIn, *rgbWrappedCmdDataOut;
 	TPM_MODIFIER_INDICATOR pbLocality;
@@ -170,20 +170,19 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
+	if (pulHandleListSize > 2) {
+		free(rgbWrappedCmdDataIn);
+		return TCSERR(TSS_E_BAD_PARAMETER);
+	}
+
 	if (pulHandleListSize) {
-		rghHandles = (TCS_HANDLE *)malloc(pulHandleListSize * sizeof(UINT32));
-		if (rghHandles == NULL) {
-			free(rgbWrappedCmdDataIn);
-			LogError("malloc of %zd bytes failed.", pulHandleListSize * sizeof(UINT32));
-			return TCSERR(TSS_E_INTERNAL_ERROR);
-		}
-		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, rghHandles,
+		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, handles,
 			    pulHandleListSize * sizeof(UINT32), &data->comm)) {
 			free(rgbWrappedCmdDataIn);
-			free(rghHandles);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
+	rghHandles = handles;
 
 	memset(&null_auth, 0, sizeof(TPM_AUTH));
 	memset(&pWrappedCmdAuth1, 0, sizeof(TPM_AUTH));
@@ -191,17 +190,14 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 
 	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pWrappedCmdAuth1, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
-		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pWrappedCmdAuth2, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
-		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (getData(TCSD_PACKET_TYPE_AUTH, i++, &pTransAuth, 0, &data->comm)) {
 		free(rgbWrappedCmdDataIn);
-		free(rghHandles);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -232,18 +228,15 @@ tcs_wrap_ExecuteTransport(struct tcsd_thread_data *data)
 		i = 0;
 		initData(&data->comm, 10);
 		if (setData(TCSD_PACKET_TYPE_UINT32, i++, &pulHandleListSize, 0, &data->comm)) {
-			free(rghHandles);
 			free(rgbWrappedCmdDataOut);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		if (pulHandleListSize) {
 			if (setData(TCSD_PACKET_TYPE_PBYTE, i++, rghHandles,
 				    pulHandleListSize * sizeof(UINT32), &data->comm)) {
-				free(rghHandles);
 				free(rgbWrappedCmdDataOut);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
-			free(rghHandles);
 		}
 		if (pAuth1) {
 			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pAuth1, 0, &data->comm)) {
