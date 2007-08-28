@@ -106,13 +106,15 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 			UnloadBlob_Auth(&offset1, b, auth1);
 		}
 
-		offset1 = TSS_TPM_TXBLOB_HDR_LEN;
-		*len1 = sizeof(TPM_CURRENT_TICKS);
+		offset1 = offset2 = TSS_TPM_TXBLOB_HDR_LEN;
+		UnloadBlob_CURRENT_TICKS(&offset2, b, NULL);
+		*len1 = (UINT32)offset2 - offset1;
 
 		if ((*blob1 = malloc(*len1)) == NULL) {
 			LogError("malloc of %u bytes failed", *len1);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
+
 		UnloadBlob(&offset1, *len1, b, *blob1);
                 UnloadBlob_UINT32(&offset1, len2, b);
 
@@ -843,6 +845,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	case TPM_ORD_OwnerClear:
 	case TPM_ORD_Delegate_LoadOwnerDelegation:
 	case TPM_ORD_CMK_SetRestrictions:
+	case TPM_ORD_FlushSpecific:
 	{
 		TPM_AUTH *auth = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
@@ -2036,6 +2039,20 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		} else {
 			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
 		}
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	case TPM_ORD_FlushSpecific:
+	{
+		UINT32 val1 = va_arg(ap, UINT32);
+		UINT32 val2 = va_arg(ap, UINT32);
+		va_end(ap);
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, val1, out_blob);
+		LoadBlob_UINT32(outOffset, val2, out_blob);
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
 
 		result = TSS_SUCCESS;
 		break;
