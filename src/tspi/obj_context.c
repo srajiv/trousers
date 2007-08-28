@@ -1064,8 +1064,9 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 
 	/* Refresh nonceOdd for continued transport auth session */
 	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
-				       (BYTE **)pTransAuth->NonceOdd.nonce)))
+				       (BYTE **)pTransAuth->NonceOdd.nonce))) {
 		LogError("Failed creating random nonce");
+	}
 
 done:
 	free(enc);

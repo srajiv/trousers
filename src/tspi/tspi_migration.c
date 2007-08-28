@@ -35,7 +35,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 	TSS_HPOLICY hOwnerPolicy;
 	UINT32 migrationKeySize;
 	BYTE *migrationKeyBlob;
-	TSS_KEY tcpaKey;
+	TSS_KEY tssKey;
 	BYTE pubKeyBlob[0x1000];
 	TPM_AUTH ownerAuth;
 	UINT32 pubKeySize;
@@ -83,8 +83,8 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 
 	/* First, turn the keyBlob into a TSS_KEY structure */
 	offset = 0;
-	memset(&tcpaKey, 0, sizeof(TSS_KEY));
-	if ((result = UnloadBlob_TSS_KEY(&offset, migrationKeyBlob, &tcpaKey))) {
+	memset(&tssKey, 0, sizeof(TSS_KEY));
+	if ((result = UnloadBlob_TSS_KEY(&offset, migrationKeyBlob, &tssKey))) {
 		free_tspi(tspContext, migrationKeyBlob);
 		return result;
 	}
@@ -92,10 +92,10 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 
 	/* Then pull the _PUBKEY portion out of that struct into a blob */
 	offset = 0;
-	Trspi_LoadBlob_KEY_PARMS(&offset, pubKeyBlob, &tcpaKey.algorithmParms);
-	Trspi_LoadBlob_STORE_PUBKEY(&offset, pubKeyBlob, &tcpaKey.pubKey);
+	Trspi_LoadBlob_KEY_PARMS(&offset, pubKeyBlob, &tssKey.algorithmParms);
+	Trspi_LoadBlob_STORE_PUBKEY(&offset, pubKeyBlob, &tssKey.pubKey);
 	pubKeySize = offset;
-	free_key_refs(&tcpaKey);
+	free_key_refs(&tssKey);
 
 	/* Auth */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -156,23 +156,23 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	TPM_AUTH *pParentAuth;
 	TCPA_RESULT result;
 	UINT64 offset;
-	BYTE hashblob[0x1000];
 	TCPA_DIGEST digest;
-	UINT32 parentKeySize;
-	BYTE *parentKeyBlob;
 	UINT32 keyToMigrateSize;
-	BYTE *keyToMigrateBlob;
+	BYTE *keyToMigrateBlob = NULL;
 	TSS_HPOLICY hParentPolicy;
 	TSS_HPOLICY hMigratePolicy;
 	TCPA_MIGRATIONKEYAUTH migAuth;
-	TSS_KEY tcpaKey;
+	TSS_KEY tssKey;
 	TCS_KEY_HANDLE parentHandle;
 	TSS_BOOL parentUsesAuth;
+	UINT32 randomSize;
+	BYTE *random = NULL;
 	UINT32 blobSize;
-	BYTE *blob;
-	TSS_KEY keyContainer;
+	BYTE *blob = NULL;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
+
+	memset(&tssKey, 0, sizeof(TSS_KEY));
 
 	if (pulRandomLength == NULL || prgbRandom == NULL || rgbMigTicket == NULL ||
 	    pulMigrationBlobLength == NULL || prgbMigrationBlob == NULL)
@@ -184,26 +184,23 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
 		return result;
 
-	if ((result = obj_rsakey_get_blob(hParentKey, &parentKeySize, &parentKeyBlob)))
-		return result;
-
 	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &keyToMigrateSize, &keyToMigrateBlob)))
-		return result;
+		goto done;
 
 	if ((result = obj_rsakey_get_policy(hParentKey, TSS_POLICY_USAGE, &hParentPolicy,
 					    &parentUsesAuth)))
-		return result;
+		goto done;
 
 	if ((result = obj_rsakey_get_policy(hKeyToMigrate, TSS_POLICY_MIGRATION, &hMigratePolicy,
 					    NULL)))
-		return result;
+		goto done;
 
 	/*  Parsing the migration scheme from the blob and key object */
 	memset(&migAuth, 0, sizeof(TCPA_MIGRATIONKEYAUTH));
 
 	offset = 0;
 	if ((result = Trspi_UnloadBlob_MIGRATIONKEYAUTH(&offset, rgbMigTicket, &migAuth)))
-		return result;
+		goto done;
 
 	/* free these now, since none are used below */
 	free(migAuth.migrationKey.algorithmParms.parms);
@@ -211,131 +208,97 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	free(migAuth.migrationKey.pubKey.key);
 	migAuth.migrationKey.pubKey.keyLength = 0;
 
-	memset(&tcpaKey, 0, sizeof(TSS_KEY));
-
 	offset = 0;
-	if ((result = UnloadBlob_TSS_KEY(&offset, keyToMigrateBlob, &tcpaKey)))
-		return result;
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyToMigrateBlob, &tssKey)))
+		goto done;
 
 	/* Generate the Authorization data */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_CreateMigrationBlob);
 	result |= Trspi_Hash_UINT16(&hashCtx, migAuth.migrationScheme);
 	result |= Trspi_HashUpdate(&hashCtx, ulMigTicketLength, rgbMigTicket);
-	result |= Trspi_Hash_UINT32(&hashCtx, tcpaKey.encSize);
-	result |= Trspi_HashUpdate(&hashCtx, tcpaKey.encSize, tcpaKey.encData);
+	result |= Trspi_Hash_UINT32(&hashCtx, tssKey.encSize);
+	result |= Trspi_HashUpdate(&hashCtx, tssKey.encSize, tssKey.encData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto done;
 
 	if (parentUsesAuth) {
 		if ((result = secret_PerformAuth_OIAP(hParentPolicy, TPM_ORD_CreateMigrationBlob,
 						      hParentPolicy, FALSE, &digest,
-						      &parentAuth))) {
-			free_key_refs(&tcpaKey);
-			return result;
-		}
+						      &parentAuth)))
+			goto done;
 		pParentAuth = &parentAuth;
 	} else {
 		pParentAuth = NULL;
 	}
 
 	if ((result = secret_PerformAuth_OIAP(hKeyToMigrate, TPM_ORD_CreateMigrationBlob,
-					      hMigratePolicy, FALSE, &digest, &entityAuth))) {
-		free_key_refs(&tcpaKey);
-		return result;
-	}
+					      hMigratePolicy, FALSE, &digest, &entityAuth)))
+		goto done;
 
 	if ((result = obj_rsakey_get_tcs_handle(hParentKey, &parentHandle)))
-		return result;
+		goto done;
 
 	if ((result = TCS_API(tspContext)->CreateMigrationBlob(tspContext, parentHandle,
 							       migAuth.migrationScheme,
 							       ulMigTicketLength, rgbMigTicket,
-							       tcpaKey.encSize, tcpaKey.encData,
+							       tssKey.encSize, tssKey.encData,
 							       pParentAuth, &entityAuth,
-							       pulRandomLength, prgbRandom,
-							       pulMigrationBlobLength,
-							       prgbMigrationBlob))) {
-		free_key_refs(&tcpaKey);
-		return result;
-	}
-	free_key_refs(&tcpaKey);
+							       &randomSize, &random,
+							       &blobSize, &blob)))
+		goto done;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_CreateMigrationBlob);
-	result |= Trspi_Hash_UINT32(&hashCtx, *pulRandomLength);
-	result |= Trspi_HashUpdate(&hashCtx, *pulRandomLength, *prgbRandom);
-	result |= Trspi_Hash_UINT32(&hashCtx, *pulMigrationBlobLength);
-	result |= Trspi_HashUpdate(&hashCtx, *pulMigrationBlobLength, *prgbMigrationBlob);
+	result |= Trspi_Hash_UINT32(&hashCtx, randomSize);
+	result |= Trspi_HashUpdate(&hashCtx, randomSize, random);
+	result |= Trspi_Hash_UINT32(&hashCtx, blobSize);
+	result |= Trspi_HashUpdate(&hashCtx, blobSize, blob);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		goto error;
+		goto done;
 
 	if (parentUsesAuth) {
 		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
-			goto error;
+			goto done;
 	}
 
 	if ((result = obj_policy_validate_auth_oiap(hMigratePolicy, &digest, &entityAuth)))
-		goto error;
+		goto done;
 
-	if (migAuth.migrationScheme == TCPA_MS_REWRAP) {
-		/* XXX update all this mess */
-		if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
-			goto error;
+	free(tssKey.encData);
+	tssKey.encSize = blobSize;
+	tssKey.encData = blob;
+	/* Set blob to null since it will now be freed during key ref freeing */
+	blob = NULL;
 
-		memset(&keyContainer, 0, sizeof(TSS_KEY));
-
-		offset = 0;
-		if ((result = UnloadBlob_TSS_KEY(&offset, blob, &keyContainer)))
-			goto error;
-
-		if (keyContainer.encSize > 0)
-			free(keyContainer.encData);
-
-		keyContainer.encSize = *pulMigrationBlobLength;
-		keyContainer.encData = *prgbMigrationBlob;
-
-		offset = 0;
-		LoadBlob_TSS_KEY(&offset, hashblob, &keyContainer);
-
-		/* Free manually here since free_key_refs() would free encData, ugh. */
-		free(keyContainer.algorithmParms.parms);
-		keyContainer.algorithmParms.parms = NULL;
-		keyContainer.algorithmParms.parmSize = 0;
-
-		free(keyContainer.pubKey.key);
-		keyContainer.pubKey.key = NULL;
-		keyContainer.pubKey.keyLength = 0;
-
-		free(keyContainer.PCRInfo);
-		keyContainer.PCRInfo = NULL;
-		keyContainer.PCRInfoSize = 0;
-
-		if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate, offset, hashblob)))
-			goto error;
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, NULL, &tssKey);
+	
+	*pulMigrationBlobLength = offset;
+	*prgbMigrationBlob = calloc_tspi(tspContext, *pulMigrationBlobLength);
+	if (*prgbMigrationBlob == NULL) {
+		LogError("malloc of %u bytes failed.", *pulMigrationBlobLength);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
 	}
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, *prgbMigrationBlob, &tssKey);
 
-	if (*pulRandomLength) {
-		if ((result = add_mem_entry(tspContext, *prgbRandom)))
-			goto error;
+	if (randomSize) {
+		if ((result = add_mem_entry(tspContext, random)))
+			goto done;
 	}
+	*pulRandomLength = randomSize;
+	*prgbRandom = random;
 
-	if ((result = add_mem_entry(tspContext, *prgbMigrationBlob))) {
-		free_tspi(tspContext, *prgbRandom);
-		*pulRandomLength = 0;
-		goto error2;
-	}
+done:
+	if (result)
+		free(random);
+	free_tspi(tspContext, keyToMigrateBlob);
+	free_key_refs(&tssKey);
+	free(blob);
 
-	return result;
-error:
-	if (*pulRandomLength) {
-		*pulRandomLength = 0;
-		free(*prgbRandom);
-	}
-error2:
-	*pulMigrationBlobLength = 0;
-	free(*prgbMigrationBlob);
 	return result;
 }
 
@@ -348,8 +311,9 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 			      BYTE * rgbMigrationBlob)		/* in */
 {
 	TCPA_RESULT result;
+	TSS_KEY tssKey;
 	UINT32 outDataSize;
-	BYTE *outData;
+	BYTE *outData = NULL;
 	TCS_KEY_HANDLE parentHandle;
 	TPM_AUTH parentAuth;
 	TSS_HPOLICY hParentPolicy;
@@ -358,6 +322,9 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	TPM_AUTH *pParentAuth;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
+	UINT64 offset;
+
+	memset(&tssKey, 0, sizeof(TSS_KEY));
 
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &tspContext)))
 		return result;
@@ -374,31 +341,35 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 					&hParentPolicy, &useAuth)))
 		return result;
 
+	offset = 0;
+	if ((result = UnloadBlob_TSS_KEY(&offset, rgbMigrationBlob, &tssKey)))
+		return result;
+
 	/* Generate the authorization */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ConvertMigrationBlob);
-	result |= Trspi_Hash_UINT32(&hashCtx, ulMigrationBlobLength);
-	result |= Trspi_HashUpdate(&hashCtx, ulMigrationBlobLength, rgbMigrationBlob);
+	result |= Trspi_Hash_UINT32(&hashCtx, tssKey.encSize);
+	result |= Trspi_HashUpdate(&hashCtx, tssKey.encSize, tssKey.encData);
 	result |= Trspi_Hash_UINT32(&hashCtx, ulRandomLength);
 	result |= Trspi_HashUpdate(&hashCtx, ulRandomLength, rgbRandom);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto done;
 
 	if (useAuth) {
 		if ((result = secret_PerformAuth_OIAP(hParentPolicy, TPM_ORD_ConvertMigrationBlob,
 						      hParentPolicy, FALSE, &digest, &parentAuth)))
-			return result;
+			goto done;
 		pParentAuth = &parentAuth;
 	} else {
 		pParentAuth = NULL;
 	}
 
 	if ((result = TCS_API(tspContext)->ConvertMigrationBlob(tspContext, parentHandle,
-								ulMigrationBlobLength,
-								rgbMigrationBlob, ulRandomLength,
-								rgbRandom, pParentAuth,
+								tssKey.encSize, tssKey.encData,
+								ulRandomLength, rgbRandom,
+								pParentAuth,
 								&outDataSize, &outData)))
-		return result;
+		goto done;
 
 	/* add validation */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -406,19 +377,21 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ConvertMigrationBlob);
 	result |= Trspi_Hash_UINT32(&hashCtx, outDataSize);
 	result |= Trspi_HashUpdate(&hashCtx, outDataSize, outData);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
-		free(outData);
-		return result;
-	}
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto done;
 
 	if (useAuth) {
-		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth))) {
-			free(outData);
-			return result;
-		}
+		if ((result = obj_policy_validate_auth_oiap(hParentPolicy, &digest, &parentAuth)))
+			goto done;
 	}
 
+	/* Set the key object to the now migrated key */
+	if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate, ulMigrationBlobLength, rgbMigrationBlob)))
+		goto done;
 	result = obj_rsakey_set_privkey(hKeyToMigrate, TRUE, outDataSize, outData);
+
+done:
+	free_key_refs(&tssKey);
 	free(outData);
 
 	return result;

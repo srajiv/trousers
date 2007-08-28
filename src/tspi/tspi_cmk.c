@@ -208,19 +208,22 @@ Tspi_Key_CMKCreateBlob(TSS_HKEY     hKeyToMigrate,	/* in */
 	UINT32 migTicketSize;
 	BYTE *migTicket = NULL;
 	TPM_MIGRATIONKEYAUTH tpmMigKeyAuth;
-	UINT32 msaListSize, restrictTicketSize, sigTicketSize, encDataSize;
-	BYTE *msaList = NULL, *restrictTicket = NULL;
-	BYTE *sigTicket = NULL, *encData = NULL;
+	UINT32 msaListSize, restrictTicketSize, sigTicketSize, blobSize;
+	BYTE *msaList = NULL, *restrictTicket = NULL, *blob = NULL;
+	BYTE *sigTicket = NULL;
 	UINT32 pubBlobSize;
 	BYTE *pubBlob = NULL;
 	TPM_DIGEST srcPubKeyDigest;
-	UINT32 randomDataSize, outDataSize;
-	BYTE *randomData = NULL, *outData = NULL;
+	TSS_KEY tssKey;
+	UINT32 randomDataSize, outDataSize, newBlobSize;
+	BYTE *randomData = NULL, *outData = NULL, *newBlob = NULL;
 	Trspi_HashCtx hashCtx;
 	TPM_DIGEST digest;
 	TPM_AUTH parentAuth, *pAuth;
 	UINT64 offset;
 	TSS_RESULT result;
+
+	memset(&tssKey, 0, sizeof(tssKey));
 
 	if (!pulRandomLength || !prgbRandom)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -269,7 +272,11 @@ Tspi_Key_CMKCreateBlob(TSS_HKEY     hKeyToMigrate,	/* in */
 		sigTicketSize = 0;
 	}
 
-	if ((result = obj_rsakey_get_priv_blob(hKeyToMigrate, &encDataSize, &encData)))
+	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &blobSize, &blob)))
+		goto done;
+
+	offset = 0;
+	if ((result = UnloadBlob_TSS_KEY(&offset, blob, &tssKey)))
 		goto done;
 
 	if (usageAuth) {
@@ -286,8 +293,8 @@ Tspi_Key_CMKCreateBlob(TSS_HKEY     hKeyToMigrate,	/* in */
 		result |= Trspi_HashUpdate(&hashCtx, restrictTicketSize, restrictTicket);
 		result |= Trspi_Hash_UINT32(&hashCtx, sigTicketSize);
 		result |= Trspi_HashUpdate(&hashCtx, sigTicketSize, sigTicket);
-		result |= Trspi_Hash_UINT32(&hashCtx, encDataSize);
-		result |= Trspi_HashUpdate(&hashCtx, encDataSize, encData);
+		result |= Trspi_Hash_UINT32(&hashCtx, tssKey.encSize);
+		result |= Trspi_HashUpdate(&hashCtx, tssKey.encSize, tssKey.encData);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			goto done;
 
@@ -300,7 +307,7 @@ Tspi_Key_CMKCreateBlob(TSS_HKEY     hKeyToMigrate,	/* in */
 	if ((result = RPC_CMK_CreateBlob(hContext, tcsKeyHandle, migScheme,
 			migTicketSize, migTicket, srcPubKeyDigest, msaListSize, msaList,
 			restrictTicketSize, restrictTicket, sigTicketSize, sigTicket,
-			encDataSize, encData, pAuth, &randomDataSize, &randomData,
+			tssKey.encSize, tssKey.encData, pAuth, &randomDataSize, &randomData,
 			&outDataSize, &outData)))
 		goto done;
 
@@ -319,7 +326,26 @@ Tspi_Key_CMKCreateBlob(TSS_HKEY     hKeyToMigrate,	/* in */
 	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, pAuth)))
 		goto done;
 
-	if ((result = obj_migdata_set_blob(hMigrationData, outDataSize, outData)))
+	/* Create the migdata key blob */
+	free(tssKey.encData);
+	tssKey.encSize = outDataSize;
+	tssKey.encData = outData;
+	/* Set outData to null since it will now be freed during key ref freeing */
+	outData = NULL;
+
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, NULL, &tssKey);
+
+	newBlobSize = offset;
+	if ((newBlob = malloc(newBlobSize)) == NULL) {
+		LogError("malloc of %u bytes failed.", newBlobSize);
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, newBlob, &tssKey);
+
+	if ((result = obj_migdata_set_blob(hMigrationData, newBlobSize, newBlob)))
 		goto done;
 
 	if ((*prgbRandom = calloc_tspi(hContext, randomDataSize)) == NULL) {
@@ -336,9 +362,11 @@ done:
 	free_tspi(hContext, msaList);
 	free_tspi(hContext, restrictTicket);
 	free_tspi(hContext, sigTicket);
-	free_tspi(hContext, encData);
+	free_tspi(hContext, blob);
 	free(randomData);
 	free(outData);
+	free(newBlob);
+	free_key_refs(&tssKey);
 
 	return result;
 }
@@ -358,18 +386,14 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 	UINT32 blobSize;
 	BYTE *blob;
 	TPM_HMAC sigTicket;
-	UINT32 keyDataSize, migDataSize, msaListSize;
-	BYTE *keyData = NULL, *migData = NULL, *msaList = NULL;
-	TPM_KEY12 key;
+	UINT32 migDataSize, msaListSize;
+	BYTE *migData = NULL, *msaList = NULL;
 	UINT32 outDataSize;
 	BYTE *outData = NULL;
 	Trspi_HashCtx hashCtx;
 	TPM_DIGEST digest;
 	TPM_AUTH parentAuth, *pAuth;
-	UINT64 offset;
 	TSS_RESULT result;
-
-	memset(&key, 0, sizeof(key));
 
 	if (!obj_rsakey_is_cmk(hKeyToMigrate))
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -391,37 +415,8 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 	memcpy(sigTicket.digest, blob, sizeof(sigTicket.digest));
 	free_tspi(hContext, blob);
 
-	if ((result = obj_rsakey_get_blob(hKeyToMigrate, &keyDataSize, &keyData)))
-		return result;
-
 	if ((result = obj_migdata_get_blob(hMigrationData, &migDataSize, &migData)))
 		goto done;
-
-	/* Replace the key's encrypted data with the migration data blob */
-	offset = 0;
-	if ((result = Trspi_UnloadBlob_KEY12(&offset, keyData, &key)))
-		goto done;
-	free(key.encData);
-	key.encSize = migDataSize;
-	if ((key.encData = malloc(migDataSize)) == NULL) {
-		LogError("malloc of %u bytes failed.", migDataSize);
-		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
-	memcpy(key.encData, migData, migDataSize);
-
-	/* Generate a new keyData blob */
-	free_tspi(hContext, keyData);
-	offset = 0;
-	Trspi_LoadBlob_KEY12(&offset, NULL, &key);
-	keyDataSize = offset;
-	if ((keyData = calloc_tspi(hContext, keyDataSize)) == NULL) {
-		LogError("malloc of %u bytes failed.", keyDataSize);
-		result = TSPERR(TSS_E_OUTOFMEMORY);
-		goto done;
-	}
-	offset = 0;
-	Trspi_LoadBlob_KEY12(&offset, keyData, &key);
 
 	if ((result = obj_migdata_get_msa_list_blob(hMigrationData, &msaListSize, &msaList)))
 		goto done;
@@ -434,7 +429,7 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 		result |= Trspi_HashUpdate(&hashCtx, sizeof(restrictTicket),
 				(BYTE *)&restrictTicket);
 		result |= Trspi_Hash_HMAC(&hashCtx, sigTicket.digest);
-		result |= Trspi_HashUpdate(&hashCtx, keyDataSize, keyData);
+		result |= Trspi_HashUpdate(&hashCtx, migDataSize, migData);
 		result |= Trspi_Hash_UINT32(&hashCtx, msaListSize);
 		result |= Trspi_HashUpdate(&hashCtx, msaListSize, msaList);
 		result |= Trspi_Hash_UINT32(&hashCtx, ulRandomLength);
@@ -449,7 +444,7 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 		pAuth = NULL;
 
 	if ((result = RPC_CMK_ConvertMigration(hContext, tcsKeyHandle, restrictTicket, sigTicket,
-			keyDataSize, keyData, msaListSize, msaList, ulRandomLength, rgbRandom,
+			migDataSize, migData, msaListSize, msaList, ulRandomLength, rgbRandom,
 			pAuth, &outDataSize, &outData)))
 		goto done;
 
@@ -466,16 +461,14 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, pAuth)))
 		goto done;
 
+	/* Set the key object to the now migrated key */
+	if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate, migDataSize, migData)))
+		goto done;
 	result = obj_rsakey_set_privkey(hKeyToMigrate, TRUE, outDataSize, outData);
 
 done:
-	free_tspi(hContext, keyData);
 	free_tspi(hContext, migData);
 	free_tspi(hContext, msaList);
-	free(key.algorithmParms.parms);
-	free(key.PCRInfo);
-	free(key.pubKey.key);
-	free(key.encData);
 	free(outData);
 
 	return result;
