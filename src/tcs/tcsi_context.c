@@ -26,7 +26,7 @@ TCS_OpenContext_Internal(TCS_CONTEXT_HANDLE * hContext)	/* out  */
 {
 	*hContext = make_context();
 	if (*hContext == 0)
-		return TCSERR(TSS_E_FAIL);
+		return TCSERR(TSS_E_OUTOFMEMORY);
 
 	return TSS_SUCCESS;
 }
