@@ -89,11 +89,6 @@ TSS_RESULT RPC_OwnerReadInternalPub_TP(struct host_table_entry *, TCS_KEY_HANDLE
 TSS_RESULT RPC_MakeIdentity_TP(struct host_table_entry *,TCPA_ENCAUTH,TCPA_CHOSENID_HASH,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **,UINT32 *,BYTE **);
 TSS_RESULT RPC_GetCredential_TP(struct host_table_entry *,UINT32 ,UINT32 ,UINT32 *,BYTE **);
 TSS_RESULT RPC_ActivateTPMIdentity_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **);
-#ifdef TSS_BUILD_TSS12
-TSS_RESULT RPC_MakeIdentity2_TP(struct host_table_entry *,TCPA_ENCAUTH,TCPA_CHOSENID_HASH,UINT32,BYTE *,TPM_AUTH *,TPM_AUTH *,UINT32 *,BYTE **,UINT32 *,BYTE **);
-#else
-#define RPC_MakeIdentity2_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
-#endif
 #else
 #define RPC_MakeIdentity_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_GetCredential_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
