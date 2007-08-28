@@ -104,6 +104,8 @@ TCSP_EstablishTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 	UnloadBlob(&offset, sizeof(TPM_NONCE), txBlob, (BYTE *)pTransNonce);
 	if (pEncKeyAuth)
 		UnloadBlob_Auth(&offset, txBlob, pEncKeyAuth);
+
+	ctx_set_transport_enabled(hContext, *hTransSession);
 done:
 	auth_mgr_release_auth(pEncKeyAuth, NULL, hContext);
 	return result;
@@ -148,13 +150,45 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		if ((result = auth_mgr_check(hContext, &pWrappedCmdAuth2->AuthHandle)))
 			goto done;
 
+	switch (unWrappedCommandOrdinal) {
+	/* If the command is FlushSpecific, we get handle that needs to be freed, but we don't know
+	 * what type it is. */
+	case TPM_ORD_FlushSpecific:
+		if (*pulHandleListSize == 0) { /* invalid */
+			result = TCSERR(TSS_E_BAD_PARAMETER);
+			goto done;
+		}
+
+		/* If this is a transport handle, remove the context's reference to the session */
+		ctx_set_transport_disabled(hContext, rghHandles[0]);
+
+		/* Is it a key? If so, jump to the get_slot_lite and key management calls below */
+		if (ctx_has_key_loaded(hContext, *rghHandles[0]))
+			goto map_key_handles;
+
+		/* fall through */
+	case TPM_ORD_Terminate_Handle:
+		if (!auth_mgr_check(hContext, rghHandles[0]))
+			auth_mgr_release_auth_handle(*rghHandles[0], hContext, FALSE);
+
+		/* If the handle is an auth handle or any other kind of handle, there's no
+		 * mapping done in the TCS, so pass its value straight to the TPM and jump over
+		 * the switch statement below where we assume FLushSpecific is being done on a
+		 * key */
+		handle1 = val1 = *rghHandles[0];
+		pVal1 = &val1;
+
+		goto build_command;
+	default:
+		break;
+	}
+
+map_key_handles:
 	if (*pulHandleListSize == 2) {
 		handle2 = (*rghHandles)[1];
 
 		if ((result = get_slot_lite(hContext, handle2, &val2))) {
 			*pulHandleListSize = 0;
-			free(*rghHandles);
-			*rghHandles = NULL;
 			goto done;
 		}
 
@@ -165,8 +199,6 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		handle1 = *rghHandles[0];
 
 		*pulHandleListSize = 0;
-		free(*rghHandles);
-		*rghHandles = NULL;
 
 		if ((result = get_slot_lite(hContext, handle1, &val1)))
 			goto done;
@@ -176,6 +208,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 	switch (unWrappedCommandOrdinal) {
 	case TPM_ORD_EvictKey:
+	case TPM_ORD_FlushSpecific:
 	{
 		if ((result = ctx_remove_key_loaded(hContext, handle1)))
 			goto done;
@@ -183,10 +216,9 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		if ((result = key_mgr_dec_ref_count(handle1)))
 			goto done;
 
-		/* we can't call key_mgr_ref_cnt() here since it calls TPM_EvictKey directly, but
-		 * it will be called lazily on context close */
+		/* we can't call key_mgr_ref_cnt() here since it calls TPM_EvictKey directly */
+		mc_set_slot_by_handle(handle1, NULL_TPM_HANDLE);
 		break;
-
 	}
 	case TPM_ORD_OIAP:
 	{
@@ -217,6 +249,8 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 			if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
 				return TCSERR(TSS_E_FAIL);
 
+			/* OSAP is never encrypted in a transport session, so changing
+			 * rgbWrappedCmdParamIn is ok here */
 			offset = sizeof(UINT16);
 			LoadBlob_UINT32(&offset, newEntValue, rgbWrappedCmdParamIn);
 		}
@@ -227,6 +261,7 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		break;
 	}
 
+build_command:
 	if ((result = tpm_rqu_build(TPM_ORD_ExecuteTransport, &wrappedOffset,
 				    &txBlob[TSS_TXBLOB_WRAPPEDCMD_OFFSET], unWrappedCommandOrdinal,
 				    pVal1, pVal2, ulWrappedCmdParamInSize, rgbWrappedCmdParamIn,
@@ -340,11 +375,6 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 		if ((result = load_key_final(hContext, handle1, &tcs_handle, NULL, val1)))
 			goto done;
 
-		if ((*rghHandles = malloc(sizeof(TCS_HANDLE))) == NULL) {
-			LogError("malloc of %zd bytes failed", sizeof(TCS_HANDLE));
-			result = TCSERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
 		*rghHandles[0] = tcs_handle;
 		*pulHandleListSize = 1;
 		break;
@@ -356,11 +386,6 @@ TCSP_ExecuteTransport_Internal(TCS_CONTEXT_HANDLE      hContext,
 
 		UnloadBlob_UINT32(&offset, &handle, *rgbWrappedCmdParamOut);
 		result = auth_mgr_add(hContext, handle);
-		break;
-	}
-	case TPM_ORD_EvictKey:
-	{
-		result = mc_set_slot_by_handle(handle1, NULL_TPM_HANDLE);
 		break;
 	}
 	default:
@@ -422,6 +447,9 @@ TCSP_ReleaseTransportSigned_Internal(TCS_CONTEXT_HANDLE      hContext,
 		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
 		goto done;
 	}
+
+	/* unconditionally disable our accounting of the session */
+	ctx_set_transport_disabled(hContext, NULL);
 
 	offset = TSS_TPM_TXBLOB_HDR_LEN;
 	UnloadBlob_UINT32(&offset, pbLocality, txBlob);
