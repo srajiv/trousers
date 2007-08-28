@@ -99,3 +99,21 @@ TCSP_TickStampBlob_Internal(TCS_CONTEXT_HANDLE hContext,
 done:
 	return result;
 }
+
+void
+UnloadBlob_CURRENT_TICKS(UINT64 *offset, BYTE *b, TPM_CURRENT_TICKS *t)
+{
+	if (!t) {
+		UnloadBlob_UINT16(offset, NULL, b);
+		UnloadBlob_UINT64(offset, NULL, b);
+		UnloadBlob_UINT16(offset, NULL, b);
+		UnloadBlob(offset, sizeof(TPM_NONCE), b, NULL);
+
+		return;
+	}
+
+	UnloadBlob_UINT16(offset, &t->tag, b);
+	UnloadBlob_UINT64(offset, &t->currentTicks, b);
+	UnloadBlob_UINT16(offset, &t->tickRate, b);
+	UnloadBlob(offset, sizeof(TPM_NONCE), b, (BYTE *)&t->tickNonce);
+}
