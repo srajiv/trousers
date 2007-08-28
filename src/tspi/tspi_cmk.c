@@ -395,9 +395,6 @@ Tspi_Key_CMKConvertMigration(TSS_HKEY     hKeyToMigrate,	/* in */
 	TPM_AUTH parentAuth, *pAuth;
 	TSS_RESULT result;
 
-	if (!obj_rsakey_is_cmk(hKeyToMigrate))
-		return TSPERR(TSS_E_BAD_PARAMETER);
-
 	if ((result = obj_rsakey_get_tsp_context(hKeyToMigrate, &hContext)))
 		return result;
 
