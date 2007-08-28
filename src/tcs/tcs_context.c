@@ -117,9 +117,11 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 	toKill = get_context(handle);
 	previous = get_previous_context(handle);
 
-	if (!previous && tcs_context_table->handle == handle) {	/*this means that toKill is the first one */
+	if (!previous && tcs_context_table->handle == handle) {
+		/* this means that toKill is the first one */
 		tcs_context_table = tcs_context_table->next;
-	} else if (previous && toKill) {	/*both are found */
+	} else if (previous && toKill) {
+		/* both are found */
 		previous->next = toKill->next;
 	} else {
 		MUTEX_UNLOCK(tcs_ctx_lock);
@@ -129,6 +131,11 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 	MUTEX_UNLOCK(tcs_ctx_lock);
 
 	CTX_ref_count_keys(toKill);
+
+	/* Free existing transport session if necessary */
+	if (toKill->transHandle)
+		TCSP_FlushSpecific_Common(toKill->transHandle, TPM_RT_TRANS);
+
 	free(toKill);
 }
 
@@ -251,7 +258,7 @@ done:
 }
 
 TSS_RESULT
-ctx_set_transport_enabled(TCS_CONTEXT_HANDLE tcsContext, UINT32 encrypted)
+ctx_set_transport_enabled(TCS_CONTEXT_HANDLE tcsContext, UINT32 hTransHandle)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	struct tcs_context *tmp, *self = NULL;
@@ -270,8 +277,7 @@ ctx_set_transport_enabled(TCS_CONTEXT_HANDLE tcsContext, UINT32 encrypted)
 
 	if (self) {
 		self->flags |= TSS_CONTEXT_FLAG_TRANSPORT_ENABLED;
-		if (encrypted)
-			self->flags |= TSS_CONTEXT_FLAG_TRANSPORT_ENCRYPTED;
+		self->transHandle = hTransHandle;
 	} else
 		result = TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 
@@ -281,7 +287,7 @@ ctx_set_transport_enabled(TCS_CONTEXT_HANDLE tcsContext, UINT32 encrypted)
 }
 
 TSS_RESULT
-ctx_transport_is_encrypted(TCS_CONTEXT_HANDLE tcsContext, UINT32 *encrypted)
+ctx_set_transport_disabled(TCS_CONTEXT_HANDLE tcsContext, TCS_HANDLE *transHandle)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 	struct tcs_context *tmp, *self = NULL;
@@ -299,7 +305,10 @@ ctx_transport_is_encrypted(TCS_CONTEXT_HANDLE tcsContext, UINT32 *encrypted)
 	}
 
 	if (self) {
-		*encrypted = self->flags & TSS_CONTEXT_FLAG_TRANSPORT_ENCRYPTED ? TRUE : FALSE;
+		if (!transHandle || *transHandle == self->transHandle) {
+			self->transHandle = 0;
+			self->flags &= ~TSS_CONTEXT_FLAG_TRANSPORT_ENABLED;
+		}
 	} else
 		result = TCSERR(TCS_E_INVALID_CONTEXTHANDLE);
 
