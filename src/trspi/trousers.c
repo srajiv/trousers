@@ -506,6 +506,24 @@ Trspi_UnloadBlob_KEY12(UINT64 *offset, BYTE *blob, TPM_KEY12 *key)
 {
 	TSS_RESULT result;
 
+	if (!key) {
+		UINT32 PCRInfoSize, encSize;
+
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_KEY_FLAGS(offset, blob, NULL);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_KEY_PARMS(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT32(offset, &PCRInfoSize, blob);
+		Trspi_UnloadBlob(offset, PCRInfoSize, blob, NULL);
+		Trspi_UnloadBlob_STORE_PUBKEY(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT32(offset, &encSize, blob);
+		Trspi_UnloadBlob(offset, encSize, blob, NULL);
+
+		return TSS_SUCCESS;
+	}
+
 	Trspi_UnloadBlob_UINT16(offset, &key->tag, blob);
 	Trspi_UnloadBlob_UINT16(offset, &key->fill, blob);
 	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
@@ -549,6 +567,23 @@ Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 {
 	TSS_RESULT result;
 
+	if (!key) {
+		UINT32 PCRInfoSize, encSize;
+
+		Trspi_UnloadBlob_TCPA_VERSION(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_KEY_FLAGS(offset, blob, NULL);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_KEY_PARMS(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT32(offset, &PCRInfoSize, blob);
+		Trspi_UnloadBlob(offset, PCRInfoSize, blob, NULL);
+		Trspi_UnloadBlob_STORE_PUBKEY(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT32(offset, &encSize, blob);
+		Trspi_UnloadBlob(offset, encSize, blob, NULL);
+
+		return TSS_SUCCESS;
+	}
+
 	Trspi_UnloadBlob_TCPA_VERSION(offset, blob, &key->ver);
 	Trspi_UnloadBlob_UINT16(offset, &key->keyUsage, blob);
 	Trspi_UnloadBlob_KEY_FLAGS(offset, blob, &key->keyFlags);
@@ -589,6 +624,15 @@ Trspi_UnloadBlob_KEY(UINT64 *offset, BYTE *blob, TCPA_KEY *key)
 TSS_RESULT
 Trspi_UnloadBlob_STORE_PUBKEY(UINT64 *offset, BYTE *blob, TCPA_STORE_PUBKEY *store)
 {
+	if (!store) {
+		UINT32 keyLength;
+
+		Trspi_UnloadBlob_UINT32(offset, &keyLength, blob);
+		Trspi_UnloadBlob(offset, keyLength, blob, NULL);
+
+		return TSS_SUCCESS;
+	}
+
 	Trspi_UnloadBlob_UINT32(offset, &store->keyLength, blob);
 
 	if (store->keyLength > 0) {
