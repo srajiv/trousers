@@ -25,6 +25,7 @@ struct keys_loaded
 
 struct tcs_context {
 	TSS_FLAG flags;
+	TPM_TRANSHANDLE transHandle;
 	TCS_CONTEXT_HANDLE handle;
 	COND_VAR cond; /* used in waiting for an auth ctx to become available */
 	struct keys_loaded *keys;
