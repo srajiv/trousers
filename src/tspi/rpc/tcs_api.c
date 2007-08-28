@@ -3094,7 +3094,7 @@ RPC_Delegate_VerifyDelegation(TSS_HCONTEXT hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_CMK_SetRestrictions(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_CMK_SetRestrictions(TSS_HCONTEXT hContext,	/* in */
 			TSS_CMK_DELEGATE restriction,	/* in */
 			TPM_AUTH *ownerAuth)		/* in, out */
 {
@@ -3118,7 +3118,7 @@ RPC_CMK_SetRestrictions(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_CMK_ApproveMA(TCS_CONTEXT_HANDLE hContext,		/* in */
+RPC_CMK_ApproveMA(TSS_HCONTEXT hContext,		/* in */
 		  TPM_DIGEST migAuthorityDigest,	/* in */
 		  TPM_AUTH *ownerAuth,			/* in, out */
 		  TPM_HMAC *migAuthorityApproval)	/* out */
@@ -3144,7 +3144,7 @@ RPC_CMK_ApproveMA(TCS_CONTEXT_HANDLE hContext,		/* in */
 }
 
 TSS_RESULT
-RPC_CMK_CreateKey(TCS_CONTEXT_HANDLE hContext,		/* in */
+RPC_CMK_CreateKey(TSS_HCONTEXT hContext,		/* in */
 		  TCS_KEY_HANDLE hWrappingKey,		/* in */
 		  TPM_ENCAUTH keyUsageAuth,		/* in */
 		  TPM_HMAC migAuthorityApproval,	/* in */
@@ -3175,7 +3175,7 @@ RPC_CMK_CreateKey(TCS_CONTEXT_HANDLE hContext,		/* in */
 }
 
 TSS_RESULT
-RPC_CMK_CreateTicket(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_CMK_CreateTicket(TSS_HCONTEXT hContext,	/* in */
 		     UINT32 publicVerifyKeySize,	/* in */
 		     BYTE *publicVerifyKey,		/* in */
 		     TPM_DIGEST signedData,		/* in */
@@ -3206,7 +3206,7 @@ RPC_CMK_CreateTicket(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_CMK_CreateBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_CMK_CreateBlob(TSS_HCONTEXT hContext,	/* in */
 		   TCS_KEY_HANDLE hParentKey,		/* in */
 		   TSS_MIGRATE_SCHEME migrationType,	/* in */
 		   UINT32 migKeyAuthSize,		/* in */
@@ -3250,7 +3250,7 @@ RPC_CMK_CreateBlob(TCS_CONTEXT_HANDLE hContext,	/* in */
 }
 
 TSS_RESULT
-RPC_CMK_ConvertMigration(TCS_CONTEXT_HANDLE hContext,	/* in */
+RPC_CMK_ConvertMigration(TSS_HCONTEXT hContext,	/* in */
 			 TCS_KEY_HANDLE hParentHandle,	/* in */
 			 TPM_CMK_AUTH restrictTicket,	/* in */
 			 TPM_HMAC sigTicket,		/* in */
@@ -3275,6 +3275,30 @@ RPC_CMK_ConvertMigration(TCS_CONTEXT_HANDLE hContext,	/* in */
 			result = RPC_CMK_ConvertMigration_TP(entry, hParentHandle, restrictTicket,
 					sigTicket, keyDataSize, keyData, msaListSize, msaList,
 					randomSize, random, pAuth, outDataSize, outData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+TSS_RESULT
+RPC_FlushSpecific(TSS_HCONTEXT hContext, /* in */
+		  TCS_HANDLE hResHandle, /* in */
+		  TPM_RESOURCE_TYPE resourceType) /* in */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_FlushSpecific_TP(entry, hResHandle, resourceType);
 			break;
 		default:
 			break;
