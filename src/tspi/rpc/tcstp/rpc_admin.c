@@ -342,3 +342,28 @@ RPC_ResetLockValue_TP(struct host_table_entry *hte,
 	return result;
 }
 
+TSS_RESULT
+RPC_FlushSpecific_TP(struct host_table_entry *hte,
+		     TCS_HANDLE hResHandle, /* in */
+		     TPM_RESOURCE_TYPE resourceType) /* in */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 3);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_FLUSHSPECIFIC;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hResHandle, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &resourceType, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	return result;
+}

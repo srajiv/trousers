@@ -443,3 +443,72 @@ done:
 	return result;
 }
 
+TSS_RESULT
+TCSP_FlushSpecific_Common(UINT32 tpmResHandle, TPM_RESOURCE_TYPE resourceType)
+{
+	UINT64 offset = 0;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	if ((result = tpm_rqu_build(TPM_ORD_FlushSpecific, &offset, txBlob, tpmResHandle,
+				    resourceType)))
+		return result;
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	if (!result) {
+		result = tpm_rsp_parse(TPM_ORD_FlushSpecific, txBlob, paramSize, NULL);
+	}
+
+	return result;
+}
+
+TSS_RESULT
+TCSP_FlushSpecific_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+			    TCS_HANDLE hResHandle,	/* in */
+			    TPM_RESOURCE_TYPE resourceType) /* in */
+{
+	UINT32 tpmResHandle;
+	TSS_RESULT result;
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	switch (resourceType) {
+		case TPM_RT_KEY:
+			if ((result = get_slot_lite(hContext, hResHandle, &tpmResHandle)))
+				return result;
+
+			if ((result = ctx_remove_key_loaded(hContext, hResHandle)))
+				return result;
+
+			if ((result = key_mgr_dec_ref_count(hResHandle)))
+				return result;
+			break;
+		case TPM_RT_AUTH:
+			if ((result = auth_mgr_check(hContext, &hResHandle)))
+				return result;
+
+			auth_mgr_release_auth_handle(hResHandle, hContext, FALSE);
+			/* fall through */
+		case TPM_RT_TRANS:
+		case TPM_RT_DAA_TPM:
+			tpmResHandle = hResHandle;
+			break;
+		case TPM_RT_CONTEXT:
+			result = TCSERR(TSS_E_NOTIMPL);
+			goto done;
+		default:
+			LogDebugFn("Unknown resource type: 0x%x", resourceType);
+			goto done;
+	}
+
+	result = TCSP_FlushSpecific_Common(tpmResHandle, resourceType);
+
+done:
+	return result;
+}
+

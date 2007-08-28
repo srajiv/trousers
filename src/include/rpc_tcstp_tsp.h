@@ -365,8 +365,10 @@ TSS_RESULT RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte, TCS_KEY_HAN
 
 #ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_SetOperatorAuth_TP(struct host_table_entry *hte, TCPA_SECRET *);
+TSS_RESULT RPC_FlushSpecific_TP(struct host_table_entry *hte, TCS_HANDLE, TPM_RESOURCE_TYPE);
 #else
 #define RPC_SetOperatorAuth_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_FlushSpecific_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_DELEGATION

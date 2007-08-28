@@ -335,8 +335,10 @@ DECLARE_TCSTP_FUNC(GetAuditDigestSigned);
 
 #ifdef TSS_BUILD_TSS12
 DECLARE_TCSTP_FUNC(SetOperatorAuth);
+DECLARE_TCSTP_FUNC(FlushSpecific);
 #else
 #define tcs_wrap_SetOperatorAuth	tcs_wrap_Error
+#define tcs_wrap_FlushSpecific		tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_DELEGATION

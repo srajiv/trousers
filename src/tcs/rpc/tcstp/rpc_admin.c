@@ -371,3 +371,33 @@ tcs_wrap_ResetLockValue(struct tcsd_thread_data *data)
 	return TSS_SUCCESS;
 }
 
+TSS_RESULT
+tcs_wrap_FlushSpecific(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCS_HANDLE hResHandle;
+	TPM_RESOURCE_TYPE resourceType;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hResHandle, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &resourceType, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_FlushSpecific_Internal(hContext, hResHandle, resourceType);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	initData(&data->comm, 0);
+	data->comm.hdr.u.result = result;
+
+	return TSS_SUCCESS;
+}
+

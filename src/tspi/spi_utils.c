@@ -160,6 +160,7 @@ struct tcs_api_table tcs_normal_api = {
 #endif
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = RPC_SetOperatorAuth,
+	.FlushSpecific = RPC_FlushSpecific,
 #endif
 #ifdef TSS_BUILD_DELEGATION
 	.Delegate_Manage = RPC_Delegate_Manage,
@@ -302,6 +303,7 @@ struct tcs_api_table tcs_transport_api = {
 #endif
 #ifdef TSS_BUILD_TSS12
 	.SetOperatorAuth = Transport_SetOperatorAuth,
+	.FlushSpecific = Transport_FlushSpecific,
 #endif
 #ifdef TSS_BUILD_DELEGATION
 	.Delegate_Manage = Transport_Delegate_Manage,
