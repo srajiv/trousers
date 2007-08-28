@@ -40,13 +40,13 @@ Tspi_Context_Create(TSS_HCONTEXT * phContext)	/* out */
 TSS_RESULT
 Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result;
-
 	if (!obj_is_context(tspContext))
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
+	obj_context_close(tspContext);
+
 	/* Have the TCS do its thing */
-	result = RPC_CloseContext(tspContext);
+	RPC_CloseContext(tspContext);
 
 	/* Note: Memory that was returned to the app that was alloc'd by this
 	 * context isn't free'd here.  Any memory that the app doesn't explicitly
