@@ -58,7 +58,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 #define CHOSENID_BLOB_SIZE 2048
 	BYTE chosenIDBlob[CHOSENID_BLOB_SIZE];
 	TSS_HCONTEXT tspContext;
-	UINT32 encSymKeySize = 256, tmp;
+	UINT32 encSymKeySize = 256, tmp, transport;
 	BYTE encSymKey[256], *cb_var;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
@@ -212,14 +212,27 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					      &nonceEvenOSAP)))
 		return result;
 
-	/* XXX Plug in MakeIdentity2 here */
-	if ((result = RPC_MakeIdentity(tspContext, encAuthUsage, chosenIDHash, idKeySize, idKey,
-				       pSrkAuth, &ownerAuth, &idKeySize, &newIdKey,
-				       &pcIdentityBindingSize, &prgbIdentityBinding,
-				       &pcEndorsementCredentialSize, &prgbEndorsementCredential,
-				       &pcPlatformCredentialSize, &prgbPlatformCredential,
-				       &pcConformanceCredentialSize, &prgbConformanceCredential)))
+	if ((result = obj_context_transport_get_control(tspContext, TSS_TSPATTRIB_ENABLE_TRANSPORT,
+							&transport)))
 		return result;
+
+	if (transport) {
+		if ((result = Transport_MakeIdentity2(tspContext, encAuthUsage, chosenIDHash,
+						      idKeySize, idKey, pSrkAuth, &ownerAuth,
+						      &idKeySize, &newIdKey, &pcIdentityBindingSize,
+						      &prgbIdentityBinding)))
+			return result;
+	} else {
+		if ((result = RPC_MakeIdentity(tspContext, encAuthUsage, chosenIDHash, idKeySize,
+					       idKey, pSrkAuth, &ownerAuth, &idKeySize, &newIdKey,
+					       &pcIdentityBindingSize, &prgbIdentityBinding,
+					       &pcEndorsementCredentialSize,
+					       &prgbEndorsementCredential,
+					       &pcPlatformCredentialSize, &prgbPlatformCredential,
+					       &pcConformanceCredentialSize,
+					       &prgbConformanceCredential)))
+			return result;
+	}
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);
@@ -236,9 +249,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		goto error;
 
 	if (usesAuth == TRUE) {
-		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy,
-							    &digest,
-							    &srkAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy, &digest, &srkAuth)))
 			goto error;
 	}
 
