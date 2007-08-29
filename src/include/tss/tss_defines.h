@@ -863,6 +863,9 @@ Global defines for TSS.
                                                          // used for this key
                                                          // (TPM_KEY or 
                                                          // TPM_KEY12)
+#define TSS_TSPATTRIB_KEYCONTROL_OWNEREVICT (0x00000780) // Get current status
+							 // of owner evict flag
+
 //
 // SubFlags for Flag TSS_TSPATTRIB_RSAKEY_INFO
 //
