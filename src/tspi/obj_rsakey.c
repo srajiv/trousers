@@ -1995,3 +1995,41 @@ done:
 	return result;
 }
 #endif
+TSS_RESULT
+obj_rsakey_get_ownerevict(TSS_HKEY hKey, UINT32 *value){
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+	*value = rsakey->flags & TSS_RSAKEY_FLAG_OWNEREVICT;
+
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_set_ownerevict(TSS_HKEY hKey, TSS_BOOL value){
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if (value)
+		rsakey->flags |= TSS_RSAKEY_FLAG_OWNEREVICT;
+	else
+		rsakey->flags &= ~TSS_RSAKEY_FLAG_OWNEREVICT;
+
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
