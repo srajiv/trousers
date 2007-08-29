@@ -39,7 +39,6 @@ struct tcs_api_table tcs_normal_api = {
 	.GetPubKey = RPC_GetPubKey,
 #ifdef TSS_BUILD_TSS12
 	.OwnerReadInternalPub = RPC_OwnerReadInternalPub,
-	.KeyControlOwner = RPC_KeyControlOwner,
 #endif
 #ifdef TSS_BUILD_CERTIFY
 	.CertifyKey = RPC_CertifyKey,
@@ -186,7 +185,6 @@ struct tcs_api_table tcs_transport_api = {
 	.GetPubKey = Transport_GetPubKey,
 #ifdef TSS_BUILD_TSS12
 	.OwnerReadInternalPub = Transport_OwnerReadInternalPub,
-	.KeyControlOwner = Transport_KeyControlOwner,
 #endif
 #ifdef TSS_BUILD_CERTIFY
 	.CertifyKey = Transport_CertifyKey,

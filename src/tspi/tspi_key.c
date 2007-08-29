@@ -699,8 +699,6 @@ Tspi_TPM_KeyControlOwner(TSS_HTPM hTPM,		/* in */
 		return result;
 	}
 
-	/* Call TCS interface */
-	//FIXME - use TCS_API(tspContext) instead
 	if ((result = RPC_KeyControlOwner(tspContext, hTcsKey, pubKeyLen, pubKey, tpmAttribName,
 					  attribValue, &ownerAuth, pUuidData))) {
 		free_tspi(tspContext, pubKey);
