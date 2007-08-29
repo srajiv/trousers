@@ -595,11 +595,12 @@ obj_context_transport_set_mode(TSS_HCONTEXT tspContext, UINT32 value)
 	return result;
 }
 
+#if 0
 TSS_RESULT
 get_trans_props(TSS_HCONTEXT tspContext, UINT32 *alg, UINT16 *enc)
 {
 	TSS_RESULT result;
-	UINT32 algs[] = { TPM_ALG_AES128, TPM_ALG_3DES, TPM_ALG_MGF1, 0 }, a = 0;
+	UINT32 algs[] = { TPM_ALG_MGF1, TPM_ALG_AES128, 0 }, a = 0;
 	UINT16 encs[] = { TPM_ES_SYM_OFB, TPM_ES_SYM_CNT, TPM_ES_SYM_CBC_PKCS5PAD, 0 }, e = 0;
 	BYTE *respData;
 	UINT32 respLen, tcsSubCap32;
@@ -655,6 +656,7 @@ check_es:
 done:
 	return TSS_SUCCESS;
 }
+#endif
 
 /* called before each TCSP_ExecuteTransport call */
 TSS_RESULT
@@ -727,13 +729,12 @@ obj_context_transport_establish(TSS_HCONTEXT tspContext, struct tr_context_obj *
 		exclusive = TSS_TCSATTRIB_TRANSPORT_EXCLUSIVE;
 	}
 
-	/* XXX test alg, encScheme to see if they've been manually set by an app first */
-	if ((result = get_trans_props(tspContext, &context->transPub.algId,
-				      &context->transPub.encScheme)))
-		return result;
+	/* XXX update this to test for other supported TPM_CAP_TRANS_ALG's */
+	context->transPub.algId = TPM_ALG_MGF1;
+	context->transPub.encScheme = TPM_ES_NONE;
 
 	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
-		context->transPub.transAttributes = TPM_TRANSPORT_ENCRYPT;
+		context->transPub.transAttributes |= TPM_TRANSPORT_ENCRYPT;
 
 		if (context->transKey == TPM_KH_TRANSPORT) {
 			LogError("No transport key handle has been set yet. Use "
@@ -883,6 +884,160 @@ obj_context_transport_establish(TSS_HCONTEXT tspContext, struct tr_context_obj *
 }
 
 TSS_RESULT
+do_transport_decryption(TPM_TRANSPORT_PUBLIC *transPub,
+			TPM_AUTH *pTransAuth,
+			BYTE *secret,
+			UINT32 inLen,
+			BYTE *in,
+			UINT32 *outLen,
+			BYTE **out)
+{
+	TSS_RESULT result;
+	UINT32 i, decLen;
+	UINT32 seedLen, ivLen;
+	BYTE *dec, *iv;
+	BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("out") + TPM_SHA1_160_HASH_LEN];
+
+	/* allocate the most data anyone below might need */
+	decLen = inLen;//((inLen / TSS_MAX_SYM_BLOCK_SIZE) + 1) * TSS_MAX_SYM_BLOCK_SIZE;
+	if ((dec = malloc(decLen)) == NULL) {
+		LogError("malloc of %u bytes failed", decLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	/* set the common 3 initial values of 'seed', which is used to generate either the IV or
+	 * mask */
+	memcpy(seed, pTransAuth->NonceEven.nonce, sizeof(TPM_NONCE));
+	memcpy(&seed[sizeof(TPM_NONCE)], pTransAuth->NonceOdd.nonce, sizeof(TPM_NONCE));
+	memcpy(&seed[2 * sizeof(TPM_NONCE)], "out", strlen("out"));
+
+	switch (transPub->algId) {
+	case TPM_ALG_MGF1:
+	{
+		decLen = inLen;
+		seedLen = sizeof(seed);
+
+		/* add the secret data to the seed for MGF1 */
+		memcpy(&seed[2 * sizeof(TPM_NONCE) + strlen("out")], secret, TPM_SHA1_160_HASH_LEN);
+
+		if ((result = Trspi_MGF1(TSS_HASH_SHA1, seedLen, seed, decLen, dec))) {
+			free(dec);
+			return result;
+		}
+
+		for (i = 0; i < inLen; i++)
+			dec[i] ^= in[i];
+		break;
+	}
+	case TPM_ALG_AES128:
+	{
+		ivLen = TSS_MAX_SYM_BLOCK_SIZE;
+		seedLen = (2 * sizeof(TPM_NONCE)) + strlen("out");
+
+		if ((result = Trspi_MGF1(TSS_HASH_SHA1, seedLen, seed, ivLen, iv))) {
+			free(dec);
+			return result;
+		}
+
+		/* use the secret data as the key for AES */
+		if ((result = Trspi_SymEncrypt(transPub->algId, transPub->encScheme, secret, iv, in,
+					       inLen, dec, &decLen))) {
+			free(dec);
+			return result;
+		}
+
+		break;
+	}
+	default:
+		LogDebug("Unknown algorithm for encrypted transport session: 0x%x",
+			 transPub->algId);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	*out = dec;
+	*outLen = decLen;
+
+	return result;
+}
+
+TSS_RESULT
+do_transport_encryption(TPM_TRANSPORT_PUBLIC *transPub,
+			TPM_AUTH *pTransAuth,
+			BYTE *secret,
+			UINT32 inLen,
+			BYTE *in,
+			UINT32 *outLen,
+			BYTE **out)
+{
+	TSS_RESULT result;
+	UINT32 i, encLen;
+	UINT32 seedLen, ivLen;
+	BYTE *enc, *iv;
+	BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("in") + TPM_SHA1_160_HASH_LEN];
+
+	/* allocate the most data anyone below might need */
+	encLen = ((inLen / TSS_MAX_SYM_BLOCK_SIZE) + 1) * TSS_MAX_SYM_BLOCK_SIZE;
+	if ((enc = malloc(encLen)) == NULL) {
+		LogError("malloc of %u bytes failed", encLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	/* set the common 3 initial values of 'seed', which is used to generate either the IV or
+	 * mask */
+	memcpy(seed, pTransAuth->NonceEven.nonce, sizeof(TPM_NONCE));
+	memcpy(&seed[sizeof(TPM_NONCE)], pTransAuth->NonceOdd.nonce, sizeof(TPM_NONCE));
+	memcpy(&seed[2 * sizeof(TPM_NONCE)], "in", strlen("in"));
+
+	switch (transPub->algId) {
+	case TPM_ALG_MGF1:
+	{
+		encLen = inLen;
+		seedLen = sizeof(seed);
+
+		/* add the secret data to the seed for MGF1 */
+		memcpy(&seed[2 * sizeof(TPM_NONCE) + strlen("in")], secret, TPM_SHA1_160_HASH_LEN);
+
+		if ((result = Trspi_MGF1(TSS_HASH_SHA1, seedLen, seed, encLen, enc))) {
+			free(enc);
+			return result;
+		}
+
+		for (i = 0; i < inLen; i++)
+			enc[i] ^= in[i];
+		break;
+	}
+	case TPM_ALG_AES128:
+	{
+		ivLen = TSS_MAX_SYM_BLOCK_SIZE;
+		seedLen = (2 * sizeof(TPM_NONCE)) + strlen("in");
+
+		if ((result = Trspi_MGF1(TSS_HASH_SHA1, seedLen, seed, ivLen, iv))) {
+			free(enc);
+			return result;
+		}
+
+		/* use the secret data as the key for AES */
+		if ((result = Trspi_SymEncrypt(transPub->algId, transPub->encScheme, secret, iv, in,
+					       inLen, enc, &encLen))) {
+			free(enc);
+			return result;
+		}
+
+		break;
+	}
+	default:
+		LogDebug("Unknown algorithm for encrypted transport session: 0x%x",
+			 transPub->algId);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	*out = enc;
+	*outLen = encLen;
+
+	return result;
+}
+
+TSS_RESULT
 obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 			      TPM_COMMAND_CODE ordinal,
 			      UINT32           ulDataLen,
@@ -899,13 +1054,13 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
 	UINT32 encLen, ulWrappedDataLen = 0;
-	BYTE *enc = NULL, *pEnc, *rgbWrappedData = NULL;
-	BYTE iv[TSS_MAX_SYM_BLOCK_SIZE];
+	BYTE *pEnc = NULL, *rgbWrappedData = NULL;
 	TPM_RESULT tpmResult;
 	Trspi_HashCtx hashCtx;
 	TPM_DIGEST etDigest, wDigest;
 	TPM_AUTH *pTransAuth;
 	UINT64 currentTicks;
+	TSS_BOOL free_enc = FALSE;
 
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -948,46 +1103,38 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 			goto done;
 	}
 
+	/* TPM Commands spec rev106 step 7.a */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
+	result |= Trspi_Hash_UINT32(&hashCtx, ulDataLen + TSS_TPM_TXBLOB_HDR_LEN
+							+ (*handlesLen * sizeof(UINT32))
+							+ (pAuth1 ? TPM_AUTH_RQU_SIZE : 0)
+							+ (pAuth2 ? TPM_AUTH_RQU_SIZE : 0));
+	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
+		goto done;
+
 	/* encrypt the data if necessary */
-	if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
-		BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("in")];
+	if (ulDataLen && context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+		switch (ordinal) {
+		case TPM_ORD_OSAP:
+		case TPM_ORD_OIAP:
+			encLen = ulDataLen;
+			pEnc = rgbData;
+			break;
+		default:
+			if ((result = do_transport_encryption(&context->transPub, pTransAuth,
+							context->transSecret.authData.authdata,
+							ulDataLen, rgbData, &encLen, &pEnc)))
+				goto done;
 
-		if ((enc = malloc(ulDataLen + TSS_MAX_SYM_BLOCK_SIZE)) == NULL) {
-			LogError("malloc of %u bytes failed", ulDataLen + TSS_MAX_SYM_BLOCK_SIZE);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
+			free_enc = TRUE;
+			break;
 		}
-		encLen = ulDataLen + TSS_MAX_SYM_BLOCK_SIZE;
-
-		/* calculate the initial vector */
-		memcpy(seed, pTransAuth->NonceEven.nonce, sizeof(TPM_NONCE));
-		memcpy(&seed[sizeof(TPM_NONCE)], pTransAuth->NonceOdd.nonce, sizeof(TPM_NONCE));
-		memcpy(&seed[2 * sizeof(TPM_NONCE)], "in", strlen("in"));
-		if ((result = Trspi_MGF1(TSS_HASH_SHA1, sizeof(seed), seed, sizeof(iv), iv)))
-			goto done;
-
-		if ((result = Trspi_SymEncrypt((UINT16)context->transPub.algId,
-					       context->transPub.encScheme,
-					       context->transSecret.authData.authdata, iv, rgbData,
-					       ulDataLen, enc, &encLen)))
-			goto done;
-
-		pEnc = enc;
 	} else {
 		encLen = ulDataLen;
 		pEnc = rgbData;
 	}
-
-	/* TPM Commands spec rev106 step 7.a */
-	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ExecuteTransport);
-	result |= Trspi_Hash_UINT32(&hashCtx, encLen + TSS_TPM_TXBLOB_HDR_LEN
-						     + (*handlesLen * sizeof(UINT32))
-						     + (pAuth1 ? TPM_AUTH_RQU_SIZE : 0)
-						     + (pAuth2 ? TPM_AUTH_RQU_SIZE : 0));
-	result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, wDigest.digest);
-	if ((result |= Trspi_HashFinal(&hashCtx, etDigest.digest)))
-		goto done;
 
 	/* TPM Commands spec rev106 step 7.b */
 	HMAC_Auth(context->transSecret.authData.authdata, etDigest.digest, pTransAuth);
@@ -1007,27 +1154,25 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 		goto done;
 	}
 
-	if (outLen) {
-		/* decrypt the returned wrapped data if necessary */
-		if (context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
-			if ((*out = malloc(ulWrappedDataLen)) == NULL) {
-				LogError("malloc of %u bytes failed", ulWrappedDataLen);
-				result = TSPERR(TSS_E_OUTOFMEMORY);
-				goto done;
-			}
+	/* decrypt the returned wrapped data if necessary */
+	if (ulWrappedDataLen && context->flags & TSS_CONTEXT_FLAGS_TRANSPORT_DEFAULT_ENCRYPT) {
+		switch (ordinal) {
+		case TPM_ORD_OSAP:
+		case TPM_ORD_OIAP:
 			*outLen = ulWrappedDataLen;
+			*out = rgbWrappedData;
+			break;
+		default:
+			if ((result = do_transport_decryption(&context->transPub, pTransAuth,
+							context->transSecret.authData.authdata,
+							ulWrappedDataLen, rgbWrappedData, outLen,
+							out)))
+					goto done;
 
-			if ((result = Trspi_SymDecrypt((UINT16)context->transPub.algId,
-							context->transPub.encScheme,
-							context->transSecret.authData.authdata, iv,
-							rgbWrappedData, ulWrappedDataLen, *out,
-							outLen))) {
-				free(*out);
-				*out = NULL;
-				*outLen = 0;
-				goto done;
-			}
-		} else {
+			free(rgbWrappedData);
+		}
+	} else {
+		if (outLen) {
 			*outLen = ulWrappedDataLen;
 			*out = rgbWrappedData;
 		}
@@ -1096,7 +1241,8 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 	}
 
 done:
-	free(enc);
+	if (free_enc)
+		free(pEnc);
 	obj_list_put(&context_list);
 
 	return result;
