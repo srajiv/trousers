@@ -188,6 +188,15 @@ tcsd_startup()
 		return result;
 	}
 
+	result = owner_evict_init();
+	if (result != TSS_SUCCESS) {
+		auth_mgr_final();
+		conf_file_final(&tcsd_options);
+		PS_close_disk_cache();
+		(void)req_mgr_final();
+		return result;
+	}
+
 	return TSS_SUCCESS;
 }
 
