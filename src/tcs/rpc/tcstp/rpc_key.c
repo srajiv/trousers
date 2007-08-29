@@ -404,3 +404,68 @@ tcs_wrap_OwnerReadInternalPub(struct tcsd_thread_data *data)
 	data->comm.hdr.u.result = result;
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+tcs_wrap_KeyControlOwner(struct tcsd_thread_data *data)
+{
+	TCS_CONTEXT_HANDLE hContext;
+	TCS_KEY_HANDLE hKey;
+	UINT32 ulPublicKeyLength;
+	BYTE* rgbPublicKey;
+	UINT32 attribName;
+	TSS_BOOL attribValue;
+	TPM_AUTH ownerAuth;
+	TSS_UUID uuidData;
+	TSS_RESULT result;
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+
+	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &ulPublicKeyLength, 0, &data->comm))
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+
+	rgbPublicKey = (BYTE *) malloc(ulPublicKeyLength);
+	if (rgbPublicKey == NULL) {
+		LogError("malloc of %u bytes failed.", ulPublicKeyLength);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicKey, ulPublicKeyLength, &data->comm)) {
+		free(rgbPublicKey);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &attribName, 0, &data->comm)) {
+		free(rgbPublicKey);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (getData(TCSD_PACKET_TYPE_BOOL, 5, &attribValue, 0, &data->comm)) {
+		free(rgbPublicKey);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &ownerAuth, 0, &data->comm)) {
+		free(rgbPublicKey);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	MUTEX_LOCK(tcsp_lock);
+
+	result = TCSP_KeyControlOwner_Internal(hContext, hKey, ulPublicKeyLength, rgbPublicKey,
+					       attribName, attribValue, &ownerAuth, &uuidData);
+
+	MUTEX_UNLOCK(tcsp_lock);
+
+	if (result == TSS_SUCCESS) {
+		initData(&data->comm, 2);
+		if (setData(TCSD_PACKET_TYPE_AUTH, 0, &ownerAuth, 0, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		if (setData(TCSD_PACKET_TYPE_UUID, 1, &uuidData, 0, &data->comm))
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+	} else
+		initData(&data->comm, 0);
+
+	data->comm.hdr.u.result = result;
+	return TSS_SUCCESS;
+
+}

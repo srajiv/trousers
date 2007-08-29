@@ -846,6 +846,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	case TPM_ORD_Delegate_LoadOwnerDelegation:
 	case TPM_ORD_CMK_SetRestrictions:
 	case TPM_ORD_FlushSpecific:
+	case TPM_ORD_KeyControlOwner:
 	{
 		TPM_AUTH *auth = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
@@ -2053,6 +2054,28 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		LoadBlob_UINT32(outOffset, val1, out_blob);
 		LoadBlob_UINT32(outOffset, val2, out_blob);
 		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
+
+		result = TSS_SUCCESS;
+		break;
+	}
+	/* 1 UINT32, 1 BLOB, 1 UINT32, 1 BOOL, 1 AUTH */
+	case TPM_ORD_KeyControlOwner:
+	{
+		UINT32 i = va_arg(ap, UINT32);
+		UINT32 len1 = va_arg(ap, UINT32);
+		BYTE *blob1 = va_arg(ap, BYTE *);
+		UINT32 j = va_arg(ap, UINT32);
+		TSS_BOOL bool1 = va_arg(ap, int);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+	        va_end(ap);
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT32(outOffset, i, out_blob);
+		LoadBlob(outOffset, len1, out_blob, blob1);
+		LoadBlob_UINT32(outOffset, j, out_blob);
+		LoadBlob_BOOL(outOffset, bool1, out_blob);
+		LoadBlob_Auth(outOffset, out_blob, auth1);
+		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
 
 		result = TSS_SUCCESS;
 		break;

@@ -608,7 +608,8 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_CMK_CreateTicket,"CMK_CreateTicket"},
 	{tcs_wrap_CMK_CreateBlob,"CMK_CreateBlob"},
 	{tcs_wrap_CMK_ConvertMigration,"CMK_ConvertMigration"},
-	{tcs_wrap_FlushSpecific,"FlushSpecific"} /* 120 */
+	{tcs_wrap_FlushSpecific,"FlushSpecific"}, /* 120 */
+	{tcs_wrap_KeyControlOwner, "KeyControlOwner"}
 };
 
 int

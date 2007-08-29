@@ -333,5 +333,19 @@ Transport_OwnerReadInternalPub(TSS_HCONTEXT tspContext,   /* in */
 
 	return result;
 }
+
+TSS_RESULT
+Transport_KeyControlOwner(TSS_HCONTEXT   tspContext,		/* in */
+			  TCS_KEY_HANDLE hKey,			/* in */
+			  UINT32         ulPublicInfoLength,	/* in */
+			  BYTE*          rgbPublicInfo,		/* in */
+			  UINT32         attribName,		/* in */
+			  TSS_BOOL       attribValue,		/* in */
+			  TPM_AUTH*      pOwnerAuth,		/* in, out */
+			  TSS_UUID*      pUuidData)		/* out */
+{
+	//FIXME - this is yet to be implemented
+	return TSPERR(TSS_E_INTERNAL_ERROR);
+}
 #endif
 

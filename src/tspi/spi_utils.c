@@ -37,7 +37,10 @@ struct tcs_api_table tcs_normal_api = {
 	.EvictKey = RPC_EvictKey,
 	.CreateWrapKey = RPC_CreateWrapKey,
 	.GetPubKey = RPC_GetPubKey,
+#ifdef TSS_BUILD_TSS12
 	.OwnerReadInternalPub = RPC_OwnerReadInternalPub,
+	.KeyControlOwner = RPC_KeyControlOwner,
+#endif
 #ifdef TSS_BUILD_CERTIFY
 	.CertifyKey = RPC_CertifyKey,
 #endif
@@ -181,7 +184,10 @@ struct tcs_api_table tcs_transport_api = {
 	.EvictKey = Transport_EvictKey,
 	.CreateWrapKey = Transport_CreateWrapKey,
 	.GetPubKey = Transport_GetPubKey,
+#ifdef TSS_BUILD_TSS12
 	.OwnerReadInternalPub = Transport_OwnerReadInternalPub,
+	.KeyControlOwner = Transport_KeyControlOwner,
+#endif
 #ifdef TSS_BUILD_CERTIFY
 	.CertifyKey = Transport_CertifyKey,
 #endif

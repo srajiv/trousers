@@ -444,6 +444,10 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 						return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 					}
 				break;
+			case TSS_TSPATTRIB_KEYCONTROL_OWNEREVICT:
+				if ((result = obj_rsakey_get_ownerevict(hObject, pulAttrib)))
+					return result;
+				break;
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 		}

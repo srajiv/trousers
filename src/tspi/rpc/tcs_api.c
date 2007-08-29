@@ -3275,3 +3275,40 @@ RPC_FlushSpecific(TSS_HCONTEXT hContext, /* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT
+RPC_KeyControlOwner(TCS_CONTEXT_HANDLE hContext,		/* in */
+		    TCS_KEY_HANDLE     hKey,			/* in */
+		    UINT32             ulPublicInfoLength,	/* in */
+		    BYTE*              rgbPublicInfo,		/* in */
+		    UINT32             attribName,		/* in */
+		    TSS_BOOL           attribValue,		/* in */
+		    TPM_AUTH*          pOwnerAuth,		/* in, out */
+		    TSS_UUID*          pUuidData)		/* out */
+
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_KeyControlOwner_TP(entry, hKey,
+							ulPublicInfoLength,
+							rgbPublicInfo,
+							attribName,
+							attribValue,
+							pOwnerAuth,
+							pUuidData);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+#endif

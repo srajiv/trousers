@@ -76,6 +76,11 @@ TSS_RESULT RPC_CreateWrapKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_EN
 TSS_RESULT RPC_GetPubKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_AUTH *,UINT32 *,BYTE **);
 TSS_RESULT RPC_TerminateHandle_TP(struct host_table_entry *,TCS_AUTHHANDLE);
 TSS_RESULT RPC_OwnerReadInternalPub_TP(struct host_table_entry *, TCS_KEY_HANDLE, TPM_AUTH *, UINT32 *, BYTE **);
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT RPC_KeyControlOwner_TP(struct host_table_entry *, TCS_KEY_HANDLE, UINT32, BYTE *, UINT32, TSS_BOOL, TPM_AUTH *, TSS_UUID *);
+#else
+#define RPC_KeyControlOwner_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#endif
 #else
 #define RPC_LoadKeyByBlob_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_EvictKey_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
@@ -83,6 +88,7 @@ TSS_RESULT RPC_OwnerReadInternalPub_TP(struct host_table_entry *, TCS_KEY_HANDLE
 #define RPC_GetPubKey_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_TerminateHandle_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_OwnerReadInternalPub_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_KeyControlOwner_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_AIK

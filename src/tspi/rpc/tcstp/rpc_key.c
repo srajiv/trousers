@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -292,3 +292,55 @@ RPC_OwnerReadInternalPub_TP(struct host_table_entry *hte,
 
 	return result;
 }
+
+/* TSS 1.2-only interfaces */
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT
+RPC_KeyControlOwner_TP(struct host_table_entry *hte,		// in
+			TCS_KEY_HANDLE     hKey,		// in
+			UINT32             ulPublicInfoLength,	// in
+			BYTE*              rgbPublicInfo,	// in
+			UINT32             attribName,		// in
+			TSS_BOOL           attribValue,		// in
+			TPM_AUTH*          pOwnerAuth,		// in, out
+			TSS_UUID*          pUuidData)		// out
+
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 7);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_KEYCONTROLOWNER;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hKey, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &ulPublicInfoLength, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicInfo, ulPublicInfoLength, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &attribName, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_BOOL, 5, &attribValue, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (pOwnerAuth != NULL) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pOwnerAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_AUTH, 0, pOwnerAuth, 0, &hte->comm))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+		if (getData(TCSD_PACKET_TYPE_UUID, 1, pUuidData, 0, &hte->comm))
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	return result;
+}
+#endif

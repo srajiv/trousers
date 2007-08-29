@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004-2006
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -374,7 +374,6 @@ Tspi_Key_WrapKey(TSS_HKEY hKey,			/* in */
 	UINT32 newPrivKeyLen = 214, encPrivKeyLen = 256;
 	UINT64 offset;
 	TSS_KEY keyContainer;
-	//BYTE hashBlob[1024];
 	TCPA_DIGEST digest;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
@@ -634,3 +633,100 @@ error:
 	pulPuKeyLength = 0;
 	return result;
 }
+
+/* TSS 1.2-only interfaces */
+#ifdef TSS_BUILD_TSS12
+TSS_RESULT
+Tspi_TPM_KeyControlOwner(TSS_HTPM hTPM,		/* in */
+			 TSS_HKEY hTssKey,	/* in */
+			 UINT32 attribName,	/* in */
+			 TSS_BOOL attribValue,	/* in */
+			 TSS_UUID* pUuidData)	/* out */
+{
+	TSS_RESULT result;
+	TSS_HPOLICY hPolicy;
+	TSS_HCONTEXT tspContext;
+	TCS_KEY_HANDLE hTcsKey;
+	BYTE *pubKey = NULL;
+	UINT32 pubKeyLen;
+	TPM_KEY_CONTROL tpmAttribName;
+	Trspi_HashCtx hashCtx;
+	TCPA_DIGEST digest;
+	TPM_AUTH ownerAuth;
+
+	LogDebugFn("Enter");
+
+	/* Check valid TPM context, get TSP context */
+	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
+		return result;
+
+	/* Get Tcs KeyHandle */
+	if ((result = obj_rsakey_get_tcs_handle(hTssKey, &hTcsKey)))
+		return result;
+
+	/* Validate/convert attribName */
+	switch (attribName) {
+		case TSS_TSPATTRIB_KEYCONTROL_OWNEREVICT:
+			tpmAttribName = TPM_KEY_CONTROL_OWNER_EVICT;
+			break;
+		default:
+			return TSPERR(TSS_E_BAD_PARAMETER);
+	}
+
+	/* Begin Auth - get TPM Policy Handler */
+	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
+		return result;
+
+	/* Get associated pubKey */
+	if ((result = obj_rsakey_get_pub_blob(hTssKey, &pubKeyLen, &pubKey)))
+		return result;
+
+	/* Create hash digest */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_KeyControlOwner);
+	LogDebugData(pubKeyLen, pubKey);
+	result |= Trspi_HashUpdate(&hashCtx, pubKeyLen, pubKey);
+	result |= Trspi_Hash_UINT32(&hashCtx, tpmAttribName);
+	result |= Trspi_Hash_BOOL(&hashCtx, attribValue);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		free_tspi(tspContext, pubKey);
+		return result;
+	}
+
+	if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_KeyControlOwner, hPolicy, FALSE,
+					      &digest, &ownerAuth))) {
+		free_tspi(tspContext, pubKey);
+		return result;
+	}
+
+	/* Call TCS interface */
+	//FIXME - use TCS_API(tspContext) instead
+	if ((result = RPC_KeyControlOwner(tspContext, hTcsKey, pubKeyLen, pubKey, tpmAttribName,
+					  attribValue, &ownerAuth, pUuidData))) {
+		free_tspi(tspContext, pubKey);
+		return result;
+	}
+
+	/* Validate return auth */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TSS_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_KeyControlOwner);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		return result;
+
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &ownerAuth)))
+		return result;
+
+	/* change hKey internal flag, according to attrib[Name|Value] */
+	switch (attribName) {
+		case TSS_TSPATTRIB_KEYCONTROL_OWNEREVICT:
+			result = obj_rsakey_set_ownerevict(hTssKey, attribValue);
+			break;
+		default:
+			/* NOT-REACHED */
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	}
+
+	return result;
+}
+#endif

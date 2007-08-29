@@ -4,7 +4,7 @@
  *
  * trousers - An open source TCG Software Stack
  *
- * (C) Copyright International Business Machines Corp. 2004
+ * (C) Copyright International Business Machines Corp. 2004-2007
  *
  */
 
@@ -313,3 +313,75 @@ done:
 	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);
 	return result;
 }
+
+TSS_RESULT
+TCSP_KeyControlOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+			      TCS_KEY_HANDLE hTcsKey,		/* in */
+			      UINT32 ulPubKeyLength,		/* in */
+			      BYTE* rgbPubKey,			/* in */
+			      UINT32 attribName,		/* in */
+			      TSS_BOOL attribValue,		/* in */
+			      TPM_AUTH* pOwnerAuth,		/* in,out */
+			      TSS_UUID* pUuidData)		/* out */
+{
+	UINT64 offset = 0;
+	UINT32 paramSize;
+	TSS_RESULT result;
+	TPM_KEY_HANDLE hTpmKey;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	LogDebugFn("Enter");
+	if ((result = ctx_verify_context(hContext))) {
+		LogDebug("Invalid TSS Context");
+		goto done;
+	}
+
+	if ((result = get_slot_lite(hContext, hTcsKey, &hTpmKey))) {
+		LogDebug("Can't get TPM Keyhandle for TCS key 0x%x", hTcsKey);
+		goto done;
+	}
+	LogDebugFn("TCS hKey=0x%x, TPM hKey=0x%x", hTcsKey, hTpmKey);
+
+	if ((result = auth_mgr_check(hContext, &pOwnerAuth->AuthHandle))) {
+		LogDebug("Owner Authentication failed");
+		goto done;
+	}
+
+	if ((result = mc_find_next_ownerevict_uuid(pUuidData))) {
+		LogDebugFn("mc_find_next_ownerevict_uuid failed: rc=0x%x", result);
+		goto done;
+	}
+
+	if ((result = tpm_rqu_build(TPM_ORD_KeyControlOwner, &offset, txBlob, hTpmKey,
+				    ulPubKeyLength, rgbPubKey, attribName, attribValue,
+				    pOwnerAuth))) {
+		LogDebugFn("rqu build failed");
+		goto done;
+	}
+
+	if ((result = req_mgr_submit_req(txBlob))) {
+	        LogDebugFn("Request submission failed");
+		goto done;
+	}
+
+	if ((result = UnloadBlob_Header(txBlob, &paramSize))) {
+		LogDebugFn("UnloadBlob_Header failed: rc=0x%x", result);
+		goto done;
+	}
+
+	if ((result = tpm_rsp_parse(TPM_ORD_KeyControlOwner, txBlob, paramSize, pOwnerAuth))) {
+		LogDebugFn("tpm_rsp_parse failed: rc=0x%x", result);
+		goto done;
+	}
+
+	if ((result = mc_set_uuid(hTcsKey, pUuidData))){
+		LogDebugFn("mc_set_uuid failed: rc=0x%x", result);
+		goto done;
+	}
+
+	LogResult("KeyControlOwner", result);
+done:
+	auth_mgr_release_auth(pOwnerAuth, NULL, hContext);
+	return result;
+}
+

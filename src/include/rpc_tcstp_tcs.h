@@ -60,6 +60,11 @@ DECLARE_TCSTP_FUNC(TerminateHandle);
 DECLARE_TCSTP_FUNC(LoadKeyByBlob);
 DECLARE_TCSTP_FUNC(CreateWrapKey);
 DECLARE_TCSTP_FUNC(OwnerReadInternalPub);
+#ifdef TSS_BUILD_TSS12
+DECLARE_TCSTP_FUNC(KeyControlOwner);
+#else
+#define tcs_wrap_KeyControlOwner	tcs_wrap_Error
+#endif
 #else
 #define tcs_wrap_EvictKey		tcs_wrap_Error
 #define tcs_wrap_GetPubkey		tcs_wrap_Error
@@ -67,6 +72,7 @@ DECLARE_TCSTP_FUNC(OwnerReadInternalPub);
 #define tcs_wrap_LoadKeyByBlob		tcs_wrap_Error
 #define tcs_wrap_CreateWrapKey		tcs_wrap_Error
 #define tcs_wrap_OwnerReadInternalPub	tcs_wrap_Error
+#define tcs_wrap_KeyControlOwner	tcs_wrap_Error
 
 #endif
 

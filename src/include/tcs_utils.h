@@ -52,6 +52,12 @@ extern struct tpm_properties tpm_metrics;
 #define TPM_VERSION_IS(maj, min) \
 	((tpm_metrics.version.major == maj) && (tpm_metrics.version.minor == min))
 
+#define TSS_UUID_IS_OWNEREVICT(uuid) \
+	((!uuid->ulTimeLow) && (!uuid->usTimeMid) && (!uuid->usTimeHigh) && \
+	 (!uuid->bClockSeqHigh) && (!uuid->bClockSeqLow) && (!uuid->rgbNode[0]) && \
+	 (!uuid->rgbNode[1]) && (!uuid->rgbNode[2]) && (!uuid->rgbNode[3]) && \
+	 (uuid->rgbNode[4] == 1))
+
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
@@ -72,6 +78,7 @@ TSS_RESULT auth_mgr_add(TCS_CONTEXT_HANDLE, TPM_AUTHHANDLE);
 
 TSS_RESULT event_log_init();
 TSS_RESULT event_log_final();
+TSS_RESULT owner_evict_init();
 
 #ifdef TSS_BUILD_PCR_EVENTS
 #define EVENT_LOG_init()	event_log_init()
@@ -109,12 +116,14 @@ TSS_UUID *mc_get_uuid_by_pub(TCPA_STORE_PUBKEY *);
 TSS_RESULT mc_get_handles_by_uuid(TSS_UUID *, TCS_KEY_HANDLE *, TCPA_KEY_HANDLE *);
 TCS_KEY_HANDLE mc_get_handle_by_encdata(BYTE *);
 TSS_RESULT mc_update_encdata(BYTE *, BYTE *);
+TSS_RESULT mc_find_next_ownerevict_uuid(TSS_UUID *);
+TSS_RESULT mc_set_uuid(TCS_KEY_HANDLE, TSS_UUID *);
 
 TSS_RESULT initDiskCache(void);
 void replaceEncData_PS(TSS_UUID, BYTE *encData, BYTE *newEncData);
 
 TSS_RESULT mc_add_entry(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TSS_KEY *);
-TSS_RESULT mc_add_entry_srk(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TSS_KEY *);
+TSS_RESULT mc_add_entry_init(TCS_KEY_HANDLE, TCPA_KEY_HANDLE, TSS_KEY *, TSS_UUID *);
 TSS_RESULT mc_remove_entry(TCS_KEY_HANDLE);
 TSS_RESULT mc_set_slot_by_slot(TCPA_KEY_HANDLE, TCPA_KEY_HANDLE);
 TSS_RESULT mc_set_slot_by_handle(TCS_KEY_HANDLE, TCPA_KEY_HANDLE);
@@ -1164,6 +1173,16 @@ TSS_RESULT TCSP_FlushSpecific_Common(UINT32, TPM_RESOURCE_TYPE);
 	TSS_RESULT TCSP_FlushSpecific_Internal(TCS_CONTEXT_HANDLE hContext,        /* in */
 					       TCS_HANDLE hResHandle,      /* in */
 					       TPM_RESOURCE_TYPE resourceType /* in */
+	);
+
+	TSS_RESULT TCSP_KeyControlOwner_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+					         TCS_KEY_HANDLE hKey,		/* in */
+					         UINT32 ulPubKeyLength,		/* in */
+					         BYTE* rgbPubKey,		/* in */
+					         UINT32 attribName,		/* in */
+					         TSS_BOOL attribValue,		/* in */
+					         TPM_AUTH* pOwnerAuth,		/* in,out */
+					         TSS_UUID* pUuidData		/* out */
 	);
 
 #endif /*_TCS_UTILS_H_ */
