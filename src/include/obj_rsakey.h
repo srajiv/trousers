@@ -13,10 +13,14 @@
 
 #ifdef TSS_BUILD_RSAKEY_LIST
 
+// rsakey specific flags
+#define TSS_RSAKEY_FLAG_OWNEREVICT (0x00000001)
+
 /* structures */
 struct tr_rsakey_obj {
 	int type;
 	TSS_KEY key;
+	TSS_FLAG flags;
 	TSS_HPOLICY usagePolicy;
 	TSS_HPOLICY migPolicy;
 	TSS_UUID uuid;
@@ -94,6 +98,8 @@ TSS_RESULT obj_rsakey_get_msa_approval(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_set_msa_digest(TSS_HKEY, UINT32, BYTE *);
 TSS_RESULT obj_rsakey_get_msa_digest(TSS_HKEY, UINT32 *, BYTE **);
 #endif
+TSS_RESULT obj_rsakey_get_ownerevict(TSS_HKEY, UINT32 *);
+TSS_RESULT obj_rsakey_set_ownerevict(TSS_HKEY, TSS_BOOL);
 
 #define RSAKEY_LIST_DECLARE		struct obj_list rsakey_list
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list
