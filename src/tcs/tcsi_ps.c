@@ -43,7 +43,7 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (is_reg == TRUE) {
+	if (is_reg == TRUE || TSS_UUID_IS_OWNEREVICT(KeyUUID)) {
 		LogDebug("UUID is already registered");
 		return TCSERR(TSS_E_KEY_ALREADY_REGISTERED);
 	}
@@ -51,8 +51,8 @@ TCS_RegisterKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	LogDebugUnrollKey(rgbKey);
 
 	/* Go ahead and store it in system persistant storage */
-	if ((result = ps_write_key(KeyUUID, WrappingKeyUUID, gbVendorData,
-				   cVendorData, rgbKey, cKeySize))) {
+	if ((result = ps_write_key(KeyUUID, WrappingKeyUUID, gbVendorData, cVendorData, rgbKey,
+				   cKeySize))) {
 		LogError("Error writing key to file");
 		return result;
 	}
