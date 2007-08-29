@@ -729,7 +729,7 @@ obj_context_transport_establish(TSS_HCONTEXT tspContext, struct tr_context_obj *
 		exclusive = TSS_TCSATTRIB_TRANSPORT_EXCLUSIVE;
 	}
 
-	/* XXX update this to test for other supported TPM_CAP_TRANS_ALG's */
+	/* XXX implement AES128+CTR (Winbond, Infineon), then AES256+CTR (Atmel) */
 	context->transPub.algId = TPM_ALG_MGF1;
 	context->transPub.encScheme = TPM_ES_NONE;
 
