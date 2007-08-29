@@ -443,8 +443,8 @@ init_disk_cache(int fd)
 			if ((rc = UnloadBlob_TSS_KEY(&tmp_offset, srk_blob, &srk_key)))
 				goto err_exit;
 			/* add to the mem cache */
-			if ((rc = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE,
-						   &srk_key))) {
+			if ((rc = mc_add_entry_init(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srk_key,
+						    &SRK_UUID))) {
 				LogError("Error adding SRK to mem cache.");
 				destroy_key_refs(&srk_key);
 				goto err_exit;

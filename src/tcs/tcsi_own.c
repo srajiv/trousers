@@ -104,8 +104,8 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 		}
 #endif
-		result = mc_add_entry_srk(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer);
-		if (result != TSS_SUCCESS) {
+		if ((result = mc_add_entry_init(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer,
+					        &SRK_UUID))) {
 			destroy_key_refs(&srkKeyContainer);
 			LogError("Error creating SRK mem cache entry");
 			*srkKeySize = 0;
