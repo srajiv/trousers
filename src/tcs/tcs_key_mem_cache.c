@@ -436,15 +436,11 @@ mc_remove_entry(TCS_KEY_HANDLE tcs_handle)
 	return TCSERR(TSS_E_FAIL);
 }
 
-/*
- * custom add mem cache entry function called only at take ownership time, since
- * that's the only non init-time instance where we need to create a mem cache
- * entry from outside a load key path
- */
 TSS_RESULT
-mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
-		 TCPA_KEY_HANDLE tpm_handle,
-		 TSS_KEY *key_blob)
+mc_add_entry_init(TCS_KEY_HANDLE tcs_handle,
+		  TCPA_KEY_HANDLE tpm_handle,
+		  TSS_KEY *key_blob,
+		  TSS_UUID *uuid)
 {
 	struct key_mem_cache *entry, *tmp;
 
@@ -470,53 +466,58 @@ mc_add_entry_srk(TCS_KEY_HANDLE tcs_handle,
 
 	entry->tpm_handle = tpm_handle;
 
-	/* allocate space for the blob */
-	entry->blob = malloc(sizeof(TSS_KEY));
-	if (entry->blob == NULL) {
-		LogError("malloc of %zd bytes failed.", sizeof(TSS_KEY));
-		free(entry);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	memcpy(entry->blob, key_blob, sizeof(TSS_KEY));
+	if (key_blob) {
+		/* allocate space for the blob */
+		entry->blob = malloc(sizeof(TSS_KEY));
+		if (entry->blob == NULL) {
+			LogError("malloc of %zd bytes failed.", sizeof(TSS_KEY));
+			free(entry);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
 
-	/* allocate space for the key parameters if necessary */
-	if (key_blob->algorithmParms.parmSize) {
-		BYTE *tmp_parms = (BYTE *)malloc(key_blob->algorithmParms.parmSize);
-		if (tmp_parms == NULL) {
-			LogError("malloc of %u bytes failed.", key_blob->algorithmParms.parmSize);
+		memcpy(entry->blob, key_blob, sizeof(TSS_KEY));
+
+		/* allocate space for the key parameters if necessary */
+		if (key_blob->algorithmParms.parmSize) {
+			BYTE *tmp_parms = (BYTE *)malloc(key_blob->algorithmParms.parmSize);
+			if (tmp_parms == NULL) {
+				LogError("malloc of %u bytes failed.",
+					 key_blob->algorithmParms.parmSize);
+				free(entry->blob);
+				free(entry);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			memcpy(tmp_parms, key_blob->algorithmParms.parms,
+			       key_blob->algorithmParms.parmSize);
+			entry->blob->algorithmParms.parms = tmp_parms;
+		}
+
+		/* allocate space for the public key */
+		entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
+		if (entry->blob->pubKey.key == NULL) {
+			LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
 			free(entry->blob);
 			free(entry);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
-		memcpy(tmp_parms, key_blob->algorithmParms.parms, key_blob->algorithmParms.parmSize);
-		entry->blob->algorithmParms.parms = tmp_parms;
-	}
+		memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
 
-	/* allocate space for the public key */
-	entry->blob->pubKey.key = (BYTE *)malloc(key_blob->pubKey.keyLength);
-	if (entry->blob->pubKey.key == NULL) {
-		LogError("malloc of %u bytes failed.", key_blob->pubKey.keyLength);
-		free(entry->blob);
-		free(entry);
-		return TCSERR(TSS_E_OUTOFMEMORY);
-	}
-	memcpy(entry->blob->pubKey.key, key_blob->pubKey.key, key_blob->pubKey.keyLength);
-
-	/* allocate space for the encData if necessary */
-	if (key_blob->encSize != 0) {
-		entry->blob->encData = (BYTE *)malloc(key_blob->encSize);
-		if (entry->blob->encData == NULL) {
-			LogError("malloc of %u bytes failed.", key_blob->encSize);
-			free(entry->blob->pubKey.key);
-			free(entry->blob);
-			free(entry);
-			return TCSERR(TSS_E_OUTOFMEMORY);
+		/* allocate space for the encData if necessary */
+		if (key_blob->encSize != 0) {
+			entry->blob->encData = (BYTE *)malloc(key_blob->encSize);
+			if (entry->blob->encData == NULL) {
+				LogError("malloc of %u bytes failed.", key_blob->encSize);
+				free(entry->blob->pubKey.key);
+				free(entry->blob);
+				free(entry);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			memcpy(entry->blob->encData, key_blob->encData, key_blob->encSize);
 		}
-		memcpy(entry->blob->encData, key_blob->encData, key_blob->encSize);
+		entry->blob->encSize = key_blob->encSize;
 	}
-	entry->blob->encSize = key_blob->encSize;
 
-	memcpy(&entry->uuid, &SRK_UUID, sizeof(TSS_UUID));
+	memcpy(&entry->uuid, uuid, sizeof(TSS_UUID));
 
 	MUTEX_LOCK(mem_cache_lock);
 
@@ -1050,3 +1051,102 @@ LoadKeyShim(TCS_CONTEXT_HANDLE hContext, TCPA_STORE_PUBKEY *pubKey,
 	return TCSERR(TCS_E_KM_LOADFAILED);
 }
 
+TSS_RESULT
+owner_evict_init()
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	TCPA_KEY_HANDLE_LIST keyList = { 0, NULL };
+	BYTE *respData = NULL, ownerEvictCtr = 0;
+	UINT32 respDataSize = 0, i;
+	UINT64 offset = 0;
+
+	if ((result = TCSP_GetCapability_Internal(InternalContext, TPM_CAP_KEY_HANDLE, 0, NULL,
+						  &respDataSize, &respData)))
+		return result;
+
+	if ((result = UnloadBlob_KEY_HANDLE_LIST(&offset, respData, &keyList))) {
+		free(respData);
+		return result;
+	}
+
+	free(respData);
+	for (i = 0; i < keyList.loaded; i++) {
+		UINT64 offset = 0;
+		UINT32 keyHandle;
+
+		LoadBlob_UINT32(&offset, keyList.handle[i], (BYTE *)&keyHandle);
+		/* get the ownerEvict flag for this key handle */
+		if ((result = TCSP_GetCapability_Internal(InternalContext, TPM_CAP_KEY_STATUS,
+							  sizeof(UINT32), (BYTE *)&keyHandle,
+							  &respDataSize, &respData))) {
+			free(keyList.handle);
+			return result;
+		}
+
+		if (*(TPM_BOOL *)respData == TRUE) {
+			TSS_UUID uuid = TSS_UUID_OWNEREVICT(ownerEvictCtr);
+
+			LogDebugFn("Found an owner evict key, assigned uuid %c", ownerEvictCtr);
+			if ((result = mc_add_entry_init(getNextTcsKeyHandle(), keyList.handle[i],
+							NULL, &uuid))) {
+				free(keyList.handle);
+				return result;
+			}
+			ownerEvictCtr++;
+		}
+	}
+
+	return result;
+}
+
+/* find next lowest OWNEREVICT uuid */
+TSS_RESULT
+mc_find_next_ownerevict_uuid(TSS_UUID *uuid)
+{
+	TCS_KEY_HANDLE tmpKey;
+	TCPA_KEY_HANDLE tmpSlot;
+	UINT16 seed = 0;
+	TSS_RESULT result = TCSERR(TSS_E_FAIL);
+
+	MUTEX_LOCK(mem_cache_lock);
+
+	for (seed = 0; seed <= 255; seed++) {
+		TSS_UUID tmpUuid = TSS_UUID_OWNEREVICT(seed);
+
+		/* if UUID is found, continue on, trying the next UUID */
+		if (!mc_get_handles_by_uuid(&tmpUuid, &tmpKey, &tmpSlot))
+			continue;
+
+		/* UUID is not found, so its the first one available */
+		memcpy(uuid, &tmpUuid, sizeof(TSS_UUID));
+		result = TSS_SUCCESS;
+		break;
+	}
+
+	MUTEX_UNLOCK(mem_cache_lock);
+	return result;
+}
+
+TSS_RESULT
+mc_set_uuid(TCS_KEY_HANDLE tcs_handle, TSS_UUID *uuid)
+{
+	struct key_mem_cache *tmp;
+	TSS_RESULT result = TCSERR(TSS_E_FAIL);
+
+	MUTEX_LOCK(mem_cache_lock);
+
+	LogDebugFn("looking for 0x%x", tcs_handle);
+
+	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
+		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
+		if (tmp->tcs_handle == tcs_handle) {
+			LogDebugFn("Handle found, re-setting UUID");
+			memcpy(&tmp->uuid, uuid, sizeof(TSS_UUID));
+			result = TSS_SUCCESS;
+			break;
+		}
+	}
+	MUTEX_UNLOCK(mem_cache_lock);
+
+	return result;
+}
