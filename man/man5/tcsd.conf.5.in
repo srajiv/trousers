@@ -91,6 +91,17 @@ specification section 9.3 for information on this process.
 A list of TCS commands which will be allowed to be executed on this machine's
 TCSD by TSP's on non-local hosts (over the internet). By default, access to all
 operations is denied.
+
+.BI host_platform_class
+Determines the TCG specification of the host's platform class. This refers to
+one of the specifications contained in the TCG web site. The default is PC
+specification version 1.2 .
+
+.BI all_platform_classes
+Specifies all the TCG defined platforms associated with the host platform. The
+host_platform_class must not be defined here. By default, all platforms but
+the host platform are associated.
+
 .SH "EXAMPLE"
 .PP
 .IP
@@ -106,6 +117,8 @@ platform_cred = /usr/local/var/lib/tpm/platform.cert
 conformance_cred = /usr/local/var/lib/tpm/conformance.cert
 endorsement_cred = /usr/local/var/lib/tpm/endorsement.cert
 remote_ops = create_key,random
+host_platform_class = server_12
+all_platform_classes = pc_11,pc_12,mobile_12
 .fi
 .SH "SEE ALSO"
 .PP

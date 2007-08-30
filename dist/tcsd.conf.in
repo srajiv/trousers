@@ -135,3 +135,36 @@
 #  enforce_exclusive_transport = 0
 #
 
+# Option: host_platform_class
+# Values: One of the TCG platform class specifications
+#	PC_11 - PC Client System, version 1.1
+#	PC_12 - PC Client System, version 1.2
+#	PDA_12 - PDA System, version 1.2
+#	SERVER_12 - Server System, version 1.2
+#	MOBILE_12 - Mobile Phone System, version 1.2
+#
+# Description: This option determines the host platform (host the TCS system
+# is running on) class, among those specified by the Trusted Computing group
+# on https://www.trustedcomputinggroup.org/specs/. This class will be reported
+# by the TCS daemon when an application queries it using the
+# TSS_TCSCAP_PROP_HOST_PLATFORM sub-capability. The default is PC_12.
+#
+# host_platform_class = PC_12
+#
+
+# Option: all_platform_classes
+# Values: TCG Platform class names, separated by commas (no whitespaces)
+#	PC_11 - PC Client System, version 1.1
+#	PC_12 - PC Client System, version 1.2
+#	PDA_12 - PDA System, version 1.2
+#	SERVER_12 - Server System, version 1.2
+#	MOBILE_12 - Mobile Phone System, version 1.2
+#
+# Description: This option determines all the platform classes supported by the
+# TCS daemon. This list must not include the value set as "host_platform_class"
+# specified above. Since by default TrouSerS supports all TPM 1.2 functionality,
+# the default is all 1.2 and 1.1 platform classes.
+#
+# all_platform_classes = PC_11,PDA_12,SERVER_12,MOBILE_12
+#
+
