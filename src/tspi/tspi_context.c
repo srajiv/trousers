@@ -64,7 +64,7 @@ Tspi_Context_Close(TSS_HCONTEXT tspContext)	/* in */
 
 TSS_RESULT
 Tspi_Context_Connect(TSS_HCONTEXT tspContext,	/* in */
-		     UNICODE *wszDestination)	/* in */
+		     TSS_UNICODE *wszDestination)	/* in */
 {
 	TSS_RESULT result;
 	BYTE *machine_name = NULL;
