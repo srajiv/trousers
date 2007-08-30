@@ -340,6 +340,10 @@ Tspi_TPM_GetStatus(TSS_HTPM hTPM,		/* in */
 	case TSS_TPMSTATUS_NV_LOCK:
 		*pfTpmState = BOOL(nonVolFlags & TSS_TPM_PF_NV_LOCKED_BIT);
 		break;
+	case TSS_TPMSTATUS_POSTINITIALISE:
+		/* There is no way to query the TPM for this flag. */
+		result = TSPERR(TSS_E_NOTIMPL);
+		break;
 #ifdef TSS_BUILD_TSS12
 	case TSS_TPMSTATUS_DISABLEPUBSRKREAD:
 		*pfTpmState = INVBOOL(nonVolFlags & TSS_TPM_PF_READSRKPUB_BIT);
