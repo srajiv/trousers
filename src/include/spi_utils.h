@@ -39,12 +39,8 @@ MUTEX_DECLARE_EXTERN(mem_cache_lock);
 #define BOOL(x)		((x) == 0) ? FALSE : TRUE
 #define INVBOOL(x)	((x) == 0) ? TRUE : FALSE
 
-#define INCREMENT	1
-#define DECREMENT	0
-
-UINT32 UnicodeToArray(BYTE *, UNICODE *);
-UINT32 ArrayToUnicode(BYTE *, UINT32, UNICODE *);
-UINT32 StringToUnicodeArray(char *, BYTE *);
+#define TSS_PSFILE_INCREMENT_NUM_KEYS	1
+#define TSS_PSFILE_DECREMENT_NUM_KEYS	0
 
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
@@ -106,7 +102,6 @@ int unpin_mem(void *, size_t);
 
 #define TSS_MAX_SYM_BLOCK_SIZE	16
 
-TSS_RESULT internal_GetMachineName(UNICODE *, int);
 TSS_RESULT internal_GetCap(TSS_HCONTEXT, TSS_FLAG, UINT32, UINT32 *, BYTE **);
 
 /* For an unconnected context that wants to do PCR operations, assume that

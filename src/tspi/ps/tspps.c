@@ -499,7 +499,7 @@ psfile_write_key(int fd,
 		goto done;
 	}
 
-	if ((result = psfile_change_num_keys(fd, INCREMENT))) {
+	if ((result = psfile_change_num_keys(fd, TSS_PSFILE_INCREMENT_NUM_KEYS))) {
 		LogDebug("%s", __FUNCTION__);
 		goto done;
 	}
@@ -591,7 +591,7 @@ psfile_remove_key(int fd, TSS_UUID *uuid)
 
 	/* we succeeded in removing a key from the disk. Decrement the number
 	 * of keys in the file */
-	if ((result = psfile_change_num_keys(fd, DECREMENT)))
+	if ((result = psfile_change_num_keys(fd, TSS_PSFILE_DECREMENT_NUM_KEYS)))
 		return result;
 
 	return TSS_SUCCESS;
