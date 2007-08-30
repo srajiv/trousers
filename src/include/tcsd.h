@@ -16,6 +16,15 @@
 
 #include "rpc_tcstp.h"
 
+/* Platform Class structures */
+struct platform_class
+{
+	unsigned int simpleID;	/* Platform specific spec identifier */
+	unsigned int classURISize;	/* Size of the classURI */
+	char *classURI;	/* Specific spec. Can be NULL */
+	struct platform_class *next;
+};
+
 /* config structures */
 struct tcsd_config
 {
@@ -34,6 +43,9 @@ struct tcsd_config
 	unsigned int unset;	/* bitmask of options which are still unset */
 	int exclusive_transport; /* allow applications to open exclusive transport sessions with
 				    the TPM and enforce their exclusivity (possible DOS issue) */
+	struct platform_class *host_platform_class; /* Host platform class of this TCS System */
+	struct platform_class *all_platform_classes;	/* List of platform classes
+							of this TCS System */
 };
 
 #define TCSD_CONFIG_FILE	ETC_PREFIX "/tcsd.conf"
@@ -48,12 +60,27 @@ struct tcsd_config
 #define TCSD_DEFAULT_KERNEL_LOG_FILE	"/sys/kernel/security/ima/binary_runtime_measurements"
 #define TCSD_DEFAULT_FIRMWARE_PCRS	0x00000000
 #define TCSD_DEFAULT_KERNEL_PCRS	0x00000000
+
 /* This will change when a system with more than 32 PCR's exists */
 #define TCSD_MAX_PCRS			32
 
 /* this is the 2nd param passed to the listen() system call */
 #define TCSD_MAX_SOCKETS_QUEUED		10
 #define TCSD_TXBUF_SIZE			1024
+
+/* The Available Tcs Platform Classes */
+struct tcg_platform_spec {
+	char *name;
+	TPM_PLATFORM_SPECIFIC specNo;
+	char *specURI;
+};
+
+/* The Specific URI's for the platforms specs on TCG website */
+#define TPM_PS_PC_11_URI	"https://www.trustedcomputinggroup.org/groups/pc_client/TCG_PCSpecificSpecification_v1_1.pdf"
+#define TPM_PS_PC_12_URI	"https://www.trustedcomputinggroup.org/specs/PCClient/TCG_PCClientImplementationforBIOS_1-20_1-00.pdf"
+#define TPM_PS_PDA_12_URI	"https://www.trustedcomputinggroup.org/specs/mobilephone/tcg-mobile-reference-architecture-1.0.pdf"
+#define TPM_PS_Server_12_URI	"https://www.trustedcomputinggroup.org/specs/Server/TCG_Generic_Server_Specification_v1_0_rev0_8.pdf"
+#define TPM_PS_Mobile_12_URI	"https://www.trustedcomputinggroup.org/specs/mobilephone/tcg-mobile-reference-architecture-1.0.pdf"
 
 /* for detecting whether an option has been set */
 #define TCSD_OPTION_PORT		0x0001
@@ -68,6 +95,7 @@ struct tcsd_config
 #define TCSD_OPTION_ENDORSEMENT_CRED	0x0200
 #define TCSD_OPTION_REMOTE_OPS		0x0400
 #define TCSD_OPTION_EXCLUSIVE_TRANSPORT	0x0800
+#define TCSD_OPTION_HOST_PLATFORM_CLASS	0x1000
 
 #define TSS_TCP_RPC_MAX_DATA_LEN	1048576
 #define TSS_TCP_RPC_BAD_PACKET_TYPE	0x10000000
@@ -84,7 +112,9 @@ enum tcsd_config_option_code {
 	opt_conformance_cred,
 	opt_endorsement_cred,
 	opt_remote_ops,
-	opt_exclusive_transport
+	opt_exclusive_transport,
+	opt_host_platform_class,
+	opt_all_platform_classes
 };
 
 struct tcsd_config_options {

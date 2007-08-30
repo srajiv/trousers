@@ -25,6 +25,7 @@
 #include "tcsd_wrap.h"
 #include "tcsd.h"
 
+extern struct tcsd_config tcsd_options;
 
 TSS_RESULT
 internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
@@ -36,6 +37,8 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 	UINT64 offset;
 	TSS_RESULT result;
 	TPM_VERSION tcsVersion = INTERNAL_CAP_TCS_VERSION;
+	struct tcsd_config *config = &tcsd_options;
+	struct platform_class *platClass;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
@@ -71,8 +74,9 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			(*resp)[0] = INTERNAL_CAP_TCS_ALG_HMAC;
 			break;
 		default:
+			*respSize = 0;
 			free(*resp);
-			return TCSERR(TSS_E_FAIL);
+			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 		break;
 	case TSS_TCSCAP_VERSION:
@@ -96,7 +100,6 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		}
 		(*resp)[0] = INTERNAL_CAP_TCS_PERSSTORAGE;
 		break;
-
 	case TSS_TCSCAP_CACHING:
 		LogDebug("TSS_TCSCAP_CACHING");
 		tcsSubCapContainer = Decode_UINT32(subCap);
@@ -118,7 +121,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
 		} else {
 			LogDebugFn("Bad subcap");
-			return TCSERR(TSS_E_FAIL);
+			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 		break;
 	case TSS_TCSCAP_MANUFACTURER:
@@ -143,7 +146,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 			memcpy(*resp, str, INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN);
 		} else {
 			LogDebugFn("Bad subcap");
-			return TCSERR(TSS_E_FAIL);
+			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 		break;
 	case TSS_TCSCAP_TRANSPORT:
@@ -158,14 +161,77 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 				LogError("malloc of %zd byte failed.", sizeof(TSS_BOOL));
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
-			*(TSS_BOOL *)(*resp) = TRUE;
+
+			if (tcsSubCapContainer == TSS_TCSCAP_TRANS_EXCLUSIVE)
+				*(TSS_BOOL *)(*resp) = config->exclusive_transport ? TRUE : FALSE;
+			else
+				*(TSS_BOOL *)(*resp) = TRUE;
 		} else {
 			LogDebugFn("Bad subcap");
-			return TCSERR(TSS_E_FAIL);
+			return TCSERR(TSS_E_BAD_PARAMETER);
+		}
+		break;
+	case TSS_TCSCAP_PLATFORM_CLASS:
+		LogDebug("TSS_TCSCAP_PLATFORM_CLASS");
+		tcsSubCapContainer = Decode_UINT32(subCap);
+
+		switch (tcsSubCapContainer) {
+		case TSS_TCSCAP_PROP_HOST_PLATFORM:
+			/* Return the TSS_PLATFORM_CLASS */
+			LogDebugFn("TSS_TCSCAP_PROP_HOST_PLATFORM");
+			platClass = config->host_platform_class;
+			/* Computes the size of host platform structure */
+			*respSize = (2 * sizeof(UINT32)) + platClass->classURISize;
+			*resp = malloc(*respSize);
+			if (*resp == NULL) {
+				LogError("malloc of %u bytes failed.", *respSize);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			memset(*resp, 0, *respSize);
+			offset = 0;
+			LoadBlob_UINT32(&offset, platClass->simpleID, *resp);
+			LoadBlob_UINT32(&offset, platClass->classURISize, *resp);
+			memcpy(&(*resp)[offset], platClass->classURI, platClass->classURISize);
+			LogBlob(*respSize, *resp);
+			break;
+		case TSS_TCSCAP_PROP_ALL_PLATFORMS:
+			/* Return an array of TSS_PLATFORM_CLASSes, when existent */
+			LogDebugFn("TSS_TCSCAP_PROP_ALL_PLATFORMS");
+			*respSize = 0;
+			*resp = NULL;
+			if ((platClass = config->all_platform_classes) != NULL) {
+				/* Computes the size of all Platform Structures */
+				while (platClass != NULL) {
+					*respSize += (2 * sizeof(UINT32)) + platClass->classURISize;
+					platClass = platClass->next;
+				}
+				*resp = malloc(*respSize);
+				if (*resp == NULL) {
+					LogError("malloc of %u bytes failed.", *respSize);
+					return TCSERR(TSS_E_OUTOFMEMORY);
+				}
+				memset(*resp, 0, *respSize);
+				offset = 0;
+				/* Concatenates all the structures on the BYTE * resp */
+				platClass = config->all_platform_classes;
+				while (platClass != NULL){
+					LoadBlob_UINT32(&offset, platClass->simpleID, *resp);
+					LoadBlob_UINT32(&offset, platClass->classURISize, *resp);
+					memcpy(&(*resp)[offset], platClass->classURI,
+					       platClass->classURISize);
+					offset += platClass->classURISize;
+					platClass = platClass->next;
+				}
+				LogBlob(*respSize, *resp);
+			}
+			break;
+		default:
+			LogDebugFn("Bad subcap");
+			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 		break;
 	default:
-		return TCSERR(TSS_E_FAIL);
+		return TCSERR(TSS_E_BAD_PARAMETER);
 	}
 
 	return TSS_SUCCESS;

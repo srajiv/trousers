@@ -70,6 +70,7 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 		case TSS_TCSCAP_PERSSTORAGE:
 		case TSS_TCSCAP_MANUFACTURER:
 		case TSS_TCSCAP_TRANSPORT:
+		case TSS_TCSCAP_PLATFORM_CLASS:
 			if (capArea == TSS_TCSCAP_ALG) {
 				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
 					return TSPERR(TSS_E_BAD_PARAMETER);

@@ -45,8 +45,20 @@ struct tcsd_config_options options_list[] = {
 	{"endorsement_cred", opt_endorsement_cred},
 	{"remote_ops", opt_remote_ops},
 	{"enforce_exclusive_transport", opt_exclusive_transport},
+	{"host_platform_class", opt_host_platform_class},
+	{"all_platform_classes", opt_all_platform_classes},
 	{NULL, 0}
 };
+
+struct tcg_platform_spec tcg_platform_specs[] = {
+	{"PC_11", TPM_PS_PC_11, TPM_PS_PC_11_URI},
+	{"PC_12", TPM_PS_PC_12, TPM_PS_PC_12_URI},
+	{"PDA_12", TPM_PS_PDA_12, TPM_PS_PDA_12_URI},
+	{"SERVER_12", TPM_PS_Server_12, TPM_PS_Server_12_URI},
+	{"MOBILE_12", TPM_PS_Mobile_12, TPM_PS_Mobile_12_URI},
+	{NULL, 0, 0}
+};
+
 
 void
 init_tcsd_config(struct tcsd_config *conf)
@@ -65,6 +77,54 @@ init_tcsd_config(struct tcsd_config *conf)
 	memset(conf->remote_ops, 0, sizeof(conf->remote_ops));
 	conf->unset = 0xffffffff;
 	conf->exclusive_transport = 0;
+	conf->host_platform_class = NULL;
+	conf->all_platform_classes = NULL;
+}
+
+TSS_RESULT
+platform_class_list_append(struct tcsd_config *conf, char *specName, TSS_BOOL is_main)
+{
+	int i;
+	struct platform_class *tmp, *new_class;
+
+	LogDebugFn("platform_class_list_append start:");
+	for (i = 0; tcg_platform_specs[i].name; i++) {
+		if (!strncasecmp(specName, tcg_platform_specs[i].name,
+				 strlen(tcg_platform_specs[i].name))) {
+			/* Allocate the new structure */
+			new_class = malloc(sizeof(struct platform_class));
+			if (new_class == NULL) {
+				LogError("malloc of %zd bytes failed",
+					 sizeof(struct platform_class));
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			new_class->simpleID = tcg_platform_specs[i].specNo;
+			new_class->classURISize = strlen(tcg_platform_specs[i].specURI) + 1;
+			new_class->classURI = malloc(new_class->classURISize);
+			if (new_class->classURI == NULL) {
+				LogError("malloc of %u bytes failed", new_class->classURISize);
+				return TCSERR(TSS_E_OUTOFMEMORY);
+			}
+			memcpy(new_class->classURI, tcg_platform_specs[i].specURI,
+			       new_class->classURISize);
+
+			/* Append to the start of the list */
+			if (is_main) {
+				tmp = conf->host_platform_class;
+				conf->host_platform_class = new_class;
+			} else {
+				tmp = conf->all_platform_classes;
+				conf->all_platform_classes = new_class;
+			}
+			new_class->next = tmp;
+
+			LogDebugFn("Platform Class Added.");
+			return TSS_SUCCESS;
+		}
+	}
+
+	LogError("TCG Specification not supported: \"%s\"", specName);
+	return TCSERR(TSS_E_INTERNAL_ERROR);
 }
 
 void
@@ -94,6 +154,9 @@ config_set_defaults(struct tcsd_config *conf)
 
 	if (conf->unset & TCSD_OPTION_KERNEL_LOGFILE)
 		conf->kernel_log_file = strdup(TCSD_DEFAULT_KERNEL_LOG_FILE);
+
+	if (conf->unset & TCSD_OPTION_HOST_PLATFORM_CLASS)
+		platform_class_list_append(conf, "PC_12", TRUE);
 }
 
 int
@@ -199,6 +262,7 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 {
 	char *ptr = buf, *tmp_ptr = NULL, *arg, *comma;
 	int option, tmp_int;
+	TSS_RESULT result;
 
 	if (ptr == NULL || *ptr == '\0' || *ptr == '#' || *ptr == '\n')
 		return TSS_SUCCESS;
@@ -505,6 +569,59 @@ read_conf_line(char *buf, int line_num, struct tcsd_config *conf)
 			conf->unset &= ~TCSD_OPTION_EXCLUSIVE_TRANSPORT;
 		}
 		break;
+	case opt_host_platform_class:
+		/* append the host class on the list */
+		conf->unset &= ~TCSD_OPTION_HOST_PLATFORM_CLASS;
+		comma = rindex(arg,'\n');
+		*comma = '\0';
+
+		comma = rindex(arg,',');
+		/* At least one comma: error - more than one host class defined */
+		if (comma != NULL) {
+			LogError("Config option \"host_platform_class\" error: more than one "
+				 "defined. %s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		} else {
+			comma = arg;
+			/* Add the platform class on the list */
+			if ((result = platform_class_list_append(conf, comma, TRUE))){
+				LogError("Config option \"host_platform_class\" invalid. "
+					 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+				return result;
+			}
+		}
+		break;
+	case opt_all_platform_classes:
+		/* append each of the comma separated values on the list */
+		comma = rindex(arg, '\n');
+		*comma = '\0';
+		while (1) {
+			comma = rindex(arg, ',');
+
+			if (comma == NULL) {
+				comma = arg;
+
+				if (comma != NULL) {
+					/* Add the platform class on the list */
+					if ((result = platform_class_list_append(conf, comma,
+										 FALSE))) {
+						LogError("Config option \"all_platform_class\" "
+							 "invalid. %s:%d: \"%s\"", TCSD_CONFIG_FILE,
+							 line_num, comma);
+						return result;
+					}
+				}
+				break;
+			}
+			*comma++ = '\0';
+			/* Add the platform class on the list */
+			if ((result = platform_class_list_append(conf, comma, FALSE))) {
+				LogError("Config option \"all_platform_class\" invalid. "
+					 "%s:%d: \"%s\"", TCSD_CONFIG_FILE, line_num, comma);
+				return result;
+			}
+		}
+		break;
 	default:
 		/* bail out on any unknown option */
 		LogError("Unknown config option %s:%d \"%s\"!", TCSD_CONFIG_FILE, line_num, arg);
@@ -530,6 +647,20 @@ read_conf_file(FILE *f, struct tcsd_config *conf)
 }
 
 void
+free_platform_lists(struct platform_class *list)
+{
+	struct platform_class *tmp;
+
+	while (list != NULL){
+		if (list->classURISize > 0)
+			free(list->classURI);
+		tmp = list->next;
+		free(list);
+		list = tmp;
+	}
+}
+
+void
 conf_file_final(struct tcsd_config *conf)
 {
 	free(conf->system_ps_file);
@@ -539,6 +670,8 @@ conf_file_final(struct tcsd_config *conf)
 	free(conf->platform_cred);
 	free(conf->conformance_cred);
 	free(conf->endorsement_cred);
+	free_platform_lists(conf->host_platform_class);
+	free_platform_lists(conf->all_platform_classes);
 }
 
 TSS_RESULT
