@@ -17,10 +17,8 @@ struct tr_tpm_obj {
 #ifdef TSS_BUILD_TSS12
 	TSS_HPOLICY operatorPolicy;
 #endif
-#ifndef TSS_SPEC_COMPLIANCE
 	TSS_ALGORITHM_ID collateAlg;
 	TSS_ALGORITHM_ID activateAlg;
-#endif
 	PVOID collateAppData;
 	PVOID activateAppData;
 	TSS_RESULT (*Tspicb_CollateIdentity)(

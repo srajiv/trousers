@@ -363,7 +363,6 @@ done:
 	return result;
 }
 
-#ifndef TSS_SPEC_COMPLIANCE
 TSS_RESULT
 obj_tpm_set_cb12(TSS_HTPM hTpm, TSS_FLAG flag, BYTE *in)
 {
@@ -456,7 +455,6 @@ done:
 
 	return result;
 }
-#endif
 
 void
 obj_tpm_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)

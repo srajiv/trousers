@@ -65,10 +65,9 @@ popup_GetSecret(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_ha
 		return TSPERR(TSS_E_POLICY_NO_SECRET);
 	}
 
-#ifndef TSS_SPEC_COMPLIANCE
 	if (hash_mode == TSS_TSPATTRIB_HASH_MODE_NOT_NULL)
-		secret_len -= sizeof(UNICODE); // Take off the NULL terminator
-#endif
+		secret_len -= sizeof(TSS_UNICODE); // Take off the NULL terminator
+
 	LogDebug("Hashing these %u bytes as the secret:", secret_len);
 	LogDebugData(secret_len, secret);
 	result = Trspi_Hash(TSS_HASH_SHA1, secret_len, secret, auth_hash);

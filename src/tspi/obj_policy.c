@@ -202,11 +202,7 @@ obj_policy_get_secret(TSS_HPOLICY hPolicy, TSS_BOOL ctx, TCPA_SECRET *secret)
 			/* if the secret is still NULL, grab it using the GUI */
 			if (policy->SecretSet == FALSE) {
 				if ((result = popup_GetSecret(ctx,
-#ifndef TSS_SPEC_COMPLIANCE
 							      policy->hashMode,
-#else
-							      0,
-#endif
 							      policy->popupString,
 							      policy->Secret)))
 					break;
@@ -435,7 +431,6 @@ obj_policy_set_cb11(TSS_HPOLICY hPolicy, TSS_FLAG type, TSS_FLAG app_data, UINT3
 #endif
 }
 
-#ifndef TSS_SPEC_COMPLIANCE
 TSS_RESULT
 obj_policy_set_cb12(TSS_HPOLICY hPolicy, TSS_FLAG flag, BYTE *in)
 {
@@ -596,7 +591,6 @@ done:
 
 	return result;
 }
-#endif
 
 TSS_RESULT
 obj_policy_get_lifetime(TSS_HPOLICY hPolicy, UINT32 *lifetime)
@@ -951,7 +945,6 @@ obj_policy_do_takeowner(TSS_HPOLICY hPolicy,
 	return result;
 }
 
-#ifndef TSS_SPEC_COMPLIANCE
 TSS_RESULT
 obj_policy_get_hash_mode(TSS_HPOLICY hPolicy, UINT32 *mode)
 {
@@ -993,7 +986,6 @@ obj_policy_set_hash_mode(TSS_HPOLICY hPolicy, UINT32 mode)
 
 	return TSS_SUCCESS;
 }
-#endif
 
 #ifdef TSS_BUILD_SEALX
 TSS_RESULT

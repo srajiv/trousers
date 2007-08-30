@@ -23,7 +23,6 @@ struct tr_policy_obj {
 	UINT32 type;
 	BYTE *popupString;
 	UINT32 popupStringLength;
-#ifndef TSS_SPEC_COMPLIANCE
 	UINT32 hashMode;
 	TSS_ALGORITHM_ID hmacAlg;
 	TSS_ALGORITHM_ID xorAlg;
@@ -31,7 +30,6 @@ struct tr_policy_obj {
 	TSS_ALGORITHM_ID changeauthAlg;
 #ifdef TSS_BUILD_SEALX
 	TSS_ALGORITHM_ID sealxAlg;
-#endif
 #endif
 	PVOID hmacAppData;
 	PVOID xorAppData;
