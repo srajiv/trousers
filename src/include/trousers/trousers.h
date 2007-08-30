@@ -70,6 +70,7 @@ TSS_RESULT Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TP
 void       Trspi_UnloadBlob_TSS_FAMILY_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_FAMILY_TABLE_ENTRY *entry);
 TSS_RESULT Trspi_UnloadBlob_TSS_PCR_INFO_SHORT(UINT64 *offset, BYTE *blob, TSS_PCR_INFO_SHORT *pcr);
 TSS_RESULT Trspi_UnloadBlob_TSS_DELEGATION_TABLE_ENTRY(UINT64 *offset, BYTE *blob, TSS_DELEGATION_TABLE_ENTRY *entry);
+TSS_RESULT Trspi_UnloadBlob_TSS_PLATFORM_CLASS(UINT64 *offset, BYTE *blob, TSS_PLATFORM_CLASS *platClass);
 
 /* Blob loading functions */
 void Trspi_LoadBlob_BOUND_DATA(UINT64 *, TCPA_BOUND_DATA, UINT32, BYTE *);

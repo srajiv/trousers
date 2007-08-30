@@ -2383,3 +2383,32 @@ Trspi_Hash_MSA_COMPOSITE(Trspi_HashCtx *c, TPM_MSA_COMPOSITE *m)
 
 	return result;
 }
+
+TSS_RESULT 
+Trspi_UnloadBlob_TSS_PLATFORM_CLASS(UINT64 *offset, BYTE *blob, TSS_PLATFORM_CLASS *platClass)
+{
+	if (!platClass){
+		UINT32 classURISize;
+
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, &classURISize, blob);
+		(*offset) += classURISize;
+
+		return TSS_SUCCESS;
+		
+	}
+	Trspi_UnloadBlob_UINT32(offset, &platClass->platformClassSimpleIdentifier, blob);
+	Trspi_UnloadBlob_UINT32(offset, &platClass->platformClassURISize, blob);
+	
+	platClass->pPlatformClassURI = malloc(platClass->platformClassURISize);
+	if (platClass->pPlatformClassURI == NULL) {
+		LogError("malloc of %u bytes failed.", platClass->platformClassURISize);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+	Trspi_UnloadBlob(offset, platClass->platformClassURISize, blob, (BYTE *)platClass->pPlatformClassURI);
+
+	return TSS_SUCCESS;
+	
+}
+
+
