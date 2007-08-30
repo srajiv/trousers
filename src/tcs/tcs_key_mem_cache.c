@@ -1086,7 +1086,7 @@ owner_evict_init()
 		if (*(TPM_BOOL *)respData == TRUE) {
 			TSS_UUID uuid = TSS_UUID_OWNEREVICT(ownerEvictCtr);
 
-			LogDebugFn("Found an owner evict key, assigned uuid %c", ownerEvictCtr);
+			LogDebugFn("Found an owner evict key, assigned uuid %hhu", ownerEvictCtr);
 			if ((result = mc_add_entry_init(getNextTcsKeyHandle(), keyList.handle[i],
 							NULL, &uuid))) {
 				free(keyList.handle);
