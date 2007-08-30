@@ -258,6 +258,8 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		goto error;
 	}
 	free(newIdKey);
+	if ((result = obj_rsakey_set_tcs_handle(hIdentityKey, 0)))
+		goto error;
 
 	if ((result = obj_rsakey_get_pub_blob(hIdentityKey, &idPubSize, &idPub)))
 		goto error;

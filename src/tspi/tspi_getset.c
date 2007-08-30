@@ -651,6 +651,8 @@ Tspi_SetAttribData(TSS_HOBJECT hObject,		/* in */
 				/* A TPM_KEY(12) structure, in blob form */
 				result = obj_rsakey_set_tcpakey(hObject, ulAttribDataSize,
 								rgbAttribData);
+				if (result == TSS_SUCCESS)
+					result = obj_rsakey_set_tcs_handle(hObject, 0);
 			} else if (subFlag == TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY) {
 				/* A TCPA_PUBKEY structure, in blob form */
 				result = obj_rsakey_set_pubkey(hObject, FALSE, rgbAttribData);

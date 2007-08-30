@@ -388,7 +388,9 @@ Tspi_Key_ConvertMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	/* Set the key object to the now migrated key */
 	if ((result = obj_rsakey_set_tcpakey(hKeyToMigrate, ulMigrationBlobLength, rgbMigrationBlob)))
 		goto done;
-	result = obj_rsakey_set_privkey(hKeyToMigrate, TRUE, outDataSize, outData);
+	if ((result = obj_rsakey_set_privkey(hKeyToMigrate, TRUE, outDataSize, outData)))
+		goto done;
+	result = obj_rsakey_set_tcs_handle(hKeyToMigrate, 0);
 
 done:
 	free_key_refs(&tssKey);

@@ -1462,7 +1462,6 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	else
 		rsakey->type = TSS_KEY_STRUCT_KEY;
 
-
 	if (rsakey->key.authDataUsage)
 		obj->flags |= TSS_OBJ_FLAG_USAGEAUTH;
 	else
