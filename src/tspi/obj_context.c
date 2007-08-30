@@ -895,7 +895,7 @@ do_transport_decryption(TPM_TRANSPORT_PUBLIC *transPub,
 	TSS_RESULT result;
 	UINT32 i, decLen;
 	UINT32 seedLen, ivLen;
-	BYTE *dec, *iv;
+	BYTE *dec;
 	BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("out") + TPM_SHA1_160_HASH_LEN];
 
 	/* allocate the most data anyone below might need */
@@ -931,6 +931,8 @@ do_transport_decryption(TPM_TRANSPORT_PUBLIC *transPub,
 	}
 	case TPM_ALG_AES128:
 	{
+		BYTE iv[TSS_MAX_SYM_BLOCK_SIZE];
+
 		ivLen = TSS_MAX_SYM_BLOCK_SIZE;
 		seedLen = (2 * sizeof(TPM_NONCE)) + strlen("out");
 
@@ -972,7 +974,7 @@ do_transport_encryption(TPM_TRANSPORT_PUBLIC *transPub,
 	TSS_RESULT result;
 	UINT32 i, encLen;
 	UINT32 seedLen, ivLen;
-	BYTE *enc, *iv;
+	BYTE *enc;
 	BYTE seed[(2 * sizeof(TPM_NONCE)) + strlen("in") + TPM_SHA1_160_HASH_LEN];
 
 	/* allocate the most data anyone below might need */
@@ -1008,6 +1010,8 @@ do_transport_encryption(TPM_TRANSPORT_PUBLIC *transPub,
 	}
 	case TPM_ALG_AES128:
 	{
+		BYTE iv[TSS_MAX_SYM_BLOCK_SIZE];
+
 		ivLen = TSS_MAX_SYM_BLOCK_SIZE;
 		seedLen = (2 * sizeof(TPM_NONCE)) + strlen("in");
 
