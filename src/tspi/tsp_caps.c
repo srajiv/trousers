@@ -33,8 +33,8 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 {
 	UINT64 offset = 0;
 	TSS_VERSION v = INTERNAL_CAP_VERSION;
-	TSS_BOOL bValue;
-	UINT32 u32value;
+	TSS_BOOL bValue = FALSE;
+	UINT32 u32value = 0;
 
 	switch (capArea) {
 	case TSS_TSPCAP_VERSION:
@@ -96,9 +96,10 @@ internal_GetCap(TSS_HCONTEXT tspContext, TSS_FLAG capArea, UINT32 subCap,
 			*(UINT32 *)respData = u32value;
 		break;
 	case TSS_TSPCAP_PERSSTORAGE:
-		if ((*respData = calloc_tspi(tspContext, sizeof(TSS_BOOL))) == NULL)
+		if ((*respData = calloc_tspi(tspContext, sizeof(TSS_BOOL))) == NULL) {
 			LogError("malloc of %zd bytes failed", sizeof(TSS_BOOL));
 			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
 
 		*respSize = sizeof(TSS_BOOL);
 		(*respData)[0] = INTERNAL_CAP_TSP_PERSSTORAGE;
