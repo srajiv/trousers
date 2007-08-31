@@ -30,139 +30,144 @@ extern struct tcsd_config tcsd_options;
 TSS_RESULT
 internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		   TCPA_CAPABILITY_AREA capArea,
-		   UINT32 subCapSize, BYTE * subCap,
+		   UINT32 subCap,
 		   UINT32 * respSize, BYTE ** resp)
 {
-	UINT32 tcsSubCapContainer;
+	UINT32 u32value;
 	UINT64 offset;
-	TSS_RESULT result;
-	TPM_VERSION tcsVersion = INTERNAL_CAP_TCS_VERSION;
+	TPM_VERSION tcsVersion = INTERNAL_CAP_VERSION;
 	struct tcsd_config *config = &tcsd_options;
 	struct platform_class *platClass;
-
-	if ((result = ctx_verify_context(hContext)))
-		return result;
+	TSS_BOOL bValue;
 
 	LogDebug("Checking Software Cap of TCS");
 	switch (capArea) {
 	case TSS_TCSCAP_ALG:
 		LogDebug("TSS_TCSCAP_ALG");
-		tcsSubCapContainer = Decode_UINT32(subCap);
-		*respSize = 1;
-		*resp = malloc(1);
-		if (*resp == NULL) {
-			LogError("malloc of %d bytes failed.", 1);
-			return TCSERR(TSS_E_OUTOFMEMORY);
-		}
-		switch (tcsSubCapContainer) {
+
+		switch (subCap) {
 		case TSS_ALG_RSA:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_RSA;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_RSA;
 			break;
 		case TSS_ALG_DES:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_DES;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_DES;
 			break;
 		case TSS_ALG_3DES:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_3DES;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_3DES;
 			break;
 		case TSS_ALG_SHA:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_SHA;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_SHA;
 			break;
 		case TSS_ALG_AES:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_AES;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_AES;
 			break;
 		case TSS_ALG_HMAC:
-			(*resp)[0] = INTERNAL_CAP_TCS_ALG_HMAC;
+			*respSize = sizeof(TSS_BOOL);
+			bValue = INTERNAL_CAP_TCS_ALG_HMAC;
+			break;
+		case TSS_ALG_DEFAULT:
+			*respSize = sizeof(UINT32);
+			u32value = INTERNAL_CAP_TCS_ALG_DEFAULT;
+			break;
+		case TSS_ALG_DEFAULT_SIZE:
+			*respSize = sizeof(UINT32);
+			u32value = INTERNAL_CAP_TCS_ALG_DEFAULT_SIZE;
 			break;
 		default:
 			*respSize = 0;
-			free(*resp);
+			LogDebugFn("Bad subcap");
 			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
+
+		if ((*resp = malloc(*respSize)) == NULL) {
+			LogError("malloc of %zd bytes failed.", *respSize);
+			*respSize = 0;
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+
+		offset = 0;
+		if (*respSize == sizeof(TSS_BOOL))
+			*(TSS_BOOL *)(*resp) = bValue;
+		else
+			*(UINT32 *)(*resp) = u32value;
 		break;
 	case TSS_TCSCAP_VERSION:
 		LogDebug("TSS_TCSCAP_VERSION");
-		*resp = calloc(1, 4);
-		if (*resp == NULL) {
-			LogError("malloc of %d bytes failed.", 4);
+		if ((*resp = calloc(1, sizeof(TSS_VERSION))) == NULL) {
+			LogError("malloc of %zd bytes failed.", sizeof(TSS_VERSION));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 		offset = 0;
 		LoadBlob_VERSION(&offset, *resp, &tcsVersion);
-		*respSize = offset;
+		*respSize = sizeof(TSS_VERSION);
 		break;
 	case TSS_TCSCAP_PERSSTORAGE:
 		LogDebug("TSS_TCSCAP_PERSSTORAGE");
-		*respSize = 1;
-		*resp = malloc(1);
-		if (*resp == NULL) {
-			LogError("malloc of %d byte failed.", 1);
+		if ((*resp = malloc(sizeof(TSS_BOOL))) == NULL) {
+			LogError("malloc of %zd byte failed.", sizeof(TSS_BOOL));
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
-		(*resp)[0] = INTERNAL_CAP_TCS_PERSSTORAGE;
+		*(TSS_BOOL *)(*resp) = INTERNAL_CAP_TCS_PERSSTORAGE;
+		*respSize = sizeof(TSS_BOOL);
 		break;
 	case TSS_TCSCAP_CACHING:
 		LogDebug("TSS_TCSCAP_CACHING");
-		tcsSubCapContainer = Decode_UINT32(subCap);
-		if (tcsSubCapContainer == TSS_TCSCAP_PROP_KEYCACHE) {
-			*respSize = 1;
-			*resp = malloc(1);
-			if (*resp == NULL) {
-				LogError("malloc of %d byte failed.", 1);
-				return TCSERR(TSS_E_OUTOFMEMORY);
-			}
-			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
-		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_AUTHCACHE) {
-			*respSize = 1;
-			*resp = malloc(1);
-			if (*resp == NULL) {
-			LogError("malloc of %d byte failed.", 1);
-				return TCSERR(TSS_E_OUTOFMEMORY);
-			}
-			(*resp)[0] = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
-		} else {
+
+		if (subCap == TSS_TCSCAP_PROP_KEYCACHE)
+			bValue = INTERNAL_CAP_TCS_CACHING_KEYCACHE;
+		else if (subCap == TSS_TCSCAP_PROP_AUTHCACHE)
+			bValue = INTERNAL_CAP_TCS_CACHING_AUTHCACHE;
+		else {
 			LogDebugFn("Bad subcap");
 			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
+
+		if ((*resp = malloc(sizeof(TSS_BOOL))) == NULL) {
+			LogError("malloc of %zd byte failed.", sizeof(TSS_BOOL));
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+		*respSize = sizeof(TSS_BOOL);
+		*(TSS_BOOL *)(*resp) = bValue;
 		break;
 	case TSS_TCSCAP_MANUFACTURER:
-		tcsSubCapContainer = Decode_UINT32(subCap);
-		if (tcsSubCapContainer == TSS_TCSCAP_PROP_MANUFACTURER_ID) {
-			*respSize = sizeof(UINT32);
-			*resp = malloc(sizeof(UINT32));
-			if (*resp == NULL) {
+		if (subCap == TSS_TCSCAP_PROP_MANUFACTURER_ID) {
+			if ((*resp = malloc(sizeof(UINT32))) == NULL) {
 				LogError("malloc of %zd byte failed.", sizeof(UINT32));
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
-			*(UINT32 *)(*resp) = INTERNAL_CAP_TCS_MANUFACTURER_ID;
-		} else if (tcsSubCapContainer == TSS_TCSCAP_PROP_MANUFACTURER_STR) {
-			BYTE str[] = INTERNAL_CAP_TCS_MANUFACTURER_STR;
+			*(UINT32 *)(*resp) = INTERNAL_CAP_MANUFACTURER_ID;
+			*respSize = sizeof(UINT32);
+		} else if (subCap == TSS_TCSCAP_PROP_MANUFACTURER_STR) {
+			BYTE str[] = INTERNAL_CAP_MANUFACTURER_STR;
 
-			*respSize = INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN;
-			*resp = malloc(INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN);
-			if (*resp == NULL) {
-				LogError("malloc of %d byte failed.", 1);
+			if ((*resp = malloc(INTERNAL_CAP_MANUFACTURER_STR_LEN)) == NULL) {
+				LogError("malloc of %d bytes failed.",
+					 INTERNAL_CAP_MANUFACTURER_STR_LEN);
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
-			memcpy(*resp, str, INTERNAL_CAP_TCS_MANUFACTURER_STR_LEN);
+			memcpy(*resp, str, INTERNAL_CAP_MANUFACTURER_STR_LEN);
+			*respSize = INTERNAL_CAP_MANUFACTURER_STR_LEN;
 		} else {
 			LogDebugFn("Bad subcap");
 			return TCSERR(TSS_E_BAD_PARAMETER);
 		}
 		break;
 	case TSS_TCSCAP_TRANSPORT:
-		tcsSubCapContainer = Decode_UINT32(subCap);
 		/* A zero value here means the TSP is asking whether we support transport sessions
 		 * at all */
-		if (tcsSubCapContainer == TSS_TCSCAP_TRANS_EXCLUSIVE ||
-		    tcsSubCapContainer == 0) {
+		if (subCap == TSS_TCSCAP_TRANS_EXCLUSIVE || subCap == 0) {
 			*respSize = sizeof(TSS_BOOL);
-			*resp = malloc(sizeof(TSS_BOOL));
-			if (*resp == NULL) {
+			if ((*resp = malloc(sizeof(TSS_BOOL))) == NULL) {
 				LogError("malloc of %zd byte failed.", sizeof(TSS_BOOL));
 				return TCSERR(TSS_E_OUTOFMEMORY);
 			}
 
-			if (tcsSubCapContainer == TSS_TCSCAP_TRANS_EXCLUSIVE)
+			if (subCap == TSS_TCSCAP_TRANS_EXCLUSIVE)
 				*(TSS_BOOL *)(*resp) = config->exclusive_transport ? TRUE : FALSE;
 			else
 				*(TSS_BOOL *)(*resp) = TRUE;
@@ -173,9 +178,8 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		break;
 	case TSS_TCSCAP_PLATFORM_CLASS:
 		LogDebug("TSS_TCSCAP_PLATFORM_CLASS");
-		tcsSubCapContainer = Decode_UINT32(subCap);
 
-		switch (tcsSubCapContainer) {
+		switch (subCap) {
 		case TSS_TCSCAP_PROP_HOST_PLATFORM:
 			/* Return the TSS_PLATFORM_CLASS */
 			LogDebugFn("TSS_TCSCAP_PROP_HOST_PLATFORM");
@@ -231,6 +235,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		}
 		break;
 	default:
+		LogDebugFn("Bad cap area");
 		return TCSERR(TSS_E_BAD_PARAMETER);
 	}
 
@@ -247,11 +252,18 @@ TCS_GetCapability_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
     )
 {
 	TSS_RESULT result;
+	UINT32 ulSubCap;
 
 	if ((result = ctx_verify_context(hContext)))
 		return result;
 
-	return internal_TCSGetCap(hContext, capArea, subCapSize, subCap,
-				  respSize, resp);
+	if (subCapSize == sizeof(UINT32))
+		ulSubCap = *(UINT32 *)subCap;
+	else if (subCapSize == 0)
+		ulSubCap = 0;
+	else
+		return TCSERR(TSS_E_BAD_PARAMETER);
+
+	return internal_TCSGetCap(hContext, capArea, ulSubCap, respSize, resp);
 }
 
