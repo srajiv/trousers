@@ -1,4 +1,6 @@
 
+* TROUSERS_0_3_0
+
   Added TSS_TCSCAP_PLATFORM_CLASS cap support
   Added the Quote2 Commands
 - Added new TSS 1.2 return codes to Trspi_Error_String.
