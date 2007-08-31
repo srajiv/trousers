@@ -1158,6 +1158,7 @@ Global defines for TSS.
 #define TSS_TSPCAP_PERSSTORAGE           (0x00000012)
 #define TSS_TSPCAP_MANUFACTURER          (0x00000013)
 #define TSS_TSPCAP_RETURNVALUE_INFO      (0x00000015)
+#define TSS_TSPCAP_PLATFORM_INFO         (0x00000016) // XXX Added by trousers
 
 // Sub-Capability Flags for TSS_TSPCAP_MANUFACTURER
 //
@@ -1168,6 +1169,12 @@ Global defines for TSS.
 // Sub-Capability Flags for TSS_TSPCAP_RETURNVALUE_INFO
 //
 #define TSS_TSPCAP_PROP_RETURNVALUE_INFO (0x00000201)
+
+// XXX Added by trousers
+// Sub-Capability Flags for TSS_TSPCAP_PLATFORM_INFO
+//
+#define TSS_TSPCAP_PLATFORM_TYPE         (0x00000301)
+#define TSS_TSPCAP_PLATFORM_VERSION      (0x00000302)
 
 //
 // Event type definitions
