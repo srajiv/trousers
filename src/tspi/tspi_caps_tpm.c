@@ -35,7 +35,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	UINT32 tcsSubCap = 0;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
-	UINT32 nonVolFlags, volFlags, respLen, correct_endianess = 0;
+	UINT32 nonVolFlags, volFlags, respLen;
 	BYTE *respData;
 	UINT64 offset;
 	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
@@ -58,34 +58,49 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 	case TSS_TPMCAP_FLAG:
 		fOwnerAuth = TRUE;
 		break;
+	case TSS_TPMCAP_AUTH_ENCRYPT:
 	case TSS_TPMCAP_ALG:
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
 			return TSPERR(TSS_E_BAD_PARAMETER);
 
-		tcsCapArea = TPM_CAP_ALG;
+		/* Test capArea again here in order to keep from having to duplicate the switch
+		 * statement below */
+		tcsCapArea = (capArea == TSS_TPMCAP_ALG ? TPM_CAP_ALG : TPM_CAP_AUTH_ENCRYPT);
 
 		switch (*(UINT32 *)rgbSubCap) {
-			case TSS_ALG_RSA:
-				tcsSubCap = TPM_ALG_RSA;
-				break;
-			case TSS_ALG_AES128:
-				tcsSubCap = TPM_ALG_AES128;
-				break;
-			case TSS_ALG_AES192:
-				tcsSubCap = TPM_ALG_AES192;
-				break;
-			case TSS_ALG_AES256:
-				tcsSubCap = TPM_ALG_AES256;
-				break;
-			case TSS_ALG_3DES:
-				tcsSubCap = TPM_ALG_3DES;
-				break;
-			case TSS_ALG_DES:
-				tcsSubCap = TPM_ALG_DES;
-				break;
-			default:
-				tcsSubCap = *(UINT32 *)rgbSubCap;
-				break;
+		case TSS_ALG_RSA:
+			tcsSubCap = TPM_ALG_RSA;
+			break;
+		case TSS_ALG_AES128:
+			tcsSubCap = TPM_ALG_AES128;
+			break;
+		case TSS_ALG_AES192:
+			tcsSubCap = TPM_ALG_AES192;
+			break;
+		case TSS_ALG_AES256:
+			tcsSubCap = TPM_ALG_AES256;
+			break;
+		case TSS_ALG_3DES:
+			tcsSubCap = TPM_ALG_3DES;
+			break;
+		case TSS_ALG_DES:
+			tcsSubCap = TPM_ALG_DES;
+			break;
+		case TSS_ALG_SHA:
+			tcsSubCap = TPM_ALG_SHA;
+			break;
+		case TSS_ALG_HMAC:
+			tcsSubCap = TPM_ALG_HMAC;
+			break;
+		case TSS_ALG_MGF1:
+			tcsSubCap = TPM_ALG_MGF1;
+			break;
+		case TSS_ALG_XOR:
+			tcsSubCap = TPM_ALG_XOR;
+			break;
+		default:
+			tcsSubCap = *(UINT32 *)rgbSubCap;
+			break;
 		}
 		break;
 #ifdef TSS_BUILD_NV
@@ -107,41 +122,162 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		tcsCapArea = TCPA_CAP_PROPERTY;
 		tcsSubCapContainer = *(UINT32 *)rgbSubCap;
 
-		if (tcsSubCapContainer == TSS_TPMCAP_PROP_PCR) {
+		switch (tcsSubCapContainer) {
+		case TSS_TPMCAP_PROP_PCR:
 			tcsSubCap = TPM_CAP_PROP_PCR;
-			correct_endianess = 1;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_DIR) {
+			break;
+		case TSS_TPMCAP_PROP_DIR:
 			tcsSubCap = TPM_CAP_PROP_DIR;
-			correct_endianess = 1;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SLOTS) {
+			break;
+		/* case TSS_TPMCAP_PROP_SLOTS: */
+		case TSS_TPMCAP_PROP_KEYS:
 			tcsSubCap = TPM_CAP_PROP_SLOTS;
-			correct_endianess = 1;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MANUFACTURER) {
+			break;
+		case TSS_TPMCAP_PROP_MANUFACTURER:
 			tcsSubCap = TPM_CAP_PROP_MANUFACTURER;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_COUNTERS) {
+			break;
+		case TSS_TPMCAP_PROP_COUNTERS:
 			tcsSubCap = TPM_CAP_PROP_COUNTERS;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXCOUNTERS) {
+			break;
+		case TSS_TPMCAP_PROP_MAXCOUNTERS:
 			tcsSubCap = TPM_CAP_PROP_MAX_COUNTERS;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MIN_COUNTER) {
+			break;
+		/*case TSS_TPMCAP_PROP_MINCOUNTERINCTIME: */
+		case TSS_TPMCAP_PROP_MIN_COUNTER:
 			tcsSubCap = TPM_CAP_PROP_MIN_COUNTER;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_ACTIVECOUNTER) {
+			break;
+		case TSS_TPMCAP_PROP_ACTIVECOUNTER:
 			tcsSubCap = TPM_CAP_PROP_ACTIVE_COUNTER;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_TRANSESSIONS) {
+			break;
+		case TSS_TPMCAP_PROP_TRANSESSIONS:
 			tcsSubCap = TPM_CAP_PROP_TRANSSESS;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXTRANSESSIONS) {
+			break;
+		case TSS_TPMCAP_PROP_MAXTRANSESSIONS:
 			tcsSubCap = TPM_CAP_PROP_MAX_TRANSSESS;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_SESSIONS) {
+			break;
+		case TSS_TPMCAP_PROP_SESSIONS:
 			tcsSubCap = TPM_CAP_PROP_SESSIONS;
-		} else if (tcsSubCapContainer == TSS_TPMCAP_PROP_MAXSESSIONS) {
+			break;
+		case TSS_TPMCAP_PROP_MAXSESSIONS:
 			tcsSubCap = TPM_CAP_PROP_MAX_SESSIONS;
-		} else
+			break;
+		case TSS_TPMCAP_PROP_FAMILYROWS:
+			tcsSubCap = TPM_CAP_PROP_FAMILYROWS;
+			break;
+		case TSS_TPMCAP_PROP_DELEGATEROWS:
+			tcsSubCap = TPM_CAP_PROP_DELEGATE_ROW;
+			break;
+		case TSS_TPMCAP_PROP_OWNER:
+			tcsSubCap = TPM_CAP_PROP_OWNER;
+			break;
+		case TSS_TPMCAP_PROP_MAXKEYS:
+			tcsSubCap = TPM_CAP_PROP_MAX_KEYS;
+			break;
+		case TSS_TPMCAP_PROP_AUTHSESSIONS:
+			tcsSubCap = TPM_CAP_PROP_AUTHSESS;
+			break;
+		case TSS_TPMCAP_PROP_MAXAUTHSESSIONS:
+			tcsSubCap = TPM_CAP_PROP_MAX_AUTHSESS;
+			break;
+		case TSS_TPMCAP_PROP_CONTEXTS:
+			tcsSubCap = TPM_CAP_PROP_CONTEXT;
+			break;
+		case TSS_TPMCAP_PROP_MAXCONTEXTS:
+			tcsSubCap = TPM_CAP_PROP_MAX_CONTEXT;
+			break;
+		case TSS_TPMCAP_PROP_DAASESSIONS:
+			tcsSubCap = TPM_CAP_PROP_SESSION_DAA;
+			break;
+		case TSS_TPMCAP_PROP_MAXDAASESSIONS:
+			tcsSubCap = TPM_CAP_PROP_DAA_MAX;
+			break;
+		case TSS_TPMCAP_PROP_TISTIMEOUTS:
+			tcsSubCap = TPM_CAP_PROP_TIS_TIMEOUT;
+			break;
+		case TSS_TPMCAP_PROP_STARTUPEFFECTS:
+			tcsSubCap = TPM_CAP_PROP_STARTUP_EFFECT;
+			break;
+		case TSS_TPMCAP_PROP_MAXCONTEXTCOUNTDIST:
+			tcsSubCap = TPM_CAP_PROP_CONTEXT_DIST;
+			break;
+		case TSS_TPMCAP_PROP_CMKRESTRICTION:
+			tcsSubCap = TPM_CAP_PROP_CMK_RESTRICTION;
+			break;
+		case TSS_TPMCAP_PROP_DURATION:
+			tcsSubCap = TPM_CAP_PROP_DURATION;
+			break;
+		case TSS_TPMCAP_PROP_MAXNVAVAILABLE:
+			tcsSubCap = TPM_CAP_PROP_NV_AVAILABLE;
+			break;
+		case TSS_TPMCAP_PROP_INPUTBUFFERSIZE:
+			tcsSubCap = TPM_CAP_PROP_INPUT_BUFFER;
+			break;
+#if 0
+		/* XXX is there a way to query the TPM for these? */
+		case TSS_TPMCAP_PROP_MAXNVWRITE:
+			break;
+		case TSS_TPMCAP_PROP_REVISION:
+			break;
+		case TSS_TPMCAP_PROP_LOCALITIES_AVAIL:
+			break;
+		case TSS_TPMCAP_PROP_PCRMAP:
+			break;
+#endif
+		default:
 			return TSPERR(TSS_E_BAD_PARAMETER);
+		}
 		break;
 	case TSS_TPMCAP_VERSION:	/* Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
 		break;
 	case TSS_TPMCAP_VERSION_VAL:	/* Queries the current TPM version for 1.2 TPM device. */
 		tcsCapArea = TPM_CAP_VERSION_VAL;
+		break;
+	case TSS_TPMCAP_MFR:
+		tcsCapArea = TPM_CAP_MFR;
+		break;
+	case TSS_TPMCAP_SYM_MODE:
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		tcsCapArea = TPM_CAP_SYM_MODE;
+		tcsSubCap = *(UINT32 *)rgbSubCap;
+		break;
+	case TSS_TPMCAP_HANDLE:
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		tcsCapArea = TPM_CAP_HANDLE;
+		tcsSubCap = *(UINT32 *)rgbSubCap;
+		break;
+	case TSS_TPMCAP_TRANS_ES:
+		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
+			return TSPERR(TSS_E_BAD_PARAMETER);
+
+		tcsCapArea = TPM_CAP_TRANS_ES;
+		switch (*(UINT32 *)rgbSubCap) {
+		case TSS_ES_NONE:
+			tcsSubCap = TPM_ES_NONE;
+			break;
+		case TSS_ES_RSAESPKCSV15:
+			tcsSubCap = TPM_ES_RSAESPKCSv15;
+			break;
+		case TSS_ES_RSAESOAEP_SHA1_MGF1:
+			tcsSubCap = TPM_ES_RSAESOAEP_SHA1_MGF1;
+			break;
+		case TSS_ES_SYM_CNT:
+			tcsSubCap = TPM_ES_SYM_CNT;
+			break;
+		case TSS_ES_SYM_OFB:
+			tcsSubCap = TPM_ES_SYM_OFB;
+			break;
+		case TSS_ES_SYM_CBC_PKCS5PAD:
+			tcsSubCap = TPM_ES_SYM_CBC_PKCS5PAD;
+			break;
+		default:
+			tcsSubCap = *(UINT32 *)rgbSubCap;
+			break;
+		}
 		break;
 	default:
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -170,26 +306,16 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		return TSS_SUCCESS;
 	}
 
-	tcsSubCap = endian32(tcsSubCap);
-
 	if ((result = TCS_API(tspContext)->GetTPMCapability(tspContext, tcsCapArea, ulSubCapLength,
-							    (BYTE *)&tcsSubCap, &respLen,
-							    &respData)))
+							    (BYTE *)&tcsSubCap, pulRespDataLength,
+							    prgbRespData)))
 		return result;
 
-	*prgbRespData = calloc_tspi(tspContext, respLen);
-	if (*prgbRespData == NULL) {
-		free(respData);
-		LogError("malloc of %u bytes failed.", respLen);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	*pulRespDataLength = respLen;
-	memcpy(*prgbRespData, respData, respLen);
-	free(respData);
-
-	if (*pulRespDataLength == sizeof(UINT32) && correct_endianess) {
-		*((UINT32 *)(*prgbRespData)) = endian32(*((UINT32 *)(*prgbRespData)));
+	if ((result = add_mem_entry(tspContext, *prgbRespData))) {
+		free(*prgbRespData);
+		*prgbRespData = NULL;
+		*pulRespDataLength = 0;
+		return result;
 	}
 
 	return TSS_SUCCESS;

@@ -36,7 +36,6 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 			   BYTE ** prgbRespData)	/* out */
 {
 	TSS_RESULT result;
-	UINT32 subCap;
 
 	if (prgbRespData == NULL || pulRespDataLength == NULL )
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -52,37 +51,34 @@ Tspi_Context_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 
 	switch (capArea) {
 		case TSS_TSPCAP_ALG:
+		case TSS_TSPCAP_RETURNVALUE_INFO:
+		case TSS_TSPCAP_PLATFORM_INFO:
+		case TSS_TSPCAP_MANUFACTURER:
+			if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
+				return TSPERR(TSS_E_BAD_PARAMETER);
+			/* fall through */
 		case TSS_TSPCAP_VERSION:
 		case TSS_TSPCAP_PERSSTORAGE:
-			if (capArea == TSS_TSPCAP_ALG) {
-				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
-					return TSPERR(TSS_E_BAD_PARAMETER);
-			}
-
 			result = internal_GetCap(tspContext, capArea,
 						 rgbSubCap ? *(UINT32 *)rgbSubCap : 0,
 						 pulRespDataLength,
 						 prgbRespData);
 			break;
 		case TSS_TCSCAP_ALG:
+			if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
+				return TSPERR(TSS_E_BAD_PARAMETER);
+			/* fall through */
 		case TSS_TCSCAP_VERSION:
 		case TSS_TCSCAP_CACHING:
 		case TSS_TCSCAP_PERSSTORAGE:
 		case TSS_TCSCAP_MANUFACTURER:
 		case TSS_TCSCAP_TRANSPORT:
 		case TSS_TCSCAP_PLATFORM_CLASS:
-			if (capArea == TSS_TCSCAP_ALG) {
-				if (ulSubCapLength != sizeof(UINT32) || !rgbSubCap)
-					return TSPERR(TSS_E_BAD_PARAMETER);
-			}
-
-			subCap = rgbSubCap ? endian32(*(UINT32 *)rgbSubCap) : 0;
-
-			result = RPC_GetCapability(tspContext, capArea, ulSubCapLength,
-						   (BYTE *)&subCap, pulRespDataLength,
-						   prgbRespData);
+			result = RPC_GetCapability(tspContext, capArea, ulSubCapLength, rgbSubCap,
+						   pulRespDataLength, prgbRespData);
 			break;
 		default:
+			LogDebug("Invalid capArea: 0x%x", capArea);
 			result = TSPERR(TSS_E_BAD_PARAMETER);
 			break;
 	}
