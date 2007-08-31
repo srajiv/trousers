@@ -33,12 +33,12 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		   UINT32 subCap,
 		   UINT32 * respSize, BYTE ** resp)
 {
-	UINT32 u32value;
+	UINT32 u32value = 0;
 	UINT64 offset;
 	TPM_VERSION tcsVersion = INTERNAL_CAP_VERSION;
 	struct tcsd_config *config = &tcsd_options;
 	struct platform_class *platClass;
-	TSS_BOOL bValue;
+	TSS_BOOL bValue = FALSE;
 
 	LogDebug("Checking Software Cap of TCS");
 	switch (capArea) {
