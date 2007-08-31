@@ -50,7 +50,7 @@ tcs_wrap_TCSGetCapability(struct tcsd_thread_data *data)
 
 	subCap = calloc(1, subCapSize);
 	if (subCap == NULL) {
-		LogError("malloc of %d bytes failed.", subCapSize);
+		LogError("malloc of %u bytes failed.", subCapSize);
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, subCap, subCapSize, &data->comm)) {
