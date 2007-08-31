@@ -85,7 +85,7 @@ internal_TCSGetCap(TCS_CONTEXT_HANDLE hContext,
 		}
 
 		if ((*resp = malloc(*respSize)) == NULL) {
-			LogError("malloc of %zd bytes failed.", *respSize);
+			LogError("malloc of %u bytes failed.", *respSize);
 			*respSize = 0;
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
