@@ -122,7 +122,7 @@ TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TSS_BOOL, TCPA_SECRET *);
 TSS_RESULT obj_policy_flush_secret(TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret_object(TSS_HPOLICY, TSS_FLAG, UINT32,
 					TCPA_DIGEST *, TSS_BOOL);
-TSS_RESULT obj_policy_copy_secret(TSS_HPOLICY, TSS_HPOLICY);
+//TSS_RESULT obj_policy_copy_secret(TSS_HPOLICY, TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
 TSS_RESULT obj_policy_get_type(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_remove(TSS_HOBJECT, TSS_HCONTEXT);
