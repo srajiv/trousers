@@ -31,22 +31,21 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 	TSS_RESULT result;
 
 	if ((policy = calloc(1, sizeof(struct tr_policy_obj))) == NULL) {
-		LogError("malloc of %zd bytes failed",
-				sizeof(struct tr_policy_obj));
+		LogError("malloc of %zd bytes failed", sizeof(struct tr_policy_obj));
 		return TSPERR(TSS_E_OUTOFMEMORY);
 	}
 
 	policy->type = type;
 #ifndef TSS_SPEC_COMPLIANCE
 	policy->SecretMode = TSS_SECRET_MODE_NONE;
+#else
+	policy->SecretMode = TSS_SECRET_MODE_POPUP;
+#endif
 	/* The policy object will inherit this attribute from the context */
 	if ((result = obj_context_get_hash_mode(tsp_context, &policy->hashMode))) {
 		free(policy);
 		return result;
 	}
-#else
-	policy->SecretMode = TSS_SECRET_MODE_POPUP;
-#endif
 	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
 #ifdef TSS_BUILD_DELEGATION
 	policy->delegationType = TSS_DELEGATIONTYPE_NONE;
@@ -287,7 +286,7 @@ done:
 
 	return result;
 }
-
+#if 0
 TSS_RESULT
 obj_policy_copy_secret(TSS_HPOLICY destPolicy, TSS_HPOLICY srcPolicy)
 {
@@ -311,7 +310,7 @@ obj_policy_copy_secret(TSS_HPOLICY destPolicy, TSS_HPOLICY srcPolicy)
 	return obj_policy_set_secret_object(destPolicy, mode, secret_size,
 					    &digest, secret_set);
 }
-
+#endif
 TSS_RESULT
 obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *data)
 {
