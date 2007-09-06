@@ -226,8 +226,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	if ((result = obj_rsakey_get_tsp_context(hKey, &tspContext)))
 		return result;
 
-	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE,
-					    &hUsagePolicy, &usesAuth)))
+	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hUsagePolicy, &usesAuth)))
 		return result;
 
 	if (obj_rsakey_is_migratable(hKey)) {
