@@ -247,7 +247,7 @@ map_key_handles:
 
 		if (entityType == TCPA_ET_KEYHANDLE || entityType == TCPA_ET_KEY) {
 			if (ensureKeyIsLoaded(hContext, entityValue, &newEntValue))
-				return TCSERR(TSS_E_FAIL);
+				return TCSERR(TSS_E_KEY_NOT_LOADED);
 
 			/* OSAP is never encrypted in a transport session, so changing
 			 * rgbWrappedCmdParamIn is ok here */
@@ -256,6 +256,29 @@ map_key_handles:
 		}
 
 		break;
+	}
+	case TPM_ORD_DSAP:
+	{
+		UINT16 entityType;
+		UINT32 keyHandle, tpmKeyHandle;
+
+		/* are the maximum number of auth sessions open? */
+		if (auth_mgr_req_new(hContext) == FALSE) {
+			if ((result = auth_mgr_swap_out(hContext)))
+				goto done;
+		}
+
+		offset = 0;
+		UnloadBlob_UINT16(&offset, &entityType, rgbWrappedCmdParamIn);
+		UnloadBlob_UINT32(&offset, &keyHandle, rgbWrappedCmdParamIn);
+
+		if (ensureKeyIsLoaded(hContext, keyHandle, &tpmKeyHandle))
+			return TCSERR(TSS_E_KEY_NOT_LOADED);
+
+		/* DSAP's only encrypted paramter is entityValue, so replacing keyHandle inside
+		 * rgbWrappedCmdParamIn is ok */
+		offset = sizeof(UINT16);
+		LoadBlob_UINT32(&offset, tpmKeyHandle, rgbWrappedCmdParamIn);
 	}
 	default:
 		break;
@@ -379,6 +402,7 @@ build_command:
 		*pulHandleListSize = 1;
 		break;
 	}
+	case TPM_ORD_DSAP:
 	case TPM_ORD_OSAP:
 	case TPM_ORD_OIAP:
 	{

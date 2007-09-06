@@ -312,3 +312,56 @@ TCSP_Delegate_VerifyDelegation_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	return result;
 }
 
+TSS_RESULT
+TCSP_DSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+		   TPM_ENTITY_TYPE entityType,	/* in */
+		   TCS_KEY_HANDLE keyHandle,	/* in */
+		   TPM_NONCE *nonceOddDSAP,	/* in */
+		   UINT32 entityValueSize,	/* in */
+		   BYTE *entityValue,		/* in */
+		   TCS_AUTHHANDLE *authHandle,	/* out */
+		   TPM_NONCE *nonceEven,	/* out */
+		   TPM_NONCE *nonceEvenDSAP)	/* out */
+{
+	TSS_RESULT result;
+	UINT64 offset = 0;
+	UINT32 paramSize;
+	TPM_KEY_HANDLE tpmKeyHandle;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
+
+	LogDebugFn("Enter");
+
+	if ((result = ctx_verify_context(hContext)))
+		return result;
+
+	if (ensureKeyIsLoaded(hContext, keyHandle, &tpmKeyHandle))
+		return TCSERR(TSS_E_KEY_NOT_LOADED);
+
+	/* are the maximum number of auth sessions open? */
+	if (auth_mgr_req_new(hContext) == FALSE) {
+		if ((result = auth_mgr_swap_out(hContext)))
+			goto done;
+	}
+
+	if ((result = tpm_rqu_build(TPM_ORD_DSAP, &offset, txBlob, entityType, keyHandle,
+				    nonceOddDSAP, entityValueSize, entityValue)))
+		return result;
+
+	if ((result = req_mgr_submit_req(txBlob)))
+		return result;
+
+	result = UnloadBlob_Header(txBlob, &paramSize);
+	if (!result) {
+		if ((result = tpm_rsp_parse(TPM_ORD_DSAP, txBlob, paramSize, authHandle, nonceEven,
+					    nonceEvenDSAP)))
+			goto done;
+	}
+
+	/* success, add an entry to the table */
+	result = auth_mgr_add(hContext, *authHandle);
+
+done:
+	LogResult("DSAP", result);
+
+	return result;
+}

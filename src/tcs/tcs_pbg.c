@@ -787,6 +787,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	}
 	/* 1 UINT32, 2 20 byte values */
 	case TPM_ORD_OSAP:
+	case TPM_ORD_DSAP:
 	{
 		UINT32 *handle = va_arg(ap, UINT32 *);
 		BYTE *nonce1 = va_arg(ap, BYTE *);
@@ -880,6 +881,31 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	va_start(ap, out_blob);
 
 	switch (ordinal) {
+	/* 1 UINT16, 1 UINT32, 1 20 bytes value, 1 UINT32, 1 BLOB */
+	case TPM_ORD_DSAP:
+	{
+		UINT16 val1 = va_arg(ap, int);
+		UINT32 handle1 = va_arg(ap, UINT32);
+		BYTE *digest1 = va_arg(ap, BYTE *);
+		UINT32 in_len1 = va_arg(ap, UINT32);
+		BYTE *in_blob1 = va_arg(ap, BYTE *);
+		va_end(ap);
+
+		if (!digest1 || !in_blob1) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			break;
+		}
+
+		*outOffset += TSS_TPM_TXBLOB_HDR_LEN;
+		LoadBlob_UINT16(outOffset, val1, out_blob);
+		LoadBlob_UINT32(outOffset, handle1, out_blob);
+		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
+		LoadBlob_UINT32(outOffset, in_len1, out_blob);
+		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+
+		result = TSS_SUCCESS;
+		break;
+	}
 	/* 1 BOOL, 1 UINT32, 1 BLOB, 1 20 byte value, 1 AUTH */
 	case TPM_ORD_Delegate_CreateOwnerDelegation:
 	{

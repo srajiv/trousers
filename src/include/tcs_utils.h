@@ -1185,4 +1185,15 @@ TSS_RESULT TCSP_FlushSpecific_Common(UINT32, TPM_RESOURCE_TYPE);
 					         TSS_UUID* pUuidData		/* out */
 	);
 
+	TSS_RESULT TCSP_DSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
+				      TPM_ENTITY_TYPE entityType,	/* in */
+				      TCS_KEY_HANDLE hKey,		/* in */
+				      TPM_NONCE *nonceOddDSAP,		/* in */
+				      UINT32 entityValueSize,		/* in */
+				      BYTE* entityValue,		/* in */
+				      TCS_AUTHHANDLE *authHandle,	/* out */
+				      TPM_NONCE *nonceEven,		/* out */
+				      TPM_NONCE *nonceEvenDSAP		/* out */
+	);
+
 #endif /*_TCS_UTILS_H_ */

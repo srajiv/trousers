@@ -380,6 +380,7 @@ TSS_RESULT RPC_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte, TPM
 TSS_RESULT RPC_Delegate_ReadTable_TP(struct host_table_entry *hte, UINT32 *, BYTE **, UINT32 *, BYTE **);
 TSS_RESULT RPC_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
 TSS_RESULT RPC_Delegate_VerifyDelegation_TP(struct host_table_entry *hte, UINT32, BYTE *);
+TSS_RESULT RPC_DSAP_TP(struct host_table_entry *hte, TPM_ENTITY_TYPE, TCS_KEY_HANDLE, TPM_NONCE *, UINT32, BYTE *, TCS_AUTHHANDLE *, TPM_NONCE *, TPM_NONCE *);
 #else
 #define RPC_Delegate_Manage_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_Delegate_CreateKeyDelegation_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
@@ -388,6 +389,7 @@ TSS_RESULT RPC_Delegate_VerifyDelegation_TP(struct host_table_entry *hte, UINT32
 #define RPC_Delegate_ReadTable_TP(...)			TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_Delegate_UpdateVerificationCount_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_Delegate_VerifyDelegation_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_DSAP_TP(...)				TSPERR(TSS_E_INTERNAL_ERROR)
 #endif
 
 #ifdef TSS_BUILD_CMK

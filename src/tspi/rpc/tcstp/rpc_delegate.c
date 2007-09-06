@@ -403,3 +403,49 @@ RPC_Delegate_VerifyDelegation_TP(struct host_table_entry *hte,
 	return result;
 }
 
+TSS_RESULT
+RPC_DSAP_TP(struct host_table_entry *hte,
+	    TPM_ENTITY_TYPE entityType,	/* in */
+	    TCS_KEY_HANDLE keyHandle,	/* in */
+	    TPM_NONCE *nonceOddDSAP,	/* in */
+	    UINT32 entityValueSize,	/* in */
+	    BYTE * entityValue,		/* in */
+	    TCS_AUTHHANDLE *authHandle,	/* out */
+	    TPM_NONCE *nonceEven,	/* out */
+	    TPM_NONCE *nonceEvenDSAP)	/* out */
+{
+	TSS_RESULT result;
+
+	initData(&hte->comm, 6);
+	hte->comm.hdr.u.ordinal = TCSD_ORD_DSAP;
+	LogDebugFn("TCS Context: 0x%x", hte->tcsContext);
+
+	if (setData(TCSD_PACKET_TYPE_UINT32, 0, &hte->tcsContext, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT16, 1, &entityType, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 2, &keyHandle, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_NONCE, 3, nonceOddDSAP, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &entityValueSize, 0, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, entityValue, entityValueSize, &hte->comm))
+		return TSPERR(TSS_E_INTERNAL_ERROR);
+
+	result = sendTCSDPacket(hte);
+
+	if (result == TSS_SUCCESS)
+		result = hte->comm.hdr.u.result;
+
+	if (result == TSS_SUCCESS) {
+		if (getData(TCSD_PACKET_TYPE_UINT32, 0, authHandle, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		if (getData(TCSD_PACKET_TYPE_NONCE, 1, nonceEven, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+		if (getData(TCSD_PACKET_TYPE_NONCE, 2, nonceEvenDSAP, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
+
+	return result;
+}

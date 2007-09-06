@@ -355,6 +355,7 @@ DECLARE_TCSTP_FUNC(Delegate_LoadOwnerDelegation);
 DECLARE_TCSTP_FUNC(Delegate_ReadTable);
 DECLARE_TCSTP_FUNC(Delegate_UpdateVerificationCount);
 DECLARE_TCSTP_FUNC(Delegate_VerifyDelegation);
+DECLARE_TCSTP_FUNC(DSAP);
 #else
 #define tcs_wrap_Delegate_Manage			tcs_wrap_Error
 #define tcs_wrap_Delegate_CreateKeyDelegation		tcs_wrap_Error
@@ -363,6 +364,7 @@ DECLARE_TCSTP_FUNC(Delegate_VerifyDelegation);
 #define tcs_wrap_Delegate_ReadTable			tcs_wrap_Error
 #define tcs_wrap_Delegate_UpdateVerificationCount	tcs_wrap_Error
 #define tcs_wrap_Delegate_VerifyDelegation		tcs_wrap_Error
+#define tcs_wrap_DSAP					tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_CMK

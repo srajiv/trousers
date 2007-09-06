@@ -3312,3 +3312,36 @@ RPC_KeyControlOwner(TCS_CONTEXT_HANDLE hContext,		/* in */
 	return result;
 }
 #endif
+
+TSS_RESULT
+RPC_DSAP(TSS_HCONTEXT hContext,		/* in */
+	 TPM_ENTITY_TYPE entityType,	/* in */
+	 TCS_KEY_HANDLE keyHandle,	/* in */
+	 TPM_NONCE *nonceOddDSAP,	/* in */
+	 UINT32 entityValueSize,	/* in */
+	 BYTE * entityValue,		/* in */
+	 TCS_AUTHHANDLE *authHandle,	/* out */
+	 TPM_NONCE *nonceEven,		/* out */
+	 TPM_NONCE *nonceEvenDSAP)	/* out */
+{
+	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_DSAP_TP(entry, entityType, keyHandle, nonceOddDSAP,
+					     entityValueSize, entityValue, authHandle, nonceEven,
+					     nonceEvenDSAP);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
