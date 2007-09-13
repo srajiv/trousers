@@ -1180,6 +1180,7 @@ Trspi_Error_String(TSS_RESULT r)
 			case TPM_E_NEEDS_SELFTEST:		return "SelfTestFull has not been run";
 			case TPM_E_DOING_SELFTEST:		return "TPM is currently executing a full selftest";
 			case TPM_E_DEFEND_LOCK_RUNNING:		return "TPM is defending against dictionary attacks and is in some time-out period";
+			case TPM_E_DISABLED_CMD:		return "The TPM target command has been disabled";
 			default:				return "Unknown error";
 		}
 	} else if (TSS_ERROR_LAYER(r) == TSS_LAYER_TDDL) {
