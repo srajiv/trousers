@@ -13,7 +13,7 @@
 
 #ifdef TSS_BUILD_RSAKEY_LIST
 
-// rsakey specific flags
+/* rsakey specific flags */
 #define TSS_RSAKEY_FLAG_OWNEREVICT (0x00000001)
 
 /* structures */
@@ -64,6 +64,7 @@ TSS_BOOL   obj_rsakey_is_migratable(TSS_HKEY);
 TSS_BOOL   obj_rsakey_is_redirected(TSS_HKEY);
 TSS_BOOL   obj_rsakey_is_volatile(TSS_HKEY);
 TSS_RESULT obj_rsakey_get_policy(TSS_HKEY, UINT32, TSS_HPOLICY *, TSS_BOOL *);
+TSS_RESULT obj_rsakey_get_policies(TSS_HKEY, TSS_HPOLICY *, TSS_HPOLICY *, TSS_BOOL *);
 TSS_RESULT obj_rsakey_get_blob(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_priv_blob(TSS_HKEY, UINT32 *, BYTE **);
 TSS_RESULT obj_rsakey_get_pub_blob(TSS_HKEY, UINT32 *, BYTE **);

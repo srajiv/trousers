@@ -152,6 +152,8 @@ TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, B
 TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
 TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
+TSS_RESULT obj_policy_get_osap_params(TSS_HCONTEXT, BYTE *, TSS_CALLBACK *, TSS_CALLBACK *,
+				      UINT32 *);
 #ifdef TSS_BUILD_SEALX
 TSS_RESULT obj_policy_do_sealx_mask(TSS_HPOLICY, TSS_HKEY, TSS_HENCDATA, TPM_AUTH *,
 		TPM_NONCE *, TPM_NONCE *, UINT32, BYTE *, BYTE **);
