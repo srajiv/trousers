@@ -182,8 +182,8 @@ Transport_GetPubKey(TSS_HCONTEXT tspContext,
 TSS_RESULT
 Transport_CreateWrapKey(TSS_HCONTEXT tspContext,	/* in */
 			TCS_KEY_HANDLE hWrappingKey,	/* in */
-			TPM_ENCAUTH KeyUsageAuth,	/* in */
-			TPM_ENCAUTH KeyMigrationAuth,	/* in */
+			TPM_ENCAUTH *KeyUsageAuth,	/* in */
+			TPM_ENCAUTH *KeyMigrationAuth,	/* in */
 			UINT32 keyInfoSize,		/* in */
 			BYTE * keyInfo,			/* in */
 			UINT32 * keyDataSize,		/* out */
@@ -223,8 +223,8 @@ Transport_CreateWrapKey(TSS_HCONTEXT tspContext,	/* in */
 	}
 
 	offset = 0;
-	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, KeyUsageAuth.authdata);
-	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, KeyMigrationAuth.authdata);
+	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, KeyUsageAuth->authdata);
+	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, KeyMigrationAuth->authdata);
 	Trspi_LoadBlob(&offset, keyInfoSize, data, keyInfo);
 
 	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_CreateWrapKey,
