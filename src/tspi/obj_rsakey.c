@@ -984,6 +984,26 @@ obj_rsakey_get_tsp_context(TSS_HKEY hKey, TSS_HCONTEXT *tspContext)
 }
 
 TSS_RESULT
+obj_rsakey_get_policies(TSS_HKEY hKey, TSS_HPOLICY *usage, TSS_HPOLICY *mig, TSS_BOOL *auth)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	*mig = rsakey->migPolicy;
+	*usage = rsakey->usagePolicy;
+	*auth = rsakey->key.authDataUsage ? TRUE : FALSE;
+
+	obj_list_put(&rsakey_list);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
 obj_rsakey_get_policy(TSS_HKEY hKey, UINT32 policyType,
 		      TSS_HPOLICY *phPolicy, TSS_BOOL *auth)
 {
@@ -1796,8 +1816,7 @@ obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	struct obj_list *list = &rsakey_list;
 	struct tr_rsakey_obj *rsakey;
 
-	/* XXX why is the macro not being used? */
-	pthread_mutex_lock(&list->lock);
+	MUTEX_LOCK(list->lock);
 
 	for (obj = list->head; obj; prev = obj, obj = obj->next) {
 		if (obj->tspContext != tspContext)
@@ -1811,8 +1830,7 @@ obj_rsakey_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 			rsakey->migPolicy = NULL_HPOLICY;
 	}
 
-	/* XXX why is the macro not being used? */
-	pthread_mutex_unlock(&list->lock);
+	MUTEX_UNLOCK(list->lock);
 }
 
 #if 0
