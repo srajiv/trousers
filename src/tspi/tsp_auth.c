@@ -14,14 +14,17 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
+#include "tcs_tsp.h"
 #include "spi_utils.h"
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "authsess.h"
 
 
 TSS_RESULT
@@ -489,6 +492,523 @@ obj_policy_validate_auth_oiap(TSS_HPOLICY hPolicy, TCPA_DIGEST *hashDigest, TPM_
 	obj_list_put(&policy_list);
 
 	return result;
+}
+
+#if 0
+TSS_RESULT
+authsess_oiap_get(TSS_HOBJECT obj, TPM_COMMAND_CODE ord, TPM_DIGEST *digest, TPM_AUTH *auth)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	TSS_BOOL bExpired;
+	UINT32 mode;
+	TPM_SECRET secret;
+	TSS_HCONTEXT tspContext;
+	TSS_RESULT (*OIAP)(TSS_HCONTEXT, TCS_AUTHHANDLE *, TPM_NONCE *); // XXX hack
+	TSS_RESULT (*TerminateHandle)(TSS_HCONTEXT, TCS_HANDLE); // XXX hack
+
+
+	if (obj_is_tpm(obj))
+		result = obj_tpm_get_tsp_context(obj, hContext);
+	else if (obj_is_rsakey(obj))
+		result = obj_rsakey_get_tsp_context(obj, hContext);
+	else if (obj_is_encdata(obj))
+		result = obj_encdata_get_tsp_context(obj, hContext);
+	else if (obj_is_nvstore(obj))
+		result = obj_nvstore_get_tsp_context(obj, hContext);
+	else
+		result = TSPERR(TSS_E_INVALID_HANDLE);
+
+#if 0
+	/* This validates that the secret can be used */
+	if ((result = obj_policy_has_expired(hPolicy, &bExpired)))
+		return result;
+
+	if (bExpired == TRUE)
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+	if ((result = obj_policy_get_tsp_context(hPolicy, &tspContext)))
+		return result;
+
+	if ((result = obj_policy_get_mode(hPolicy, &mode)))
+		return result;
+#else
+	if ((result = obj_policy_get_authsess_params()))
+		return result;
+#endif
+	if ((result = Init_AuthNonce(tspContext, cas, auth)))
+		return result;
+
+	/* XXX hack for opening a transport session */
+	if (cas) {
+		OIAP = RPC_OIAP;
+		TerminateHandle = RPC_TerminateHandle;
+	} else {
+		OIAP = TCS_API(tspContext)->OIAP;
+		TerminateHandle = TCS_API(tspContext)->TerminateHandle;
+	}
+
+	/* added retry logic */
+	if ((result = OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven))) {
+		if (result == TCPA_E_RESOURCES) {
+			int retry = 0;
+			do {
+				/* POSIX sleep time, { secs, nanosecs } */
+				struct timespec t = { 0, AUTH_RETRY_NANOSECS };
+
+				nanosleep(&t, NULL);
+
+				result = OIAP(tspContext, &auth->AuthHandle, &auth->NonceEven);
+			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
+		}
+
+		if (result)
+			return result;
+	}
+
+	switch (mode) {
+		case TSS_SECRET_MODE_CALLBACK:
+			result = obj_policy_do_hmac(hPolicy, hAuthorizedObject,
+						    TRUE, ulPendingFn,
+						    auth->fContinueAuthSession,
+						    20,
+						    auth->NonceEven.nonce,
+						    auth->NonceOdd.nonce,
+						    NULL, NULL, 20,
+						    hashDigest->digest,
+						    (BYTE *)&auth->HMAC);
+			break;
+		case TSS_SECRET_MODE_SHA1:
+		case TSS_SECRET_MODE_PLAIN:
+		case TSS_SECRET_MODE_POPUP:
+			if ((result = obj_policy_get_secret(hPolicy, TR_SECRET_CTX_NOT_NEW,
+							    &secret)))
+				break;
+
+			HMAC_Auth(secret.authdata, hashDigest->digest, auth);
+			break;
+		case TSS_SECRET_MODE_NONE:
+			/* fall through */
+		default:
+			result = TSPERR(TSS_E_POLICY_NO_SECRET);
+			break;
+	}
+
+	if (result) {
+		TerminateHandle(tspContext, auth->AuthHandle);
+		return result;
+	}
+
+	return obj_policy_dec_counter(hPolicy);
+}
+
+TSS_RESULT
+authsess_oiap_put(TPM_AUTH *auth)
+{
+}
+#endif
+
+
+TSS_RESULT
+authsess_do_osap(struct authsess *sess)
+{
+	TSS_RESULT result;
+
+	if ((result = TCS_API(sess->tspContext)->OSAP(sess->tspContext, sess->entity_type,
+						      sess->obj_parent, &sess->pAuth->NonceOdd,
+						      &sess->pAuth->AuthHandle,
+						      &sess->pAuth->NonceEven,
+						      &sess->nonceEvenOSAP))) {
+		if (result == TCPA_E_RESOURCES) {
+			int retry = 0;
+			do {
+				/* POSIX sleep time, { secs, nanosecs } */
+				struct timespec t = { 0, AUTH_RETRY_NANOSECS };
+
+				nanosleep(&t, NULL);
+
+				result = TCS_API(sess->tspContext)->OSAP(sess->tspContext,
+									 sess->entity_type,
+									 sess->obj_parent,
+									 &sess->pAuth->NonceOdd,
+									 &sess->pAuth->AuthHandle,
+									 &sess->pAuth->NonceEven,
+									 &sess->nonceEvenOSAP);
+			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
+		}
+	}
+
+	return result;
+}
+
+TSS_RESULT
+authsess_callback_xor(PVOID lpAppData,
+		      TSS_HOBJECT hOSAPObject,
+		      TSS_HOBJECT hObject,
+		      TSS_FLAG PurposeSecret,
+		      UINT32 ulSizeNonces,
+		      BYTE *rgbNonceEven,
+		      BYTE *rgbNonceOdd,
+		      BYTE *rgbNonceEvenOSAP,
+		      BYTE *rgbNonceOddOSAP,
+		      UINT32 ulSizeEncAuth,
+		      BYTE *rgbEncAuthUsage,
+		      BYTE *rgbEncAuthMigration)
+{
+	TSS_RESULT result;
+	UINT64 offset;
+	BYTE *hmacBlob;
+	BYTE xorUseAuth[sizeof(TPM_DIGEST)];
+	BYTE xorMigAuth[sizeof(TPM_DIGEST)];
+	Trspi_HashCtx hashCtx;
+	UINT32 i;
+	struct authsess *sess = (struct authsess *)lpAppData;
+
+	if ((hmacBlob = malloc((2 * ulSizeNonces) + ulSizeEncAuth)) == NULL) {
+		LogError("malloc of %u bytes failed", (2 * ulSizeNonces) + ulSizeEncAuth);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	offset = 0;
+	Trspi_LoadBlob(&offset, ulSizeNonces, hmacBlob, rgbNonceEvenOSAP);
+	Trspi_LoadBlob(&offset, ulSizeNonces, hmacBlob, rgbNonceOdd);
+
+	if ((result = Trspi_HMAC(TSS_HASH_SHA1, ulSizeEncAuth, sess->parentSecret.authdata, offset,
+				 hmacBlob, sess->sharedSecret.digest))) {
+		free(hmacBlob);
+		return result;
+	}
+	free(hmacBlob);
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_SECRET(&hashCtx, sess->sharedSecret.digest);
+	result |= Trspi_Hash_NONCE(&hashCtx, rgbNonceEven);
+	if ((result |= Trspi_HashFinal(&hashCtx, xorUseAuth)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_SECRET(&hashCtx, sess->sharedSecret.digest);
+	result |= Trspi_Hash_NONCE(&hashCtx, rgbNonceOdd);
+	if ((result |= Trspi_HashFinal(&hashCtx, xorMigAuth)))
+		return result;
+
+	for (i = 0; i < ulSizeEncAuth; i++)
+		rgbEncAuthUsage[i] ^= xorUseAuth[i];
+
+	for (i = 0; i < ulSizeEncAuth; i++)
+		rgbEncAuthMigration[i] ^= xorMigAuth[i];
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+authsess_callback_hmac(PVOID lpAppData,
+		       TSS_HOBJECT hAuthorizedObject,
+		       TSS_BOOL ReturnOrVerify,
+		       UINT32 ulPendingFunction,
+		       TSS_BOOL ContinueUse,
+		       UINT32 ulSizeNonces,
+		       BYTE *rgbNonceEven,
+		       BYTE *rgbNonceOdd,
+		       BYTE *rgbNonceEvenOSAP,
+		       BYTE *rgbNonceOddOSAP,
+		       UINT32 ulSizeDigestHmac,
+		       BYTE *rgbParamDigest,
+		       BYTE *rgbHmacData)
+{
+	struct authsess *sess = (struct authsess *)lpAppData;
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT64 offset;
+	BYTE Blob[61];
+
+	offset = 0;
+	Trspi_LoadBlob(&offset, ulSizeDigestHmac, Blob, rgbParamDigest);
+	Trspi_LoadBlob(&offset, ulSizeNonces, Blob, rgbNonceEven);
+	Trspi_LoadBlob(&offset, ulSizeNonces, Blob, rgbNonceOdd);
+	Blob[offset++] = ContinueUse;
+
+	if (ReturnOrVerify) {
+		Trspi_HMAC(TSS_HASH_SHA1, ulSizeDigestHmac, sess->sharedSecret.digest, offset, Blob,
+			   rgbHmacData);
+	} else {
+		TPM_HMAC hmacVerify;
+
+		Trspi_HMAC(TSS_HASH_SHA1, ulSizeDigestHmac, sess->sharedSecret.digest, offset, Blob,
+			   hmacVerify.digest);
+		result = memcmp(rgbHmacData, hmacVerify.digest, ulSizeDigestHmac);
+	}
+
+	return result;
+}
+
+/* Create an OSAP session. @requirements is used in different ways depending on the command to
+ * indicate whether we should require a policy or auth value */
+TSS_RESULT
+authsess_xsap_init(TSS_HCONTEXT     tspContext,
+		   TSS_HOBJECT	    obj_parent,
+		   TSS_HOBJECT      obj_child,
+		   TSS_BOOL	    requirements,
+		   TPM_COMMAND_CODE command,
+		   TPM_ENTITY_TYPE  entity_type,
+		   struct authsess  **xsess)
+{
+	TSS_RESULT result;
+	TSS_BOOL authdatausage = FALSE, req_auth = TRUE, get_child_auth = TRUE;
+	struct authsess *sess;
+
+	if ((sess = calloc(1, sizeof(struct authsess))) == NULL) {
+		LogError("malloc of %zd bytes failed", sizeof(struct authsess));
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	switch (command) {
+	/* Parent is Key for the cases below */
+	case TPM_ORD_Delegate_CreateKeyDelegation:
+	case TPM_ORD_CreateWrapKey:
+	case TPM_ORD_Seal:
+	case TPM_ORD_Sealx:
+	case TPM_ORD_ChangeAuth:
+		if ((result = obj_rsakey_get_policy(obj_parent, TSS_POLICY_USAGE,
+						    &sess->hUsageParent, NULL)))
+			goto error;
+		break;
+	/* Parent is TPM for the cases below */
+	case TPM_ORD_Delegate_CreateOwnerDelegation:
+		req_auth = FALSE;
+		/* fall through */
+	case TPM_ORD_MakeIdentity:
+	case TPM_ORD_NV_DefineSpace:
+		if ((result = obj_tpm_get_policy(obj_parent, TSS_POLICY_USAGE,
+						 &sess->hUsageParent)))
+			goto error;
+		break;
+	case TPM_ORD_ChangeAuthOwner:
+		/* Special case, ChangeAuthOwner is used to change Owner and SRK auth */
+		if (obj_is_rsakey(obj_parent)) {
+			if ((result = obj_rsakey_get_policy(obj_parent, TSS_POLICY_USAGE,
+							    &sess->hUsageParent, NULL)))
+				goto error;
+		} else {
+			if ((result = obj_tpm_get_policy(obj_parent, TSS_POLICY_USAGE,
+							 &sess->hUsageParent)))
+				goto error;
+		}
+		break;
+	default:
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto error;
+	}
+
+	if (requirements && !sess->hUsageParent) {
+		result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
+		goto error;
+	}
+
+	if (sess->hUsageParent) {
+		/* These are trousers callback functions which will be used to process the auth
+		 * session. If the policy type is callback for hUsageParent, they will be
+		 * overwritten by the application defined callback functions in the policy */
+		sess->cb_xor.callback = authsess_callback_xor;
+		sess->cb_xor.appData = (PVOID)sess;
+		sess->cb_hmac.callback = authsess_callback_hmac;
+		sess->cb_hmac.appData = (PVOID)sess;
+
+		/* XXX the parent object doesn't always hold the callbacks */
+		if ((result = obj_policy_get_osap_params(sess->hUsageParent,
+							 sess->parentSecret.authdata,
+							 &sess->cb_xor, &sess->cb_hmac,
+							 &sess->parentMode)))
+			goto error;
+	} else
+		sess->parentMode = TSS_SECRET_MODE_NONE;
+
+	switch (command) {
+	/* Child is a Key object */
+	case TPM_ORD_CreateWrapKey:
+		if ((result = obj_rsakey_get_policies(obj_child, &sess->hUsageChild,
+						      &sess->hMigChild, &authdatausage)))
+			return result;
+
+		if (authdatausage && !sess->hUsageChild) {
+			result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
+			goto error;
+		}
+
+		if (obj_rsakey_is_migratable(obj_child)) {
+			if (!sess->hMigChild) {
+				result = TSPERR(TSS_E_KEY_NO_MIGRATION_POLICY);
+				goto error;
+			}
+
+			if ((result = obj_policy_get_osap_params(sess->hMigChild,
+								 sess->encAuthMig.authdata, NULL,
+								 NULL, &sess->mMode)))
+				goto error;
+		}
+
+		if ((result = obj_rsakey_get_tcs_handle(obj_parent, &sess->obj_parent)))
+			goto error;
+		break;
+	/* Child is an Encdata object */
+	case TPM_ORD_Seal:
+	case TPM_ORD_Sealx:
+		if ((result = obj_encdata_get_policy(obj_child, TSS_POLICY_USAGE,
+						     &sess->hUsageChild)))
+			goto error;
+		break;
+	/* Child is an NV object */
+	case TPM_ORD_NV_DefineSpace:
+		/* The requirements variable tells us whether nv object auth is required */
+		req_auth = requirements;
+
+		if (req_auth) {
+			if (sess->parentMode == TSS_SECRET_MODE_NONE) {
+				result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
+				goto error;
+			}
+
+			if ((result = obj_nvstore_get_policy(obj_child, TSS_POLICY_USAGE,
+							     &sess->hUsageChild)))
+				goto error;
+
+			/* According to the spec, we must fall back on the TSP context's policy for
+			 * auth if none is set in the NV object */
+			if (!sess->hUsageChild) {
+				if ((result = obj_context_get_policy(obj_child, TSS_POLICY_USAGE,
+								     &sess->hUsageChild)))
+					goto error;
+			}
+
+			if (!sess->hUsageChild) {
+				result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
+				goto error;
+			}
+		} else {
+			/* In this case, the TPM is owned, but we're creating a no-auth NV area */
+			get_child_auth = FALSE;
+		}
+
+		break;
+	/* Child is a Key object */
+	case TPM_ORD_MakeIdentity:
+		if ((result = obj_rsakey_get_policy(obj_child, TSS_POLICY_USAGE,
+						    &sess->hUsageChild, NULL)))
+			goto error;
+		break;
+	/* Child is a Policy object */
+	case TPM_ORD_Delegate_CreateKeyDelegation:
+		if ((result = obj_rsakey_get_tcs_handle(obj_parent, &sess->obj_parent)))
+			goto error;
+		/* fall through */
+	case TPM_ORD_Delegate_CreateOwnerDelegation:
+	case TPM_ORD_ChangeAuth:
+	case TPM_ORD_ChangeAuthOwner:
+		sess->hUsageChild = obj_child;
+		break;
+	default:
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
+		goto error;
+	}
+
+	/* If req_auth is FALSE here, we don't actually need to set up an auth session, so returning
+	 * is OK.  At this point, authsess->pAuth is NULL, so the TCS API will not get any
+	 * authdata. */
+	if (req_auth == FALSE && sess->parentMode == TSS_SECRET_MODE_NONE)
+		goto done;
+
+	if (get_child_auth) {
+		if ((result = obj_policy_get_osap_params(sess->hUsageChild,
+							 sess->encAuthUse.authdata, NULL, NULL,
+							 &sess->uMode)))
+			return result;
+	}
+
+	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+				       (BYTE **)sess->auth.NonceOdd.nonce))) {
+		LogError("Failed creating random nonce");
+		goto error;
+	}
+
+	sess->entity_type = entity_type;
+	sess->obj_child = obj_child;
+	sess->tspContext = tspContext;
+	sess->pAuth = &sess->auth;
+
+	if ((result = authsess_do_osap(sess)))
+		goto error;
+
+	/* XXX What does a PurposeSecret of TRUE mean here? */
+	if ((result =
+	    ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HOBJECT,
+			     TSS_FLAG, UINT32, BYTE *, BYTE *,
+			     BYTE *, BYTE *, UINT32, BYTE *,
+			     BYTE *))sess->cb_xor.callback)(sess->cb_xor.appData,
+							    sess->hUsageParent, sess->hUsageChild,
+							    TRUE, sizeof(TPM_DIGEST),
+							    sess->auth.NonceEven.nonce,
+							    sess->auth.NonceOdd.nonce,
+							    sess->nonceEvenOSAP.nonce,
+							    sess->nonceOddOSAP.nonce,
+							    sizeof(TPM_ENCAUTH),
+							    sess->encAuthUse.authdata,
+							    sess->encAuthMig.authdata)))
+		goto error;
+done:
+	*xsess = sess;
+
+	return TSS_SUCCESS;
+error:
+	free(sess);
+	return result;
+}
+
+TSS_RESULT
+authsess_xsap_hmac(struct authsess *sess, TPM_DIGEST *digest)
+{
+	TSS_RESULT result;
+
+	/* If no auth session was established using this authsess object, return success */
+	if (!sess->pAuth)
+		return TSS_SUCCESS;
+
+	if ((result =
+	    ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
+	      UINT32, TSS_BOOL, UINT32, BYTE *, BYTE *,
+	      BYTE *, BYTE *, UINT32, BYTE *,
+	      BYTE *))sess->cb_hmac.callback)(sess->cb_hmac.appData,
+					      sess->hUsageParent, TRUE, sess->command,
+					      sess->auth.fContinueAuthSession, sizeof(TPM_NONCE),
+					      sess->auth.NonceEven.nonce,
+					      sess->auth.NonceOdd.nonce,
+					      sess->nonceEvenOSAP.nonce,
+					      sess->nonceOddOSAP.nonce, sizeof(TPM_DIGEST),
+					      digest->digest, sess->auth.HMAC.authdata)))
+		return result;
+
+	obj_policy_dec_counter(sess->hUsageParent);
+	obj_policy_dec_counter(sess->hUsageChild);
+	obj_policy_dec_counter(sess->hMigChild);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+authsess_xsap_verify(struct authsess *sess, TPM_DIGEST *digest)
+{
+	/* If no auth session was established using this authsess object, return success */
+	if (!sess->pAuth)
+		return TSS_SUCCESS;
+
+	return ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
+		 UINT32, TSS_BOOL, UINT32, BYTE *, BYTE *,
+		 BYTE *, BYTE *, UINT32, BYTE *,
+		 BYTE *))sess->cb_hmac.callback)(sess->cb_hmac.appData,
+						 sess->hUsageParent, FALSE, sess->command,
+						 sess->auth.fContinueAuthSession, sizeof(TPM_NONCE),
+						 sess->auth.NonceEven.nonce,
+						 sess->auth.NonceOdd.nonce,
+						 sess->nonceEvenOSAP.nonce,
+						 sess->nonceOddOSAP.nonce, sizeof(TPM_DIGEST),
+						 digest->digest, sess->auth.HMAC.authdata);
 }
 
 #ifdef TSS_BUILD_TRANSPORT
