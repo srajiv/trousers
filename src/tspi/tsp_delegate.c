@@ -20,6 +20,7 @@
 #include "obj.h"
 #include "tsplog.h"
 #include "tsp_delegate.h"
+#include "authsess.h"
 
 
 TSS_RESULT
@@ -102,27 +103,18 @@ create_owner_delegation(TSS_HTPM       hTpm,
 			TSS_HPOLICY    hDelegation)
 {
 	TSS_HCONTEXT hContext;
-	TSS_HPOLICY hPolicy;
 	TSS_BOOL incrementCount = FALSE;
 	UINT32 type;
-	UINT32 secretMode = TSS_SECRET_MODE_NONE;
 	UINT32 publicInfoSize;
 	BYTE *publicInfo = NULL;
 	Trspi_HashCtx hashCtx;
 	TCPA_DIGEST digest;
-	TCPA_ENCAUTH encAuthUsage, encAuthMig;
-	BYTE sharedSecret[20];
-	TCPA_NONCE nonceOddOSAP;
-	TCPA_NONCE nonceEvenOSAP;
-	TPM_AUTH ownerAuth, *pAuth;
 	UINT32 blobSize;
 	BYTE *blob;
 	TSS_RESULT result;
+	struct authsess *xsap = NULL;
 
 	if ((result = obj_tpm_get_tsp_context(hTpm, &hContext)))
-		return result;
-
-	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
 	if ((ulFlags & ~TSS_DELEGATE_INCREMENTVERIFICATIONCOUNT) > 0)
@@ -137,66 +129,52 @@ create_owner_delegation(TSS_HTPM       hTpm,
 	if (type != TSS_DELEGATIONTYPE_OWNER)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if (hPolicy != NULL_HPOLICY) {
-		if ((result = obj_policy_get_mode(hPolicy, &secretMode)))
-			return result;
-	}
-
 	if ((result = build_delegate_public_info(bLabel, hPcrs, hFamily, hDelegation,
 			&publicInfoSize, &publicInfo)))
 		return result;
 
-	if (secretMode != TSS_SECRET_MODE_NONE) {
-		pAuth = &ownerAuth;
-		if ((result = secret_PerformXOR_OSAP(hPolicy, hDelegation, NULL_HPOLICY,
-						     TPM_KH_OWNER, TCPA_ET_OWNER, TPM_KH_OWNER,
-						     &encAuthUsage, &encAuthMig, sharedSecret,
-						     pAuth, &nonceEvenOSAP)))
-			goto done;
-		nonceOddOSAP = pAuth->NonceOdd;
+	if ((result = authsess_xsap_init(hContext, hTpm, hDelegation, TSS_AUTH_POLICY_NOT_REQUIRED,
+					 TPM_ORD_Delegate_CreateOwnerDelegation, TPM_ET_OWNER,
+					 &xsap)))
+		return result;
 
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateOwnerDelegation);
-		result |= Trspi_Hash_BOOL(&hashCtx, incrementCount);
-		result |= Trspi_HashUpdate(&hashCtx, publicInfoSize, publicInfo);
-		result |= Trspi_Hash_ENCAUTH(&hashCtx, encAuthUsage.authdata);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			goto done;
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateOwnerDelegation);
+	result |= Trspi_Hash_BOOL(&hashCtx, incrementCount);
+	result |= Trspi_HashUpdate(&hashCtx, publicInfoSize, publicInfo);
+	result |= Trspi_Hash_DIGEST(&hashCtx, xsap->encAuthUse.authdata);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto done;
 
-		if ((result = secret_PerformAuth_OSAP(hTpm, TPM_ORD_Delegate_CreateOwnerDelegation,
-						      hPolicy, hPolicy, NULL_HPOLICY, sharedSecret,
-						      pAuth, digest.digest, &nonceEvenOSAP)))
-			goto done;
-	} else
-		pAuth = NULL;
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto done;
 
 	/* Create the delegation */
 	if ((result = TCS_API(hContext)->Delegate_CreateOwnerDelegation(hContext, incrementCount,
 									publicInfoSize, publicInfo,
-									encAuthUsage, pAuth,
-									&blobSize, &blob)))
-		return result;
+									&xsap->encAuthUse,
+									xsap->pAuth, &blobSize,
+									&blob)))
+		goto done;
 
-	if (pAuth) {
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateOwnerDelegation);
-		result |= Trspi_Hash_UINT32(&hashCtx, blobSize);
-		result |= Trspi_HashUpdate(&hashCtx, blobSize, blob);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			goto done;
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateOwnerDelegation);
+	result |= Trspi_Hash_UINT32(&hashCtx, blobSize);
+	result |= Trspi_HashUpdate(&hashCtx, blobSize, blob);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto done;
 
-		if ((result = secret_ValidateAuth_OSAP(TPM_KH_OWNER,
-				TPM_ORD_Delegate_CreateOwnerDelegation, hPolicy, hPolicy,
-				NULL_HPOLICY, sharedSecret, pAuth, digest.digest,
-				&nonceEvenOSAP)))
-			goto done;
+	if (authsess_xsap_verify(xsap, &digest)) {
+		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+		goto done;
 	}
 
 	result = obj_policy_set_delegation_blob(hDelegation, TSS_DELEGATIONTYPE_OWNER,
 			blobSize, blob);
 
 done:
+	free(xsap);
 	free(publicInfo);
 
 	return result;
@@ -211,28 +189,18 @@ create_key_delegation(TSS_HKEY       hKey,
 		      TSS_HPOLICY    hDelegation)
 {
 	TSS_HCONTEXT hContext;
-	TSS_HPOLICY hPolicy;
-	TSS_BOOL useAuth;
 	UINT32 type;
-	UINT32 secretMode = TSS_SECRET_MODE_NONE;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	UINT32 publicInfoSize;
 	BYTE *publicInfo = NULL;
 	Trspi_HashCtx hashCtx;
 	TCPA_DIGEST digest;
-	TCPA_ENCAUTH encAuthUsage, encAuthMig;
-	BYTE sharedSecret[20];
-	TCPA_NONCE nonceOddOSAP;
-	TCPA_NONCE nonceEvenOSAP;
-	TPM_AUTH keyAuth, *pAuth;
 	UINT32 blobSize;
 	BYTE *blob;
 	TSS_RESULT result;
+	struct authsess *xsap = NULL;
 
 	if ((result = obj_rsakey_get_tsp_context(hKey, &hContext)))
-		return result;
-
-	if ((result = obj_rsakey_get_policy(hKey, TSS_POLICY_USAGE, &hPolicy, &useAuth)))
 		return result;
 
 	if (ulFlags != 0)
@@ -244,11 +212,6 @@ create_key_delegation(TSS_HKEY       hKey,
 	if (type != TSS_DELEGATIONTYPE_KEY)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((hPolicy != NULL_HPOLICY) && (useAuth == TRUE)) {
-		if ((result = obj_policy_get_mode(hPolicy, &secretMode)))
-			return result;
-	}
-
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		return result;
 
@@ -256,54 +219,47 @@ create_key_delegation(TSS_HKEY       hKey,
 			&publicInfoSize, &publicInfo)))
 		return result;
 
-	if (secretMode != TSS_SECRET_MODE_NONE) {
-		pAuth = &keyAuth;
-		if ((result = secret_PerformXOR_OSAP(hPolicy, hDelegation, NULL_HPOLICY, hKey,
-						     TCPA_ET_KEYHANDLE, tcsKeyHandle, &encAuthUsage,
-						     &encAuthMig, sharedSecret, pAuth, &nonceEvenOSAP)))
-			goto done;
-		nonceOddOSAP = pAuth->NonceOdd;
+	if ((result = authsess_xsap_init(hContext, hKey, hDelegation, TSS_AUTH_POLICY_REQUIRED,
+					 TPM_ORD_Delegate_CreateKeyDelegation, TPM_ET_KEYHANDLE,
+					 &xsap)))
+		goto done;
 
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateKeyDelegation);
-		result |= Trspi_HashUpdate(&hashCtx, publicInfoSize, publicInfo);
-		result |= Trspi_Hash_ENCAUTH(&hashCtx, encAuthUsage.authdata);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateKeyDelegation);
+	result |= Trspi_HashUpdate(&hashCtx, publicInfoSize, publicInfo);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto done;
 
-		if ((result = secret_PerformAuth_OSAP(hKey,
-				TPM_ORD_Delegate_CreateKeyDelegation, hPolicy, hPolicy,
-				NULL_HPOLICY, sharedSecret, pAuth, digest.digest, &nonceEvenOSAP)))
-			goto done;
-	} else
-		pAuth = NULL;
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto done;
 
 	/* Create the delegation */
 	if ((result = TCS_API(hContext)->Delegate_CreateKeyDelegation(hContext, tcsKeyHandle,
 								      publicInfoSize, publicInfo,
-								      encAuthUsage, pAuth,
-								      &blobSize, &blob)))
-		return result;
+								      &xsap->encAuthUse,
+								      xsap->pAuth, &blobSize,
+								      &blob)))
+		goto done;
 
-	if (pAuth) {
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateKeyDelegation);
-		result |= Trspi_Hash_UINT32(&hashCtx, blobSize);
-		result |= Trspi_HashUpdate(&hashCtx, blobSize, blob);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			goto done;
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateKeyDelegation);
+	result |= Trspi_Hash_UINT32(&hashCtx, blobSize);
+	result |= Trspi_HashUpdate(&hashCtx, blobSize, blob);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto done;
 
-		if ((result = secret_ValidateAuth_OSAP(hKey, TPM_ORD_Delegate_CreateKeyDelegation,
-						       hPolicy, hPolicy, NULL_HPOLICY, sharedSecret,
-						       pAuth, digest.digest, &nonceEvenOSAP)))
-			goto done;
+	if (authsess_xsap_verify(xsap, &digest)) {
+		result = TSPERR(TSS_E_TSP_AUTHFAIL);
+		goto done;
 	}
 
 	result = obj_policy_set_delegation_blob(hDelegation, TSS_DELEGATIONTYPE_KEY, blobSize,
 						blob);
 
 done:
+	free(xsap);
 	free(publicInfo);
 
 	return result;
@@ -533,7 +489,7 @@ Transport_Delegate_CreateKeyDelegation(TSS_HCONTEXT tspContext,         /* in */
 				       TCS_KEY_HANDLE hKey,           /* in */
 				       UINT32 publicInfoSize,         /* in */
 				       BYTE *publicInfo,              /* in */
-				       TPM_ENCAUTH encDelAuth,        /* in */
+				       TPM_ENCAUTH *encDelAuth,        /* in */
 				       TPM_AUTH *keyAuth,             /* in, out */
 				       UINT32 *blobSize,              /* out */
 				       BYTE **blob)                   /* out */
@@ -572,7 +528,7 @@ Transport_Delegate_CreateKeyDelegation(TSS_HCONTEXT tspContext,         /* in */
 
 	offset = 0;
 	Trspi_LoadBlob(&offset, publicInfoSize, data, publicInfo);
-	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, encDelAuth.authdata);
+	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, encDelAuth->authdata);
 
 	if ((result = obj_context_transport_execute(tspContext,
 						    TPM_ORD_Delegate_CreateKeyDelegation, dataLen,
@@ -604,7 +560,7 @@ Transport_Delegate_CreateOwnerDelegation(TSS_HCONTEXT tspContext,       /* in */
 					 TSS_BOOL increment,          /* in */
 					 UINT32 publicInfoSize,       /* in */
 					 BYTE *publicInfo,            /* in */
-					 TPM_ENCAUTH encDelAuth,      /* in */
+					 TPM_ENCAUTH *encDelAuth,      /* in */
 					 TPM_AUTH *ownerAuth,         /* in, out */
 					 UINT32 *blobSize,            /* out */
 					 BYTE **blob)                 /* out */
@@ -629,7 +585,7 @@ Transport_Delegate_CreateOwnerDelegation(TSS_HCONTEXT tspContext,       /* in */
 	offset = 0;
 	Trspi_LoadBlob_BOOL(&offset, increment, data);
 	Trspi_LoadBlob(&offset, publicInfoSize, data, publicInfo);
-	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, encDelAuth.authdata);
+	Trspi_LoadBlob(&offset, sizeof(TPM_ENCAUTH), data, encDelAuth->authdata);
 
 	if ((result = obj_context_transport_execute(tspContext,
 						    TPM_ORD_Delegate_CreateOwnerDelegation, dataLen,

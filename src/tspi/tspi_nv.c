@@ -21,6 +21,9 @@
  *
  * Author: james.xu@intel.com Rossey.liu@intel.com
  *
+ * Kent Yoder - updates for new authsession mechanism
+ * (C) International Business Machines Corp. 2007
+ *
  */
 
 #include <stdlib.h>
@@ -36,6 +39,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "authsess.h"
 
 TSS_RESULT
 Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
@@ -51,14 +55,8 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 
 	TPM_BOOL defined_index = FALSE;
 	NV_DATA_PUBLIC nv_data_public;
-	UINT32 need_authdata = FALSE;
-	TSS_HPOLICY hPolicy, hEncPolicy;
-	BYTE sharedSecret[20];
-	TPM_AUTH auth;
-	TCPA_ENCAUTH encAuthUsage;
-	TCPA_ENCAUTH encAuthMig;
+	TSS_BOOL need_authdata = FALSE;
 	TCPA_DIGEST digest;
-	TCPA_NONCE nonceEvenOSAP;
 	BYTE *pReadPCR;
 	UINT32 pReadPCR_len;
 	BYTE *pWritePCR;
@@ -66,9 +64,7 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	UINT64 NVPublic_DataSize;
 	BYTE NVPublicData[MAX_PUBLIC_DATA_SIZE];
 	Trspi_HashCtx hashCtx;
-	UINT32 mode;
-	TSS_BOOL bExpired;
-	TCPA_SECRET usageSec;
+	struct authsess *xsap = NULL;
 
 	if ((result = obj_nvstore_get_tsp_context(hNvstore, &tspContext)))
 		return result;
@@ -104,30 +100,8 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 		return result;
 	}
 
-	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hEncPolicy)))
-		return result;
-
-	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
-		return result;
-
-	if (!hEncPolicy) {
-		if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &hEncPolicy)))
-			return result;
-	}
-
-	if ((result = obj_policy_get_mode(hEncPolicy, &mode)))
-		return result;
-
-	if ((result = obj_policy_has_expired(hEncPolicy, &bExpired)))
-		return result;
-
-	need_authdata = nv_data_public.permission.attributes
-			& (TPM_NV_PER_AUTHREAD |TPM_NV_PER_AUTHWRITE);
-
-	if (need_authdata && (bExpired || (mode == TSS_SECRET_MODE_NONE))) {
-		result = TSPERR(TSS_E_POLICY_NO_SECRET); /* need to define the policy; */
-		return result;
-	}
+	need_authdata = (nv_data_public.permission.attributes
+			& (TPM_NV_PER_AUTHREAD |TPM_NV_PER_AUTHWRITE)) ? TRUE : FALSE;
 
 	nv_data_public.tag = TPM_TAG_NV_DATA_PUBLIC;
 
@@ -155,57 +129,34 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	free_tspi(tspContext, pReadPCR);
 	free_tspi(tspContext, pWritePCR);
 
-	if ((result = obj_policy_get_secret(hEncPolicy, TR_SECRET_CTX_NEW, &usageSec)))
-		return result;
+	if ((result = authsess_xsap_init(tspContext, hTpm, hNvstore, need_authdata,
+					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap)))
+		goto error;
 
-	memcpy(encAuthUsage.authdata, usageSec.authdata, sizeof(TCPA_SECRET));
-	memset(&auth, 0 , sizeof(TPM_AUTH));
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
+	result |= Trspi_HashUpdate(&hashCtx, NVPublic_DataSize, NVPublicData);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
 
-	if ((result = obj_policy_get_mode(hPolicy, &mode)))
-		return result;
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
 
-	/*if no secret, then the tspi will use the TPM_TAG_RQU_COMMAND*/
-	if (mode != TSS_SECRET_MODE_NONE) {
-		if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy, hNvstore,
-						     TCPA_ET_OWNER, 0, &encAuthUsage,
-						     &encAuthMig, sharedSecret, &auth, &nonceEvenOSAP)))
-			return result;
+	if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
+								   NVPublicData, xsap->encAuthUse,
+								   xsap->pAuth)))
+			goto error;
 
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
-		result |= Trspi_HashUpdate(&hashCtx, NVPublic_DataSize, NVPublicData);
-		result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, encAuthUsage.authdata);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
 
-		if ((result = secret_PerformAuth_OSAP(hNvstore, TPM_ORD_NV_DefineSpace, hPolicy,
-						      hEncPolicy, hEncPolicy, sharedSecret, &auth,
-						      digest.digest, &nonceEvenOSAP)))
-			return result;
-
-		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
-									   NVPublic_DataSize,
-									   NVPublicData,
-									   encAuthUsage, &auth)))
-			return result;
-
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result = secret_ValidateAuth_OSAP(hNvstore, TPM_ORD_NV_DefineSpace, hPolicy,
-						       hEncPolicy, hEncPolicy, sharedSecret, &auth,
-						       digest.digest, &nonceEvenOSAP)))
-			return result;
-	} else {
-		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
-									   NVPublic_DataSize,
-									   NVPublicData,
-									   encAuthUsage, NULL)))
-			return result;
-	}
+	result = authsess_xsap_hmac(xsap, &digest);
+error:
+	free(xsap);
 
 	return result;
 }
@@ -221,21 +172,14 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 	UINT32 i;
 	TPM_BOOL defined_index = FALSE;
 	NV_DATA_PUBLIC nv_data_public;
-	TSS_HPOLICY hPolicy, hEncPolicy;
-	BYTE sharedSecret[20];
-	TPM_AUTH auth;
-	TCPA_ENCAUTH encAuthUsage;
-	TCPA_ENCAUTH encAuthMig;
 	TCPA_DIGEST digest;
-	TCPA_NONCE nonceEvenOSAP;
 	BYTE *pPCR;
 	UINT32 pPCR_len;
 
 	UINT64 NVPublic_DataSize;
 	BYTE NVPublicData[MAX_PUBLIC_DATA_SIZE];
 	Trspi_HashCtx hashCtx;
-	UINT32 mode;
-	TCPA_SECRET usageSec;
+	struct authsess *xsap = NULL;
 
 	memset(&nv_data_public, 0, sizeof(NV_DATA_PUBLIC));
 
@@ -271,20 +215,6 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 		return result;
 	}
 
-	if ((result = obj_tpm_get_policy(hTpm, TSS_POLICY_USAGE, &hPolicy)))
-		return result;
-
-	if ((result = obj_nvstore_get_policy(hNvstore, TSS_POLICY_USAGE, &hEncPolicy)))
-		return result;
-
-	if (!hEncPolicy) {
-		if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &hEncPolicy)))
-			return result;
-	}
-
-	if ((result = obj_policy_get_mode(hPolicy, &mode)))
-		return result;
-
 	nv_data_public.tag = TPM_TAG_NV_DATA_PUBLIC;
 
 	if ((result = obj_nvstore_create_pcrshortinfo(hNvstore, (TSS_HPCRS)NULL, &pPCR_len, &pPCR)))
@@ -307,54 +237,28 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 	Trspi_LoadBlob_UINT32(&NVPublic_DataSize, 0, NVPublicData);
 	free_tspi(tspContext, pPCR);
 
-	if ((result = obj_policy_get_secret(hEncPolicy, TR_SECRET_CTX_NEW, &usageSec)))
-		return result;
+	if ((result = authsess_xsap_init(tspContext, hTpm, hNvstore, TSS_AUTH_POLICY_NOT_REQUIRED,
+					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap)))
+		goto error;
 
-	memcpy(encAuthUsage.authdata, usageSec.authdata, sizeof(TCPA_SECRET));
-	memset(&auth, 0 , sizeof(TPM_AUTH));
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
+	result |= Trspi_HashUpdate(&hashCtx, NVPublic_DataSize, NVPublicData);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
 
-	if (mode != TSS_SECRET_MODE_NONE) {/*releasespace need the owner authentication!!!*/
-		if ((result = secret_PerformXOR_OSAP(hPolicy, hEncPolicy, hEncPolicy, hNvstore,
-						     TCPA_ET_OWNER, 0, &encAuthUsage,
-						     &encAuthMig, sharedSecret,
-						     &auth, &nonceEvenOSAP)))
-			return result;
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
 
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
-		result |= Trspi_HashUpdate(&hashCtx, NVPublic_DataSize, NVPublicData);
-		result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, encAuthUsage.authdata);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
+	if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext, NVPublic_DataSize,
+								   NVPublicData, xsap->encAuthUse,
+								   xsap->pAuth)))
+		goto error;
 
-		if ((result = secret_PerformAuth_OSAP(hNvstore, TPM_ORD_NV_DefineSpace, hPolicy,
-						      hEncPolicy, hEncPolicy, sharedSecret, &auth,
-						      digest.digest, &nonceEvenOSAP)))
-			return result;
-
-		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
-									   NVPublic_DataSize,
-									   NVPublicData,
-									   encAuthUsage, &auth)))
-			return result;
-
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result = secret_ValidateAuth_OSAP(hNvstore, TPM_ORD_NV_DefineSpace, hPolicy,
-						       hEncPolicy, hEncPolicy, sharedSecret, &auth,
-						       digest.digest, &nonceEvenOSAP)))
-			return result;
-	} else {
-		if ((result = TCS_API(tspContext)->NV_DefineOrReleaseSpace(tspContext,
-									   NVPublic_DataSize,
-									   NVPublicData,
-									   encAuthUsage, NULL)))
-			return result;
-	}
+	result = authsess_xsap_hmac(xsap, &digest);
+error:
+	free(xsap);
 
 	return result;
 }

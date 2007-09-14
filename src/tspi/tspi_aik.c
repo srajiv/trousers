@@ -20,6 +20,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "authsess.h"
 
 
 TSS_RESULT
@@ -33,18 +34,14 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				UINT32 * pulTcpaIdentityReqLength,	/* out */
 				BYTE ** prgbTcpaIdentityReq)		/* out */
 {
-	TCPA_ENCAUTH encAuthUsage;
-	TCPA_ENCAUTH encAuthMig;
-	BYTE sharedSecret[20];
-	TPM_AUTH srkAuth, ownerAuth;
+	TPM_AUTH srkAuth;
 	TCPA_RESULT result;
 	UINT64 offset;
 	BYTE hashblob[USHRT_MAX], idReqBlob[USHRT_MAX], testblob[USHRT_MAX];
 	TCPA_DIGEST digest;
-	TSS_HPOLICY hSRKPolicy, hIDPolicy, hCAPolicy, hTPMPolicy;
+	TSS_HPOLICY hSRKPolicy, hIDPolicy, hCAPolicy;
 	UINT32 caKeyBlobSize, idKeySize, idPubSize;
 	BYTE *caKeyBlob, *idKey, *newIdKey, *idPub;
-	TCPA_NONCE nonceEvenOSAP;
 	TSS_KEY caKey;
 	TCPA_CHOSENID_HASH chosenIDHash = { { 0, } };
 	UINT32 pcIdentityBindingSize;
@@ -70,6 +67,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	Trspi_HashCtx hashCtx;
 	UINT32 tempCredSize;
 	BYTE *tempCred = NULL;
+	struct authsess *xsap = NULL;
 
 	if (pulTcpaIdentityReqLength == NULL || prgbTcpaIdentityReq == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -88,11 +86,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	}
 
 	/* Get Policies */
-	if ((result = obj_rsakey_get_policy(hKeySRK, TSS_POLICY_USAGE,
-					    &hSRKPolicy, &usesAuth)))
-		return result;
-
-	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hTPMPolicy)))
+	if ((result = obj_rsakey_get_policy(hKeySRK, TSS_POLICY_USAGE, &hSRKPolicy, &usesAuth)))
 		return result;
 
 	if ((result = obj_rsakey_get_policy(hCAPubKey, TSS_POLICY_USAGE,
@@ -182,20 +176,18 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result = Trspi_UnloadBlob_KEY_PARMS(&offset, chosenIDBlob, &asymParms)))
 		return result;
 
-	if ((result = secret_PerformXOR_OSAP(hTPMPolicy, hIDPolicy, NULL_HPOLICY, hTPM,
-					     TCPA_ET_OWNER, TPM_KEYHND_SRK, &encAuthUsage,
-					     &encAuthMig, sharedSecret, &ownerAuth,
-					     &nonceEvenOSAP)))
+	if ((result = authsess_xsap_init(tspContext, hTPM, hIdentityKey, TSS_AUTH_POLICY_REQUIRED,
+					 TPM_ORD_MakeIdentity, TPM_ET_OWNER, &xsap)))
 		return result;
 
 	/* Hash the Auth data */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_MakeIdentity);
-	result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, encAuthUsage.authdata);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
 	result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, chosenIDHash.digest);
 	result |= Trspi_HashUpdate(&hashCtx, idKeySize, idKey);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error;
 
 	/* Do the Auth's */
 	if (usesAuth) {
@@ -207,26 +199,24 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 		pSrkAuth = NULL;
 	}
 
-	if ((result = secret_PerformAuth_OSAP(hTPM, TPM_ORD_MakeIdentity, hTPMPolicy, hIDPolicy,
-					      NULL_HPOLICY, sharedSecret, &ownerAuth, digest.digest,
-					      &nonceEvenOSAP)))
-		return result;
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
 
 	if ((result = obj_context_transport_get_control(tspContext, TSS_TSPATTRIB_ENABLE_TRANSPORT,
 							&transport)))
 		return result;
 
 	if (transport) {
-		if ((result = Transport_MakeIdentity2(tspContext, encAuthUsage, chosenIDHash,
-						      idKeySize, idKey, pSrkAuth, &ownerAuth,
+		if ((result = Transport_MakeIdentity2(tspContext, xsap->encAuthUse, chosenIDHash,
+						      idKeySize, idKey, pSrkAuth, xsap->pAuth,
 						      &idKeySize, &newIdKey, &pcIdentityBindingSize,
 						      &prgbIdentityBinding)))
 			return result;
 	} else {
-		if ((result = RPC_MakeIdentity(tspContext, encAuthUsage, chosenIDHash, idKeySize,
-					       idKey, pSrkAuth, &ownerAuth, &idKeySize, &newIdKey,
-					       &pcIdentityBindingSize, &prgbIdentityBinding,
-					       &pcEndorsementCredentialSize,
+		if ((result = RPC_MakeIdentity(tspContext, xsap->encAuthUse, chosenIDHash,
+					       idKeySize, idKey, pSrkAuth, xsap->pAuth, &idKeySize,
+					       &newIdKey, &pcIdentityBindingSize,
+					       &prgbIdentityBinding, &pcEndorsementCredentialSize,
 					       &prgbEndorsementCredential,
 					       &pcPlatformCredentialSize, &prgbPlatformCredential,
 					       &pcConformanceCredentialSize,
@@ -243,9 +233,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
-	if ((result = secret_ValidateAuth_OSAP(hTPM, TPM_ORD_MakeIdentity, hTPMPolicy, hIDPolicy,
-					       NULL_HPOLICY, sharedSecret, &ownerAuth,
-					       digest.digest, &nonceEvenOSAP)))
+	if ((result = authsess_xsap_verify(xsap, &digest)))
 		goto error;
 
 	if (usesAuth == TRUE) {
@@ -380,6 +368,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	memcpy(*prgbTcpaIdentityReq, idReqBlob, offset);
 	*pulTcpaIdentityReqLength = offset;
 error:
+	free(xsap);
 	free_key_refs(&caKey);
 	free(prgbIdentityBinding);
 	free(prgbEndorsementCredential);
