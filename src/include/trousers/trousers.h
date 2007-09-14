@@ -175,6 +175,7 @@ TSS_RESULT Trspi_Hash_MSA_COMPOSITE(Trspi_HashCtx *c, TPM_MSA_COMPOSITE *m);
 #define Trspi_Hash_NONCE(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_ENCAUTH(c, d)	Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 #define Trspi_Hash_HMAC(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
+#define Trspi_Hash_SECRET(c, d)		Trspi_HashUpdate(c, TPM_SHA1_160_HASH_LEN, d)
 
 
 UINT32 Trspi_HMAC(UINT32 HashType, UINT32 SecretSize, BYTE*Secret, UINT32 BufSize, BYTE*Buf, BYTE*hmacOut);
