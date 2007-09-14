@@ -23,45 +23,16 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "authsess.h"
 
 TSS_RESULT
 Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 		TSS_HOBJECT hParentObject,	/* in */
 		TSS_HPOLICY hNewPolicy)		/* in */
 {
-	TCPA_ENCAUTH encAuthUsage;
-	TCPA_ENCAUTH encAuthMig;
-	BYTE sharedSecret[20];
-	TPM_AUTH auth1;
-	TPM_AUTH auth2;
-	UINT64 offset;
-	TCPA_DIGEST digest;
-	TCPA_RESULT result;
-	UINT32 keyHandle;
-	TSS_HPOLICY hPolicy;
-	TSS_HPOLICY hParentPolicy;
-	TCPA_NONCE nonceEvenOSAP;
-	UINT32 dataBlobLength;
-	BYTE *dataBlob;
-	TCPA_STORED_DATA storedData;
 	UINT32 keyToChangeHandle;
-	UINT32 objectLength;
-	TSS_KEY keyToChange;
-	BYTE *keyBlob;
-	UINT32 newEncSize;
-	BYTE *newEncData;
+	TSS_RESULT result;
 	TSS_HCONTEXT tspContext;
-	Trspi_HashCtx hashCtx;
-
-	/* Perform the initial checks
-	 * If the parent Object is Null
-	 *      -       Trying to change the TPM Auth
-	 *      -       This requires Owner Authorization
-	 * If the parent Object is not Null
-	 *      -       Trying to change the auth of an entity
-	 * If the ObjectToChange is the SRK, then the parent must be the TPM
-	 *  Object
-	 */
 
 	if ((result = obj_policy_get_tsp_context(hNewPolicy, &tspContext)))
 		return result;
@@ -71,346 +42,28 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	 * object must be either an rsakey or the TPM */
 	if (obj_is_tpm(hObjectToChange)) {
 		if (hParentObject != NULL_HOBJECT)
-			return TSPERR(TSS_E_INVALID_HANDLE);
-	} else if (!obj_is_rsakey(hParentObject) &&
-		   !obj_is_tpm(hParentObject)) {
+			return TSPERR(TSS_E_BAD_PARAMETER);
+	} else if (!obj_is_rsakey(hParentObject) && !obj_is_tpm(hParentObject)) {
 		return TSPERR(TSS_E_INVALID_HANDLE);
 	}
 
-	if (obj_is_tpm(hObjectToChange)) {/*  if TPM Owner Auth change */
-		/* get the owner policy */
-		if ((result = obj_tpm_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
-			return result;
-
-		/* Now Calculate the authorization */
-		if ((result =
-		    secret_PerformXOR_OSAP(hPolicy, hNewPolicy, hNewPolicy,
-					   hObjectToChange, TCPA_ET_OWNER, 0,
-					   &encAuthUsage, &encAuthMig,
-					   sharedSecret, &auth1,
-					   &nonceEvenOSAP)))
-			return result;
-
-		/* calculate auth data */
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
-		result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
-		result |= Trspi_HashUpdate(&hashCtx, 20, encAuthUsage.authdata);
-		result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_OWNER);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result =
-		    secret_PerformAuth_OSAP(hObjectToChange,
-					    TPM_ORD_ChangeAuthOwner, hPolicy,
-					    hNewPolicy, hNewPolicy,
-					    sharedSecret, &auth1,
-					    digest.digest, &nonceEvenOSAP)))
-			return result;
-
-		if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext, TCPA_PID_ADCP,
-								   &encAuthUsage, TCPA_ET_OWNER,
-								   &auth1)))
-			return result;
-
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result = secret_ValidateAuth_OSAP(hObjectToChange,
-						       TPM_ORD_ChangeAuthOwner,
-						       hPolicy, hNewPolicy,
-						       hNewPolicy,
-						       sharedSecret, &auth1,
-						       digest.digest,
-						       &nonceEvenOSAP)))
-			return result;
-
+	if (obj_is_tpm(hObjectToChange)) {
+		result = changeauth_owner(tspContext, hObjectToChange, NULL_HTPM, hNewPolicy);
 	} else if (obj_is_rsakey(hObjectToChange)) {
 		if ((result = obj_rsakey_get_tcs_handle(hObjectToChange, &keyToChangeHandle)))
 			return result;
 
 		if (keyToChangeHandle == TPM_KEYHND_SRK) {
-			LogDebug("SRK Handle");
-			/* get the owner policy */
-			if ((result = obj_tpm_get_policy(hParentObject, TSS_POLICY_USAGE,
-							 &hParentPolicy)))
-				return result;
-
-			/* Now Calculate the authorization */
-			if ((result =
-			    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy,
-						   hNewPolicy, hParentObject,
-						   TCPA_ET_OWNER, 0,
-						   &encAuthUsage, &encAuthMig,
-						   sharedSecret, &auth1,
-						   &nonceEvenOSAP)))
-				return result;
-
-			/* calculate auth data */
-			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-			result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
-			result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
-			result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN,
-						   encAuthUsage.authdata);
-			result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_SRK);
-			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-				return result;
-
-			if ((result =
-			    secret_PerformAuth_OSAP(hParentObject,
-						    TPM_ORD_ChangeAuthOwner,
-						    hParentPolicy, hNewPolicy,
-						    hNewPolicy, sharedSecret,
-						    &auth1, digest.digest,
-						    &nonceEvenOSAP)))
-				return result;
-
-			if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext,
-									   TCPA_PID_ADCP,
-									   &encAuthUsage,
-									   TPM_ET_SRK,
-									   &auth1)))
-				return result;
-
-			/* Validate the Auths */
-			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-			result |= Trspi_Hash_UINT32(&hashCtx, result);
-			result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
-			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-				return result;
-
-			if ((result =
-			    secret_ValidateAuth_OSAP(hParentObject,
-						     TPM_ORD_ChangeAuthOwner,
-						     hParentPolicy, hNewPolicy,
-						     hNewPolicy, sharedSecret,
-						     &auth1, digest.digest,
-						     &nonceEvenOSAP)))
-				return result;
+			result = changeauth_srk(tspContext, hObjectToChange, hParentObject,
+						hNewPolicy);
 		} else {
-			if ((result = obj_rsakey_get_policy(hObjectToChange,
-							TSS_POLICY_USAGE,
-							&hPolicy, NULL)))
-				return result;
-
-			/*  get the parent secret */
-			if ((result = obj_rsakey_get_policy(hParentObject,
-							   TSS_POLICY_USAGE,
-							   &hParentPolicy, NULL)))
-				return result;
-
-			if ((result = obj_rsakey_get_blob(hObjectToChange,
-						&objectLength, &keyBlob)))
-				return result;
-
-			offset = 0;
-			if ((result = UnloadBlob_TSS_KEY(&offset, keyBlob, &keyToChange))) {
-				LogDebug("UnloadBlob_TSS_KEY failed. "
-						"result=0x%x", result);
-				return result;
-			}
-
-			if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
-				return result;
-
-			if ((result =
-			    secret_PerformXOR_OSAP(hParentPolicy,
-						   hNewPolicy,
-						   hNewPolicy,
-						   hParentObject,
-						   keyHandle == TPM_KEYHND_SRK ?
-						                   TCPA_ET_SRK :
-								   TCPA_ET_KEYHANDLE,
-						   keyHandle,
-						   &encAuthUsage,
-						   &encAuthMig,
-						   sharedSecret,
-						   &auth1,
-						   &nonceEvenOSAP)))
-				return result;
-
-			/* caluculate auth data */
-			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-			result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
-			result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
-			result |= Trspi_HashUpdate(&hashCtx, 20, encAuthUsage.authdata);
-			result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_KEY);
-			result |= Trspi_Hash_UINT32(&hashCtx, keyToChange.encSize);
-			result |= Trspi_HashUpdate(&hashCtx, keyToChange.encSize,
-						   keyToChange.encData);
-			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-				return result;
-
-			if ((result =
-			    secret_PerformAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
-						    hParentPolicy, hNewPolicy, hNewPolicy,
-						    sharedSecret, &auth1, digest.digest,
-						    &nonceEvenOSAP)))
-				return result;
-
-			if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
-							      hPolicy, FALSE, &digest, &auth2)))
-				return result;
-
-			if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle,
-								      TPM_PID_ADCP, &encAuthUsage,
-								      TPM_ET_KEY,
-								      keyToChange.encSize,
-								      keyToChange.encData, &auth1,
-								      &auth2, &newEncSize,
-								      &newEncData)))
-				return result;
-
-			/* Validate the Auths */
-			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-			result |= Trspi_Hash_UINT32(&hashCtx, result);
-			result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
-			result |= Trspi_Hash_UINT32(&hashCtx, newEncSize);
-			result |= Trspi_HashUpdate(&hashCtx, newEncSize, newEncData);
-			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-				return result;
-
-			if ((result =
-			    secret_ValidateAuth_OSAP(hParentObject,
-						     TPM_ORD_ChangeAuth,
-						     hParentPolicy, hNewPolicy,
-						     hNewPolicy, sharedSecret,
-						     &auth1, digest.digest,
-						     &nonceEvenOSAP))) {
-				free(newEncData);
-				return result;
-			}
-
-			if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
-								&auth2)))
-				return result;
-
-			memcpy(keyToChange.encData, newEncData, newEncSize);
-			free(newEncData);
-
-			offset = 0;
-			LoadBlob_TSS_KEY(&offset, keyBlob, &keyToChange);
-			objectLength = offset;
-
-			if ((result = obj_rsakey_set_tcpakey(hObjectToChange,
-					       objectLength, keyBlob)))
-				return result;
+			result = changeauth_key(tspContext, hObjectToChange, hParentObject,
+						hNewPolicy);
 		}
 	} else if (obj_is_encdata(hObjectToChange)) {
-		/*  get the secret for the parent */
-		if ((result = obj_encdata_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
-			return result;
-
-		/*  get the parent secret */
-		if ((result = obj_rsakey_get_policy(hParentObject, TSS_POLICY_USAGE, &hParentPolicy,
-						    NULL)))
-			return result;
-
-		/*  get the data Object  */
-		if ((result = obj_encdata_get_data(hObjectToChange, &dataBlobLength, &dataBlob)))
-			return result;
-
-		offset = 0;
-		if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataBlob, &storedData)))
-			return result;
-
-		if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		if ((result =
-		    secret_PerformXOR_OSAP(hParentPolicy, hNewPolicy, hNewPolicy, hParentObject,
-					   TCPA_ET_KEYHANDLE, keyHandle, &encAuthUsage, &encAuthMig,
-					   sharedSecret, &auth1, &nonceEvenOSAP))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		/* caluculate auth data */
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
-		result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
-		result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN, encAuthUsage.authdata);
-		result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_DATA);
-		result |= Trspi_Hash_UINT32(&hashCtx, storedData.encDataSize);
-		result |= Trspi_HashUpdate(&hashCtx, storedData.encDataSize, storedData.encData);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result =
-		    secret_PerformAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
-					    hParentPolicy, hNewPolicy,
-					    hNewPolicy, sharedSecret, &auth1,
-					    digest.digest, &nonceEvenOSAP))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
-						      hPolicy, FALSE, &digest, &auth2))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
-							      &encAuthUsage, TPM_ET_DATA,
-							      storedData.encDataSize,
-							      storedData.encData, &auth1, &auth2,
-							      &newEncSize, &newEncData))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		/* Validate the Auths */
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
-		result |= Trspi_Hash_UINT32(&hashCtx, newEncSize);
-		result |= Trspi_HashUpdate(&hashCtx, newEncSize, newEncData);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result =
-		    secret_ValidateAuth_OSAP(hParentObject, TPM_ORD_ChangeAuth,
-					     hParentPolicy, hNewPolicy,
-					     hNewPolicy, sharedSecret, &auth1,
-					     digest.digest, &nonceEvenOSAP))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			free(newEncData);
-			return result;
-		}
-
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest,
-							&auth2))) {
-			free(storedData.sealInfo);
-			free(storedData.encData);
-			return result;
-		}
-
-		memcpy(storedData.encData, newEncData, newEncSize);
-		free(newEncData);
-		storedData.encDataSize = newEncSize;
-
-		offset = 0;
-		Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
-		free(storedData.sealInfo);
-		free(storedData.encData);
-		if ((result = obj_encdata_set_data(hObjectToChange,
-						 offset, dataBlob)))
-			return result;
-
+		result = changeauth_encdata(tspContext, hObjectToChange, hParentObject, hNewPolicy);
 	} else if (obj_is_policy(hObjectToChange) || obj_is_hash(hObjectToChange) ||
-		    obj_is_pcrs(hObjectToChange) || obj_is_context(hObjectToChange)) {
+		   obj_is_pcrs(hObjectToChange) || obj_is_context(hObjectToChange)) {
 		return TSPERR(TSS_E_BAD_PARAMETER);
 	} else {
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -419,7 +72,9 @@ Tspi_ChangeAuth(TSS_HOBJECT hObjectToChange,	/* in */
 	if ((result = obj_policy_set_type(hNewPolicy, TSS_POLICY_USAGE)))
 		return result;
 
-	return Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
+	result = Tspi_Policy_AssignToObject(hNewPolicy, hObjectToChange);
+
+	return result;
 }
 
 TSS_RESULT
