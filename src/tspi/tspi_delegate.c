@@ -117,11 +117,11 @@ Tspi_TPM_Delegate_CreateDelegation(TSS_HOBJECT    hObject,	/* in */
 
 	if (obj_is_tpm(hObject)) {
 		if ((result = create_owner_delegation(hObject, bLabel, ulFlags, hPcrs, hFamily,
-				hDelegation)))
+						      hDelegation)))
 			return result;
 	} else if (obj_is_rsakey(hObject)) {
 		if ((result = create_key_delegation(hObject, bLabel, ulFlags, hPcrs, hFamily,
-				hDelegation)))
+						    hDelegation)))
 			return result;
 	} else
 		return TSPERR(TSS_E_INVALID_HANDLE);
