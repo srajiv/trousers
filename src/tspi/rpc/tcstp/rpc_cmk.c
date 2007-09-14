@@ -90,9 +90,9 @@ RPC_CMK_ApproveMA_TP(struct host_table_entry *hte,
 TSS_RESULT
 RPC_CMK_CreateKey_TP(struct host_table_entry *hte,
 		     TCS_KEY_HANDLE hWrappingKey,	/* in */
-		     TPM_ENCAUTH keyUsageAuth,		/* in */
-		     TPM_HMAC migAuthorityApproval,	/* in */
-		     TPM_DIGEST migAuthorityDigest,	/* in */
+		     TPM_ENCAUTH *keyUsageAuth,		/* in */
+		     TPM_HMAC *migAuthorityApproval,	/* in */
+		     TPM_DIGEST *migAuthorityDigest,	/* in */
 		     UINT32 *keyDataSize,		/* in, out */
 		     BYTE **keyData,			/* in, out */
 		     TPM_AUTH *pAuth)			/* in, out */
@@ -107,11 +107,11 @@ RPC_CMK_CreateKey_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hWrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &keyUsageAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, keyUsageAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_DIGEST, 3, &migAuthorityApproval, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_DIGEST, 3, migAuthorityApproval, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_DIGEST, 4, &migAuthorityDigest, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_DIGEST, 4, migAuthorityDigest, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 5, keyDataSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);

@@ -104,8 +104,8 @@ RPC_EvictKey_TP(struct host_table_entry *hte,
 TSS_RESULT
 RPC_CreateWrapKey_TP(struct host_table_entry *hte,
 		      TCS_KEY_HANDLE hWrappingKey,	/* in */
-		      TCPA_ENCAUTH KeyUsageAuth,	/* in */
-		      TCPA_ENCAUTH KeyMigrationAuth,	/* in */
+		      TCPA_ENCAUTH *KeyUsageAuth,	/* in */
+		      TCPA_ENCAUTH *KeyMigrationAuth,	/* in */
 		      UINT32 keyInfoSize,	/* in */
 		      BYTE * keyInfo,	/* in */
 		      UINT32 * keyDataSize,	/* out */
@@ -122,16 +122,18 @@ RPC_CreateWrapKey_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 1, &hWrappingKey, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, &KeyUsageAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 2, KeyUsageAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, &KeyMigrationAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 3, KeyMigrationAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_UINT32, 4, &keyInfoSize, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 5, keyInfo, keyInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_AUTH, 6, pAuth, 0, &hte->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+	if (pAuth) {
+		if (setData(TCSD_PACKET_TYPE_AUTH, 6, pAuth, 0, &hte->comm))
+			return TSPERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	result = sendTCSDPacket(hte);
 
@@ -154,10 +156,12 @@ RPC_CreateWrapKey_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
-		if (getData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &hte->comm)) {
-			free(*keyData);
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-			goto done;
+		if (pAuth) {
+			if (getData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &hte->comm)) {
+				free(*keyData);
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+			}
 		}
 	}
 

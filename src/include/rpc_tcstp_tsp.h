@@ -72,7 +72,7 @@ TSS_RESULT RPC_LoadKeyByUUID_TP(struct host_table_entry *,TSS_UUID,TCS_LOADKEY_I
 #ifdef TSS_BUILD_KEY
 TSS_RESULT RPC_LoadKeyByBlob_TP(struct host_table_entry *,TCS_KEY_HANDLE,UINT32,BYTE *,TPM_AUTH *,TCS_KEY_HANDLE *,TCS_KEY_HANDLE *);
 TSS_RESULT RPC_EvictKey_TP(struct host_table_entry *,TCS_KEY_HANDLE);
-TSS_RESULT RPC_CreateWrapKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH,TCPA_ENCAUTH,UINT32,BYTE *,UINT32 *,BYTE **,TPM_AUTH *);
+TSS_RESULT RPC_CreateWrapKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TCPA_ENCAUTH *,TCPA_ENCAUTH *,UINT32,BYTE *,UINT32 *,BYTE **,TPM_AUTH *);
 TSS_RESULT RPC_GetPubKey_TP(struct host_table_entry *,TCS_KEY_HANDLE,TPM_AUTH *,UINT32 *,BYTE **);
 TSS_RESULT RPC_TerminateHandle_TP(struct host_table_entry *,TCS_AUTHHANDLE);
 TSS_RESULT RPC_OwnerReadInternalPub_TP(struct host_table_entry *, TCS_KEY_HANDLE, TPM_AUTH *, UINT32 *, BYTE **);
@@ -374,8 +374,8 @@ TSS_RESULT RPC_FlushSpecific_TP(struct host_table_entry *hte, TCS_HANDLE, TPM_RE
 
 #ifdef TSS_BUILD_DELEGATION
 TSS_RESULT RPC_Delegate_Manage_TP(struct host_table_entry *hte, TPM_FAMILY_ID, TPM_FAMILY_OPERATION, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
-TSS_RESULT RPC_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_ENCAUTH, TPM_AUTH *, UINT32 *, BYTE **);
-TSS_RESULT RPC_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte, TSS_BOOL, UINT32, BYTE *, TPM_ENCAUTH, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT RPC_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, UINT32, BYTE *, TPM_ENCAUTH *, TPM_AUTH *, UINT32 *, BYTE **);
+TSS_RESULT RPC_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte, TSS_BOOL, UINT32, BYTE *, TPM_ENCAUTH *, TPM_AUTH *, UINT32 *, BYTE **);
 TSS_RESULT RPC_Delegate_LoadOwnerDelegation_TP(struct host_table_entry *hte, TPM_DELEGATE_INDEX, UINT32, BYTE *, TPM_AUTH *);
 TSS_RESULT RPC_Delegate_ReadTable_TP(struct host_table_entry *hte, UINT32 *, BYTE **, UINT32 *, BYTE **);
 TSS_RESULT RPC_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);
@@ -395,7 +395,7 @@ TSS_RESULT RPC_DSAP_TP(struct host_table_entry *hte, TPM_ENTITY_TYPE, TCS_KEY_HA
 #ifdef TSS_BUILD_CMK
 TSS_RESULT RPC_CMK_SetRestrictions_TP(struct host_table_entry *hte, TSS_CMK_DELEGATE, TPM_AUTH *);
 TSS_RESULT RPC_CMK_ApproveMA_TP(struct host_table_entry *hte, TPM_DIGEST, TPM_AUTH *, TPM_HMAC *);
-TSS_RESULT RPC_CMK_CreateKey_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TPM_ENCAUTH, TPM_HMAC, TPM_DIGEST, UINT32 *, BYTE **, TPM_AUTH *);
+TSS_RESULT RPC_CMK_CreateKey_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TPM_ENCAUTH *, TPM_HMAC *, TPM_DIGEST *, UINT32 *, BYTE **, TPM_AUTH *);
 TSS_RESULT RPC_CMK_CreateTicket_TP(struct host_table_entry *hte, UINT32, BYTE *, TPM_DIGEST, UINT32, BYTE *, TPM_AUTH *, TPM_HMAC *);
 TSS_RESULT RPC_CMK_CreateBlob_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TSS_MIGRATE_SCHEME, UINT32, BYTE *, TPM_DIGEST, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **, UINT32 *, BYTE **);
 TSS_RESULT RPC_CMK_ConvertMigration_TP(struct host_table_entry *hte, TCS_KEY_HANDLE, TPM_CMK_AUTH, TPM_HMAC, UINT32, BYTE *, UINT32, BYTE *, UINT32, BYTE *, TPM_AUTH *, UINT32 *, BYTE **);

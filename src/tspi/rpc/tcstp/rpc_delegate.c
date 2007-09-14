@@ -92,7 +92,7 @@ RPC_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte,
 				    TCS_KEY_HANDLE hKey,		/* in */
 				    UINT32 publicInfoSize,		/* in */
 				    BYTE *publicInfo,			/* in */
-				    TPM_ENCAUTH encDelAuth,		/* in */
+				    TPM_ENCAUTH *encDelAuth,		/* in */
 				    TPM_AUTH *keyAuth,			/* in/out */
 				    UINT32 *blobSize,			/* out */
 				    BYTE **blob)			/* out */
@@ -112,7 +112,7 @@ RPC_Delegate_CreateKeyDelegation_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, publicInfo, publicInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 4, &encDelAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 4, encDelAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (keyAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 5, keyAuth, 0, &hte->comm))
@@ -157,7 +157,7 @@ RPC_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte,
 				      TSS_BOOL increment,		/* in */
 				      UINT32 publicInfoSize,		/* in */
 				      BYTE *publicInfo,		/* in */
-				      TPM_ENCAUTH encDelAuth,		/* in */
+				      TPM_ENCAUTH *encDelAuth,		/* in */
 				      TPM_AUTH *ownerAuth,		/* in/out */
 				      UINT32 *blobSize,		/* out */
 				      BYTE **blob)			/* out */
@@ -177,7 +177,7 @@ RPC_Delegate_CreateOwnerDelegation_TP(struct host_table_entry *hte,
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (setData(TCSD_PACKET_TYPE_PBYTE, 3, publicInfo, publicInfoSize, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
-	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 4, &encDelAuth, 0, &hte->comm))
+	if (setData(TCSD_PACKET_TYPE_ENCAUTH, 4, encDelAuth, 0, &hte->comm))
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	if (ownerAuth) {
 		if (setData(TCSD_PACKET_TYPE_AUTH, 5, ownerAuth, 0, &hte->comm))

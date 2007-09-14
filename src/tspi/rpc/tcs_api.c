@@ -458,8 +458,8 @@ TSS_RESULT RPC_EvictKey(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_CreateWrapKey(TSS_HCONTEXT tspContext,	/* in */
 			     TCS_KEY_HANDLE hWrappingKey,	/* in */
-			     TCPA_ENCAUTH KeyUsageAuth,	/* in */
-			     TCPA_ENCAUTH KeyMigrationAuth,	/* in */
+			     TCPA_ENCAUTH *KeyUsageAuth,	/* in */
+			     TCPA_ENCAUTH *KeyMigrationAuth,	/* in */
 			     UINT32 keyInfoSize,	/* in */
 			     BYTE * keyInfo,	/* in */
 			     UINT32 * keyDataSize,	/* out */
@@ -2894,7 +2894,7 @@ RPC_Delegate_CreateKeyDelegation(TSS_HCONTEXT hContext,		/* in */
 				 TCS_KEY_HANDLE hKey,		/* in */
 				 UINT32 publicInfoSize,		/* in */
 				 BYTE *publicInfo,		/* in */
-				 TPM_ENCAUTH encDelAuth,	/* in */
+				 TPM_ENCAUTH *encDelAuth,	/* in */
 				 TPM_AUTH *keyAuth,		/* in, out */
 				 UINT32 *blobSize,		/* out */
 				 BYTE **blob)			/* out */
@@ -2925,7 +2925,7 @@ RPC_Delegate_CreateOwnerDelegation(TSS_HCONTEXT hContext,	/* in */
 				   TSS_BOOL increment,		/* in */
 				   UINT32 publicInfoSize,	/* in */
 				   BYTE *publicInfo,		/* in */
-				   TPM_ENCAUTH encDelAuth,	/* in */
+				   TPM_ENCAUTH *encDelAuth,	/* in */
 				   TPM_AUTH *ownerAuth,		/* in, out */
 				   UINT32 *blobSize,		/* out */
 				   BYTE **blob)			/* out */
@@ -3112,9 +3112,9 @@ RPC_CMK_ApproveMA(TSS_HCONTEXT hContext,		/* in */
 TSS_RESULT
 RPC_CMK_CreateKey(TSS_HCONTEXT hContext,		/* in */
 		  TCS_KEY_HANDLE hWrappingKey,		/* in */
-		  TPM_ENCAUTH keyUsageAuth,		/* in */
-		  TPM_HMAC migAuthorityApproval,	/* in */
-		  TPM_DIGEST migAuthorityDigest,	/* in */
+		  TPM_ENCAUTH *keyUsageAuth,		/* in */
+		  TPM_HMAC *migAuthorityApproval,	/* in */
+		  TPM_DIGEST *migAuthorityDigest,	/* in */
 		  UINT32 *keyDataSize,			/* in, out */
 		  BYTE **keyData,			/* in, out */
 		  TPM_AUTH *pAuth)			/* in, out */
