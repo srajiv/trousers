@@ -23,6 +23,7 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
+#include "authsess.h"
 
 
 TSS_RESULT
@@ -70,6 +71,292 @@ Trspi_LoadBlob_STORED_DATA(UINT64 *offset, BYTE *blob, TCPA_STORED_DATA *data)
 	Trspi_LoadBlob_UINT32(offset, data->encDataSize, blob);
 	Trspi_LoadBlob(offset, data->encDataSize, blob, data->encData);
 }
+
+TSS_RESULT
+changeauth_owner(TSS_HCONTEXT tspContext,
+		 TSS_HOBJECT hObjectToChange,
+		 TSS_HOBJECT hParentObject,
+		 TSS_HPOLICY hNewPolicy)
+{
+	TPM_DIGEST digest;
+	TSS_RESULT result;
+	Trspi_HashCtx hashCtx;
+	struct authsess *xsap = NULL;
+
+	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
+					TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuthOwner,
+					TPM_ET_OWNER, &xsap)))
+		return result;
+
+	/* calculate auth data */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_OWNER);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
+
+	if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext, TCPA_PID_ADCP,
+							   &xsap->encAuthUse, TPM_ET_OWNER,
+							   xsap->pAuth)))
+		goto error;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	result = authsess_xsap_verify(xsap, &digest);
+error:
+	free(xsap);
+
+	return result;
+}
+
+TSS_RESULT
+changeauth_srk(TSS_HCONTEXT tspContext,
+	       TSS_HOBJECT hObjectToChange,
+	       TSS_HOBJECT hParentObject,
+	       TSS_HPOLICY hNewPolicy)
+{
+	TPM_DIGEST digest;
+	TSS_RESULT result;
+	Trspi_HashCtx hashCtx;
+	struct authsess *xsap = NULL;
+
+
+	if ((result = authsess_xsap_init(tspContext, hParentObject, hNewPolicy,
+					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuthOwner,
+					 TPM_ET_OWNER, &xsap)))
+		return result;
+
+	/* calculate auth data */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_SRK);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		return result;
+
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
+
+	if ((result = TCS_API(tspContext)->ChangeAuthOwner(tspContext, TCPA_PID_ADCP,
+							   &xsap->encAuthUse, TPM_ET_SRK,
+							   xsap->pAuth)))
+		goto error;
+
+	/* Validate the Auths */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuthOwner);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	result = authsess_xsap_verify(xsap, &digest);
+error:
+	free(xsap);
+
+	return result;
+}
+
+TSS_RESULT
+changeauth_encdata(TSS_HCONTEXT tspContext,
+		   TSS_HOBJECT hObjectToChange,
+		   TSS_HOBJECT hParentObject,
+		   TSS_HPOLICY hNewPolicy)
+{
+	TPM_DIGEST digest;
+	TSS_RESULT result;
+	Trspi_HashCtx hashCtx;
+	TSS_HPOLICY hPolicy;
+	TCS_KEY_HANDLE keyHandle;
+	UINT64 offset;
+	struct authsess *xsap = NULL;
+	TPM_STORED_DATA storedData;
+	UINT32 dataBlobLength, newEncSize;
+	BYTE *dataBlob, *newEncData;
+	TPM_AUTH auth2;
+
+	/*  get the secret for the parent */
+	if ((result = obj_encdata_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy)))
+		return result;
+
+	/*  get the data Object  */
+	if ((result = obj_encdata_get_data(hObjectToChange, &dataBlobLength, &dataBlob)))
+		return result;
+
+	offset = 0;
+	if ((result = Trspi_UnloadBlob_STORED_DATA(&offset, dataBlob, &storedData)))
+		return result;
+
+	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
+		goto error;
+
+	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
+					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuth,
+					 TPM_ET_DATA, &xsap)))
+		goto error;
+
+	/* caluculate auth data */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_DATA);
+	result |= Trspi_Hash_UINT32(&hashCtx, storedData.encDataSize);
+	result |= Trspi_HashUpdate(&hashCtx, storedData.encDataSize, storedData.encData);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
+
+	if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
+					hPolicy, FALSE, &digest, &auth2)))
+		goto error;
+
+	if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
+						      &xsap->encAuthUse, TPM_ET_DATA,
+						      storedData.encDataSize, storedData.encData,
+						      xsap->pAuth, &auth2, &newEncSize,
+						      &newEncData)))
+		goto error;
+
+	/* Validate the Auths */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
+	result |= Trspi_Hash_UINT32(&hashCtx, newEncSize);
+	result |= Trspi_HashUpdate(&hashCtx, newEncSize, newEncData);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	if ((result = authsess_xsap_verify(xsap, &digest)))
+		goto error;
+
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth2)))
+		goto error;
+
+	memcpy(storedData.encData, newEncData, newEncSize);
+	free(newEncData);
+	storedData.encDataSize = newEncSize;
+
+	offset = 0;
+	Trspi_LoadBlob_STORED_DATA(&offset, dataBlob, &storedData);
+
+	result = obj_encdata_set_data(hObjectToChange, offset, dataBlob);
+
+error:
+	free(xsap);
+	free(storedData.sealInfo);
+	free(storedData.encData);
+
+	return result;
+
+}
+
+TSS_RESULT
+changeauth_key(TSS_HCONTEXT tspContext,
+	       TSS_HOBJECT hObjectToChange,
+	       TSS_HOBJECT hParentObject,
+	       TSS_HPOLICY hNewPolicy)
+{
+	TPM_DIGEST digest;
+	Trspi_HashCtx hashCtx;
+	TSS_RESULT result;
+	TSS_KEY keyToChange;
+	TCS_KEY_HANDLE keyHandle;
+	struct authsess *xsap = NULL;
+	UINT32 objectLength;
+	TSS_HPOLICY hPolicy;
+	BYTE *keyBlob;
+	UINT32 newEncSize;
+	BYTE *newEncData;
+	TPM_AUTH auth2;
+	UINT64 offset;
+
+
+	if ((result = obj_rsakey_get_blob(hObjectToChange, &objectLength, &keyBlob)))
+		return result;
+
+	offset = 0;
+	if ((result = UnloadBlob_TSS_KEY(&offset, keyBlob, &keyToChange))) {
+		LogDebug("UnloadBlob_TSS_KEY failed. "
+				"result=0x%x", result);
+		return result;
+	}
+
+	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
+		return result;
+
+	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
+					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuth,
+					 keyHandle == TPM_KEYHND_SRK ?
+					 TPM_ET_SRK : TPM_ET_KEYHANDLE, &xsap)))
+		return result;
+
+	/* caluculate auth data */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
+	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
+	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_KEY);
+	result |= Trspi_Hash_UINT32(&hashCtx, keyToChange.encSize);
+	result |= Trspi_HashUpdate(&hashCtx, keyToChange.encSize,
+			keyToChange.encData);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		return result;
+
+	if ((result = authsess_xsap_hmac(xsap, &digest)))
+		goto error;
+
+	if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
+					hPolicy, FALSE, &digest, &auth2)))
+		return result;
+
+	if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
+						      &xsap->encAuthUse, TPM_ET_KEY,
+						      keyToChange.encSize, keyToChange.encData,
+						      xsap->pAuth, &auth2, &newEncSize,
+						      &newEncData)))
+		return result;
+
+	/* Validate the Auths */
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, result);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
+	result |= Trspi_Hash_UINT32(&hashCtx, newEncSize);
+	result |= Trspi_HashUpdate(&hashCtx, newEncSize, newEncData);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
+	if ((result = authsess_xsap_verify(xsap, &digest)))
+		goto error;
+
+	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth2)))
+		return result;
+
+	memcpy(keyToChange.encData, newEncData, newEncSize);
+	free(newEncData);
+
+	offset = 0;
+	LoadBlob_TSS_KEY(&offset, keyBlob, &keyToChange);
+	objectLength = offset;
+
+	result = obj_rsakey_set_tcpakey(hObjectToChange, objectLength, keyBlob);
+error:
+	free(xsap);
+
+	return result;
+}
+
 
 #ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT
