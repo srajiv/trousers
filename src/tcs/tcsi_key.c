@@ -187,8 +187,10 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = ctx_verify_context(hContext)))
 		goto done;
 
-	if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
-		goto done;
+	if (pAuth) {
+		if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
+			goto done;
+	}
 
 	/* Since hWrappingKey must already be loaded, we can fail immediately if
 	 * mc_get_slot_by_handle_lock() fails.*/
@@ -206,12 +208,10 @@ TCSP_CreateWrapKey_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	if ((result = req_mgr_submit_req(txBlob)))
 		goto done;
 
-	offset = 10;
 	result = UnloadBlob_Header(txBlob, &paramSize);
-
 	if (!result) {
-		result = tpm_rsp_parse(TPM_ORD_GetPubKey, txBlob, paramSize, keyDataSize, keyData,
-				       pAuth);
+		result = tpm_rsp_parse(TPM_ORD_CreateWrapKey, txBlob, paramSize, keyDataSize,
+				       keyData, pAuth);
 	}
 	LogResult("Create Wrap Key", result);
 

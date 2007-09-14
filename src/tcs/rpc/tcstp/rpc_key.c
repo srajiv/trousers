@@ -300,7 +300,7 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
 	UINT32 keyInfoSize;
 	BYTE *keyInfo;
 
-	TPM_AUTH pAuth;
+	TPM_AUTH *pAuth, auth;
 
 	UINT32 keyDataSize;
 	BYTE *keyData;
@@ -329,15 +329,15 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
 		free(keyInfo);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &pAuth, 0, &data->comm)) {
-		free(keyInfo);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
+	if (getData(TCSD_PACKET_TYPE_AUTH, 6, &auth, 0, &data->comm))
+		pAuth = NULL;
+	else
+		pAuth = &auth;
 
 	MUTEX_LOCK(tcsp_lock);
 
 	result = TCSP_CreateWrapKey_Internal(hContext, hWrappingKey, KeyUsageAuth, KeyMigrationAuth,
-					     keyInfoSize, keyInfo, &keyDataSize, &keyData, &pAuth);
+					     keyInfoSize, keyInfo, &keyDataSize, &keyData, pAuth);
 
 	MUTEX_UNLOCK(tcsp_lock);
 
@@ -353,8 +353,9 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 		free(keyData);
-		if (setData(TCSD_PACKET_TYPE_AUTH, 2, &pAuth, 0, &data->comm)) {
-			return TCSERR(TSS_E_INTERNAL_ERROR);
+		if (pAuth) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, 2, pAuth, 0, &data->comm))
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else
 		initData(&data->comm, 0);

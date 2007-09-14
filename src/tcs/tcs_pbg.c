@@ -1505,7 +1505,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		result = TSS_SUCCESS;
 		break;
 	}
-	/* 1 UINT32, 2 20-byte blobs, 1 BLOB, 1 AUTH */
+	/* 1 UINT32, 2 20-byte blobs, 1 BLOB, 1 optional AUTH */
 	case TPM_ORD_CreateWrapKey:
 	{
 		UINT32 keySlot1 = va_arg(ap, UINT32);
@@ -1516,7 +1516,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
 
-		if (!keySlot1 || !digest1 || !digest2 || !in_blob1 || !auth1) {
+		if (!keySlot1 || !digest1 || !digest2 || !in_blob1) {
 			LogError("Internal error for ordinal 0x%x", ordinal);
 			break;
 		}
@@ -1526,8 +1526,11 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest2);
 		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
-		LoadBlob_Auth(outOffset, out_blob, auth1);
-		LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		if (auth1) {
+			LoadBlob_Auth(outOffset, out_blob, auth1);
+			LoadBlob_Header(TPM_TAG_RQU_AUTH1_COMMAND, *outOffset, ordinal, out_blob);
+		} else
+			LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
 
 		result = TSS_SUCCESS;
 		break;
