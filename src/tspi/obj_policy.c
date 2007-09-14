@@ -24,6 +24,7 @@
 #include "tsp_seal.h"
 #include "tsp_delegate.h"
 
+
 TSS_RESULT
 obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 {
@@ -841,32 +842,23 @@ done:
 }
 
 TSS_RESULT
-obj_policy_has_expired(TSS_HPOLICY hPolicy, TSS_BOOL *answer)
+policy_has_expired(struct tr_policy_obj *policy, TSS_BOOL *answer)
 {
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-
-	if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
+	switch (policy->SecretLifetime) {
+	case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS:
 		*answer = FALSE;
-	} else if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-		if (policy->SecretCounter == 0)
-			*answer = TRUE;
-		else
-			*answer = FALSE;
-	} else if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
+		break;
+	case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER:
+		*answer = (policy->SecretCounter == 0 ? TRUE : FALSE);
+		break;
+	case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER:
+	{
 		int seconds_elapsed;
 		time_t t = time(NULL);
 
 		if (t == ((time_t)-1)) {
 			LogError("time failed: %s", strerror(errno));
-			result = TSPERR(TSS_E_INTERNAL_ERROR);
-			goto done;
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 		/* curtime - SecretTimer is the number of seconds elapsed since we
 		 * started the timer. SecretCounter is the number of seconds the
@@ -874,15 +866,73 @@ obj_policy_has_expired(TSS_HPOLICY hPolicy, TSS_BOOL *answer)
 		 * expired.
 		 */
 		seconds_elapsed = t - policy->SecretTimer;
-		if ((UINT32)seconds_elapsed >= policy->SecretCounter) {
-			*answer = TRUE;
-		} else {
-			*answer = FALSE;
-		}
-	} else {
-		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		*answer = ((UINT32)seconds_elapsed >= policy->SecretCounter ? TRUE : FALSE);
+		break;
+	}
+	default:
+		LogError("policy has an undefined secret lifetime!");
+		return TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 	}
 
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+obj_policy_has_expired(TSS_HPOLICY hPolicy, TSS_BOOL *answer)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	result = policy_has_expired(policy, answer);
+
+	obj_list_put(&policy_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
+			   BYTE *secret,
+			   TSS_CALLBACK *cb_xor,
+			   TSS_CALLBACK *cb_hmac,
+			   UINT32 *mode)
+{
+	struct tsp_object *obj;
+	struct tr_policy_obj *policy;
+	TSS_RESULT result;
+	TSS_BOOL answer = FALSE;
+
+	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	policy = (struct tr_policy_obj *)obj->data;
+
+	if ((result = policy_has_expired(policy, &answer)))
+		goto done;
+
+	if (answer) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	if (policy->SecretMode == TSS_SECRET_MODE_CALLBACK && cb_xor && cb_hmac) {
+		cb_xor->callback = policy->Tspicb_CallbackXorEnc;
+		cb_xor->appData = policy->xorAppData;
+		cb_xor->alg = policy->xorAlg;
+
+		cb_hmac->callback = policy->Tspicb_CallbackHMACAuth;
+		cb_hmac->appData = policy->hmacAppData;
+		cb_hmac->alg = policy->hmacAlg;
+	}
+
+	memcpy(secret, policy->Secret, sizeof(TPM_SECRET));
+	*mode = policy->SecretMode;
 done:
 	obj_list_put(&policy_list);
 
