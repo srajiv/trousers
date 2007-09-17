@@ -252,21 +252,27 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result = obj_rsakey_get_pub_blob(hIdentityKey, &idPubSize, &idPub)))
 		goto error;
 
-	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_EKCERT, &tempCredSize, &tempCred);
+	if ((result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_EKCERT, &tempCredSize, &tempCred)))
+		goto error;
+
 	if (tempCred != NULL) {
 		free(prgbEndorsementCredential);
 		prgbEndorsementCredential = tempCred;
 		pcEndorsementCredentialSize = tempCredSize;
 	}
 
-	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_TPM_CC, &tempCredSize, &tempCred);
+	if ((result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_TPM_CC, &tempCredSize, &tempCred)))
+		goto error;
+
 	if (tempCred != NULL) {
 		free(prgbConformanceCredential);
 		prgbConformanceCredential = tempCred;
 		pcConformanceCredentialSize = tempCredSize;
 	}
 
-	result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_PLATFORMCERT, &tempCredSize, &tempCred);
+	if ((result = obj_tpm_get_cred(hTPM, TSS_TPMATTRIB_PLATFORMCERT, &tempCredSize, &tempCred)))
+		goto error;
+
 	if (tempCred != NULL) {
 		free(prgbPlatformCredential);
 		prgbPlatformCredential = tempCred;
@@ -275,6 +281,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	/* set up the TCPA_IDENTITY_PROOF structure */
 	/* XXX This should be DER encoded first. TPM1.1b section 9.4 */
+	/* XXX hash this incrementally using a Trspi_HashCtx */
 	offset = 0;
 	Trspi_LoadBlob_TSS_VERSION(&offset, hashblob, VERSION_1_1);
 	Trspi_LoadBlob_UINT32(&offset, ulIdentityLabelLength, hashblob);
