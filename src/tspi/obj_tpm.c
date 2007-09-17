@@ -327,8 +327,10 @@ obj_tpm_get_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *CredSize, BYTE **CredData
 			break;
 	}
 
-	if (*CredSize == 0)
+	if (*CredSize == 0) {
+		*CredData = NULL;
 		goto done;
+	}
 
 	if ((*CredData = calloc_tspi(obj->tspContext, *CredSize)) == NULL) {
 		*CredSize = 0;
