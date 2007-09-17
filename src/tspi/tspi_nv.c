@@ -154,7 +154,7 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		goto error;
 
-	result = authsess_xsap_hmac(xsap, &digest);
+	result = authsess_xsap_verify(xsap, &digest);
 error:
 	free(xsap);
 
@@ -256,7 +256,7 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 								   xsap->pAuth)))
 		goto error;
 
-	result = authsess_xsap_hmac(xsap, &digest);
+	result = authsess_xsap_verify(xsap, &digest);
 error:
 	free(xsap);
 
