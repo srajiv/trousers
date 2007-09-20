@@ -16,10 +16,13 @@
 /* structures */
 struct tr_encdata_obj {
 	TSS_HPOLICY usagePolicy;
-	TSS_HPOLICY migPolicy;
 	UINT32 encryptedDataLength;
 	BYTE *encryptedData;
-	TCPA_PCR_INFO pcrInfo; /* XXX use a link to a PCR object here */
+	union {
+		TPM_PCR_INFO info11;
+		TPM_PCR_INFO_LONG infolong;
+	} pcrInfo;
+	UINT32 pcrInfoType;
 	UINT32 type;
 #ifdef TSS_BUILD_SEALX
 	UINT32 protectMode;
@@ -35,11 +38,11 @@ TSS_RESULT obj_encdata_remove(TSS_HOBJECT, TSS_HCONTEXT);
 TSS_RESULT obj_encdata_get_tsp_context(TSS_HENCDATA, TSS_HCONTEXT *);
 TSS_RESULT obj_encdata_add(TSS_HCONTEXT, UINT32, TSS_HOBJECT *);
 TSS_RESULT obj_encdata_get_data(TSS_HENCDATA, UINT32 *, BYTE **);
-TSS_RESULT obj_encdata_get_pcr_atcreation(TSS_HENCDATA, UINT32 *, BYTE **);
-TSS_RESULT obj_encdata_get_pcr_atrelease(TSS_HENCDATA, UINT32 *, BYTE **);
-TSS_RESULT obj_encdata_get_pcr_selection(TSS_HENCDATA, UINT32 *, BYTE **);
+TSS_RESULT obj_encdata_get_pcr_selection(TSS_HENCDATA, TSS_FLAG, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_encdata_get_pcr_locality(TSS_HENCDATA, TSS_FLAG, UINT32 *);
+TSS_RESULT obj_encdata_get_pcr_digest(TSS_HENCDATA, TSS_FLAG, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_encdata_set_pcr_info(TSS_HENCDATA, UINT32, BYTE *);
 TSS_RESULT obj_encdata_get_policy(TSS_HENCDATA, UINT32, TSS_HPOLICY *);
-TSS_RESULT obj_encdata_set_pcr_info(TSS_HENCDATA, BYTE *);
 void       obj_encdata_remove_policy_refs(TSS_HPOLICY, TSS_HCONTEXT);
 #ifdef TSS_BUILD_SEALX
 TSS_RESULT obj_encdata_set_seal_protect_mode(TSS_HENCDATA, UINT32);

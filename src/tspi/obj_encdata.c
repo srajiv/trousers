@@ -35,7 +35,8 @@ obj_encdata_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 	}
 
 	/* add usage policy */
-	if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE, &encdata->usagePolicy))) {
+	if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE,
+					     &encdata->usagePolicy))) {
 		free(encdata);
 		return result;
 	}
@@ -166,116 +167,16 @@ done:
 }
 
 TSS_RESULT
-obj_encdata_get_pcr_atcreation(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
+obj_encdata_get_pcr_digest(TSS_HENCDATA hEncData,
+			   TSS_FLAG pcrInfoType,
+			   TSS_FLAG dir,
+			   UINT32 *size,
+			   BYTE **data)
 {
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
 	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	encdata = (struct tr_encdata_obj *)obj->data;
-
-	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
-		if (*data == NULL) {
-			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = sizeof(TCPA_DIGEST);
-		memcpy(*data, &encdata->pcrInfo.digestAtCreation,
-				sizeof(TCPA_DIGEST));
-	}
-
-done:
-	obj_list_put(&encdata_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_encdata_get_pcr_atrelease(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
-{
-	struct tsp_object *obj;
-	struct tr_encdata_obj *encdata;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	encdata = (struct tr_encdata_obj *)obj->data;
-
-	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
-		if (*data == NULL) {
-			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = sizeof(TCPA_DIGEST);
-		memcpy(*data, &encdata->pcrInfo.digestAtRelease,
-				sizeof(TCPA_DIGEST));
-	}
-
-done:
-	obj_list_put(&encdata_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_encdata_get_pcr_selection(TSS_HENCDATA hEncData, UINT32 *size, BYTE **data)
-{
-	struct tsp_object *obj;
-	struct tr_encdata_obj *encdata;
-	TSS_RESULT result = TSS_SUCCESS;
-
-	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	encdata = (struct tr_encdata_obj *)obj->data;
-
-	if ((obj->flags & TSS_OBJ_FLAG_PCRS) == FALSE) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		if (encdata->pcrInfo.pcrSelection.sizeOfSelect == 0) {
-			*data = NULL;
-			*size = 0;
-		} else {
-			*data = calloc_tspi(obj->tspContext,
-					encdata->pcrInfo.pcrSelection.sizeOfSelect);
-			if (*data == NULL) {
-				LogError("malloc of %d bytes failed.",
-					 encdata->pcrInfo.pcrSelection.sizeOfSelect);
-				result = TSPERR(TSS_E_OUTOFMEMORY);
-				goto done;
-			}
-			*size = encdata->pcrInfo.pcrSelection.sizeOfSelect;
-			memcpy(*data, encdata->pcrInfo.pcrSelection.pcrSelect, *size);
-		}
-	}
-
-done:
-	obj_list_put(&encdata_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_encdata_set_pcr_info(TSS_HENCDATA hEncData, BYTE *info_blob)
-{
-	struct tsp_object *obj;
-	struct tr_encdata_obj *encdata;
-	TSS_RESULT result;
+	TPM_DIGEST *digest;
 	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
@@ -283,12 +184,173 @@ obj_encdata_set_pcr_info(TSS_HENCDATA hEncData, BYTE *info_blob)
 
 	encdata = (struct tr_encdata_obj *)obj->data;
 
-	free(encdata->pcrInfo.pcrSelection.pcrSelect);
+	if (pcrInfoType != encdata->pcrInfoType) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	switch (pcrInfoType) {
+		case TSS_PCRS_STRUCT_INFO:
+			if (dir == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATCREATION)
+				digest = &encdata->pcrInfo.info11.digestAtCreation;
+			else if (dir == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATRELEASE)
+				digest = &encdata->pcrInfo.info11.digestAtRelease;
+			else {
+				result = TSPERR(TSS_E_BAD_PARAMETER);
+				goto done;
+			}
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATCREATION)
+				digest = &encdata->pcrInfo.infolong.digestAtCreation;
+			else if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATRELEASE)
+				digest = &encdata->pcrInfo.infolong.digestAtCreation;
+			else {
+				result = TSPERR(TSS_E_BAD_PARAMETER);
+				goto done;
+			}
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+	}
+
+	*size = sizeof(TPM_DIGEST);
+
+	if ((*data = calloc_tspi(obj->tspContext, *size)) == NULL) {
+		LogError("malloc of %u bytes failed.", *size);
+		*size = 0;
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
 
 	offset = 0;
-	result = Trspi_UnloadBlob_PCR_INFO(&offset, info_blob, &encdata->pcrInfo);
-	obj->flags |= TSS_OBJ_FLAG_PCRS;
+	Trspi_LoadBlob_DIGEST(&offset, *data, digest);
+done:
+	obj_list_put(&encdata_list);
 
+	return result;
+}
+
+TSS_RESULT
+obj_encdata_get_pcr_locality(TSS_HENCDATA hEncData, TSS_FLAG dir, UINT32 *locality)
+{
+	struct tsp_object *obj;
+	struct tr_encdata_obj *encdata;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	encdata = (struct tr_encdata_obj *)obj->data;
+
+	if (encdata->pcrInfoType == TSS_PCRS_STRUCT_INFO_LONG) {
+		if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_LOCALITY_ATCREATION)
+			*locality = encdata->pcrInfo.infolong.localityAtCreation;
+		else if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_LOCALITY_ATRELEASE)
+			*locality = encdata->pcrInfo.infolong.localityAtRelease;
+		else
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+	obj_list_put(&encdata_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_encdata_get_pcr_selection(TSS_HENCDATA hEncData,
+			      TSS_FLAG pcrInfoType,
+			      TSS_FLAG dir,
+			      UINT32 *size,
+			      BYTE **data)
+{
+	struct tsp_object *obj;
+	struct tr_encdata_obj *encdata;
+	TSS_RESULT result = TSS_SUCCESS;
+	TPM_PCR_SELECTION *selection;
+	UINT64 offset;
+
+	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	encdata = (struct tr_encdata_obj *)obj->data;
+
+	if (pcrInfoType != encdata->pcrInfoType) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+		goto done;
+	}
+
+	switch (pcrInfoType) {
+		case TSS_PCRS_STRUCT_INFO:
+			if (dir == TSS_TSPATTRIB_ENCDATAPCR_SELECTION)
+				selection = &encdata->pcrInfo.info11.pcrSelection;
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_CREATION_SELECTION)
+				selection = &encdata->pcrInfo.infolong.creationPCRSelection;
+			else if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_RELEASE_SELECTION)
+				selection = &encdata->pcrInfo.infolong.releasePCRSelection;
+			else {
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				goto done;
+			}
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+	}
+
+	*size = sizeof(UINT16) + selection->sizeOfSelect;
+
+	if ((*data = calloc_tspi(obj->tspContext, *size)) == NULL) {
+		LogError("malloc of %u bytes failed.", *size);
+		*size = 0;
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_PCR_SELECTION(&offset, *data, selection);
+done:
+	obj_list_put(&encdata_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_encdata_set_pcr_info(TSS_HENCDATA hEncData, UINT32 pcrInfoType, BYTE *info_blob)
+{
+	struct tsp_object *obj;
+	struct tr_encdata_obj *encdata;
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT64 offset = 0;
+
+	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	encdata = (struct tr_encdata_obj *)obj->data;
+
+	switch (pcrInfoType) {
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			result = Trspi_UnloadBlob_PCR_INFO_LONG(&offset, info_blob,
+								&encdata->pcrInfo.infolong);
+			break;
+		case TSS_PCRS_STRUCT_INFO:
+			result = Trspi_UnloadBlob_PCR_INFO(&offset, info_blob,
+							   &encdata->pcrInfo.info11);
+			break;
+		default:
+			result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+			goto done;
+	}
+
+	encdata->pcrInfoType = pcrInfoType;
+
+	/* XXX are we using this anywhere? */
+	obj->flags |= TSS_OBJ_FLAG_PCRS;
+done:
 	obj_list_put(&encdata_list);
 
 	return result;
@@ -332,7 +394,20 @@ encdata_free(void *data)
 	struct tr_encdata_obj *encdata = (struct tr_encdata_obj *)data;
 
 	free(encdata->encryptedData);
-	free(encdata->pcrInfo.pcrSelection.pcrSelect);
+
+	switch (encdata->pcrInfoType) {
+		case TSS_PCRS_STRUCT_INFO:
+			free(encdata->pcrInfo.info11.pcrSelection.pcrSelect);
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			free(encdata->pcrInfo.infolong.creationPCRSelection.pcrSelect);
+			free(encdata->pcrInfo.infolong.releasePCRSelection.pcrSelect);
+			break;
+		default:
+			/* no PCR data was set */
+			break;
+	}
+
 	free(encdata);
 }
 
