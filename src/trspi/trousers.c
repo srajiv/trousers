@@ -2264,7 +2264,7 @@ Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(UINT64 *offset, BYTE *blob, TPM_DELEGATE_
 		Trspi_UnloadBlob_DIGEST(offset, blob, NULL);
 		Trspi_UnloadBlob_UINT32(offset, &additionalSize, blob);
 		(void)Trspi_UnloadBlob(offset, additionalSize, blob, NULL);
-		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, &sensitiveSize, blob);
 		(void)Trspi_UnloadBlob(offset, sensitiveSize, blob, NULL);
 
 		return TSS_SUCCESS;
