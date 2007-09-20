@@ -583,12 +583,19 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 		}
 	} else if (obj_is_encdata(hObject)) {
 #ifdef TSS_BUILD_SEALX
-		if (attribFlag != TSS_TSPATTRIB_ENCDATA_SEAL)
+		if (attribFlag == TSS_TSPATTRIB_ENCDATA_SEAL) {
+			if (subFlag == TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE)
+				result = obj_encdata_get_seal_protect_mode(hObject, pulAttrib);
+			else
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+		} else if (attribFlag == TSS_TSPATTRIB_ENCDATA_PCR_LONG) {
+			if (subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_LOCALITY_ATCREATION ||
+			    subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_LOCALITY_ATRELEASE) {
+				result = obj_encdata_get_pcr_locality(hObject, subFlag, pulAttrib);
+			} else
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
-		if (subFlag == TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE)
-			result = obj_encdata_get_seal_protect_mode(hObject, pulAttrib);
-		else
-			return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 #endif
 #ifdef TSS_BUILD_DELEGATION
 	} else if (obj_is_delfamily(hObject)) {
@@ -973,22 +980,34 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			if (subFlag != TSS_TSPATTRIB_ENCDATABLOB_BLOB)
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			result = obj_encdata_get_data(hObject,
-					pulAttribDataSize,
-					prgbAttribData);
+			result = obj_encdata_get_data(hObject, pulAttribDataSize, prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_ENCDATA_PCR) {
-			if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATCREATION) {
-				result = obj_encdata_get_pcr_atcreation(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
-			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_RELEASE) {
-				result = obj_encdata_get_pcr_atrelease(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+			if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_ATCREATION ||
+			    subFlag == TSS_TSPATTRIB_ENCDATAPCR_DIGEST_RELEASE) {
+				result = obj_encdata_get_pcr_digest(hObject, TSS_PCRS_STRUCT_INFO,
+								    subFlag, pulAttribDataSize,
+								    prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCR_SELECTION) {
 				result = obj_encdata_get_pcr_selection(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+								       TSS_PCRS_STRUCT_INFO,
+								       subFlag, pulAttribDataSize,
+								       prgbAttribData);
+			} else {
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+			}
+		} else if (attribFlag == TSS_TSPATTRIB_ENCDATA_PCR_LONG) {
+			if (subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_CREATION_SELECTION ||
+			    subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_RELEASE_SELECTION) {
+				result = obj_encdata_get_pcr_selection(hObject,
+								       TSS_PCRS_STRUCT_INFO_LONG,
+								       subFlag, pulAttribDataSize,
+								       prgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATCREATION ||
+				   subFlag == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATRELEASE) {
+				result = obj_encdata_get_pcr_digest(hObject,
+								    TSS_PCRS_STRUCT_INFO_LONG,
+								    subFlag, pulAttribDataSize,
+								    prgbAttribData);
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
