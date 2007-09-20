@@ -293,6 +293,9 @@ changeauth_key(TSS_HCONTEXT tspContext,
 		return result;
 	}
 
+	if ((result = obj_rsakey_get_policy(hObjectToChange, TSS_POLICY_USAGE, &hPolicy, NULL)))
+		return result;
+
 	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
 		return result;
 
