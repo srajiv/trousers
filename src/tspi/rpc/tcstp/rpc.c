@@ -190,8 +190,7 @@ getData(TCSD_PACKET_TYPE dataType,
 			Trspi_UnloadBlob(&offset, theDataSize, comm->buf, (BYTE *)theData);
 			break;
 		case TCSD_PACKET_TYPE_NONCE:
-			Trspi_UnloadBlob(&offset, sizeof(TCPA_NONCE), comm->buf,
-					 ((TCPA_NONCE *)theData)->nonce);
+			Trspi_UnloadBlob_NONCE(&offset, comm->buf, (TPM_NONCE *)theData);
 			break;
 		case TCSD_PACKET_TYPE_DIGEST:
 			Trspi_UnloadBlob(&offset, sizeof(TCPA_DIGEST), comm->buf,
