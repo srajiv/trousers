@@ -607,14 +607,13 @@ authsess_oiap_put(TPM_AUTH *auth)
 }
 #endif
 
-
 TSS_RESULT
 authsess_do_osap(struct authsess *sess)
 {
 	TSS_RESULT result;
 
 	if ((result = TCS_API(sess->tspContext)->OSAP(sess->tspContext, sess->entity_type,
-						      sess->obj_parent, &sess->pAuth->NonceOdd,
+						      sess->obj_parent, &sess->nonceOddOSAP,
 						      &sess->pAuth->AuthHandle,
 						      &sess->pAuth->NonceEven,
 						      &sess->nonceEvenOSAP))) {
@@ -629,7 +628,7 @@ authsess_do_osap(struct authsess *sess)
 				result = TCS_API(sess->tspContext)->OSAP(sess->tspContext,
 									 sess->entity_type,
 									 sess->obj_parent,
-									 &sess->pAuth->NonceOdd,
+									 &sess->nonceOddOSAP,
 									 &sess->pAuth->AuthHandle,
 									 &sess->pAuth->NonceEven,
 									 &sess->nonceEvenOSAP);
@@ -655,29 +654,13 @@ authsess_callback_xor(PVOID lpAppData,
 		      BYTE *rgbEncAuthMigration)
 {
 	TSS_RESULT result;
-	UINT64 offset;
-	BYTE *hmacBlob;
 	BYTE xorUseAuth[sizeof(TPM_DIGEST)];
 	BYTE xorMigAuth[sizeof(TPM_DIGEST)];
 	Trspi_HashCtx hashCtx;
 	UINT32 i;
 	struct authsess *sess = (struct authsess *)lpAppData;
 
-	if ((hmacBlob = malloc((2 * ulSizeNonces) + ulSizeEncAuth)) == NULL) {
-		LogError("malloc of %u bytes failed", (2 * ulSizeNonces) + ulSizeEncAuth);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	offset = 0;
-	Trspi_LoadBlob(&offset, ulSizeNonces, hmacBlob, rgbNonceEvenOSAP);
-	Trspi_LoadBlob(&offset, ulSizeNonces, hmacBlob, rgbNonceOdd);
-
-	if ((result = Trspi_HMAC(TSS_HASH_SHA1, ulSizeEncAuth, sess->parentSecret.authdata, offset,
-				 hmacBlob, sess->sharedSecret.digest))) {
-		free(hmacBlob);
-		return result;
-	}
-	free(hmacBlob);
+	/* sess->sharedSecret was calculated in authsess_xsap_init */
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_SECRET(&hashCtx, sess->sharedSecret.digest);
@@ -685,14 +668,14 @@ authsess_callback_xor(PVOID lpAppData,
 	if ((result |= Trspi_HashFinal(&hashCtx, xorUseAuth)))
 		return result;
 
+	for (i = 0; i < ulSizeEncAuth; i++)
+		rgbEncAuthUsage[i] ^= xorUseAuth[i];
+
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_SECRET(&hashCtx, sess->sharedSecret.digest);
 	result |= Trspi_Hash_NONCE(&hashCtx, rgbNonceOdd);
 	if ((result |= Trspi_HashFinal(&hashCtx, xorMigAuth)))
 		return result;
-
-	for (i = 0; i < ulSizeEncAuth; i++)
-		rgbEncAuthUsage[i] ^= xorUseAuth[i];
 
 	for (i = 0; i < ulSizeEncAuth; i++)
 		rgbEncAuthMigration[i] ^= xorMigAuth[i];
@@ -753,6 +736,8 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 {
 	TSS_RESULT result;
 	TSS_BOOL authdatausage = FALSE, req_auth = TRUE, get_child_auth = TRUE;
+	BYTE hmacBlob[2 * sizeof(TPM_DIGEST)];
+	UINT64 offset;
 	struct authsess *sess;
 
 	if ((sess = calloc(1, sizeof(struct authsess))) == NULL) {
@@ -766,6 +751,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	case TPM_ORD_CreateWrapKey:
 	case TPM_ORD_Seal:
 	case TPM_ORD_Sealx:
+	case TPM_ORD_Unseal:
 	case TPM_ORD_ChangeAuth:
 		if ((result = obj_rsakey_get_policy(obj_parent, TSS_POLICY_USAGE,
 						    &sess->hUsageParent, NULL)))
@@ -815,7 +801,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		/* XXX the parent object doesn't always hold the callbacks */
 		if ((result = obj_policy_get_osap_params(sess->hUsageParent,
 							 sess->parentSecret.authdata,
-							 &sess->cb_xor, &sess->cb_hmac,
+							 &sess->cb_xor, &sess->cb_hmac, NULL,
 							 &sess->parentMode)))
 			goto error;
 	} else
@@ -841,7 +827,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 
 			if ((result = obj_policy_get_osap_params(sess->hMigChild,
 								 sess->encAuthMig.authdata, NULL,
-								 NULL, &sess->mMode)))
+								 NULL, NULL, &sess->mMode)))
 				goto error;
 		}
 
@@ -849,10 +835,19 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 			goto error;
 		break;
 	/* Child is an Encdata object */
-	case TPM_ORD_Seal:
 	case TPM_ORD_Sealx:
+	case TPM_ORD_Unseal:
+		/* These may be overwritten down below, when obj_policy_get_osap_params is called
+		 * on the child usage policy */
+		sess->cb_sealx.callback = sealx_mask_cb;
+		sess->cb_sealx.appData = (PVOID)sess;
+		/* fall through */
+	case TPM_ORD_Seal:
 		if ((result = obj_encdata_get_policy(obj_child, TSS_POLICY_USAGE,
 						     &sess->hUsageChild)))
+			goto error;
+
+		if ((result = obj_rsakey_get_tcs_handle(obj_parent, &sess->obj_parent)))
 			goto error;
 		break;
 	/* Child is an NV object */
@@ -918,15 +913,13 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	if (get_child_auth) {
 		if ((result = obj_policy_get_osap_params(sess->hUsageChild,
 							 sess->encAuthUse.authdata, NULL, NULL,
-							 &sess->uMode)))
+							 &sess->cb_sealx, &sess->uMode)))
 			return result;
 	}
 
 	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
-				       (BYTE **)sess->auth.NonceOdd.nonce))) {
-		LogError("Failed creating random nonce");
+				       (BYTE **)sess->nonceOddOSAP.nonce)))
 		goto error;
-	}
 
 	sess->entity_type = entity_type;
 	sess->obj_child = obj_child;
@@ -936,22 +929,34 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	if ((result = authsess_do_osap(sess)))
 		goto error;
 
+	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
+				       (BYTE **)sess->auth.NonceOdd.nonce)))
+		goto error;
+
+	/* We have both OSAP nonces, so calculate the shared secret if we're responsible for it */
+	if (sess->parentMode != TSS_SECRET_MODE_CALLBACK) {
+		offset = 0;
+		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceEvenOSAP.nonce);
+		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceOddOSAP.nonce);
+
+		if ((result = Trspi_HMAC(TSS_HASH_SHA1, sizeof(TPM_ENCAUTH),
+					 sess->parentSecret.authdata, offset, hmacBlob,
+					 sess->sharedSecret.digest)))
+			goto error;
+	}
+
 	/* XXX What does a PurposeSecret of TRUE mean here? */
 	if ((result =
-	    ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HOBJECT,
-			     TSS_FLAG, UINT32, BYTE *, BYTE *,
-			     BYTE *, BYTE *, UINT32, BYTE *,
-			     BYTE *))sess->cb_xor.callback)(sess->cb_xor.appData,
-							    sess->hUsageParent, sess->hUsageChild,
-							    TRUE, sizeof(TPM_DIGEST),
-							    sess->auth.NonceEven.nonce,
-							    sess->auth.NonceOdd.nonce,
-							    sess->nonceEvenOSAP.nonce,
-							    sess->nonceOddOSAP.nonce,
-							    sizeof(TPM_ENCAUTH),
-							    sess->encAuthUse.authdata,
-							    sess->encAuthMig.authdata)))
-		goto error;
+	     ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_HOBJECT, TSS_FLAG,
+	       UINT32, BYTE *, BYTE *, BYTE *, BYTE *, UINT32, BYTE *,
+	       BYTE *))sess->cb_xor.callback)(sess->cb_xor.appData, sess->hUsageParent,
+					      sess->hUsageChild, TRUE, sizeof(TPM_DIGEST),
+					      sess->auth.NonceEven.nonce, sess->auth.NonceOdd.nonce,
+					      sess->nonceEvenOSAP.nonce, sess->nonceOddOSAP.nonce,
+					      sizeof(TPM_ENCAUTH), sess->encAuthUse.authdata,
+					      sess->encAuthMig.authdata)))
+		return result;
+
 done:
 	*xsess = sess;
 
@@ -969,6 +974,8 @@ authsess_xsap_hmac(struct authsess *sess, TPM_DIGEST *digest)
 	/* If no auth session was established using this authsess object, return success */
 	if (!sess->pAuth)
 		return TSS_SUCCESS;
+
+	/* XXX conditionally bump NonceOdd if continueAuthSession == TRUE */
 
 	if ((result =
 	    ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
