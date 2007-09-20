@@ -324,7 +324,6 @@ obj_tpm_get_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *CredSize, BYTE **CredData
 			LogError("Credential type is unknown");
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
-			break;
 	}
 
 	if (*CredSize == 0) {
@@ -356,7 +355,6 @@ obj_tpm_get_cred(TSS_HTPM hTpm, TSS_FLAG type, UINT32 *CredSize, BYTE **CredData
 			*CredSize = 0;
 			free(*CredData);
 			*CredData = NULL;
-			goto done;
 			break;
 	}
 
