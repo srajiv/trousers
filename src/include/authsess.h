@@ -26,7 +26,7 @@ struct authsess {
 	TSS_HPOLICY hUsageParent;
 	UINT32 parentMode;
 	TPM_SECRET parentSecret;
-	TSS_CALLBACK cb_xor, cb_hmac;
+	TSS_CALLBACK cb_xor, cb_hmac, cb_sealx;
 
 	TPM_ENTITY_TYPE entity_type;
 
