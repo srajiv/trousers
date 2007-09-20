@@ -1,4 +1,8 @@
 
+- Added support for unmasking data on unseal :-)
+- Implemented encdata PCR_INFO_LONG GetAttrib's
+- Overhauled OSAP session handling.
+
 * TROUSERS_0_3_0
 
   Added TSS_TCSCAP_PLATFORM_CLASS cap support
