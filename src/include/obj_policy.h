@@ -122,7 +122,6 @@ TSS_RESULT obj_policy_get_secret(TSS_HPOLICY, TSS_BOOL, TCPA_SECRET *);
 TSS_RESULT obj_policy_flush_secret(TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret_object(TSS_HPOLICY, TSS_FLAG, UINT32,
 					TCPA_DIGEST *, TSS_BOOL);
-//TSS_RESULT obj_policy_copy_secret(TSS_HPOLICY, TSS_HPOLICY);
 TSS_RESULT obj_policy_set_secret(TSS_HPOLICY, TSS_FLAG, UINT32, BYTE *);
 TSS_RESULT obj_policy_get_type(TSS_HPOLICY, UINT32 *);
 TSS_RESULT obj_policy_remove(TSS_HOBJECT, TSS_HCONTEXT);
@@ -153,11 +152,7 @@ TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *)
 TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_policy_get_osap_params(TSS_HCONTEXT, BYTE *, TSS_CALLBACK *, TSS_CALLBACK *,
-				      UINT32 *);
-#ifdef TSS_BUILD_SEALX
-TSS_RESULT obj_policy_do_sealx_mask(TSS_HPOLICY, TSS_HKEY, TSS_HENCDATA, TPM_AUTH *,
-		TPM_NONCE *, TPM_NONCE *, UINT32, BYTE *, BYTE **);
-#endif
+				      TSS_CALLBACK *, UINT32 *);
 #ifdef TSS_BUILD_DELEGATION
 TSS_RESULT obj_policy_set_delegation_type(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_delegation_type(TSS_HPOLICY, UINT32 *);
