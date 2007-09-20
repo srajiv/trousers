@@ -21,7 +21,6 @@
 #include "capabilities.h"
 #include "tsplog.h"
 #include "obj.h"
-#include "tsp_seal.h"
 #include "tsp_delegate.h"
 
 
@@ -287,31 +286,7 @@ done:
 
 	return result;
 }
-#if 0
-TSS_RESULT
-obj_policy_copy_secret(TSS_HPOLICY destPolicy, TSS_HPOLICY srcPolicy)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-	TCPA_DIGEST digest;
-	UINT32 secret_size, mode;
-	TSS_BOOL secret_set;
 
-	if ((obj = obj_list_get_obj(&policy_list, srcPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	memcpy(&digest.digest, &policy->Secret, policy->SecretSize);
-	mode = policy->SecretMode;
-	secret_size = policy->SecretSize;
-	secret_set = policy->SecretSet;
-
-	obj_list_put(&policy_list);
-
-	return obj_policy_set_secret_object(destPolicy, mode, secret_size,
-					    &digest, secret_set);
-}
-#endif
 TSS_RESULT
 obj_policy_set_secret(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size, BYTE *data)
 {
@@ -901,6 +876,7 @@ obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
 			   BYTE *secret,
 			   TSS_CALLBACK *cb_xor,
 			   TSS_CALLBACK *cb_hmac,
+			   TSS_CALLBACK *cb_sealx,
 			   UINT32 *mode)
 {
 	struct tsp_object *obj;
@@ -921,7 +897,16 @@ obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
 		goto done;
 	}
 
+	/* Either this is a policy set to mode callback, in which case both xor and hmac addresses
+	 * must be set, or this is an encrypted data object's policy, where its mode is independent
+	 * of whether a sealx callback is set */
 	if (policy->SecretMode == TSS_SECRET_MODE_CALLBACK && cb_xor && cb_hmac) {
+		if ((policy->Tspicb_CallbackXorEnc && !policy->Tspicb_CallbackHMACAuth) ||
+		    (!policy->Tspicb_CallbackXorEnc && policy->Tspicb_CallbackHMACAuth)) {
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
 		cb_xor->callback = policy->Tspicb_CallbackXorEnc;
 		cb_xor->appData = policy->xorAppData;
 		cb_xor->alg = policy->xorAlg;
@@ -929,6 +914,10 @@ obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
 		cb_hmac->callback = policy->Tspicb_CallbackHMACAuth;
 		cb_hmac->appData = policy->hmacAppData;
 		cb_hmac->alg = policy->hmacAlg;
+	} else if (cb_sealx && policy->Tspicb_CallbackSealxMask) {
+		cb_sealx->callback = policy->Tspicb_CallbackSealxMask;
+		cb_sealx->appData = policy->sealxAppData;
+		cb_sealx->alg = policy->sealxAlg;
 	}
 
 	memcpy(secret, policy->Secret, sizeof(TPM_SECRET));
@@ -1035,70 +1024,6 @@ obj_policy_set_hash_mode(TSS_HPOLICY hPolicy, UINT32 mode)
 
 	return TSS_SUCCESS;
 }
-
-#ifdef TSS_BUILD_SEALX
-TSS_RESULT
-obj_policy_do_sealx_mask(TSS_HPOLICY hPolicy, TSS_HKEY hKey, TSS_HENCDATA hEncData,
-			 TPM_AUTH *auth, TPM_NONCE *nonceEvenOSAP, TPM_NONCE *nonceOddOSAP,
-			 UINT32 ulDataLength, BYTE *rgbDataToMask, BYTE **rgbMaskedData)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-	TSS_RESULT result;
-
-	*rgbMaskedData = NULL;
-	if ((*rgbMaskedData = (BYTE *)calloc(1, ulDataLength)) == NULL) {
-		LogError("malloc of %u bytes failed", ulDataLength);
-		return TSPERR(TSS_E_OUTOFMEMORY);
-	}
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL) {
-		result = TSPERR(TSS_E_INVALID_HANDLE);
-		goto done;
-	}
-
-	policy = (struct tr_policy_obj *)obj->data;
-
-	if (policy->Tspicb_CallbackSealxMask) {
-		result = policy->Tspicb_CallbackSealxMask(policy->sealxAppData, hKey, hEncData,
-				policy->sealxAlg, sizeof(auth->NonceEven.nonce),
-				auth->NonceEven.nonce, auth->NonceOdd.nonce,
-				nonceEvenOSAP->nonce, nonceOddOSAP->nonce,
-				ulDataLength, rgbDataToMask, *rgbMaskedData);
-
-		obj_list_put(&policy_list);
-	} else {
-		TCPA_SECRET usageSecret;
-		UINT64 offset;
-		BYTE hmacBlob[0x200];
-		BYTE sharedSecret[20];
-
-		obj_list_put(&policy_list);
-
-		/* TODO: Should check that the OSAP session ET is using XOR algorithm */
-
-		if ((result = obj_policy_get_secret(hPolicy, TR_SECRET_CTX_NOT_NEW, &usageSecret)))
-			goto done;
-
-		offset = 0;
-		Trspi_LoadBlob(&offset, sizeof(nonceEvenOSAP->nonce), hmacBlob,
-			       nonceEvenOSAP->nonce);
-	        Trspi_LoadBlob(&offset, sizeof(nonceOddOSAP->nonce), hmacBlob, nonceOddOSAP->nonce);
-		Trspi_HMAC(TSS_HASH_SHA1, 20, usageSecret.authdata, offset, hmacBlob, sharedSecret);
-
-		result = sealx_mask_cb(sizeof(sharedSecret), sharedSecret,
-				sizeof(nonceEvenOSAP->nonce),
-				nonceEvenOSAP->nonce, nonceOddOSAP->nonce,
-				ulDataLength, rgbDataToMask, *rgbMaskedData);
-	}
-
-done:
-	if (result != TSS_SUCCESS)
-		free(*rgbMaskedData);
-
-	return result;
-}
-#endif
 
 #ifdef TSS_BUILD_DELEGATION
 TSS_RESULT
