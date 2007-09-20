@@ -229,7 +229,7 @@ obj_pcrs_set_value(TSS_HPCRS hPcrs, UINT32 idx, UINT32 size, BYTE *value)
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
 			bytes_to_hold = (bytes_to_hold < 3) ? 3 : bytes_to_hold;
-			select = &pcrs->info.infolong.creationPCRSelection;
+			select = &pcrs->info.infolong.releasePCRSelection;
 			compHash = &pcrs->info.infolong.digestAtRelease;
 			break;
 		default:
@@ -551,13 +551,13 @@ done:
 }
 
 TSS_RESULT
-obj_pcrs_create_info_type(TSS_HPCRS hPcrs, UINT32 type, UINT32 *size, BYTE **info)
+obj_pcrs_create_info_type(TSS_HPCRS hPcrs, UINT32 *type, UINT32 *size, BYTE **info)
 {
 	TSS_RESULT result;
 
 	/* If type equals 0, then we create the structure
 	   based on how the object was created */
-	if (type == 0) {
+	if (*type == 0) {
 		struct tsp_object *obj;
 		struct tr_pcrs_obj *pcrs;
 
@@ -565,12 +565,12 @@ obj_pcrs_create_info_type(TSS_HPCRS hPcrs, UINT32 type, UINT32 *size, BYTE **inf
 			return TSPERR(TSS_E_INVALID_HANDLE);
 
 		pcrs = (struct tr_pcrs_obj *)obj->data;
-		type = pcrs->type;
+		*type = pcrs->type;
 
 		obj_list_put(&pcrs_list);
 	}
 
-	switch (type) {
+	switch (*type) {
 	case TSS_PCRS_STRUCT_INFO:
 		result = obj_pcrs_create_info(hPcrs, size, info);
 		break;
@@ -653,6 +653,8 @@ obj_pcrs_create_info_long(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	struct tr_pcrs_obj *pcrs;
 	TSS_RESULT result = TSS_SUCCESS;
 	TPM_PCR_INFO_LONG infolong;
+	BYTE dummyBits[3] = { 0, 0, 0 };
+	TPM_PCR_SELECTION dummySelection = { 3, dummyBits };
 	UINT64 offset;
 	UINT32 ret_size;
 	BYTE *ret;
@@ -666,14 +668,21 @@ obj_pcrs_create_info_long(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	memset(&infolong, 0, sizeof(infolong));
 
 	infolong.tag = TPM_TAG_PCR_INFO_LONG;
+	/* localityAtCreation and creationPCRSelection certainly do not need to be set here, but
+	 * some chips such as Winbond do not ignore them on input, so we must give them dummy
+	 * "good" values */
+	infolong.localityAtCreation = TSS_LOCALITY_ALL;
+	infolong.creationPCRSelection = dummySelection;
 	switch (pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
-			infolong.localityAtRelease = 0x1f;
+			infolong.localityAtRelease = TSS_LOCALITY_ALL;
 			infolong.releasePCRSelection = pcrs->info.info11.pcrSelection;
 			infolong.digestAtRelease = pcrs->info.info11.digestAtRelease;
 			break;
 		case TSS_PCRS_STRUCT_INFO_LONG:
-			infolong = pcrs->info.infolong;
+			infolong.localityAtRelease = pcrs->info.infolong.localityAtRelease;
+			infolong.releasePCRSelection = pcrs->info.infolong.releasePCRSelection;
+			infolong.digestAtRelease = pcrs->info.infolong.digestAtRelease;
 			break;
 		case TSS_PCRS_STRUCT_INFO_SHORT:
 			infolong.localityAtRelease = pcrs->info.infoshort.localityAtRelease;
@@ -731,7 +740,7 @@ obj_pcrs_create_info_short(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 		switch (pcrs->type) {
 			case TSS_PCRS_STRUCT_INFO:
 				infoshort.pcrSelection = pcrs->info.info11.pcrSelection;
-				infoshort.localityAtRelease = 0x1f;
+				infoshort.localityAtRelease = TSS_LOCALITY_ALL;
 				infoshort.digestAtRelease = pcrs->info.info11.digestAtRelease;
 				break;
 			case TSS_PCRS_STRUCT_INFO_LONG:
@@ -749,7 +758,7 @@ obj_pcrs_create_info_short(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	} else {
 		infoshort.pcrSelection.sizeOfSelect = sizeof(select);
 		infoshort.pcrSelection.pcrSelect = select;
-		infoshort.localityAtRelease = 0x1f;
+		infoshort.localityAtRelease = TSS_LOCALITY_ALL;
 	}
 
 	offset = 0;
@@ -842,7 +851,6 @@ obj_pcrs_set_locality(TSS_HPCRS hPcrs, UINT32 locality)
 	}
 
 	*loc = locality;
-
 done:
 	obj_list_put(&pcrs_list);
 
