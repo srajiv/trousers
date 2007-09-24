@@ -34,14 +34,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	TSS_RESULT result;
 	TSS_HPOLICY hPolicy, hEncPolicy;
 	BYTE *encData = NULL;
+	BYTE *pcrData = NULL;
 	UINT32 encDataSize;
-	UINT32 pcrInfoType = TSS_PCRS_STRUCT_DEFAULT;
 	UINT32 pcrDataSize;
-	BYTE *pcrData;
+	UINT32 pcrInfoType = TSS_PCRS_STRUCT_DEFAULT;
+	UINT32 sealOrdinal = TPM_ORD_Seal;
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
-	UINT32 sealOrdinal = TPM_ORD_Seal;
 	BYTE *sealData;
 	struct authsess *xsap = NULL;
 #ifdef TSS_BUILD_SEALX
