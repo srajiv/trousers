@@ -31,14 +31,14 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		       BYTE ** prgbRespData)		/* out */
 {
 	TSS_HCONTEXT tspContext;
-	TCPA_CAPABILITY_AREA tcsCapArea;
+	TPM_CAPABILITY_AREA tcsCapArea;
 	UINT32 tcsSubCap = 0;
 	UINT32 tcsSubCapContainer;
 	TSS_RESULT result;
 	UINT32 nonVolFlags, volFlags, respLen;
 	BYTE *respData;
 	UINT64 offset;
-	TSS_BOOL fOwnerAuth = FALSE; /* flag for caps that need owner auth */
+	TSS_BOOL fOwnerAuth = FALSE, endianFlag = TRUE;
 
 	if (pulRespDataLength == NULL || prgbRespData == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -135,6 +135,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 			break;
 		case TSS_TPMCAP_PROP_MANUFACTURER:
 			tcsSubCap = TPM_CAP_PROP_MANUFACTURER;
+			endianFlag = FALSE;
 			break;
 		case TSS_TPMCAP_PROP_COUNTERS:
 			tcsSubCap = TPM_CAP_PROP_COUNTERS;
@@ -196,6 +197,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 			break;
 		case TSS_TPMCAP_PROP_STARTUPEFFECTS:
 			tcsSubCap = TPM_CAP_PROP_STARTUP_EFFECT;
+			endianFlag = FALSE;
 			break;
 		case TSS_TPMCAP_PROP_MAXCONTEXTCOUNTDIST:
 			tcsSubCap = TPM_CAP_PROP_CONTEXT_DIST;
@@ -229,12 +231,15 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		break;
 	case TSS_TPMCAP_VERSION:	/* Queries the current TPM version. */
 		tcsCapArea = TCPA_CAP_VERSION;
+		endianFlag = FALSE;
 		break;
 	case TSS_TPMCAP_VERSION_VAL:	/* Queries the current TPM version for 1.2 TPM device. */
 		tcsCapArea = TPM_CAP_VERSION_VAL;
+		endianFlag = FALSE;
 		break;
 	case TSS_TPMCAP_MFR:
 		tcsCapArea = TPM_CAP_MFR;
+		endianFlag = FALSE;
 		break;
 	case TSS_TPMCAP_SYM_MODE:
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
@@ -306,10 +311,19 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 		return TSS_SUCCESS;
 	}
 
+	tcsSubCap = endian32(tcsSubCap);
+
 	if ((result = TCS_API(tspContext)->GetTPMCapability(tspContext, tcsCapArea, ulSubCapLength,
 							    (BYTE *)&tcsSubCap, pulRespDataLength,
 							    prgbRespData)))
 		return result;
+
+	if (endianFlag) {
+		if (*pulRespDataLength == sizeof(UINT32))
+			*(UINT32 *)(*prgbRespData) = endian32(*(UINT32 *)(*prgbRespData));
+		else if (*pulRespDataLength == sizeof(UINT16))
+			*(UINT32 *)(*prgbRespData) = endian16(*(UINT32 *)(*prgbRespData));
+	}
 
 	if ((result = add_mem_entry(tspContext, *prgbRespData))) {
 		free(*prgbRespData);
