@@ -269,7 +269,7 @@ obj_encdata_get_pcr_selection(TSS_HENCDATA hEncData,
 	struct tsp_object *obj;
 	struct tr_encdata_obj *encdata;
 	TSS_RESULT result = TSS_SUCCESS;
-	TPM_PCR_SELECTION *selection;
+	TPM_PCR_SELECTION *selection = NULL;
 	UINT64 offset;
 
 	if ((obj = obj_list_get_obj(&encdata_list, hEncData)) == NULL)
