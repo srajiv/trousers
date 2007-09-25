@@ -1053,10 +1053,12 @@ free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
 void
 authsess_free(struct authsess *xsap)
 {
-	if (xsap->auth.AuthHandle)
-		(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
+	if (xsap) {
+		if (xsap->auth.AuthHandle)
+			(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
 
-	free(xsap);
+		free(xsap);
+	}
 }
 
 #ifdef TSS_BUILD_TRANSPORT
