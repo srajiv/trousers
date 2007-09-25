@@ -287,7 +287,7 @@ TCSP_OwnerReadInternalPub_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		goto done;
 
 	LogDebug("OwnerReadInternalPub: handle: 0x%x", hKey);
-	if (hKey != TPM_KH_SRK) {
+	if (hKey != TPM_KH_SRK && hKey != TPM_KH_EK) {
 		result = TCSERR(TSS_E_FAIL);
 		LogDebug("OwnerReadInternalPub - Unsupported Key Handle");
 		goto done;
