@@ -136,7 +136,7 @@ libtspi_la_SOURCES+=tspi_aik.c tsp_aik.c rpc/@RPC@/rpc_aik.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_AIK
 endif
 if TSS_BUILD_EK
-libtspi_la_SOURCES+=tspi_ek.c rpc/@RPC@/rpc_ek.c
+libtspi_la_SOURCES+=tspi_ek.c tsp_ek.c rpc/@RPC@/rpc_ek.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_EK
 endif
 if TSS_BUILD_CERTIFY
