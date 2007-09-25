@@ -258,18 +258,18 @@ version_1_print(FILE *f)
 	return 0;
 }
 
-/* the smallest key on disk should be around 600 bytes total
- * and the largest should be about 1000 bytes, so if the number
+/* the smallest key on disk should be around 360 bytes total
+ * and the largest should be about 560 bytes, so if the number
  * of keys is not in this ballpark, this is probably not a PS
  * file
  */
 int
 bad_file_size(UINT32 num_keys, off_t file_size)
 {
-	if ((num_keys * 600) > (unsigned long)file_size)
+	if ((num_keys * 360) > (unsigned long)file_size)
 		return 1;
 
-	if ((num_keys * 1000) < (unsigned long)file_size)
+	if ((num_keys * 560) < (unsigned long)file_size)
 		return 1;
 
 	return 0;
