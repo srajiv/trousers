@@ -49,6 +49,7 @@ TSS_RESULT authsess_oiap_put(TPM_AUTH *, TPM_DIGEST *);
 TSS_RESULT authsess_xsap_init(TSS_HCONTEXT, TSS_HOBJECT, TSS_HOBJECT, TSS_BOOL, TPM_COMMAND_CODE, TPM_ENTITY_TYPE, struct authsess **);
 TSS_RESULT authsess_xsap_hmac(struct authsess *, TPM_DIGEST *);
 TSS_RESULT authsess_xsap_verify(struct authsess *, TPM_DIGEST *);
+void       authsess_free(struct authsess *);
 
 #define TSS_AUTH_POLICY_REQUIRED	TRUE
 #define TSS_AUTH_POLICY_NOT_REQUIRED	FALSE
