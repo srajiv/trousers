@@ -749,6 +749,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	/* Parent is Key for the cases below */
 	case TPM_ORD_Delegate_CreateKeyDelegation:
 	case TPM_ORD_CreateWrapKey:
+	case TPM_ORD_CMK_CreateKey:
 	case TPM_ORD_Seal:
 	case TPM_ORD_Sealx:
 	case TPM_ORD_Unseal:
@@ -810,6 +811,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	switch (command) {
 	/* Child is a Key object */
 	case TPM_ORD_CreateWrapKey:
+	case TPM_ORD_CMK_CreateKey:
 		if ((result = obj_rsakey_get_policies(obj_child, &sess->hUsageChild,
 						      &sess->hMigChild, &authdatausage)))
 			return result;
@@ -1016,6 +1018,45 @@ authsess_xsap_verify(struct authsess *sess, TPM_DIGEST *digest)
 						 sess->nonceEvenOSAP.nonce,
 						 sess->nonceOddOSAP.nonce, sizeof(TPM_DIGEST),
 						 digest->digest, sess->auth.HMAC.authdata);
+}
+
+TSS_RESULT
+free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
+{
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT32 version = 0;
+
+	if ((result = obj_context_get_tpm_version(tspContext, &version)))
+		return result;
+
+	if (version == 2) {
+		return TCS_API(tspContext)->FlushSpecific(tspContext, handle, resourceType);
+	}
+
+	switch (resourceType) {
+		case TPM_RT_KEY:
+			result = TCS_API(tspContext)->EvictKey(tspContext, handle);
+			break;
+		case TPM_RT_AUTH:
+			result = TCS_API(tspContext)->TerminateHandle(tspContext, handle);
+			break;
+		default:
+			LogDebugFn("Trying to free TPM 1.2 resource type 0x%x on 1.1 TPM!",
+				   resourceType);
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			break;
+	}
+
+	return result;
+}
+
+void
+authsess_free(struct authsess *xsap)
+{
+	if (xsap->auth.AuthHandle)
+		(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
+
+	free(xsap);
 }
 
 #ifdef TSS_BUILD_TRANSPORT
