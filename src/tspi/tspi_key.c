@@ -37,7 +37,7 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &hTcsKey)))
 		return result;
 
-	return TCS_API(tspContext)->EvictKey(tspContext, hTcsKey);
+	return free_resource(tspContext, hTcsKey, TPM_RT_KEY);
 }
 
 TSS_RESULT
@@ -316,7 +316,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	result = obj_rsakey_set_tcpakey(hKey, newKeySize, newKey);
 
 done:
-	free(xsap);
+	authsess_free(xsap);
 	free_tspi(tspContext, keyBlob);
 	free(newKey);
 

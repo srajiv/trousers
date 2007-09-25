@@ -174,7 +174,7 @@ create_owner_delegation(TSS_HTPM       hTpm,
 			blobSize, blob);
 
 done:
-	free(xsap);
+	authsess_free(xsap);
 	free(publicInfo);
 
 	return result;
@@ -222,7 +222,7 @@ create_key_delegation(TSS_HKEY       hKey,
 	if ((result = authsess_xsap_init(hContext, hKey, hDelegation, TSS_AUTH_POLICY_REQUIRED,
 					 TPM_ORD_Delegate_CreateKeyDelegation, TPM_ET_KEYHANDLE,
 					 &xsap)))
-		goto done;
+		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_Delegate_CreateKeyDelegation);
@@ -259,7 +259,7 @@ create_key_delegation(TSS_HKEY       hKey,
 						blob);
 
 done:
-	free(xsap);
+	authsess_free(xsap);
 	free(publicInfo);
 
 	return result;

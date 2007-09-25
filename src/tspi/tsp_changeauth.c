@@ -113,7 +113,7 @@ changeauth_owner(TSS_HCONTEXT tspContext,
 
 	result = authsess_xsap_verify(xsap, &digest);
 error:
-	free(xsap);
+	authsess_free(xsap);
 
 	return result;
 }
@@ -142,7 +142,7 @@ changeauth_srk(TSS_HCONTEXT tspContext,
 	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
 	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_SRK);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error;
 
 	if ((result = authsess_xsap_hmac(xsap, &digest)))
 		goto error;
@@ -161,7 +161,7 @@ changeauth_srk(TSS_HCONTEXT tspContext,
 
 	result = authsess_xsap_verify(xsap, &digest);
 error:
-	free(xsap);
+	authsess_free(xsap);
 
 	return result;
 }
@@ -197,12 +197,12 @@ changeauth_encdata(TSS_HCONTEXT tspContext,
 		return result;
 
 	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
-		goto error;
+		return result;
 
 	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
 					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuth,
 					 TPM_ET_DATA, &xsap)))
-		goto error;
+		return result;
 
 	/* caluculate auth data */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -254,7 +254,7 @@ changeauth_encdata(TSS_HCONTEXT tspContext,
 	result = obj_encdata_set_data(hObjectToChange, offset, dataBlob);
 
 error:
-	free(xsap);
+	authsess_free(xsap);
 	free(storedData.sealInfo);
 	free(storedData.encData);
 
@@ -315,21 +315,21 @@ changeauth_key(TSS_HCONTEXT tspContext,
 	result |= Trspi_HashUpdate(&hashCtx, keyToChange.encSize,
 			keyToChange.encData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error;
 
 	if ((result = authsess_xsap_hmac(xsap, &digest)))
 		goto error;
 
 	if ((result = secret_PerformAuth_OIAP(hObjectToChange, TPM_ORD_ChangeAuth,
 					hPolicy, FALSE, &digest, &auth2)))
-		return result;
+		goto error;
 
 	if ((result = TCS_API(tspContext)->ChangeAuth(tspContext, keyHandle, TPM_PID_ADCP,
 						      &xsap->encAuthUse, TPM_ET_KEY,
 						      keyToChange.encSize, keyToChange.encData,
 						      xsap->pAuth, &auth2, &newEncSize,
 						      &newEncData)))
-		return result;
+		goto error;
 
 	/* Validate the Auths */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -355,7 +355,7 @@ changeauth_key(TSS_HCONTEXT tspContext,
 
 	result = obj_rsakey_set_tcpakey(hObjectToChange, objectLength, keyBlob);
 error:
-	free(xsap);
+	authsess_free(xsap);
 
 	return result;
 }

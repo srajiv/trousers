@@ -193,7 +193,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if (usesAuth) {
 		if ((result = secret_PerformAuth_OIAP(hKeySRK, TPM_ORD_MakeIdentity, hSRKPolicy,
 						      FALSE, &digest, &srkAuth)))
-			return result;
+			goto error;
 		pSrkAuth = &srkAuth;
 	} else {
 		pSrkAuth = NULL;
@@ -204,14 +204,14 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 
 	if ((result = obj_context_transport_get_control(tspContext, TSS_TSPATTRIB_ENABLE_TRANSPORT,
 							&transport)))
-		return result;
+		goto error;
 
 	if (transport) {
 		if ((result = Transport_MakeIdentity2(tspContext, xsap->encAuthUse, chosenIDHash,
 						      idKeySize, idKey, pSrkAuth, xsap->pAuth,
 						      &idKeySize, &newIdKey, &pcIdentityBindingSize,
 						      &prgbIdentityBinding)))
-			return result;
+			goto error;
 	} else {
 		if ((result = RPC_MakeIdentity(tspContext, xsap->encAuthUse, chosenIDHash,
 					       idKeySize, idKey, pSrkAuth, xsap->pAuth, &idKeySize,
@@ -221,7 +221,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					       &pcPlatformCredentialSize, &prgbPlatformCredential,
 					       &pcConformanceCredentialSize,
 					       &prgbConformanceCredential)))
-			return result;
+			goto error;
 	}
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
@@ -231,7 +231,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, pcIdentityBindingSize);
 	result |= Trspi_HashUpdate(&hashCtx, pcIdentityBindingSize, prgbIdentityBinding);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-		return result;
+		goto error;
 
 	if ((result = authsess_xsap_verify(xsap, &digest)))
 		goto error;
@@ -375,7 +375,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	memcpy(*prgbTcpaIdentityReq, idReqBlob, offset);
 	*pulTcpaIdentityReqLength = offset;
 error:
-	free(xsap);
+	authsess_free(xsap);
 	free_key_refs(&caKey);
 	free(prgbIdentityBinding);
 	free(prgbEndorsementCredential);

@@ -131,7 +131,7 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 
 	if ((result = authsess_xsap_init(tspContext, hTpm, hNvstore, need_authdata,
 					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap)))
-		goto error;
+		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
@@ -156,7 +156,7 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 
 	result = authsess_xsap_verify(xsap, &digest);
 error:
-	free(xsap);
+	authsess_free(xsap);
 
 	return result;
 }
@@ -239,7 +239,7 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 
 	if ((result = authsess_xsap_init(tspContext, hTpm, hNvstore, TSS_AUTH_POLICY_NOT_REQUIRED,
 					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap)))
-		goto error;
+		return result;
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
@@ -258,7 +258,7 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 
 	result = authsess_xsap_verify(xsap, &digest);
 error:
-	free(xsap);
+	authsess_free(xsap);
 
 	return result;
 }

@@ -130,7 +130,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
 		if (sealData != rgbDataToSeal)
 			free(sealData);
-		return result;
+		goto error;
 	}
 
 	if ((result = authsess_xsap_hmac(xsap, &digest)))
@@ -180,7 +180,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 		result = obj_encdata_set_pcr_info(hEncData, pcrInfoType, pcrData);
 
 error:
-	free(xsap);
+	authsess_free(xsap);
 	free(encData);
 	free(pcrData);
 
@@ -321,7 +321,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 	*prgbUnsealedData = unSealedData;
 
 error:
-	free(xsap);
+	authsess_free(xsap);
 	if (data)
 		free_tspi(tspContext, data);
 
