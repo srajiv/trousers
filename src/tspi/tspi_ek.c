@@ -139,9 +139,7 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 {
 	TCPA_DIGEST digest;
 	TSS_RESULT result;
-	TPM_AUTH ownerAuth;
 	UINT64 offset;
-	TSS_HPOLICY hPolicy;
 	UINT32 pubEKSize;
 	BYTE *pubEK;
 	TCPA_NONCE antiReplay;
@@ -159,123 +157,97 @@ Tspi_TPM_GetPubEndorsementKey(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if (fOwnerAuthorized) {
-		if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
-			return result;
+	if (fOwnerAuthorized)
+		return owner_get_pubek(tspContext, hTPM, phEndorsementPubKey);
 
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadPubek);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			return result;
-
-		if ((result = secret_PerformAuth_OIAP(hTPM, TPM_ORD_OwnerReadPubek, hPolicy, FALSE,
-						      &digest, &ownerAuth)))
-			return result;
-
-		if ((result = TCS_API(tspContext)->OwnerReadPubek(tspContext, &ownerAuth,
-								  &pubEKSize, &pubEK)))
-			return result;
-
-		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-		result |= Trspi_Hash_UINT32(&hashCtx, result);
-		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadPubek);
-		result |= Trspi_HashUpdate(&hashCtx, pubEKSize, pubEK);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-			goto done;
-
-		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &ownerAuth)))
-			goto done;
-	} else {
-		if (pValidationData == NULL) {
-			if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
-						       (BYTE **)antiReplay.nonce))) {
-				LogDebug("Failed to generate random nonce");
-				return TSPERR(TSS_E_INTERNAL_ERROR);
-			}
-		} else {
-			if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
-				return TSPERR(TSS_E_BAD_PARAMETER);
-
-			memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
-			       sizeof(antiReplay.nonce));
+	if (pValidationData == NULL) {
+		if ((result = get_local_random(tspContext, FALSE, sizeof(TCPA_NONCE),
+					       (BYTE **)antiReplay.nonce))) {
+			LogDebug("Failed to generate random nonce");
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
+	} else {
+		if (pValidationData->ulExternalDataLength < sizeof(antiReplay.nonce))
+			return TSPERR(TSS_E_BAD_PARAMETER);
 
-		/* call down to the TPM */
-		if ((result = TCS_API(tspContext)->ReadPubek(tspContext, antiReplay, &pubEKSize,
-							     &pubEK, &checkSum)))
-			return result;
+		memcpy(antiReplay.nonce, pValidationData->rgbExternalData,
+		       sizeof(antiReplay.nonce));
+	}
 
-		/* validate the returned hash, or set up the return so that the user can */
-		if (pValidationData == NULL) {
+	/* call down to the TPM */
+	if ((result = TCS_API(tspContext)->ReadPubek(tspContext, antiReplay, &pubEKSize, &pubEK,
+						     &checkSum)))
+		return result;
+
+	/* validate the returned hash, or set up the return so that the user can */
+	if (pValidationData == NULL) {
+		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+		result |= Trspi_HashUpdate(&hashCtx, pubEKSize, pubEK);
+		result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN, antiReplay.nonce);
+		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+			goto done;
+
+		/* check validation of the entire pubkey structure */
+		if (memcmp(digest.digest, checkSum.digest, TPM_SHA1_160_HASH_LEN)) {
+			/* validation failed, unload the pubEK in order to hash
+			 * just the pubKey portion of the pubEK. This is done on
+			 * Atmel chips specifically.
+			 */
+			offset = 0;
+			memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
+			if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubEK, &pubKey)))
+				goto done;
+
 			result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-			result |= Trspi_HashUpdate(&hashCtx, pubEKSize, pubEK);
-			result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN,
+			result |= Trspi_HashUpdate(&hashCtx, pubKey.pubKey.keyLength,
+						   pubKey.pubKey.key);
+			result |= Trspi_HashUpdate(&hashCtx, TPM_SHA1_160_HASH_LEN,
 						   antiReplay.nonce);
 			if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 				goto done;
 
-			/* check validation of the entire pubkey structure */
 			if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
-				/* validation failed, unload the pubEK in order to hash
-				 * just the pubKey portion of the pubEK. This is done on
-				 * Atmel chips specifically.
-				 */
-				offset = 0;
-				memset(&pubKey, 0, sizeof(TCPA_PUBKEY));
-				if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubEK, &pubKey)))
-					goto done;
-
-				result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
-				result |= Trspi_HashUpdate(&hashCtx, pubKey.pubKey.keyLength,
-							   pubKey.pubKey.key);
-				result |= Trspi_HashUpdate(&hashCtx, TCPA_SHA1_160_HASH_LEN,
-							   antiReplay.nonce);
-				if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
-					goto done;
-
-				if (memcmp(digest.digest, checkSum.digest, TCPA_SHA1_160_HASH_LEN)) {
-					result = TSPERR(TSS_E_EK_CHECKSUM);
-					goto done;
-				}
-			}
-		} else {
-			/* validate the entire TCPA_PUBKEY structure */
-			pValidationData->ulDataLength = pubEKSize + TCPA_SHA1_160_HASH_LEN;
-			pValidationData->rgbData = calloc_tspi(tspContext,
-							       pValidationData->ulDataLength);
-			if (pValidationData->rgbData == NULL) {
-				LogError("malloc of %u bytes failed.",
-					 pValidationData->ulDataLength);
-				pValidationData->ulDataLength = 0;
-				result = TSPERR(TSS_E_OUTOFMEMORY);
+				result = TSPERR(TSS_E_EK_CHECKSUM);
 				goto done;
 			}
-
-			memcpy(pValidationData->rgbData, pubEK, pubEKSize);
-			memcpy(&pValidationData->rgbData[pubEKSize], antiReplay.nonce,
-			       TCPA_SHA1_160_HASH_LEN);
-
-			pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
-			pValidationData->rgbValidationData = calloc_tspi(tspContext,
-									 TCPA_SHA1_160_HASH_LEN);
-			if (pValidationData->rgbValidationData == NULL) {
-				LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
-				pValidationData->ulValidationDataLength = 0;
-				pValidationData->ulDataLength = 0;
-				free_tspi(tspContext,pValidationData->rgbData);
-				result = TSPERR(TSS_E_OUTOFMEMORY);
-				goto done;
-			}
-
-			memcpy(pValidationData->rgbValidationData, checkSum.digest,
-			       TCPA_SHA1_160_HASH_LEN);
 		}
+	} else {
+		/* validate the entire TCPA_PUBKEY structure */
+		pValidationData->ulDataLength = pubEKSize + TCPA_SHA1_160_HASH_LEN;
+		pValidationData->rgbData = calloc_tspi(tspContext,
+				pValidationData->ulDataLength);
+		if (pValidationData->rgbData == NULL) {
+			LogError("malloc of %u bytes failed.",
+					pValidationData->ulDataLength);
+			pValidationData->ulDataLength = 0;
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+
+		memcpy(pValidationData->rgbData, pubEK, pubEKSize);
+		memcpy(&pValidationData->rgbData[pubEKSize], antiReplay.nonce,
+				TCPA_SHA1_160_HASH_LEN);
+
+		pValidationData->ulValidationDataLength = TCPA_SHA1_160_HASH_LEN;
+		pValidationData->rgbValidationData = calloc_tspi(tspContext,
+				TCPA_SHA1_160_HASH_LEN);
+		if (pValidationData->rgbValidationData == NULL) {
+			LogError("malloc of %d bytes failed.", TCPA_SHA1_160_HASH_LEN);
+			pValidationData->ulValidationDataLength = 0;
+			pValidationData->ulDataLength = 0;
+			free_tspi(tspContext,pValidationData->rgbData);
+			result = TSPERR(TSS_E_OUTOFMEMORY);
+			goto done;
+		}
+
+		memcpy(pValidationData->rgbValidationData, checkSum.digest,
+				TPM_SHA1_160_HASH_LEN);
 	}
 
 	if ((result = obj_rsakey_add(tspContext, TSS_KEY_SIZE_2048|TSS_KEY_TYPE_LEGACY, &retKey)))
 		goto done;
 
-	if ((result = obj_rsakey_set_pubkey(retKey, FALSE, pubEK)))
+	if ((result = obj_rsakey_set_pubkey(retKey, TRUE, pubEK)))
 		goto done;
 
 	*phEndorsementPubKey = retKey;
