@@ -74,6 +74,7 @@ TSS_RESULT sealx_mask_cb(PVOID, TSS_HKEY, TSS_HENCDATA, TSS_ALGORITHM_ID, UINT32
 			 BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
 
 TSS_RESULT free_resource(TSS_HCONTEXT, UINT32, UINT32);
+TSS_RESULT owner_get_pubek(TSS_HCONTEXT, TSS_HTPM, TSS_HKEY *);
 
 
 #define next( x )	x = x->next
