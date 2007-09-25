@@ -73,6 +73,8 @@ TSS_RESULT changeauth_encdata(TSS_HCONTEXT, TSS_HOBJECT, TSS_HOBJECT, TSS_HPOLIC
 TSS_RESULT sealx_mask_cb(PVOID, TSS_HKEY, TSS_HENCDATA, TSS_ALGORITHM_ID, UINT32, BYTE *, BYTE *,
 			 BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
 
+TSS_RESULT free_resource(TSS_HCONTEXT, UINT32, UINT32);
+
 
 #define next( x )	x = x->next
 
