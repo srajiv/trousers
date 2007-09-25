@@ -84,24 +84,39 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		}
 
 #ifdef TSS_BUILD_PS
-		/* Once the key file is created, it stays forever. There could be
-		 * migratable keys in the hierarchy that are still useful to someone.
-		 */
-		result = ps_remove_key(&SRK_UUID);
-		if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
-			destroy_key_refs(&srkKeyContainer);
-			LogError("Error removing SRK from key file.");
-			*srkKeySize = 0;
-			free(*srkKey);
-			goto done;
-		}
+		{
+			BYTE fake_pubkey[256] = { 0, }, fake_srk[2048] = { 0, };
+			BYTE *save;
 
-		if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, *srkKey, *srkKeySize))) {
-			destroy_key_refs(&srkKeyContainer);
-			LogError("Error writing SRK to disk");
-			*srkKeySize = 0;
-			free(*srkKey);
-			goto done;
+			/* Once the key file is created, it stays forever. There could be
+			 * migratable keys in the hierarchy that are still useful to someone.
+			 */
+			result = ps_remove_key(&SRK_UUID);
+			if (result != TSS_SUCCESS && result != TCSERR(TSS_E_PS_KEY_NOTFOUND)) {
+				destroy_key_refs(&srkKeyContainer);
+				LogError("Error removing SRK from key file.");
+				*srkKeySize = 0;
+				free(*srkKey);
+				goto done;
+			}
+
+			/* Set the SRK pubkey to all 0's before writing the SRK to disk, this is for
+			 * privacy reasons as outlined in the TSS spec */
+			save = srkKeyContainer.pubKey.key;
+			srkKeyContainer.pubKey.key = fake_pubkey;
+			offset = 0;
+			LoadBlob_TSS_KEY(&offset, fake_srk, &srkKeyContainer);
+
+			if ((result = ps_write_key(&SRK_UUID, &NULL_UUID, NULL, 0, fake_srk,
+						   offset))) {
+				destroy_key_refs(&srkKeyContainer);
+				LogError("Error writing SRK to disk");
+				*srkKeySize = 0;
+				free(*srkKey);
+				goto done;
+			}
+
+			srkKeyContainer.pubKey.key = save;
 		}
 #endif
 		if ((result = mc_add_entry_init(SRK_TPM_HANDLE, SRK_TPM_HANDLE, &srkKeyContainer,
