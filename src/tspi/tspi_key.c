@@ -229,11 +229,11 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 			return TSPERR(TSS_E_BAD_PARAMETER);
 	}
 
-	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
+	if ((result = obj_rsakey_get_tcs_handle(hWrappingKey, &parentTCSKeyHandle)))
 		return result;
 
-	if ((result = obj_rsakey_get_tcs_handle(hWrappingKey, &parentTCSKeyHandle)))
-		goto done;
+	if ((result = obj_rsakey_get_blob(hKey, &keySize, &keyBlob)))
+		return result;
 
 #ifdef TSS_BUILD_CMK
 	isCmk = obj_rsakey_is_cmk(hKey);
@@ -559,7 +559,6 @@ Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_tpm_get_policy(hTPM, TSS_POLICY_USAGE, &hPolicy)))
 		return result;
 
-	/* do an owner authorized get capability call */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_OwnerReadInternalPub);
 	result |= Trspi_Hash_UINT32(&hashCtx, hKey);
