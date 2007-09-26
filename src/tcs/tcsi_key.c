@@ -94,7 +94,8 @@ LoadKeyByBlob_Internal(UINT32 ord,	/* The ordinal to use, LoadKey or LoadKey2 */
 			if (newSlot && (isKeyLoaded(newSlot) == TRUE)) {
 				LogDebugFn("Don't need to reload this key.");
 				*phKeyTCSI = newHandle;
-				*phKeyHMAC = newSlot;
+				if (phKeyHMAC)
+					*phKeyHMAC = newSlot;
 				return TSS_SUCCESS;
 			}
 		}
