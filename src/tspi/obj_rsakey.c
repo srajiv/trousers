@@ -1710,6 +1710,7 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
+	UINT32 pcrType = TSS_PCRS_STRUCT_DEFAULT;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -1721,8 +1722,10 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	if ((result = obj_pcrs_create_info(hPcrComposite, &rsakey->key.PCRInfoSize,
-					   &rsakey->key.PCRInfo)))
+	/* passing in a pcrType of TSS_PCRS_STRUCT_DEFAULT will tell the pcr routine to create
+	 * a structure matching the type of the hPcrComposite object */
+	if ((result = obj_pcrs_create_info_type(hPcrComposite, &pcrType, &rsakey->key.PCRInfoSize,
+						&rsakey->key.PCRInfo)))
 		goto done;
 
 done:
