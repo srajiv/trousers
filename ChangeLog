@@ -1,4 +1,15 @@
 
+- Updated ps_inspect utility to more accurately guess if the file
+you're inspecting is really a persistent storage file.
+- Fixed endianess issue with certain TPM get caps
+- Fixed bug in setting credential data in the TSP
+- Moved secret hash mode code out from inside spec compliance
+#defines since they're now part of the 1.2 spec.
+- Better support for NULL parameters to blob manipulation
+functions
+- Fix for regression - blank the SRK pubkey copy stored in system
+persistent storage
+- Added RPC plumbing for DSAP sessions
 - Added support for unmasking data on unseal :-)
 - Implemented encdata PCR_INFO_LONG GetAttrib's
 - Overhauled OSAP session handling.
