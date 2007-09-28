@@ -1,4 +1,6 @@
 
+* TROUSERS_REDHAT_SUBMIT
+
 - Updated ps_inspect utility to more accurately guess if the file
 you're inspecting is really a persistent storage file.
 - Fixed endianess issue with certain TPM get caps
