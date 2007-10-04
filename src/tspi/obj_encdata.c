@@ -204,7 +204,7 @@ obj_encdata_get_pcr_digest(TSS_HENCDATA hEncData,
 			if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATCREATION)
 				digest = &encdata->pcrInfo.infolong.digestAtCreation;
 			else if (dir == TSS_TSPATTRIB_ENCDATAPCRLONG_DIGEST_ATRELEASE)
-				digest = &encdata->pcrInfo.infolong.digestAtCreation;
+				digest = &encdata->pcrInfo.infolong.digestAtRelease;
 			else {
 				result = TSPERR(TSS_E_BAD_PARAMETER);
 				goto done;
