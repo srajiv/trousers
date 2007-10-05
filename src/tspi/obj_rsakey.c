@@ -68,11 +68,13 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 		case TSS_KEY_STRUCT_KEY:
 			rsakey->key.hdr.key11.ver = ver;
 			rsakey->type = TSS_KEY_STRUCT_KEY;
+			rsakey->pcrInfoType = TSS_PCRS_STRUCT_INFO;
 			break;
 		case TSS_KEY_STRUCT_KEY12:
 			rsakey->key.hdr.key12.tag = TPM_TAG_KEY12;
 			rsakey->key.hdr.key12.fill = 0;
 			rsakey->type = TSS_KEY_STRUCT_KEY12;
+			rsakey->pcrInfoType = TSS_PCRS_STRUCT_INFO_LONG;
 			break;
 		default:
 			free(rsakey);
@@ -1487,8 +1489,20 @@ obj_rsakey_set_tcpakey(TSS_HKEY hKey, UINT32 size, BYTE *data)
 	else
 		obj->flags &= ~TSS_OBJ_FLAG_USAGEAUTH;
 
+	if (rsakey->key.PCRInfoSize && rsakey->key.PCRInfo) {
+		offset = 0;
+		if (rsakey->type == TSS_KEY_STRUCT_KEY12) {
+			if ((result = Trspi_UnloadBlob_PCR_INFO_LONG(&offset, rsakey->key.PCRInfo,
+								     &rsakey->pcrInfo.infolong)))
+				goto done;
+		} else {
+			if ((result = Trspi_UnloadBlob_PCR_INFO(&offset, rsakey->key.PCRInfo,
+								&rsakey->pcrInfo.info11)))
+				goto done;
+		}
+	}
+
 	obj->flags |= TSS_OBJ_FLAG_KEY_SET;
-
 done:
 	obj_list_put(&rsakey_list);
 
@@ -1496,139 +1510,163 @@ done:
 }
 
 TSS_RESULT
-obj_rsakey_get_pcr_atcreation(TSS_HKEY hKey, UINT32 *size, BYTE **data)
+obj_rsakey_get_pcr_digest(TSS_HKEY hKey,
+                          TSS_FLAG pcrInfoType,
+                          TSS_FLAG dir,
+                          UINT32 *size,
+                          BYTE **data)
 {
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
+	TPM_DIGEST *digest = NULL;
 	UINT64 offset;
-	TPM_PCR_INFO *info;
-	TPM_PCR_INFO_LONG *info_long;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	if (rsakey->key.PCRInfo == NULL) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
-		if (*data == NULL) {
-			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = sizeof(TCPA_DIGEST);
-
-		if (rsakey->type == TSS_KEY_STRUCT_KEY) { /* 1.1 */
-			info = (TPM_PCR_INFO *)rsakey->key.PCRInfo;
-			offset = 0;
-			Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), *data,
-				       (BYTE *)&info->digestAtCreation);
-		} else {
-			info_long = (TPM_PCR_INFO_LONG *)rsakey->key.PCRInfo;
-			offset = 0;
-			Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), *data,
-				       (BYTE *)&info_long->digestAtCreation);
-		}
-	}
-
-done:
-	obj_list_put(&rsakey_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_rsakey_get_pcr_atrelease(TSS_HKEY hKey, UINT32 *size, BYTE **data)
-{
-	struct tsp_object *obj;
-	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSS_SUCCESS;
-	UINT64 offset;
-	TCPA_PCR_INFO *info;
-	TPM_PCR_INFO_LONG *info_long;
-
-	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	rsakey = (struct tr_rsakey_obj *)obj->data;
-
-	if (rsakey->key.PCRInfo == NULL) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		*data = calloc_tspi(obj->tspContext, sizeof(TCPA_DIGEST));
-		if (*data == NULL) {
-			LogError("malloc of %zd bytes failed.", sizeof(TCPA_DIGEST));
-			result = TSPERR(TSS_E_OUTOFMEMORY);
-			goto done;
-		}
-		*size = sizeof(TCPA_DIGEST);
-
-		if (rsakey->type == TSS_KEY_STRUCT_KEY) { /* 1.1 */
-			info = (TCPA_PCR_INFO *)rsakey->key.PCRInfo;
-			offset = 0;
-			Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), *data,
-					(BYTE *)&info->digestAtRelease);
-		} else {
-			info_long = (TPM_PCR_INFO_LONG *)rsakey->key.PCRInfo;
-			offset = 0;
-			Trspi_LoadBlob(&offset, sizeof(TCPA_DIGEST), *data,
-					(BYTE *)&info_long->digestAtRelease);
-		}
-	}
-
-done:
-	obj_list_put(&rsakey_list);
-
-	return result;
-}
-
-TSS_RESULT
-obj_rsakey_get_pcr_selection(TSS_HKEY hKey, UINT32 *size, BYTE **data)
-{
-	struct tsp_object *obj;
-	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSS_SUCCESS;
-	UINT16 offset;
-	TCPA_PCR_INFO *info;
-
-	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	rsakey = (struct tr_rsakey_obj *)obj->data;
-
-	/* XXX Why? */
-	if (rsakey->type != TSS_KEY_STRUCT_KEY) {
-		result = TSPERR(TSS_E_BAD_PARAMETER);
+	if (pcrInfoType != rsakey->pcrInfoType) {
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
 
-	if (rsakey->key.PCRInfo == NULL) {
-		*data = NULL;
-		*size = 0;
-	} else {
-		info = (TCPA_PCR_INFO *)rsakey->key.PCRInfo;
-		offset = info->pcrSelection.sizeOfSelect;
-		*data = calloc_tspi(obj->tspContext, offset);
-		if (*data == NULL) {
-			LogError("malloc of %hu bytes failed.", offset);
-			result = TSPERR(TSS_E_OUTOFMEMORY);
+	switch (pcrInfoType) {
+		case TSS_PCRS_STRUCT_INFO:
+			if (dir == TSS_TSPATTRIB_KEYPCR_DIGEST_ATCREATION)
+				digest = &rsakey->pcrInfo.info11.digestAtCreation;
+			else if (dir == TSS_TSPATTRIB_KEYPCR_DIGEST_ATRELEASE)
+				digest = &rsakey->pcrInfo.info11.digestAtRelease;
+			else {
+				result = TSPERR(TSS_E_BAD_PARAMETER);
+				goto done;
+			}
+			break;
+		case TSS_PCRS_STRUCT_INFO_LONG:
+			if (dir == TSS_TSPATTRIB_KEYPCRLONG_DIGEST_ATCREATION)
+				digest = &rsakey->pcrInfo.infolong.digestAtCreation;
+			else if (dir == TSS_TSPATTRIB_KEYPCRLONG_DIGEST_ATRELEASE)
+				digest = &rsakey->pcrInfo.infolong.digestAtRelease;
+			else {
+				result = TSPERR(TSS_E_BAD_PARAMETER);
+				goto done;
+			}
+			break;
+		default:
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
-		}
-		*size = offset;
-		memcpy(*data, &info->pcrSelection.pcrSelect, *size);
 	}
 
+	*size = sizeof(TPM_DIGEST);
+
+	if ((*data = calloc_tspi(obj->tspContext, *size)) == NULL) {
+		LogError("malloc of %u bytes failed.", *size);
+		*size = 0;
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto done;
+	}
+
+	offset = 0;
+	Trspi_LoadBlob_DIGEST(&offset, *data, digest);
 done:
 	obj_list_put(&rsakey_list);
 
 	return result;
 }
 
+
+TSS_RESULT
+obj_rsakey_get_pcr_locality(TSS_HKEY hKey, TSS_FLAG dir, UINT32 *locality)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+	if (rsakey->pcrInfoType == TSS_PCRS_STRUCT_INFO_LONG) {
+		if (dir == TSS_TSPATTRIB_KEYPCRLONG_LOCALITY_ATCREATION)
+			*locality = rsakey->pcrInfo.infolong.localityAtCreation;
+		else if (dir == TSS_TSPATTRIB_KEYPCRLONG_LOCALITY_ATRELEASE)
+			*locality = rsakey->pcrInfo.infolong.localityAtRelease;
+		else
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+	} else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_get_pcr_selection(TSS_HKEY hKey,
+			     UINT32 pcrInfoType,
+			     TSS_FLAG dir,
+			     UINT32 *size,
+			     BYTE **data)
+{
+	struct tsp_object *obj;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSS_SUCCESS;
+	UINT64 offset;
+	TPM_PCR_SELECTION *selection = NULL;
+
+	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
+	rsakey = (struct tr_rsakey_obj *)obj->data;
+
+        if (pcrInfoType != rsakey->pcrInfoType) {
+                result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
+                goto done;
+        }
+
+        switch (pcrInfoType) {
+                case TSS_PCRS_STRUCT_INFO:
+                        if (dir == TSS_TSPATTRIB_KEYPCR_SELECTION)
+                                selection = &rsakey->pcrInfo.info11.pcrSelection;
+                        else {
+                                result = TSPERR(TSS_E_BAD_PARAMETER);
+                                goto done;
+                        }
+                        break;
+                case TSS_PCRS_STRUCT_INFO_LONG:
+                        if (dir == TSS_TSPATTRIB_KEYPCRLONG_CREATION_SELECTION)
+                                selection = &rsakey->pcrInfo.infolong.creationPCRSelection;
+                        else if (dir == TSS_TSPATTRIB_KEYPCRLONG_RELEASE_SELECTION)
+                                selection = &rsakey->pcrInfo.infolong.releasePCRSelection;
+                        else {
+                                result = TSPERR(TSS_E_BAD_PARAMETER);
+                                goto done;
+                        }
+                        break;
+                default:
+                        result = TSPERR(TSS_E_INTERNAL_ERROR);
+                        goto done;
+        }
+
+        *size = sizeof(UINT16) + selection->sizeOfSelect;
+
+        if ((*data = calloc_tspi(obj->tspContext, *size)) == NULL) {
+                LogError("malloc of %u bytes failed.", *size);
+                *size = 0;
+                result = TSPERR(TSS_E_OUTOFMEMORY);
+                goto done;
+        }
+
+        offset = 0;
+        Trspi_LoadBlob_PCR_SELECTION(&offset, *data, selection);
+
+done:
+	obj_list_put(&rsakey_list);
+
+	return result;
+}
 
 /* Expect a TPM_PUBKEY as is explained in the portable data section of the spec */
 TSS_RESULT
@@ -1710,7 +1748,8 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result = TSS_SUCCESS;
-	UINT32 pcrType = TSS_PCRS_STRUCT_DEFAULT;
+	UINT32 pcrType, pcrSize;
+	BYTE *pcrInfo;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -1724,10 +1763,12 @@ obj_rsakey_set_pcr_data(TSS_HKEY hKey, TSS_HPCRS hPcrComposite)
 
 	/* passing in a pcrType of TSS_PCRS_STRUCT_DEFAULT will tell the pcr routine to create
 	 * a structure matching the type of the hPcrComposite object */
-	if ((result = obj_pcrs_create_info_type(hPcrComposite, &pcrType, &rsakey->key.PCRInfoSize,
-						&rsakey->key.PCRInfo)))
+	pcrType = TSS_PCRS_STRUCT_DEFAULT;
+	if ((result = obj_pcrs_create_info_type(hPcrComposite, &pcrType, &pcrSize, &pcrInfo)))
 		goto done;
 
+	rsakey->key.PCRInfo = pcrInfo;
+	rsakey->key.PCRInfoSize = pcrSize;
 done:
 	obj_list_put(&rsakey_list);
 
@@ -2015,11 +2056,12 @@ done:
 	return result;
 }
 #endif
+
 TSS_RESULT
-obj_rsakey_get_ownerevict(TSS_HKEY hKey, UINT32 *value){
+obj_rsakey_get_ownerevict(TSS_HKEY hKey, UINT32 *value)
+{
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -2029,15 +2071,14 @@ obj_rsakey_get_ownerevict(TSS_HKEY hKey, UINT32 *value){
 
 	obj_list_put(&rsakey_list);
 
-	return result;
+	return TSS_SUCCESS;
 }
 
 TSS_RESULT
-obj_rsakey_set_ownerevict(TSS_HKEY hKey, TSS_BOOL value){
+obj_rsakey_set_ownerevict(TSS_HKEY hKey, TSS_BOOL value)
+{
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSS_SUCCESS;
-
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -2051,5 +2092,5 @@ obj_rsakey_set_ownerevict(TSS_HKEY hKey, TSS_BOOL value){
 
 	obj_list_put(&rsakey_list);
 
-	return result;
+	return TSS_SUCCESS;
 }
