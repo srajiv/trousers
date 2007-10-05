@@ -29,6 +29,11 @@ struct tr_rsakey_obj {
 	TPM_HMAC msaApproval;
 	TPM_DIGEST msaDigest;
 #endif
+	union {
+		TPM_PCR_INFO info11;
+		TPM_PCR_INFO_LONG infolong;
+	} pcrInfo;
+	UINT32 pcrInfoType;
 };
 
 /* obj_rsakey.c */
@@ -78,9 +83,9 @@ TSS_RESULT obj_rsakey_get_parent_uuid(TSS_HKEY, TSS_FLAG *, TSS_UUID *);
 TSS_RESULT obj_rsakey_set_uuids(TSS_HKEY, TSS_FLAG, TSS_UUID *, TSS_FLAG, TSS_UUID *);
 TSS_RESULT obj_rsakey_set_uuid(TSS_HKEY, TSS_FLAG, TSS_UUID *);
 TSS_RESULT obj_rsakey_set_tcpakey(TSS_HKEY, UINT32 , BYTE *);
-TSS_RESULT obj_rsakey_get_pcr_atcreation(TSS_HKEY, UINT32 *, BYTE **);
-TSS_RESULT obj_rsakey_get_pcr_atrelease(TSS_HKEY, UINT32 *, BYTE **);
-TSS_RESULT obj_rsakey_get_pcr_selection(TSS_HKEY, UINT32 *, BYTE **);
+TSS_RESULT obj_rsakey_get_pcr_digest(TSS_HKEY, UINT32, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_rsakey_get_pcr_selection(TSS_HKEY, UINT32, TSS_FLAG, UINT32 *, BYTE **);
+TSS_RESULT obj_rsakey_get_pcr_locality(TSS_HKEY, TSS_FLAG, UINT32 *);
 TSS_RESULT obj_rsakey_set_pubkey(TSS_HKEY, UINT32, BYTE *);
 TSS_RESULT obj_rsakey_set_privkey(TSS_HKEY, UINT32, UINT32, BYTE *);
 TSS_RESULT obj_rsakey_set_pcr_data(TSS_HKEY, TSS_HPOLICY);
