@@ -1,4 +1,6 @@
 
+- Fix for setting the right kind of PCR struct in the key object
+
 * TROUSERS_REDHAT_SUBMIT
 
 - Updated ps_inspect utility to more accurately guess if the file
@@ -18,8 +20,8 @@ persistent storage
 
 * TROUSERS_0_3_0
 
-  Added TSS_TCSCAP_PLATFORM_CLASS cap support
-  Added the Quote2 Commands
+- Added TSS_TCSCAP_PLATFORM_CLASS cap support
+- Added the Quote2 Commands
 - Added new TSS 1.2 return codes to Trspi_Error_String.
 - Added Tspi_Context_GetRegisteredKeysByUUID2 functions
 to the persistent storage system
