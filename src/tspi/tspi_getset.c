@@ -384,6 +384,12 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 			} else {
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 			}
+		} else if (attribFlag == TSS_TSPATTRIB_KEY_PCR_LONG) {
+			if (subFlag == TSS_TSPATTRIB_KEYPCRLONG_LOCALITY_ATCREATION ||
+			    subFlag == TSS_TSPATTRIB_KEYPCRLONG_LOCALITY_ATRELEASE) {
+				result = obj_rsakey_get_pcr_locality(hObject, subFlag, pulAttrib);
+			} else
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 		} else
 			return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 #endif
@@ -906,22 +912,32 @@ Tspi_GetAttribData(TSS_HOBJECT hObject,		/* in */
 			if (subFlag)
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
-			result = obj_rsakey_get_uuid(hObject,
-					pulAttribDataSize,
-					prgbAttribData);
+			result = obj_rsakey_get_uuid(hObject, pulAttribDataSize, prgbAttribData);
 		} else if (attribFlag == TSS_TSPATTRIB_KEY_PCR) {
-			if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATCREATION) {
-				result = obj_rsakey_get_pcr_atcreation(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
-			} else if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATRELEASE) {
-				result = obj_rsakey_get_pcr_atrelease(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+			if (subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATCREATION ||
+			    subFlag == TSS_TSPATTRIB_KEYPCR_DIGEST_ATRELEASE) {
+				result = obj_rsakey_get_pcr_digest(hObject, TSS_PCRS_STRUCT_INFO,
+								   subFlag, pulAttribDataSize,
+								   prgbAttribData);
 			} else if (subFlag == TSS_TSPATTRIB_KEYPCR_SELECTION) {
+				result = obj_rsakey_get_pcr_selection(hObject, TSS_PCRS_STRUCT_INFO,
+								      subFlag, pulAttribDataSize,
+								      prgbAttribData);
+			} else
+				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
+		} else if (attribFlag == TSS_TSPATTRIB_KEY_PCR_LONG) {
+			if (subFlag == TSS_TSPATTRIB_KEYPCRLONG_DIGEST_ATCREATION ||
+			    subFlag == TSS_TSPATTRIB_KEYPCRLONG_DIGEST_ATRELEASE) {
+				result = obj_rsakey_get_pcr_digest(hObject,
+								   TSS_PCRS_STRUCT_INFO_LONG,
+								   subFlag, pulAttribDataSize,
+								   prgbAttribData);
+			} else if (subFlag == TSS_TSPATTRIB_KEYPCRLONG_CREATION_SELECTION ||
+			           subFlag == TSS_TSPATTRIB_KEYPCRLONG_RELEASE_SELECTION) {
 				result = obj_rsakey_get_pcr_selection(hObject,
-						pulAttribDataSize,
-						prgbAttribData);
+								      TSS_PCRS_STRUCT_INFO_LONG,
+								      subFlag, pulAttribDataSize,
+								      prgbAttribData);
 			} else
 				return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 #ifdef TSS_BUILD_CMK
