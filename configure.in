@@ -39,8 +39,8 @@ case $target in
                 ;;
 esac
 
-# Non-standard OpenSSL (for 64bit platforms)
-AC_MSG_CHECKING([Non-standard OpenSSL])
+# Non-standard OpenSSL location
+AC_MSG_CHECKING([Non-standard OpenSSL location])
 AC_ARG_WITH(openssl,
 	AC_HELP_STRING([--with-openssl=PATH], [Location of openssl libs/includes]),
 	[OPENSSL_INCLUDE_DIR="$withval/include"
