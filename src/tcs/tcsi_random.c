@@ -132,7 +132,7 @@ TCSP_StirRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	if ((result = tpm_rqu_build(TPM_ORD_StirRandom, &offset, txBlob, inDataSize, inDataSize,
-				    inData, NULL)))
+				    inData, NULL, NULL)))
 		return result;
 
 	if ((result = req_mgr_submit_req(txBlob)))
