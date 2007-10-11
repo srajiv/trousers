@@ -277,6 +277,19 @@ obj_policy_set_secret_object(TSS_HPOLICY hPolicy, TSS_FLAG mode, UINT32 size,
 		}
 	}
 
+	if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
+		policy->SecretCounter = policy->SecretTimeStamp;
+	} else if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
+		time_t t = time(NULL);
+		if (t == ((time_t)-1)) {
+			LogError("time failed: %s", strerror(errno));
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
+			goto done;
+		}
+
+		policy->SecretTimeStamp = t;
+	}
+
 	memcpy(policy->Secret, digest, size);
 	policy->SecretMode = mode;
 	policy->SecretSize = size;
@@ -585,22 +598,55 @@ obj_policy_get_lifetime(TSS_HPOLICY hPolicy, UINT32 *lifetime)
 }
 
 TSS_RESULT
-obj_policy_set_lifetime(TSS_HPOLICY hPolicy)
+obj_policy_set_lifetime(TSS_HPOLICY hPolicy, UINT32 type, UINT32 value)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
+	time_t t;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	policy->SecretCounter = 0;
-	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
-	policy->SecretTimer = 0;
+
+	switch (type) {
+		case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS:
+			policy->SecretCounter = 0;
+			policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS;
+			policy->SecretTimeStamp = 0;
+			break;
+		case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER:
+			/* Both SecretCounter and SecretTimeStamp will receive value. Every time the
+			 * policy is used, SecretCounter will be decremented. Each time SetSecret is
+			 * called, SecretCounter will get the value stored in SecretTimeStamp */
+			policy->SecretCounter = value;
+			policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER;
+			policy->SecretTimeStamp = value;
+			break;
+		case TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER:
+			t = time(NULL);
+			if (t == ((time_t)-1)) {
+				LogError("time failed: %s", strerror(errno));
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
+				break;
+			}
+
+			/* For mode time, we'll use the SecretCounter variable to hold the number
+			 * of seconds we're valid and the SecretTimeStamp var to record the current
+			 * timestamp. This should protect against overflows. */
+			policy->SecretCounter = value;
+			policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER;
+			policy->SecretTimeStamp = t;
+			break;
+		default:
+			result = TSPERR(TSS_E_BAD_PARAMETER);
+			break;
+	}
 
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -625,35 +671,21 @@ obj_policy_get_counter(TSS_HPOLICY hPolicy, UINT32 *counter)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
+	TSS_RESULT result = TSS_SUCCESS;
 
 	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	*counter = policy->SecretCounter;
+
+	if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
+		*counter = policy->SecretCounter;
+	else
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 
 	obj_list_put(&policy_list);
 
-	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_set_counter(TSS_HPOLICY hPolicy, UINT32 counter)
-{
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-	policy->SecretCounter = counter;
-	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER;
-	policy->SecretTimer = 0;
-
-	obj_list_put(&policy_list);
-
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
@@ -666,46 +698,16 @@ obj_policy_dec_counter(TSS_HPOLICY hPolicy)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	policy = (struct tr_policy_obj *)obj->data;
-	if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER)
+
+	/* Only decrement if SecretCounter > 0, otherwise it could loop and become valid again */
+	if (policy->SecretLifetime == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER &&
+	    policy->SecretCounter > 0) {
 		policy->SecretCounter--;
+	}
 
 	obj_list_put(&policy_list);
 
 	return TSS_SUCCESS;
-}
-
-TSS_RESULT
-obj_policy_set_timer(TSS_HPOLICY hPolicy, UINT32 timer)
-{
-	TSS_RESULT result = TSS_SUCCESS;
-	struct tsp_object *obj;
-	struct tr_policy_obj *policy;
-	time_t t;
-
-	if ((obj = obj_list_get_obj(&policy_list, hPolicy)) == NULL)
-		return TSPERR(TSS_E_INVALID_HANDLE);
-
-	policy = (struct tr_policy_obj *)obj->data;
-
-	t = time(NULL);
-	if (t == ((time_t)-1)) {
-		LogError("time failed: %s", strerror(errno));
-		result = TSPERR(TSS_E_INTERNAL_ERROR);
-		goto done;
-	}
-	/* for mode time, we'll use the SecretCounter variable to hold
-	 * the number of seconds we're valid and the SecretTimer var to
-	 * record the current timestamp. This should protect against
-	 * overflows.
-	 */
-	policy->SecretCounter = timer;
-	policy->SecretLifetime = TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER;
-	policy->SecretTimer = t;
-
-done:
-	obj_list_put(&policy_list);
-
-	return result;
 }
 
 /* return a unicode string to the Tspi_GetAttribData function */
@@ -789,7 +791,7 @@ obj_policy_get_secs_until_expired(TSS_HPOLICY hPolicy, UINT32 *secs)
 	policy = (struct tr_policy_obj *)obj->data;
 
 	if (policy->SecretLifetime != TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-		result = TSPERR(TSS_E_BAD_PARAMETER);
+		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
 
@@ -798,12 +800,10 @@ obj_policy_get_secs_until_expired(TSS_HPOLICY hPolicy, UINT32 *secs)
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
-	/* curtime - SecretTimer is the number of seconds elapsed since we
-	 * started the timer. SecretCounter is the number of seconds the
-	 * secret is valid.  If seconds_elspased > SecretCounter, we've
-	 * expired.
-	 */
-	seconds_elapsed = t - policy->SecretTimer;
+	/* curtime - SecretTimeStamp is the number of seconds elapsed since we started the timer.
+	 * SecretCounter is the number of seconds the secret is valid.  If
+	 * seconds_elspased > SecretCounter, we've expired. */
+	seconds_elapsed = t - policy->SecretTimeStamp;
 	if ((UINT32)seconds_elapsed >= policy->SecretCounter) {
 		*secs = 0;
 	} else {
@@ -840,7 +840,7 @@ policy_has_expired(struct tr_policy_obj *policy, TSS_BOOL *answer)
 		 * secret is valid.  If seconds_elspased > SecretCounter, we've
 		 * expired.
 		 */
-		seconds_elapsed = t - policy->SecretTimer;
+		seconds_elapsed = t - policy->SecretTimeStamp;
 		*answer = ((UINT32)seconds_elapsed >= policy->SecretCounter ? TRUE : FALSE);
 		break;
 	}

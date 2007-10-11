@@ -13,11 +13,11 @@
 
 /* structures */
 struct tr_policy_obj {
-	BYTE SecretLifetime;    /* 0->Always, 1->Use Counter 2-> Use Timer */
+	BYTE SecretLifetime;
 	TSS_BOOL SecretSet;
 	UINT32 SecretMode;
 	UINT32 SecretCounter;
-	UINT32 SecretTimer;     /* in seconds */
+	UINT32 SecretTimeStamp;
 	UINT32 SecretSize;
 	BYTE Secret[20];
 	UINT32 type;
@@ -132,10 +132,8 @@ TSS_RESULT obj_policy_get_cb12(TSS_HPOLICY, TSS_FLAG, UINT32 *, BYTE **);
 TSS_RESULT obj_policy_set_cb11(TSS_HPOLICY, TSS_FLAG, TSS_FLAG, UINT32);
 TSS_RESULT obj_policy_get_cb11(TSS_HPOLICY, TSS_FLAG, UINT32 *);
 TSS_RESULT obj_policy_get_lifetime(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_lifetime(TSS_HPOLICY);
+TSS_RESULT obj_policy_set_lifetime(TSS_HPOLICY, UINT32, UINT32);
 TSS_RESULT obj_policy_get_counter(TSS_HPOLICY, UINT32 *);
-TSS_RESULT obj_policy_set_counter(TSS_HPOLICY, UINT32);
-TSS_RESULT obj_policy_set_timer(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_string(TSS_HPOLICY, UINT32 *size, BYTE **);
 TSS_RESULT obj_policy_set_string(TSS_HPOLICY, UINT32 size, BYTE *);
 TSS_RESULT obj_policy_get_secs_until_expired(TSS_HPOLICY, UINT32 *);

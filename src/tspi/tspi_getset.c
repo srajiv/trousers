@@ -145,12 +145,11 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 							     subFlag, ulAttrib);
 				break;
 			case TSS_TSPATTRIB_POLICY_SECRET_LIFETIME:
-				if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS) {
-					result = obj_policy_set_lifetime(hObject);
-				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER) {
-					result = obj_policy_set_counter(hObject, ulAttrib);
-				} else if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
-					result = obj_policy_set_timer(hObject, ulAttrib);
+				if (subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_ALWAYS ||
+				    subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_COUNTER ||
+				    subFlag == TSS_TSPATTRIB_POLICYSECRET_LIFETIME_TIMER) {
+					result = obj_policy_set_lifetime(hObject, subFlag,
+									 ulAttrib);
 				} else {
 					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				}
