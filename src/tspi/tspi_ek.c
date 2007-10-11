@@ -423,7 +423,7 @@ Tspi_TPM_RevokeEndorsementKey(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_tpm_get_tsp_context(hTPM, &tspContext)))
 		return result;
 
-	if (ulEkResetDataLength < sizeof(eKResetAuth.digest))
+	if (ulEkResetDataLength < sizeof(eKResetAuth.digest) || !rgbEkResetData)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
 	memcpy(eKResetAuth.digest, rgbEkResetData, sizeof(eKResetAuth.digest));
