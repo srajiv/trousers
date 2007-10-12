@@ -352,6 +352,9 @@ Tspi_TPM_Delegate_ReadTables(TSS_HCONTEXT                 hContext,		/* in */
 	if (!pulFamilyTableSize || !ppFamilyTable || !pulDelegateTableSize || !ppDelegateTable)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
+	if (!obj_is_context(hContext))
+		return TSPERR(TSS_E_INVALID_HANDLE);
+
 	if ((result = TCS_API(hContext)->Delegate_ReadTable(hContext, &tpmFamilyTableSize,
 							    &tpmFamilyTable, &tpmDelegateTableSize,
 							    &tpmDelegateTable)))
