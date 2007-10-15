@@ -1054,7 +1054,7 @@ void
 authsess_free(struct authsess *xsap)
 {
 	if (xsap) {
-		if (xsap->auth.AuthHandle)
+		if (xsap->auth.AuthHandle && xsap->auth.fContinueAuthSession)
 			(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
 
 		free(xsap);
