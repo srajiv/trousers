@@ -1,4 +1,16 @@
 
+- Fix for SF#1811120, Tspi_TPM_StirRandom01 test crashes TCSD.
+- Fix for SF#1805829, ChangeAuth fails to return an error
+- Fix for SF#1803767, TSS_TSPATTRIB_KEY_PCR_LONG key attribute
+not implemented
+- Fix for SF#1802804, Tspi_TPM_Delegate_UpdateVerificationCount
+problem
+- Fix for SF#1799935, Tspi_TPM_delefate_ReadTables bug
+- Fix for SF#1799912, policy lifetime counter doesn't reset with
+SetSecret
+- Fix for SF#1799901, policy lifetime timer doesn't reset with
+SetSecret
+- Fix for SF#1779282. Trspi_UnloadBlob_CERTIFY_INFO DNE.
 - Fix for setting the right kind of PCR struct in the key object
 
 * TROUSERS_REDHAT_SUBMIT
