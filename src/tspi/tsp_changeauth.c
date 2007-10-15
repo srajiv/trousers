@@ -199,17 +199,17 @@ changeauth_encdata(TSS_HCONTEXT tspContext,
 	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
 		return result;
 
-	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
+	if ((result = authsess_xsap_init(tspContext, hParentObject, hNewPolicy,
 					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuth,
-					 TPM_ET_DATA, &xsap)))
+					 TPM_ET_KEYHANDLE, &xsap)))
 		return result;
 
 	/* caluculate auth data */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_ChangeAuth);
-	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_PID_ADCP);
+	result |= Trspi_Hash_UINT16(&hashCtx, TPM_PID_ADCP);
 	result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
-	result |= Trspi_Hash_UINT16(&hashCtx, TCPA_ET_DATA);
+	result |= Trspi_Hash_UINT16(&hashCtx, TPM_ET_DATA);
 	result |= Trspi_Hash_UINT32(&hashCtx, storedData.encDataSize);
 	result |= Trspi_HashUpdate(&hashCtx, storedData.encDataSize, storedData.encData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
@@ -299,7 +299,7 @@ changeauth_key(TSS_HCONTEXT tspContext,
 	if ((result = obj_rsakey_get_tcs_handle(hParentObject, &keyHandle)))
 		return result;
 
-	if ((result = authsess_xsap_init(tspContext, hObjectToChange, hNewPolicy,
+	if ((result = authsess_xsap_init(tspContext, hParentObject, hNewPolicy,
 					 TSS_AUTH_POLICY_REQUIRED, TPM_ORD_ChangeAuth,
 					 keyHandle == TPM_KEYHND_SRK ?
 					 TPM_ET_SRK : TPM_ET_KEYHANDLE, &xsap)))
