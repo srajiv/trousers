@@ -215,7 +215,8 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 			tcsSubCap = TPM_CAP_PROP_INPUT_BUFFER;
 			break;
 #if 0
-		/* XXX is there a way to query the TPM for these? */
+		/* There isn't a way to query the TPM for these, the TPMWG is considering how to
+		 * address some of them in the next version of the TPM - KEY Oct 15, 2007*/
 		case TSS_TPMCAP_PROP_MAXNVWRITE:
 			break;
 		case TSS_TPMCAP_PROP_REVISION:
