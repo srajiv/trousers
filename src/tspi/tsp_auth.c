@@ -893,11 +893,11 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		break;
 	/* Child is a Policy object */
 	case TPM_ORD_Delegate_CreateKeyDelegation:
+	case TPM_ORD_ChangeAuth:
 		if ((result = obj_rsakey_get_tcs_handle(obj_parent, &sess->obj_parent)))
 			goto error;
 		/* fall through */
 	case TPM_ORD_Delegate_CreateOwnerDelegation:
-	case TPM_ORD_ChangeAuth:
 	case TPM_ORD_ChangeAuthOwner:
 		sess->hUsageChild = obj_child;
 		break;
