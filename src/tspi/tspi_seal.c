@@ -230,7 +230,8 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 		/* The second UINT16 in a TPM_STORED_DATA12 is the entity type. If its non-zero
 		 * then we must unmask the unsealed data after it returns from the TCS */
 		Trspi_UnloadBlob_UINT16(&offset, &mask, data);
-	}
+	} else
+		mask = 0;
 
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		goto error;
