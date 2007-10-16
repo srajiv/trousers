@@ -76,11 +76,17 @@ obj_context_get_tcs_api(TSS_HCONTEXT tspContext)
 	struct tr_context_obj *context;
 	struct tcs_api_table *t;
 
+	/* If the object cannot be found with the given handle, return a safe value, the normal TCS
+	 * API pointer.  Since the handle is bad, the RPC_ function will barf in looking up the
+	 * corresponding TCS context handle and an invalid handle error will be returned. */
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
-		return NULL;
+		return &tcs_normal_api;
 
 	context = (struct tr_context_obj *)obj->data;
 
+	/* Return the current API set we're using, either the normal API, or the transport encrypted
+	 * API.  The context->tcs_api variable is switched back and forth between the two sets by
+	 * the obj_context_transport_set_control function through a set attrib. */
 	t = context->tcs_api;
 
 	obj_list_put(&context_list);
