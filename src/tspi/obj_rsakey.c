@@ -1668,6 +1668,25 @@ done:
 	return result;
 }
 
+TSS_RESULT
+rsakey_set_pubkey(struct tr_rsakey_obj *rsakey, BYTE *pubkey)
+{
+	TSS_RESULT result;
+	UINT64 offset = 0;
+	TPM_PUBKEY pub;
+
+	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, pubkey, &pub)))
+		return result;
+
+	free(rsakey->key.pubKey.key);
+	free(rsakey->key.algorithmParms.parms);
+
+	memcpy(&rsakey->key.pubKey, &pub.pubKey, sizeof(TPM_STORE_PUBKEY));
+	memcpy(&rsakey->key.algorithmParms, &pub.algorithmParms, sizeof(TPM_KEY_PARMS));
+
+	return TSS_SUCCESS;
+}
+
 /* Expect a TPM_PUBKEY as is explained in the portable data section of the spec */
 TSS_RESULT
 obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 force, BYTE *data)
@@ -1675,32 +1694,45 @@ obj_rsakey_set_pubkey(TSS_HKEY hKey, UINT32 force, BYTE *data)
 	struct tsp_object *obj;
 	struct tr_rsakey_obj *rsakey;
 	TSS_RESULT result;
-	UINT64 offset = 0;
-	TCPA_PUBKEY pub;
 
 	if ((obj = obj_list_get_obj(&rsakey_list, hKey)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
 
 	rsakey = (struct tr_rsakey_obj *)obj->data;
 
-	/* Another SRK workaround. For all keys that aren't the SRK, disallow the setting of their
-	 * pub key after creation. Since the SRK's pub isn't stored anywhere, allow its value to be
-	 * set */
 	if (!force && (obj->flags & TSS_OBJ_FLAG_KEY_SET)) {
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
 
-	if ((result = Trspi_UnloadBlob_PUBKEY(&offset, data, &pub)))
-		return result;
-
-	free(rsakey->key.pubKey.key);
-	free(rsakey->key.algorithmParms.parms);
-
-	memcpy(&rsakey->key.pubKey, &pub.pubKey, sizeof(TCPA_STORE_PUBKEY));
-	memcpy(&rsakey->key.algorithmParms, &pub.algorithmParms, sizeof(TCPA_KEY_PARMS));
+	result = rsakey_set_pubkey(rsakey, data);
 done:
 	obj_list_put(&rsakey_list);
+
+	return result;
+}
+
+TSS_RESULT
+obj_rsakey_set_srk_pubkey(BYTE *pubkey)
+{
+	struct tsp_object *obj, *prev = NULL;
+	struct obj_list *list = &rsakey_list;
+	struct tr_rsakey_obj *rsakey;
+	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+
+	MUTEX_LOCK(list->lock);
+
+	for (obj = list->head; obj; prev = obj, obj = obj->next) {
+		rsakey = (struct tr_rsakey_obj *)obj->data;
+
+		/* we found the SRK, set this data as its public key */
+		if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
+			result = rsakey_set_pubkey(rsakey, pubkey);
+			break;
+		}
+	}
+
+	MUTEX_UNLOCK(list->lock);
 
 	return result;
 }

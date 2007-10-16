@@ -584,7 +584,10 @@ Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
 	if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &auth)))
 		goto error;
 
-	obj_rsakey_set_pubkey(hKey, TRUE, *prgbPubKey);
+	/* Call a special SRK-seeking command to transparently add the public data to the object */
+	if ((result = obj_rsakey_set_srk_pubkey(*prgbPubKey))) {
+		LogError("Error setting SRK public data, SRK key object may not exist");
+	}
 
 	if ((result = add_mem_entry(tspContext, *prgbPubKey)))
 		goto error;

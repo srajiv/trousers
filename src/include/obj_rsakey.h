@@ -106,6 +106,7 @@ TSS_RESULT obj_rsakey_get_msa_digest(TSS_HKEY, UINT32 *, BYTE **);
 #endif
 TSS_RESULT obj_rsakey_get_ownerevict(TSS_HKEY, UINT32 *);
 TSS_RESULT obj_rsakey_set_ownerevict(TSS_HKEY, TSS_BOOL);
+TSS_RESULT obj_rsakey_set_srk_pubkey(BYTE *);
 
 #define RSAKEY_LIST_DECLARE		struct obj_list rsakey_list
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list
