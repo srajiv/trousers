@@ -1,4 +1,6 @@
 
+- Fixed multiple problems with changing auth on encrypted data
+and keys.
 - Fix for SF#1811120, Tspi_TPM_StirRandom01 test crashes TCSD.
 - Fix for SF#1805829, ChangeAuth fails to return an error
 - Fix for SF#1803767, TSS_TSPATTRIB_KEY_PCR_LONG key attribute
