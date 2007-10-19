@@ -1060,6 +1060,10 @@ owner_evict_init()
 	UINT32 respDataSize = 0, i;
 	UINT64 offset = 0;
 
+	/* If we're a 1.1 TPM, we can exit immediately since only 1.2+ supports owner evict */
+	if (TPM_VERSION_IS(1,1))
+		return TSS_SUCCESS;
+
 	if ((result = TCSP_GetCapability_Internal(InternalContext, TPM_CAP_KEY_HANDLE, 0, NULL,
 						  &respDataSize, &respData)))
 		return result;
