@@ -1,4 +1,7 @@
 
+- Prevent Tspi_TPM_GetCapability from swithcing the endianess of
+the data returned from a request for TSS_TPMCAP_NV_LIST when that
+list happens to be sizeof(UINT32).
 - Fixed trouble in owner_evict_init path for 1.1 TPMs
 - Fixed multiple problems with changing auth on encrypted data
 and keys.
