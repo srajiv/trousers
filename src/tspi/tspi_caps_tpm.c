@@ -106,6 +106,7 @@ Tspi_TPM_GetCapability(TSS_HTPM hTPM,			/* in */
 #ifdef TSS_BUILD_NV
 	case TSS_TPMCAP_NV_LIST:
 		tcsCapArea = TPM_CAP_NV_LIST;
+		endianFlag = FALSE;
 		break;
 	case TSS_TPMCAP_NV_INDEX:
 		if ((ulSubCapLength != sizeof(UINT32)) || !rgbSubCap)
