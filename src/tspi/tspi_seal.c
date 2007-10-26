@@ -111,8 +111,8 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 						      xsap->cb_sealx.alg, sizeof(TPM_NONCE),
 						      xsap->auth.NonceEven.nonce,
 						      xsap->auth.NonceOdd.nonce,
-						      xsap->nonceEvenOSAP.nonce,
-						      xsap->nonceOddOSAP.nonce, ulDataLength,
+						      xsap->nonceEvenxSAP.nonce,
+						      xsap->nonceOddxSAP.nonce, ulDataLength,
 						      rgbDataToSeal, sealData)))
 			goto error;
 	}
@@ -304,8 +304,8 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 							 xsap->cb_sealx.alg, sizeof(TPM_NONCE),
 							 authLastNonceEven.nonce,
 							 xsap->auth.NonceOdd.nonce,
-							 xsap->nonceEvenOSAP.nonce,
-							 xsap->nonceOddOSAP.nonce,
+							 xsap->nonceEvenxSAP.nonce,
+							 xsap->nonceOddxSAP.nonce,
 							 unSealedDataLen, maskedData,
 							 unSealedData))) {
 			free(maskedData);
