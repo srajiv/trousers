@@ -22,6 +22,7 @@
 #include "tsplog.h"
 #include "obj.h"
 #include "tsp_delegate.h"
+#include "authsess.h"
 
 
 TSS_RESULT
@@ -872,7 +873,11 @@ obj_policy_has_expired(TSS_HPOLICY hPolicy, TSS_BOOL *answer)
 }
 
 TSS_RESULT
-obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
+obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
+			   TPM_COMMAND_CODE command,
+			   TPM_ENTITY_TYPE *et,
+			   UINT32 *entity_value_size,
+			   BYTE **entity_value,
 			   BYTE *secret,
 			   TSS_CALLBACK *cb_xor,
 			   TSS_CALLBACK *cb_hmac,
@@ -895,6 +900,36 @@ obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
 	if (answer) {
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
+	}
+
+	/* if the delegation index or blob is set, check to see if the command is delegated, if so,
+	 * return the blob or index as the secret data */
+	if (command && (policy->delegationType != TSS_DELEGATIONTYPE_NONE)) {
+		if (policy->delegationBlob) {
+			if ((*entity_value = malloc(policy->delegationBlobLength)) == NULL) {
+				LogError("malloc of %u bytes failed.",
+					 policy->delegationBlobLength);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+
+			memcpy(*entity_value, policy->delegationBlob, policy->delegationBlobLength);
+			*entity_value_size = policy->delegationBlobLength;
+			if (policy->delegationType == TSS_DELEGATIONTYPE_OWNER)
+				*et = TPM_ET_DEL_OWNER_BLOB;
+			else
+				*et = TPM_ET_DEL_KEY_BLOB;
+		} else {
+			if ((*entity_value = malloc(sizeof(UINT32))) == NULL) {
+				LogError("malloc of %zd bytes failed.", sizeof(UINT32));
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+
+			*(UINT32 *)entity_value = policy->delegationIndex;
+			*entity_value_size = sizeof(UINT32);
+			*et = TPM_ET_DEL_ROW;
+		}
 	}
 
 	/* Either this is a policy set to mode callback, in which case both xor and hmac addresses
@@ -920,7 +955,7 @@ obj_policy_get_osap_params(TSS_HPOLICY hPolicy,
 		cb_sealx->alg = policy->sealxAlg;
 	}
 
-	memcpy(secret, policy->Secret, sizeof(TPM_SECRET));
+	memcpy(secret, policy->Secret, TPM_SHA1_160_HASH_LEN);
 	*mode = policy->SecretMode;
 done:
 	obj_list_put(&policy_list);
@@ -1572,16 +1607,18 @@ obj_policy_get_delegate_public(struct tsp_object *obj, TPM_DELEGATE_PUBLIC *publ
 		offset = 0;
 		switch (tag) {
 		case TPM_TAG_DELEGATE_OWNER_BLOB:
-			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(&offset, policy->delegationBlob,
-					 &ownerBlob)))
+			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(&offset,
+									policy->delegationBlob,
+									&ownerBlob)))
 				return result;
 			*public = ownerBlob.pub;
 			free(ownerBlob.additionalArea);
 			free(ownerBlob.sensitiveArea);
 			break;
 		case TPM_TAG_DELG_KEY_BLOB:
-			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(&offset, policy->delegationBlob,
-					 &keyBlob)))
+			if ((result = Trspi_UnloadBlob_TPM_DELEGATE_KEY_BLOB(&offset,
+									     policy->delegationBlob,
+									     &keyBlob)))
 				return result;
 			*public = keyBlob.pub;
 			free(keyBlob.additionalArea);
