@@ -608,15 +608,50 @@ authsess_oiap_put(TPM_AUTH *auth)
 #endif
 
 TSS_RESULT
+authsess_do_dsap(struct authsess *sess)
+{
+	TSS_RESULT result;
+
+	if ((result = TCS_API(sess->tspContext)->DSAP(sess->tspContext, sess->entity_type,
+						      sess->obj_parent, &sess->nonceOddxSAP,
+						      sess->entityValueSize, sess->entityValue,
+						      &sess->pAuth->AuthHandle,
+						      &sess->pAuth->NonceEven,
+						      &sess->nonceEvenxSAP))) {
+		if (result == TCPA_E_RESOURCES) {
+			int retry = 0;
+			do {
+				/* POSIX sleep time, { secs, nanosecs } */
+				struct timespec t = { 0, AUTH_RETRY_NANOSECS };
+
+				nanosleep(&t, NULL);
+
+				result = TCS_API(sess->tspContext)->DSAP(sess->tspContext,
+									 sess->entity_type,
+									 sess->obj_parent,
+									 &sess->nonceOddxSAP,
+									 sess->entityValueSize,
+									 sess->entityValue,
+									 &sess->pAuth->AuthHandle,
+									 &sess->pAuth->NonceEven,
+									 &sess->nonceEvenxSAP);
+			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
+		}
+	}
+
+	return result;
+}
+
+TSS_RESULT
 authsess_do_osap(struct authsess *sess)
 {
 	TSS_RESULT result;
 
 	if ((result = TCS_API(sess->tspContext)->OSAP(sess->tspContext, sess->entity_type,
-						      sess->obj_parent, &sess->nonceOddOSAP,
+						      sess->obj_parent, &sess->nonceOddxSAP,
 						      &sess->pAuth->AuthHandle,
 						      &sess->pAuth->NonceEven,
-						      &sess->nonceEvenOSAP))) {
+						      &sess->nonceEvenxSAP))) {
 		if (result == TCPA_E_RESOURCES) {
 			int retry = 0;
 			do {
@@ -628,10 +663,10 @@ authsess_do_osap(struct authsess *sess)
 				result = TCS_API(sess->tspContext)->OSAP(sess->tspContext,
 									 sess->entity_type,
 									 sess->obj_parent,
-									 &sess->nonceOddOSAP,
+									 &sess->nonceOddxSAP,
 									 &sess->pAuth->AuthHandle,
 									 &sess->pAuth->NonceEven,
-									 &sess->nonceEvenOSAP);
+									 &sess->nonceEvenxSAP);
 			} while (result == TCPA_E_RESOURCES && ++retry < AUTH_RETRY_COUNT);
 		}
 	}
@@ -800,10 +835,11 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		sess->cb_hmac.appData = (PVOID)sess;
 
 		/* XXX the parent object doesn't always hold the callbacks */
-		if ((result = obj_policy_get_osap_params(sess->hUsageParent,
-							 sess->parentSecret.authdata,
-							 &sess->cb_xor, &sess->cb_hmac, NULL,
-							 &sess->parentMode)))
+		if ((result = obj_policy_get_xsap_params(sess->hUsageParent, command,
+							 &sess->entity_type, &sess->entityValueSize,
+							 &sess->entityValue,
+							 sess->parentSecret.authdata, &sess->cb_xor,
+							 &sess->cb_hmac, NULL, &sess->parentMode)))
 			goto error;
 	} else
 		sess->parentMode = TSS_SECRET_MODE_NONE;
@@ -827,9 +863,9 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 				goto error;
 			}
 
-			if ((result = obj_policy_get_osap_params(sess->hMigChild,
-								 sess->encAuthMig.authdata, NULL,
-								 NULL, NULL, &sess->mMode)))
+			if ((result = obj_policy_get_xsap_params(sess->hMigChild, 0, NULL, NULL,
+								 NULL, sess->encAuthMig.authdata,
+								 NULL, NULL, NULL, &sess->mMode)))
 				goto error;
 		}
 
@@ -839,7 +875,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	/* Child is an Encdata object */
 	case TPM_ORD_Sealx:
 	case TPM_ORD_Unseal:
-		/* These may be overwritten down below, when obj_policy_get_osap_params is called
+		/* These may be overwritten down below, when obj_policy_get_xsap_params is called
 		 * on the child usage policy */
 		sess->cb_sealx.callback = sealx_mask_cb;
 		sess->cb_sealx.appData = (PVOID)sess;
@@ -913,23 +949,32 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		goto done;
 
 	if (get_child_auth) {
-		if ((result = obj_policy_get_osap_params(sess->hUsageChild,
+		if ((result = obj_policy_get_xsap_params(sess->hUsageChild, 0, 0, NULL, NULL,
 							 sess->encAuthUse.authdata, NULL, NULL,
 							 &sess->cb_sealx, &sess->uMode)))
 			return result;
 	}
 
 	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
-				       (BYTE **)sess->nonceOddOSAP.nonce)))
+				       (BYTE **)sess->nonceOddxSAP.nonce)))
 		goto error;
 
-	sess->entity_type = entity_type;
 	sess->obj_child = obj_child;
 	sess->tspContext = tspContext;
 	sess->pAuth = &sess->auth;
+	sess->command = command;
 
-	if ((result = authsess_do_osap(sess)))
-		goto error;
+	/* if entityValue is set, we have a custom entity, i.e. delegation blob or row */
+	if (sess->entityValue) {
+		/* DSAP's entity type was pulled from the policy in the authsess_xsap_init call
+		 * above */
+		if ((result = authsess_do_dsap(sess)))
+			goto error;
+	} else {
+		sess->entity_type = entity_type;
+		if ((result = authsess_do_osap(sess)))
+			goto error;
+	}
 
 	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
 				       (BYTE **)sess->auth.NonceOdd.nonce)))
@@ -938,8 +983,8 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	/* We have both OSAP nonces, so calculate the shared secret if we're responsible for it */
 	if (sess->parentMode != TSS_SECRET_MODE_CALLBACK) {
 		offset = 0;
-		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceEvenOSAP.nonce);
-		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceOddOSAP.nonce);
+		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceEvenxSAP.nonce);
+		Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), hmacBlob, sess->nonceOddxSAP.nonce);
 
 		if ((result = Trspi_HMAC(TSS_HASH_SHA1, sizeof(TPM_ENCAUTH),
 					 sess->parentSecret.authdata, offset, hmacBlob,
@@ -954,7 +999,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	       BYTE *))sess->cb_xor.callback)(sess->cb_xor.appData, sess->hUsageParent,
 					      sess->hUsageChild, TRUE, sizeof(TPM_DIGEST),
 					      sess->auth.NonceEven.nonce, sess->auth.NonceOdd.nonce,
-					      sess->nonceEvenOSAP.nonce, sess->nonceOddOSAP.nonce,
+					      sess->nonceEvenxSAP.nonce, sess->nonceOddxSAP.nonce,
 					      sizeof(TPM_ENCAUTH), sess->encAuthUse.authdata,
 					      sess->encAuthMig.authdata)))
 		return result;
@@ -977,7 +1022,9 @@ authsess_xsap_hmac(struct authsess *sess, TPM_DIGEST *digest)
 	if (!sess->pAuth)
 		return TSS_SUCCESS;
 
-	/* XXX conditionally bump NonceOdd if continueAuthSession == TRUE */
+	/* XXX Placeholder for future continueAuthSession support:
+	 *      conditionally bump NonceOdd if continueAuthSession == TRUE here
+	 */
 
 	if ((result =
 	    ((TSS_RESULT (*)(PVOID, TSS_HOBJECT, TSS_BOOL,
@@ -988,8 +1035,8 @@ authsess_xsap_hmac(struct authsess *sess, TPM_DIGEST *digest)
 					      sess->auth.fContinueAuthSession, sizeof(TPM_NONCE),
 					      sess->auth.NonceEven.nonce,
 					      sess->auth.NonceOdd.nonce,
-					      sess->nonceEvenOSAP.nonce,
-					      sess->nonceOddOSAP.nonce, sizeof(TPM_DIGEST),
+					      sess->nonceEvenxSAP.nonce,
+					      sess->nonceOddxSAP.nonce, sizeof(TPM_DIGEST),
 					      digest->digest, sess->auth.HMAC.authdata)))
 		return result;
 
@@ -1015,8 +1062,8 @@ authsess_xsap_verify(struct authsess *sess, TPM_DIGEST *digest)
 						 sess->auth.fContinueAuthSession, sizeof(TPM_NONCE),
 						 sess->auth.NonceEven.nonce,
 						 sess->auth.NonceOdd.nonce,
-						 sess->nonceEvenOSAP.nonce,
-						 sess->nonceOddOSAP.nonce, sizeof(TPM_DIGEST),
+						 sess->nonceEvenxSAP.nonce,
+						 sess->nonceOddxSAP.nonce, sizeof(TPM_DIGEST),
 						 digest->digest, sess->auth.HMAC.authdata);
 }
 
@@ -1057,6 +1104,7 @@ authsess_free(struct authsess *xsap)
 		if (xsap->auth.AuthHandle && xsap->auth.fContinueAuthSession)
 			(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
 
+		free(xsap->entityValue);
 		free(xsap);
 	}
 }
