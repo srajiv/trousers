@@ -902,6 +902,7 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		LoadBlob(outOffset, TPM_SHA1_160_HASH_LEN, out_blob, digest1);
 		LoadBlob_UINT32(outOffset, in_len1, out_blob);
 		LoadBlob(outOffset, in_len1, out_blob, in_blob1);
+		LoadBlob_Header(TPM_TAG_RQU_COMMAND, *outOffset, ordinal, out_blob);
 
 		result = TSS_SUCCESS;
 		break;
