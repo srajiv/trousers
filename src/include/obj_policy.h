@@ -147,9 +147,10 @@ TSS_RESULT obj_policy_do_xor(TSS_HPOLICY, TSS_HOBJECT, TSS_HOBJECT, TSS_FLAG,
 		UINT32, BYTE *, BYTE *, BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
 TSS_RESULT obj_policy_do_takeowner(TSS_HPOLICY, TSS_HOBJECT, TSS_HKEY, UINT32, BYTE *);
 TSS_RESULT obj_policy_validate_auth_oiap(TSS_HPOLICY, TCPA_DIGEST *, TPM_AUTH *);
-TSS_RESULT obj_policy_get_hash_mode(TSS_HCONTEXT, UINT32 *);
-TSS_RESULT obj_policy_set_hash_mode(TSS_HCONTEXT, UINT32);
-TSS_RESULT obj_policy_get_osap_params(TSS_HCONTEXT, BYTE *, TSS_CALLBACK *, TSS_CALLBACK *,
+TSS_RESULT obj_policy_get_hash_mode(TSS_HPOLICY, UINT32 *);
+TSS_RESULT obj_policy_set_hash_mode(TSS_HPOLICY, UINT32);
+TSS_RESULT obj_policy_get_xsap_params(TSS_HPOLICY, TPM_COMMAND_CODE, TPM_ENTITY_TYPE *, UINT32 *,
+				      BYTE **, BYTE *, TSS_CALLBACK *, TSS_CALLBACK *,
 				      TSS_CALLBACK *, UINT32 *);
 #ifdef TSS_BUILD_DELEGATION
 TSS_RESULT obj_policy_set_delegation_type(TSS_HPOLICY, UINT32);
