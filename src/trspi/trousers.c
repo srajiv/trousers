@@ -2682,3 +2682,54 @@ Trspi_UnloadBlob_TSS_PLATFORM_CLASS(UINT64 *offset, BYTE *blob, TSS_PLATFORM_CLA
 
 	return TSS_SUCCESS;
 }
+
+void
+Trspi_LoadBlob_CAP_VERSION_INFO(UINT64 *offset, BYTE *blob, TPM_CAP_VERSION_INFO *v)
+{
+	Trspi_LoadBlob_UINT16(offset, v->tag, blob);
+	Trspi_LoadBlob_TCPA_VERSION(offset, blob, *(TCPA_VERSION *)(&v->version));
+	Trspi_LoadBlob_UINT16(offset, v->specLevel, blob);
+	Trspi_LoadBlob_BYTE(offset, v->errataRev, blob);
+	Trspi_LoadBlob(offset, sizeof(v->tpmVendorID), blob, v->tpmVendorID);
+	Trspi_LoadBlob_UINT16(offset, v->vendorSpecificSize, blob);
+	Trspi_LoadBlob(offset, v->vendorSpecificSize, blob, v->vendorSpecific);
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_CAP_VERSION_INFO(UINT64 *offset, BYTE *blob, TPM_CAP_VERSION_INFO *v)
+{
+	if (!v) {
+		UINT16 vendorSpecificSize;
+
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_VERSION(offset, blob, NULL);
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob(offset, 4, blob, NULL);
+		Trspi_UnloadBlob_UINT16(offset, &vendorSpecificSize, blob);
+
+		(*offset) += vendorSpecificSize;
+
+		return TSS_SUCCESS;
+	}
+
+	Trspi_UnloadBlob_UINT16(offset, &v->tag, blob);
+	Trspi_UnloadBlob_VERSION(offset, blob, (TCPA_VERSION *)&v->version);
+	Trspi_UnloadBlob_UINT16(offset, &v->specLevel, blob);
+	Trspi_UnloadBlob_BYTE(offset, &v->errataRev, blob);
+	Trspi_UnloadBlob(offset, sizeof(v->tpmVendorID), blob, v->tpmVendorID);
+	Trspi_UnloadBlob_UINT16(offset, &v->vendorSpecificSize, blob);
+
+	if (v->vendorSpecificSize > 0) {
+		if ((v->vendorSpecific = malloc(v->vendorSpecificSize)) == NULL) {
+			LogError("malloc of %u bytes failed.", v->vendorSpecificSize);
+			return TSPERR(TSS_E_OUTOFMEMORY);
+		}
+
+		Trspi_UnloadBlob(offset, v->vendorSpecificSize, blob, v->vendorSpecific);
+	} else {
+		v->vendorSpecific = NULL;
+	}
+
+	return TSS_SUCCESS;
+}
