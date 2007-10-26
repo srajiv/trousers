@@ -792,4 +792,75 @@ Transport_Delegate_VerifyDelegation(TSS_HCONTEXT tspContext,    /* in */
 
 	return result;
 }
+
+TSS_RESULT
+Transport_DSAP(TSS_HCONTEXT tspContext,		/* in */
+	       TPM_ENTITY_TYPE entityType,	/* in */
+	       TCS_KEY_HANDLE keyHandle,	/* in */
+	       TPM_NONCE *nonceOddDSAP,		/* in */
+	       UINT32 entityValueSize,		/* in */
+	       BYTE * entityValue,		/* in */
+	       TCS_AUTHHANDLE *authHandle,	/* out */
+	       TPM_NONCE *nonceEven,		/* out */
+	       TPM_NONCE *nonceEvenDSAP)	/* out */
+{
+	TSS_RESULT result;
+	UINT32 handlesLen, dataLen, decLen;
+	TCS_HANDLE *handles, handle;
+	TPM_DIGEST pubKeyHash;
+	Trspi_HashCtx hashCtx;
+	UINT64 offset;
+	BYTE *data, *dec;
+
+
+	if ((result = obj_context_transport_init(tspContext)))
+		return result;
+
+	LogDebugFn("Executing in a transport session");
+
+	if ((result = obj_tcskey_get_pubkeyhash(keyHandle, pubKeyHash.digest)))
+		return result;
+
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_DIGEST(&hashCtx, pubKeyHash.digest);
+	if ((result |= Trspi_HashFinal(&hashCtx, pubKeyHash.digest)))
+		return result;
+
+	dataLen = sizeof(TPM_ENTITY_TYPE) + sizeof(TPM_KEY_HANDLE)
+					  + sizeof(TPM_NONCE)
+					  + sizeof(UINT32)
+					  + entityValueSize;
+	if ((data = malloc(dataLen)) == NULL) {
+		LogError("malloc of %u bytes failed", dataLen);
+		return TSPERR(TSS_E_OUTOFMEMORY);
+	}
+
+	handlesLen = 1;
+	handle = keyHandle;
+	handles = &handle;
+
+	offset = 0;
+	Trspi_LoadBlob_UINT32(&offset, entityType, data);
+	Trspi_LoadBlob_UINT32(&offset, keyHandle, data);
+	Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), data, nonceEvenDSAP->nonce);
+	Trspi_LoadBlob_UINT32(&offset, entityValueSize, data);
+	Trspi_LoadBlob(&offset, entityValueSize, data, entityValue);
+
+	if ((result = obj_context_transport_execute(tspContext, TPM_ORD_DSAP, dataLen, data,
+						    &pubKeyHash, &handlesLen, &handles, NULL, NULL,
+						    &decLen, &dec))) {
+		free(data);
+		return result;
+	}
+	free(data);
+
+	offset = 0;
+	Trspi_UnloadBlob_UINT32(&offset, authHandle, dec);
+
+	Trspi_UnloadBlob(&offset, sizeof(TPM_NONCE), dec, nonceEven->nonce);
+	Trspi_UnloadBlob(&offset, sizeof(TPM_NONCE), dec, nonceEvenDSAP->nonce);
+
+
+	return result;
+}
 #endif
