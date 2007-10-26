@@ -272,8 +272,10 @@ map_key_handles:
 		UnloadBlob_UINT16(&offset, &entityType, rgbWrappedCmdParamIn);
 		UnloadBlob_UINT32(&offset, &keyHandle, rgbWrappedCmdParamIn);
 
-		if (ensureKeyIsLoaded(hContext, keyHandle, &tpmKeyHandle))
-			return TCSERR(TSS_E_KEY_NOT_LOADED);
+		if (ensureKeyIsLoaded(hContext, keyHandle, &tpmKeyHandle)) {
+			result = TCSERR(TSS_E_KEY_NOT_LOADED);
+			goto done;
+		}
 
 		/* DSAP's only encrypted paramter is entityValue, so replacing keyHandle inside
 		 * rgbWrappedCmdParamIn is ok */
