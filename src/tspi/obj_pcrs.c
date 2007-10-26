@@ -44,6 +44,7 @@ obj_pcrs_add(TSS_HCONTEXT tspContext, UINT32 type, TSS_HOBJECT *phObject)
 		switch (ver) {
 			case TSS_TSPATTRIB_CONTEXT_VERSION_V1_2:
 				pcrs->type = TSS_PCRS_STRUCT_INFO_LONG;
+				pcrs->info.infolong.localityAtRelease = TSS_LOCALITY_ALL;
 				break;
 			case TSS_TSPATTRIB_CONTEXT_VERSION_V1_1:
 				/* fall through */
