@@ -343,7 +343,7 @@ TCSP_DSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			goto done;
 	}
 
-	if ((result = tpm_rqu_build(TPM_ORD_DSAP, &offset, txBlob, entityType, keyHandle,
+	if ((result = tpm_rqu_build(TPM_ORD_DSAP, &offset, txBlob, entityType, tpmKeyHandle,
 				    nonceOddDSAP, entityValueSize, entityValue)))
 		return result;
 
@@ -352,14 +352,13 @@ TCSP_DSAP_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
-		if ((result = tpm_rsp_parse(TPM_ORD_DSAP, txBlob, paramSize, authHandle, nonceEven,
-					    nonceEvenDSAP)))
+		if ((result = tpm_rsp_parse(TPM_ORD_DSAP, txBlob, paramSize, authHandle,
+					    nonceEven->nonce, nonceEvenDSAP->nonce)))
 			goto done;
+
+		/* success, add an entry to the table */
+		result = auth_mgr_add(hContext, *authHandle);
 	}
-
-	/* success, add an entry to the table */
-	result = auth_mgr_add(hContext, *authHandle);
-
 done:
 	LogResult("DSAP", result);
 
