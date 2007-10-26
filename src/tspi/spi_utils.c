@@ -172,6 +172,7 @@ struct tcs_api_table tcs_normal_api = {
 	.Delegate_ReadTable = RPC_Delegate_ReadTable,
 	.Delegate_UpdateVerificationCount = RPC_Delegate_UpdateVerificationCount,
 	.Delegate_VerifyDelegation = RPC_Delegate_VerifyDelegation,
+	.DSAP = RPC_DSAP,
 #endif
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
@@ -317,6 +318,7 @@ struct tcs_api_table tcs_transport_api = {
 	.Delegate_ReadTable = Transport_Delegate_ReadTable,
 	.Delegate_UpdateVerificationCount = Transport_Delegate_UpdateVerificationCount,
 	.Delegate_VerifyDelegation = Transport_Delegate_VerifyDelegation,
+	.DSAP = Transport_DSAP,
 #endif
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
