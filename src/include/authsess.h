@@ -29,14 +29,16 @@ struct authsess {
 	TSS_CALLBACK cb_xor, cb_hmac, cb_sealx;
 
 	TPM_ENTITY_TYPE entity_type;
+	UINT32 entityValueSize;
+	BYTE *entityValue;
 
 	TSS_HOBJECT obj_child;
 	TSS_HPOLICY hUsageChild, hMigChild;
 	UINT32 uMode, mMode;
 
-	/* Created during OSAP protocol initiation */
-	TPM_NONCE nonceOddOSAP;
-	TPM_NONCE nonceEvenOSAP;
+	/* Created during OSAP or DSAP protocol initiation */
+	TPM_NONCE nonceOddxSAP;
+	TPM_NONCE nonceEvenxSAP;
 	TPM_HMAC sharedSecret;
 
 	//MUTEX_DECLARE(lock);
