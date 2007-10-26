@@ -556,11 +556,12 @@ Global defines for TSS.
 // Attribute values for 
 //    TSS_TSPATTRIB_ENCDATA_SEAL/TSS_TSPATTRIB_ENCDATASEAL_PROTECT_MODE
 //
-#define  TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT            (0x00000000)
-#define  TSS_TSPATTRIB_ENCDATA_SEAL_NO_PROTECT           TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT
+#define  TSS_TSPATTRIB_ENCDATASEAL_NOPROTECT             (0x00000000)
 #define  TSS_TSPATTRIB_ENCDATASEAL_PROTECT               (0x00000001)
-#define  TSS_TSPATTRIB_ENCDATA_SEAL_PROTECT               TSS_TSPATTRIB_ENCDATASEAL_PROTECT
 
+// Accounting for typos in original header files
+#define  TSS_TSPATTRIB_ENCDATASEAL_NO_PROTECT                                \
+                                           TSS_TSPATTRIB_ENCDATASEAL_NOPROTECT
 
 //*************
 // NV object: *
@@ -1057,6 +1058,7 @@ Global defines for TSS.
 #define TSS_TPMSTATUS_NV_LOCK                (0x0000001B) // persistent flag
 #define TSS_TPMSTATUS_TPM_ESTABLISHED        (0x0000001C) // persistent flag
 #define TSS_TPMSTATUS_RESETLOCK              (0x0000001D) // volatile flag
+#define TSS_TPMSTATUS_DISABLE_FULL_DA_LOGIC_INFO (0x0000001D) //persistent flag
 
 
 //
@@ -1079,6 +1081,7 @@ Global defines for TSS.
 #define TSS_TPMCAP_AUTH_ENCRYPT          (0x1c)  
 #define TSS_TPMCAP_SET_PERM_FLAGS        (0x1d)  // cf. TPM_SET_PERM_FLAGS
 #define TSS_TPMCAP_SET_VENDOR            (0x1e)  // cf. TPM_SET_VENDOR
+#define TSS_TPMCAP_DA_LOGIC              (0x1f)
 
 //
 // Sub-Capability Flags for TSS_TPMCAP_PROPERTY
@@ -1160,23 +1163,23 @@ Global defines for TSS.
 #define TSS_TSPCAP_PERSSTORAGE           (0x00000012)
 #define TSS_TSPCAP_MANUFACTURER          (0x00000013)
 #define TSS_TSPCAP_RETURNVALUE_INFO      (0x00000015)
-#define TSS_TSPCAP_PLATFORM_INFO         (0x00000016) // XXX Added by trousers
+#define TSS_TSPCAP_PLATFORM_INFO         (0x00000016)
 
 // Sub-Capability Flags for TSS_TSPCAP_MANUFACTURER
 //
 #define TSS_TSPCAP_PROP_MANUFACTURER_STR (0x00000102)
 #define TSS_TSPCAP_PROP_MANUFACTURER_ID  (0x00000103)
 
+// Sub-Capability Flags for TSS_TSPCAP_PLATFORM_INFO
+//
+#define TSS_TSPCAP_PLATFORM_TYPE         (0x00000201)
+#define TSS_TSPCAP_PLATFORM_VERSION      (0x00000202)
+
+
 
 // Sub-Capability Flags for TSS_TSPCAP_RETURNVALUE_INFO
 //
 #define TSS_TSPCAP_PROP_RETURNVALUE_INFO (0x00000201)
-
-// XXX Added by trousers
-// Sub-Capability Flags for TSS_TSPCAP_PLATFORM_INFO
-//
-#define TSS_TSPCAP_PLATFORM_TYPE         (0x00000301)
-#define TSS_TSPCAP_PLATFORM_VERSION      (0x00000302)
 
 //
 // Event type definitions

@@ -7,13 +7,8 @@ TSS Core Service structures
 #ifndef __TCS_DEFINES_H__
 #define __TCS_DEFINES_H__
 
-#define TCS_TCSATTRIB_TRANSPORT_DEFAULT           ((UINT32)(0x00000000))
-#define TCS_TCSATTRIB_TRANSPORT_EXCLUSIVE         ((UINT32)(0x00000001))
-
-/* XXX added by the trousers project */
-#define TSS_TCSATTRIB_TRANSPORT_DEFAULT		TCS_TCSATTRIB_TRANSPORT_DEFAULT
-#define TSS_TCSATTRIB_TRANSPORT_EXCLUSIVE	TCS_TCSATTRIB_TRANSPORT_EXCLUSIVE
-/* XXX end */
+#define TSS_TCSATTRIB_TRANSPORT_DEFAULT           ((UINT32)(0x00000000))
+#define TSS_TCSATTRIB_TRANSPORT_EXCLUSIVE         ((UINT32)(0x00000001))
 
 
 // Values for the ulCredentialType parameter to Tcsi_GetCredential

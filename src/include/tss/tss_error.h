@@ -84,7 +84,7 @@ TSS error return codes
 //
 //  Successful completion of the operation.
 //
-#define TSS_SUCCESS     0x00000000L
+#define TSS_SUCCESS     (UINT32)(0x00000000L)
 
 //
 // MessageId: TSS_E_FAIL

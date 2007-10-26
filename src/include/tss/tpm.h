@@ -145,6 +145,9 @@ typedef UINT16  TPM_STRUCTURE_TAG;
 #define TPM_TAG_CMK_SIGTICKET          ((UINT16)0x0034)
 #define TPM_TAG_CMK_MA_APPROVAL        ((UINT16)0x0035)
 #define TPM_TAG_QUOTE_INFO2            ((UINT16)0x0036)
+#define TPM_TAG_DA_INFO                ((UINT16)0x0037)
+#define TPM_TAG_DA_INFO_LIMITED        ((UINT16)0x0038)
+#define TPM_TAG_DA_ACTION_TYPE         ((UINT16)0x0039)
 
 
 //-------------------------------------------------------------------
@@ -185,6 +188,7 @@ typedef UINT16 TPM_ENTITY_TYPE;                             /* 1.1b */
 #define TPM_ET_DEL_KEY_BLOB            ((UINT16)0x0009)
 #define TPM_ET_COUNTER                 ((UINT16)0x000a)
 #define TPM_ET_NV                      ((UINT16)0x000b)
+#define TPM_ET_OPERATOR                ((UINT16)0x000c)
 #define TPM_ET_RESERVED_HANDLE         ((UINT16)0x0040)
 
 /* The following values may be ORed into the MSB of the TPM_ENTITY_TYPE
@@ -213,7 +217,8 @@ typedef UINT16 TPM_STARTUP_TYPE;                            /* 1.1b */
 
 
 //typedef UINT32 TPM_STARTUP_EFFECTS;
-// 32-bit mask, see spec for meaning. Names not currently defined
+// 32-bit mask, see spec for meaning. Names not currently defined.
+// bits 0-8 have meaning
 
 typedef UINT16 TPM_PROTOCOL_ID;                             /* 1.1b */
 #define TPM_PID_OIAP                   ((UINT16)0x0001)     /* 1.1b */
@@ -225,6 +230,7 @@ typedef UINT16 TPM_PROTOCOL_ID;                             /* 1.1b */
 #define TPM_PID_TRANSPORT              ((UINT16)0x0007)
 
 
+// Note in 1.2 rev 104, DES and 3DES are eliminated
 typedef UINT32 TPM_ALGORITHM_ID;                            /* 1.1b */
 #define TPM_ALG_RSA                    ((UINT32)0x00000001) /* 1.1b */
 #define TPM_ALG_DES                    ((UINT32)0x00000002) /* 1.1b */
@@ -256,7 +262,6 @@ typedef UINT16 TPM_MIGRATE_SCHEME;                          /* 1.1b */
 #define TPM_MS_MAINT                     ((UINT16)0x0003)   /* 1.1b */
 #define TPM_MS_RESTRICT_MIGRATE          ((UINT16)0x0004)
 #define TPM_MS_RESTRICT_APPROVE_DOUBLE   ((UINT16)0x0005)
-#define TPM_MS_RESTRICT_MIGRATE_EXTERNAL ((UINT16)0x0006)
 
 
 typedef UINT16 TPM_EK_TYPE;
@@ -308,20 +313,20 @@ typedef struct tdTPM_DIGEST
     BYTE  digest[TPM_SHA1_160_HASH_LEN];
 } TPM_DIGEST;
 
+typedef TPM_DIGEST TPM_CHOSENID_HASH;
 typedef TPM_DIGEST TPM_COMPOSITE_HASH;
 typedef TPM_DIGEST TPM_DIRVALUE;
 typedef TPM_DIGEST TPM_HMAC;
 typedef TPM_DIGEST TPM_PCRVALUE;
 typedef TPM_DIGEST TPM_AUDITDIGEST;
-typedef TPM_DIGEST TPM_DAA_TPM_SEED;
-typedef TPM_DIGEST TPM_DAA_CONTEXT_SEED;
-
 
 typedef struct tdTPM_NONCE                                  /* 1.1b */
 {
     BYTE  nonce[TPM_SHA1BASED_NONCE_LEN];
 } TPM_NONCE;
 
+typedef TPM_NONCE TPM_DAA_TPM_SEED;
+typedef TPM_NONCE TPM_DAA_CONTEXT_SEED;
 
 typedef struct tdTPM_AUTHDATA                               /* 1.1b */
 {
@@ -531,6 +536,7 @@ typedef struct tdTPM_PERMANENT_FLAGS
     TSS_BOOL readSRKPub;
     TSS_BOOL tpmEstablished;
     TSS_BOOL maintenanceDone;
+    TSS_BOOL disableFullDALogicInfo;
 } TPM_PERMANENT_FLAGS;
 
 #define TPM_PF_DISABLE                      ((UINT32)0x00000001)
@@ -552,6 +558,7 @@ typedef struct tdTPM_PERMANENT_FLAGS
 #define TPM_PF_READSRKPUB                   ((UINT32)0x00000011)
 #define TPM_PF_RESETESTABLISHMENTBIT        ((UINT32)0x00000012)
 #define TPM_PF_MAINTENANCEDONE              ((UINT32)0x00000013)
+#define TPM_PF_DISABLEFULLDALOGICINFO       ((UINT32)0x00000014)
 
 
 //-------------------------------------------------------------------
@@ -596,6 +603,10 @@ typedef struct tdTPM_STANY_FLAGS
 // Part 2, section 7.4: TPM_PERMANENT_DATA
 // available inside TPM only
 //
+//#define TPM_MIN_COUNTERS          4
+//#define TPM_NUM_PCR              16
+//#define TPM_MAX_NV_WRITE_NOOWNER 64
+//
 //typedef struct tdTPM_PERMANENT_DATA
 //{
 //    TPM_STRUCTURE_TAG  tag;
@@ -623,6 +634,8 @@ typedef struct tdTPM_STANY_FLAGS
 //    UINT32             noOwnerNVWrite;
 //    TPM_CMK_DELEGATE   restrictDelegate;
 //    TPM_DAA_TPM_SEED   tpmDAASeed;
+//    TPM_NONCE          daaProof;
+//    TPM_NONCE          daaBlobKey;
 //} TPM_PERMANENT_DATA;
 
 
@@ -637,6 +650,8 @@ typedef struct tdTPM_STANY_FLAGS
 //    TPM_COUNT_ID      countID;
 //    UINT32            ownerReference;
 //    TPM_BOOL          disableResetLock;
+//    TPM_PCRVALUE      PCR[TPM_NUM_PCR];
+//    UINT32            deferredPhysicalPresence;
 //} TPM_STCLEAR_DATA;
     
 
@@ -654,6 +669,11 @@ typedef struct tdTPM_STANY_FLAGS
 //    UINT32            contextCount;
 //    UINT32            contextList[TPM_MIN_SESSION_LIST];
 //    TPM_SESSION_DATA  sessions[TPM_MIN_SESSIONS];
+//    // The following appear in section 22.6 but not in 7.5
+//    TPM_DAA_ISSUER    DAA_issuerSettings;
+//    TPM_DAA_TPM       DAA_tpmSpecific;
+//    TPM_DAA_CONTEXT   DAA_session;
+//    TPM_DAA_JOINDATA  DAA_joinSession;
 //} TPM_STANY_DATA;
     
 
@@ -974,9 +994,6 @@ typedef struct tdTPM_EK_BLOB_AUTH
 } TPM_EK_BLOB_AUTH;
 
 
-// TPM_CHOSENID_HASH = SHA(identityLabel || privacyCA)
-typedef TPM_DIGEST TPM_CHOSENID_HASH;
-
 typedef struct tdTPM_IDENTITY_CONTENTS
 {
     TPM_STRUCT_VER    ver;
@@ -1232,17 +1249,20 @@ typedef struct tdTPM_NV_DATA_SENSITIVE
 #define TPM_DELEGATE_SetOrdinalAuditStatus          (((UINT32)1)<<30)
 #define TPM_DELEGATE_DirWriteAuth                   (((UINT32)1)<<29)
 #define TPM_DELEGATE_CMK_ApproveMA                  (((UINT32)1)<<28)
+#define TPM_DELEGATE_NV_WriteValue                  (((UINT32)1)<<27)
 #define TPM_DELEGATE_CMK_CreateTicket               (((UINT32)1)<<26)
+#define TPM_DELEGATE_NV_ReadValue                   (((UINT32)1)<<25)
 #define TPM_DELEGATE_Delegate_LoadOwnerDelegation   (((UINT32)1)<<24)
 #define TPM_DELEGATE_DAA_Join                       (((UINT32)1)<<23)
 #define TPM_DELEGATE_AuthorizeMigrationKey          (((UINT32)1)<<22)
 #define TPM_DELEGATE_CreateMaintenanceArchive       (((UINT32)1)<<21)
 #define TPM_DELEGATE_LoadMaintenanceArchive         (((UINT32)1)<<20)
 #define TPM_DELEGATE_KillMaintenanceFeature         (((UINT32)1)<<19)
-#define TPM_DELEGATE_OwnerReadInteralPub            (((UINT32)1)<<18)
+#define TPM_DELEGATE_OwnerReadInternalPub           (((UINT32)1)<<18)
 #define TPM_DELEGATE_ResetLockValue                 (((UINT32)1)<<17)
 #define TPM_DELEGATE_OwnerClear                     (((UINT32)1)<<16)
 #define TPM_DELEGATE_DisableOwnerClear              (((UINT32)1)<<15)
+#define TPM_DELEGATE_NV_DefineSpace                 (((UINT32)1)<<14)
 #define TPM_DELEGATE_OwnerSetDisable                (((UINT32)1)<<13)
 #define TPM_DELEGATE_SetCapability                  (((UINT32)1)<<12)
 #define TPM_DELEGATE_MakeIdentity                   (((UINT32)1)<<11)
@@ -1426,6 +1446,7 @@ typedef UINT32 TPM_CAPABILITY_AREA;                         /* 1.1b */
 #define TPM_CAP_TRANS_ES               ((UINT32)0x00000015)
 #define TPM_CAP_AUTH_ENCRYPT           ((UINT32)0x00000017)
 #define TPM_CAP_SELECT_SIZE            ((UINT32)0x00000018)
+#define TPM_CAP_DA_LOGIC               ((UINT32)0x00000019)
 #define TPM_CAP_VERSION_VAL            ((UINT32)0x0000001A)
 
 // Part 2, section 21.1: Subcap values for CAP_FLAG
@@ -1455,8 +1476,10 @@ typedef UINT32 TPM_CAPABILITY_AREA;                         /* 1.1b */
 #define TPM_CAP_PROP_TIS_TIMEOUT       ((UINT32)0x00000115)
 #define TPM_CAP_PROP_STARTUP_EFFECT    ((UINT32)0x00000116)
 #define TPM_CAP_PROP_DELEGATE_ROW      ((UINT32)0x00000117)
-#define TPM_CAP_PROP_DAA_MAX           ((UINT32)0x00000119)
-#define TPM_CAP_PROP_SESSION_DAA       ((UINT32)0x0000011A)
+#define TPM_CAP_PROP_MAX_DAASESS       ((UINT32)0x00000119)
+#define TPM_CAP_PROP_DAA_MAX           TPM_CAP_PROP_MAX_DAASESS
+#define TPM_CAP_PROP_DAASESS           ((UINT32)0x0000011A)
+#define TPM_CAP_PROP_SESSION_DAA       TPM_CAP_PROP_DAASESS
 #define TPM_CAP_PROP_CONTEXT_DIST      ((UINT32)0x0000011B)
 #define TPM_CAP_PROP_DAA_INTERRUPT     ((UINT32)0x0000011C)
 #define TPM_CAP_PROP_SESSIONS          ((UINT32)0x0000011D)
@@ -1478,7 +1501,7 @@ typedef UINT32 TPM_CAPABILITY_AREA;                         /* 1.1b */
 #define TPM_SET_VENDOR                 ((UINT32)0x00000007)
 
 
-// Part 2, section 21.5: TPM_CAP_VERSION_INFO
+// Part 2, section 21.6: TPM_CAP_VERSION_INFO
 typedef struct tdTPM_CAP_VERSION_INFO
 {
     TPM_STRUCTURE_TAG tag;
@@ -1490,6 +1513,49 @@ typedef struct tdTPM_CAP_VERSION_INFO
     SIZEIS(vendorSpecificSize)
         BYTE         *vendorSpecific;
 } TPM_CAP_VERSION_INFO;
+
+
+// Part 2, section 21.9: TPM_DA_STATE
+// out of order to make it available for structure definitions
+typedef BYTE TPM_DA_STATE;
+#define TPM_DA_STATE_INACTIVE          (0x00)
+#define TPM_DA_STATE_ACTIVE            (0x01)
+
+// Part 2, section 21.10: TPM_DA_ACTION_TYPE
+typedef struct tdTPM_DA_ACTION_TYPE
+{
+    TPM_STRUCTURE_TAG tag;
+    UINT32            actions;
+} TPM_DA_ACTION_TYPE;
+#define TPM_DA_ACTION_TIMEOUT          ((UINT32)0x00000001)
+#define TPM_DA_ACTION_DISABLE          ((UINT32)0x00000002)
+#define TPM_DA_ACTION_DEACTIVATE       ((UINT32)0x00000004)
+#define TPM_DA_ACTION_FAILURE_MODE     ((UINT32)0x00000008)
+
+// Part 2, section 21.7: TPM_DA_INFO
+typedef struct tdTPM_DA_INFO
+{
+    TPM_STRUCTURE_TAG  tag;
+    TPM_DA_STATE       state;
+    UINT16             currentCount;
+    UINT16             threshholdCount;
+    TPM_DA_ACTION_TYPE actionAtThreshold;
+    UINT32             actionDependValue;
+    UINT32             vendorDataSize;
+    SIZEIS(vendorDataSize)
+        BYTE          *vendorData;
+} TPM_DA_INFO;
+
+// Part 2, section 21.8: TPM_DA_INFO_LIMITED
+typedef struct tdTPM_DA_INFO_LIMITED
+{
+    TPM_STRUCTURE_TAG  tag;
+    TPM_DA_STATE       state;
+    TPM_DA_ACTION_TYPE actionAtThreshold;
+    UINT32             vendorDataSize;
+    SIZEIS(vendorDataSize)
+        BYTE          *vendorData;
+} TPM_DA_INFO_LIMITED;
 
 
 

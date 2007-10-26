@@ -2,12 +2,15 @@
 #define TCS_H
 #include <tss/platform.h>
 #include <tss/tss_structs.h>
-#include <tss/tcs_defines.h> /* XXX added by the trousers project */
 #include <tss/tcs_typedef.h>
+#include <tss/tcs_defines.h>
 #include <tss/tcs_structs.h>
 #include <tss/tcs_error.h>
 #include <tss/tpm.h>
 
+#if defined __cplusplus
+extern "C" {
+#endif 
 
 extern TSS_RESULT Tcsi_OpenContext
 (
@@ -1117,7 +1120,10 @@ extern TSS_RESULT Tcsi_GetCredential
     UINT32              ulCredentialAccessMode, // in
     UINT32*             pulCredentialSize,      // out
     BYTE**              prgbCredentialData      // out
-
 );
+
+#if defined __cplusplus
+} // extern "C"
+#endif
 
 #endif /* TCS_H */
