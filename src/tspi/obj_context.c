@@ -1132,6 +1132,43 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 			encLen = ulDataLen;
 			pEnc = rgbData;
 			break;
+		case TPM_ORD_DSAP:
+		{
+			UINT64 offset;
+			UINT32 tmpLen, entityValueLen;
+			BYTE *tmpEnc, *entityValuePtr;
+
+			/* DSAP is a special case where only entityValue is encrypted. So, we'll
+			 * parse through rgbData until we get to entityValue, encrypt it, alloc
+			 * new space for rgbData (since it could be up to a block length larger
+			 * than it came in) and copy the unencrypted data and the encrypted
+			 * entityValue to the new block, setting pEnc and encLen to new values. */
+
+			offset = (2 * sizeof(UINT32)) + sizeof(TPM_NONCE);
+			Trspi_UnloadBlob_UINT32(&offset, &entityValueLen, rgbData);
+
+			entityValuePtr = &rgbData[offset];
+			if ((result = do_transport_encryption(&context->transPub, pTransAuth,
+							context->transSecret.authData.authdata,
+							entityValueLen, entityValuePtr, &tmpLen,
+							&tmpEnc)))
+				goto done;
+
+			/* offset is the amount of data before the block we encrypted and tmpLen is
+			 * the size of the encrypted data */
+			encLen = offset + tmpLen;
+			if ((pEnc = malloc(encLen)) == NULL) {
+				LogError("malloc of %u bytes failed.", encLen);
+				result = TSPERR(TSS_E_OUTOFMEMORY);
+				goto done;
+			}
+			memcpy(pEnc, rgbData, offset);
+			memcpy(&pEnc[offset], tmpEnc, tmpLen);
+			free(tmpEnc);
+
+			free_enc = TRUE;
+			break;
+		}
 		default:
 			if ((result = do_transport_encryption(&context->transPub, pTransAuth,
 							context->transSecret.authData.authdata,
@@ -1169,6 +1206,7 @@ obj_context_transport_execute(TSS_HCONTEXT     tspContext,
 		switch (ordinal) {
 		case TPM_ORD_OSAP:
 		case TPM_ORD_OIAP:
+		case TPM_ORD_DSAP:
 			*outLen = ulWrappedDataLen;
 			*out = rgbWrappedData;
 			break;
