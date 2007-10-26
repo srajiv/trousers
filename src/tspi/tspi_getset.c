@@ -166,23 +166,20 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					case TSS_DELEGATIONTYPE_OWNER:
 					case TSS_DELEGATIONTYPE_KEY:
 						result = obj_policy_set_delegation_type(hObject,
-								ulAttrib);
+											ulAttrib);
 						break;
 					default:
 						result = TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 					}
 					break;
 				case TSS_TSPATTRIB_POLDEL_INDEX:
-					result = obj_policy_set_delegation_index(hObject,
-							ulAttrib);
+					result = obj_policy_set_delegation_index(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_POLDEL_PER1:
-					result = obj_policy_set_delegation_per1(hObject,
-							ulAttrib);
+					result = obj_policy_set_delegation_per1(hObject, ulAttrib);
 					break;
 				case TSS_TSPATTRIB_POLDEL_PER2:
-					result = obj_policy_set_delegation_per2(hObject,
-							ulAttrib);
+					result = obj_policy_set_delegation_per2(hObject, ulAttrib);
 					break;
 				default:
 					result = TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);

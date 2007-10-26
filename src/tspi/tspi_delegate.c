@@ -38,8 +38,8 @@ Tspi_TPM_Delegate_AddFamily(TSS_HTPM        hTpm,	/* in, must not be NULL */
 		return TSPERR(TSS_E_BAD_PARAMETER);
 	*phFamily = NULL_HDELFAMILY;
 
-	if ((result = do_delegate_manage(hTpm, familyID, TPM_FAMILY_CREATE,
-			sizeof(bLabel), &bLabel, &outDataSize, &outData)))
+	if ((result = do_delegate_manage(hTpm, familyID, TPM_FAMILY_CREATE, sizeof(bLabel), &bLabel,
+					 &outDataSize, &outData)))
 		return result;
 
 	offset = 0;
