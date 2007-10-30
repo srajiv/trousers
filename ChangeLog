@@ -1,4 +1,5 @@
 
+- Added missing ordinals in tcs_pbg.c as reported by Phil Carmon.
 - Added support for DSAP sessions and delegating authorizations!
 - Added support for DSAP sessions inside a transport session.
 - Prevent Tspi_TPM_GetCapability from switching the endianess of
@@ -13,7 +14,7 @@ and keys.
 not implemented
 - Fix for SF#1802804, Tspi_TPM_Delegate_UpdateVerificationCount
 problem
-- Fix for SF#1799935, Tspi_TPM_delefate_ReadTables bug
+- Fix for SF#1799935, Tspi_TPM_Delegate_ReadTables bug
 - Fix for SF#1799912, policy lifetime counter doesn't reset with
 SetSecret
 - Fix for SF#1799901, policy lifetime timer doesn't reset with
