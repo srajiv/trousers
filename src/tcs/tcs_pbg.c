@@ -1847,6 +1847,9 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 	case TPM_ORD_GetTestResult:
 	case TPM_ORD_KillMaintenanceFeature:
 	case TPM_ORD_Delegate_ReadTable:
+	case TPM_ORD_PhysicalEnable:
+	case TPM_ORD_DisableForceClear:
+	case TPM_ORD_ForceClear:
 	{
 		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
