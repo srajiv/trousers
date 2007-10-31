@@ -207,7 +207,8 @@ Tspi_TPM_SetStatus(TSS_HTPM hTPM,	/* in */
 						      FALSE, &hashDigest, &auth)))
 			return result;
 
-		result = TCS_API(tspContext)->ResetLockValue(tspContext, &auth);
+		if ((result = TCS_API(tspContext)->ResetLockValue(tspContext, &auth)))
+			return result;
 
 		result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 		result |= Trspi_Hash_UINT32(&hashCtx, result);
