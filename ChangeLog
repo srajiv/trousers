@@ -1,4 +1,5 @@
 
+- Added check of return code for ResetDALock call in tspi_admin
 - Added missing ordinals in tcs_pbg.c as reported by Phil Carmon.
 - Added support for DSAP sessions and delegating authorizations!
 - Added support for DSAP sessions inside a transport session.
