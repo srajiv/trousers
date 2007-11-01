@@ -80,9 +80,10 @@ BUILDING the TSS 64-bit
   TrouSerS has been built and tested on ppc64 and x86_64, so please
 don't hesitate to report bugs on these platforms.  Building everything
 64-bit will require a few more flags than are necessary for a 32-bit
-platform.  Here are some example instructions for SLES9 ppc64:
+platform.  Here are some example instructions for ppc64:
 
   $ sh bootstrap.sh
+  $ export PKG_CONFIG_PATH=/usr/lib64/pkgconfig
   $ CFLAGS="-L/usr/lib64 -L/opt/gnome/lib64" LDFLAGS="-L/usr/lib64 \
            -L/opt/gnome/lib64" ./configure --libdir="/usr/local/lib64"
   $ make
