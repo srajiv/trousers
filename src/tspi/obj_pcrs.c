@@ -672,7 +672,7 @@ obj_pcrs_create_info_long(TSS_HPCRS hPcrs, UINT32 *size, BYTE **info)
 	/* localityAtCreation and creationPCRSelection certainly do not need to be set here, but
 	 * some chips such as Winbond do not ignore them on input, so we must give them dummy
 	 * "good" values */
-	infolong.localityAtCreation = TSS_LOCALITY_ALL;
+	infolong.localityAtCreation = TPM_LOC_ZERO;
 	infolong.creationPCRSelection = dummySelection;
 	switch (pcrs->type) {
 		case TSS_PCRS_STRUCT_INFO:
