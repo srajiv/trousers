@@ -5,17 +5,23 @@
 %define version		@VERSION@
 %define release		1
 
-Name:		%{name}
-Summary:	Implementation of the TCG's Software Stack v1.1 Specification
-Version:	%{version}
-Release:	%{release}
-License:	CPL
-Group:		System Environment/Libraries
-Source:		%{name}-%{version}.tar.gz
-Url:		http://www.sf.net/projects/trousers
-BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires:	libtool, gtk2-devel, openssl-devel
-Requires:	gtk+ >= 2.0, openssl
+Name:			%{name}
+Summary:		Implementation of the TCG's Software Stack v1.1 Specification
+Version:		%{version}
+Release:		%{release}
+License:		CPL
+Group:			Development/Libraries
+Source:			%{name}-%{version}.tar.gz
+Url:			http://www.sf.net/projects/trousers
+BuildRoot:		%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires:		libtool, gtk2-devel, openssl-devel
+Requires:		gtk+ >= 2.0, openssl
+Requires(post):		/sbin/ldconfig
+Requires(post):		/sbin/chkconfig
+Requires(postun):	/sbin/ldconfig
+Requires(postun):	/sbin/service
+Requires(preun):	/sbin/chkconfig
+Requires(preun):	/sbin/service
 
 %description
 TrouSerS is an implementation of the Trusted Computing Group's Software Stack
@@ -34,18 +40,28 @@ Header files and man pages for use in creating Trusted Computing enabled
 applications.
 
 %prep
-%setup
+%setup -q
 
 %build
-%configure
+autoreconf
 make %{?_smp_mflags}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && [ -d ${RPM_BUILD_ROOT} ] && rm -rf ${RPM_BUILD_ROOT};
 
+#
+# $1 is the number of entries in the RPM database for the package after the step is
+# executed. So in the post step, if $1 is 1, then this is the first time we've been
+# installed. If its 2, we're upgrading.
+#
 %post
-chkconfig --add tcsd
 /sbin/ldconfig
+if [ $1 = 1 ]; then
+	/sbin/chkconfig --add tcsd
+	if [ $? == 0 ]; then
+		/sbin/chkconfig --level 35 tcsd on
+	fi
+fi
 
 %post devel -p /sbin/ldconfig
 
@@ -59,10 +75,16 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 rm -f ${RPM_BUILD_ROOT}/%{_libdir}/libtspi.la
 
 %preun
-%{_initrddir}/tcsd stop
-chkconfig --del tcsd
+if [ $1 = 0 ]; then
+	/sbin/service tcsd stop &> /dev/null
+	/sbin/chkconfig --del tcsd
+fi
 
-%postun -p /sbin/ldconfig
+%postun
+/sbin/ldconfig
+if [ $1 -gt 1 ]; then
+	/sbin/service tcsd condrestart &>/dev/null
+fi
 
 %postun devel -p /sbin/ldconfig
 
@@ -79,17 +101,20 @@ chkconfig --del tcsd
 
 # The files to be used by developers, 'trousers-devel'
 %files		devel
-%defattr(755, root, root)
-%{_libdir}/libtspi.so
+%attr(755, root, root) %{_libdir}/libtspi.so
+%defattr(644, root, root)
 %{_libdir}/libtddl.a
-%attr(644, root, root) %{_includedir}/tss/*.h
-%attr(644, root, root) %{_includedir}/trousers/*.h
-%attr(644, root, root) %{_mandir}/man3/Tspi_*
+%{_includedir}/tss/*.h
+%{_includedir}/trousers/*.h
+%{_mandir}/man3/Tspi_*
 
 %changelog
+* Mon Nov 12 2007 Kent Yoder <kyoder@users.sf.net> - 0.3.1
+- Updated specfile for comments in RHBZ#323441
+
 * Wed Jun 07 2006 Kent Yoder <kyoder@users.sf.net> - 0.2.6-1
-- Updated %build section to use smp_mflags
-- Removed .la file from installed dest and %files section
+- Updated build section to use smp_mflags
+- Removed .la file from installed dest and files section
 
 * Tue Jun 06 2006 Kent Yoder <kyoder@users.sf.net> - 0.2.6-1
 - Initial add of changelog tag for trousers CVS
