@@ -254,11 +254,13 @@ internal_EvictByKeySlot(TCPA_KEY_HANDLE slot)
 
 	LogDebug("Entering Evict Key");
 
+#ifdef TSS_BUILD_TSS12
 	if (TPM_VERSION_IS(1,2)) {
 		LogDebugFn("Evicting key using FlushSpecific for TPM 1.2");
 
 		return TCSP_FlushSpecific_Common(slot, TPM_RT_KEY);
 	}
+#endif
 
 	offset = 10;
 	LoadBlob_UINT32(&offset, slot, txBlob);
