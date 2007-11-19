@@ -218,6 +218,7 @@ tcs_wrap_LoadKeyByBlob(struct tcsd_thread_data *data)
 	return TSS_SUCCESS;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 tcs_wrap_LoadKey2ByBlob(struct tcsd_thread_data *data)
 {
@@ -289,6 +290,7 @@ tcs_wrap_LoadKey2ByBlob(struct tcsd_thread_data *data)
 
 	return TSS_SUCCESS;
 }
+#endif
 
 TSS_RESULT
 tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
@@ -365,6 +367,7 @@ tcs_wrap_CreateWrapKey(struct tcsd_thread_data *data)
 	return TSS_SUCCESS;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 tcs_wrap_OwnerReadInternalPub(struct tcsd_thread_data *data)
 {
@@ -431,11 +434,11 @@ tcs_wrap_KeyControlOwner(struct tcsd_thread_data *data)
 	rgbPublicKey = (BYTE *) malloc(ulPublicKeyLength);
 	if (rgbPublicKey == NULL) {
 		LogError("malloc of %u bytes failed.", ulPublicKeyLength);
-		return TSPERR(TSS_E_OUTOFMEMORY);
+		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 3, rgbPublicKey, ulPublicKeyLength, &data->comm)) {
 		free(rgbPublicKey);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &attribName, 0, &data->comm)) {
 		free(rgbPublicKey);
@@ -470,3 +473,4 @@ tcs_wrap_KeyControlOwner(struct tcsd_thread_data *data)
 	return TSS_SUCCESS;
 
 }
+#endif
