@@ -32,6 +32,7 @@ struct tr_context_obj {
 	UINT32 machineNameLength;
 	UINT32 connection_policy, current_connection;
 	struct tcs_api_table *tcs_api;
+#ifdef TSS_BUILD_TRANSPORT
 	/* transport session support */
 	TSS_HKEY transKey;
 	TPM_TRANSPORT_PUBLIC transPub;
@@ -41,6 +42,7 @@ struct tr_context_obj {
 	TPM_TRANSPORT_LOG_IN transLogIn;
 	TPM_TRANSPORT_LOG_OUT transLogOut;
 	TPM_DIGEST transLogDigest;
+#endif
 };
 
 /* obj_context.c */
@@ -59,6 +61,7 @@ TSS_RESULT obj_context_get_hash_mode(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_set_hash_mode(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_context_get_connection_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_set_connection_policy(TSS_HCONTEXT, UINT32);
+#ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT obj_context_set_transport_key(TSS_HCONTEXT, TSS_HKEY);
 TSS_RESULT obj_context_transport_get_control(TSS_HCONTEXT, UINT32, UINT32 *);
 TSS_RESULT obj_context_transport_set_control(TSS_HCONTEXT, UINT32);
@@ -71,6 +74,7 @@ TSS_RESULT obj_context_transport_execute(TSS_HCONTEXT, TPM_COMMAND_CODE, UINT32,
 					 BYTE**);
 TSS_RESULT obj_context_transport_close(TSS_HCONTEXT, TSS_HKEY, TSS_HPOLICY, TSS_BOOL,
 				       TPM_SIGN_INFO*, UINT32*, BYTE**);
+#endif
 TSS_RESULT obj_context_set_tpm_version(TSS_HCONTEXT, UINT32);
 TSS_RESULT obj_context_get_tpm_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
