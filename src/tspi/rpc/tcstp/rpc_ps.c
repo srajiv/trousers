@@ -337,7 +337,7 @@ RPC_LoadKeyByUUID_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 
 		LogDebugFn("TCS key handle: 0x%x", *phKeyTCSI);
-	} else if (pLoadKeyInfo && (result == TCSERR(TCS_E_KM_LOADFAILED))) {
+	} else if (pLoadKeyInfo && (result == (TCS_E_KM_LOADFAILED | TSS_LAYER_TCS))) {
 		if (getData(TCSD_PACKET_TYPE_LOADKEY_INFO, 0, pLoadKeyInfo, 0, &hte->comm))
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 	}
