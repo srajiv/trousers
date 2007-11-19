@@ -134,11 +134,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 			return result;
 	}
 
-	if ((result = Tspi_GetAttribData(hKeySRK,
-					 TSS_TSPATTRIB_KEY_BLOB,
-					 TSS_TSPATTRIB_KEYBLOB_BLOB,
-					 &srkKeyBlobLength,
-					 &srkKeyBlob)))
+	if ((result = obj_rsakey_get_blob(hKeySRK, &srkKeyBlobLength, &srkKeyBlob)))
 		return result;
 
 	/* Authorizatin Digest Calculation */
@@ -150,6 +146,7 @@ secret_TakeOwnership(TSS_HKEY hEndorsementPubKey,
 	result |= Trspi_Hash_UINT32(&hashCtx, *encSRKAuthLength);
 	result |= Trspi_HashUpdate(&hashCtx, *encSRKAuthLength, encSRKAuth);
 	result |= Trspi_HashUpdate(&hashCtx, srkKeyBlobLength, srkKeyBlob);
+	free_tspi(tspContext, srkKeyBlob);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		return result;
 
