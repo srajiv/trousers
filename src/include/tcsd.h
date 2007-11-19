@@ -29,7 +29,7 @@ struct platform_class
 struct tcsd_config
 {
 	int port;		/* port the TCSD will listen on */
-	int num_threads;	/* max number of threads the TCSD allows simultaneously */
+	unsigned int num_threads;	/* max number of threads the TCSD allows simultaneously */
 	char *system_ps_dir;	/* the directory the system PS file sits in */
 	char *system_ps_file;	/* the name of the system PS file */
 	char *firmware_log_file;/* the name of the firmware PCR event file */
@@ -65,7 +65,7 @@ struct tcsd_config
 #define TCSD_MAX_PCRS			32
 
 /* this is the 2nd param passed to the listen() system call */
-#define TCSD_MAX_SOCKETS_QUEUED		10
+#define TCSD_MAX_SOCKETS_QUEUED		50
 #define TCSD_TXBUF_SIZE			1024
 
 /* The Available Tcs Platform Classes */
