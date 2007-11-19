@@ -200,6 +200,13 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		   TSS_HKEY hWrappingKey,	/* in */
 		   TSS_HPCRS hPcrComposite)	/* in, may be NULL */
 {
+#ifdef TSS_BUILD_CMK
+	UINT32 blobSize;
+	BYTE *blob;
+	TSS_BOOL isCmk = FALSE;
+	TPM_HMAC msaApproval;
+	TPM_DIGEST msaDigest;
+#endif
 	TCPA_DIGEST digest;
 	TCPA_RESULT result;
 	TCS_KEY_HANDLE parentTCSKeyHandle;
@@ -207,12 +214,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 	UINT32 keySize;
 	UINT32 newKeySize;
 	BYTE *newKey = NULL;
-	TSS_BOOL isCmk = FALSE;
-	UINT32 blobSize;
-	BYTE *blob;
-	TPM_HMAC msaApproval;
-	TPM_DIGEST msaDigest;
-	UINT32 ordinal;
+	UINT32 ordinal = TPM_ORD_CreateWrapKey;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
 	struct authsess *xsap = NULL;
@@ -247,28 +249,32 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 			goto done;
 		memcpy(msaDigest.digest, blob, sizeof(msaDigest.digest));
 		free_tspi(tspContext, blob);
+
+		ordinal = TPM_ORD_CMK_CreateKey;
 	}
 #endif
 
-	ordinal = isCmk ? TPM_ORD_CMK_CreateKey : TPM_ORD_CreateWrapKey;
 	if ((result = authsess_xsap_init(tspContext, hWrappingKey, hKey, TSS_AUTH_POLICY_REQUIRED,
 					 ordinal, TPM_ET_KEYHANDLE, &xsap)))
 		return result;
 
 	/* Setup the Hash Data for the HMAC */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+#ifdef TSS_BUILD_CMK
 	if (isCmk) {
-		result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
 		result |= Trspi_Hash_ENCAUTH(&hashCtx, xsap->encAuthUse.authdata);
 		result |= Trspi_HashUpdate(&hashCtx, keySize, keyBlob);
 		result |= Trspi_Hash_HMAC(&hashCtx, msaApproval.digest);
 		result |= Trspi_Hash_DIGEST(&hashCtx, msaDigest.digest);
 	} else {
-		result |= Trspi_Hash_UINT32(&hashCtx, ordinal);
+#endif
 		result |= Trspi_Hash_DIGEST(&hashCtx, xsap->encAuthUse.authdata);
 		result |= Trspi_Hash_DIGEST(&hashCtx, xsap->encAuthMig.authdata);
 		result |= Trspi_HashUpdate(&hashCtx, keySize, keyBlob);
+#ifdef TSS_BUILD_CMK
 	}
+#endif
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 		goto done;
 
@@ -276,6 +282,7 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 		goto done;
 
 	/* Now call the function */
+#ifdef TSS_BUILD_CMK
 	if (isCmk) {
 		if ((newKey = malloc(keySize)) == NULL) {
 			LogError("malloc of %u bytes failed.", keySize);
@@ -291,13 +298,16 @@ Tspi_Key_CreateKey(TSS_HKEY hKey,		/* in */
 						xsap->pAuth)))
 			goto done;
 	} else {
+#endif
 		if ((result = TCS_API(tspContext)->CreateWrapKey(tspContext, parentTCSKeyHandle,
 								 (TPM_ENCAUTH *)&xsap->encAuthUse,
 								 (TPM_ENCAUTH *)&xsap->encAuthMig,
 								 keySize, keyBlob, &newKeySize,
 								 &newKey, xsap->pAuth)))
 			goto done;
+#ifdef TSS_BUILD_CMK
 	}
+#endif
 
 	/* Validate the Authorization before using the new key */
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
