@@ -13,9 +13,12 @@
 #include <string.h>
 #include <syslog.h>
 
+#include "trousers/tss.h"
 #include "tcslog.h"
 
 int foreground = 0;
+
+#ifdef TSS_DEBUG
 
 /*
  * LogBlobData()
@@ -57,4 +60,29 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	}
 }
 
+void
+LogTPMERR(TSS_RESULT result, char *file, int line)
+{
+	if (getenv("TSS_DEBUG_OFF") == NULL)
+		fprintf(stderr, "%s %s %s:%d: 0x%x\n", "LOG_RETERR", "TPM", file, line, result);
+}
 
+TSS_RESULT
+LogTDDLERR(TSS_RESULT result, char *file, int line)
+{
+	if (getenv("TSS_DEBUG_OFF") == NULL)
+		fprintf(stderr, "%s %s %s:%d: 0x%x\n", "LOG_RETERR", APPID, file, line, result);
+
+	return (result | TSS_LAYER_TDDL);
+}
+
+TSS_RESULT
+LogTCSERR(TSS_RESULT result, char *file, int line)
+{
+	if (getenv("TSS_DEBUG_OFF") == NULL)
+		fprintf(stderr, "%s %s %s:%d: 0x%x\n", "LOG_RETERR", APPID, file, line, result);
+
+	return (result | TSS_LAYER_TCS);
+}
+
+#endif
