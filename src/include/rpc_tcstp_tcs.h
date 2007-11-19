@@ -23,6 +23,7 @@ DECLARE_TCSTP_FUNC(OIAP);
 DECLARE_TCSTP_FUNC(OSAP);
 DECLARE_TCSTP_FUNC(GetCapability);
 DECLARE_TCSTP_FUNC(GetCapabilityOwner);
+DECLARE_TCSTP_FUNC(SetCapability);
 
 #ifdef TSS_BUILD_RANDOM
 DECLARE_TCSTP_FUNC(GetRandom);
@@ -59,11 +60,12 @@ DECLARE_TCSTP_FUNC(GetPubkey);
 DECLARE_TCSTP_FUNC(TerminateHandle);
 DECLARE_TCSTP_FUNC(LoadKeyByBlob);
 DECLARE_TCSTP_FUNC(CreateWrapKey);
-DECLARE_TCSTP_FUNC(OwnerReadInternalPub);
 #ifdef TSS_BUILD_TSS12
 DECLARE_TCSTP_FUNC(KeyControlOwner);
+DECLARE_TCSTP_FUNC(OwnerReadInternalPub);
 #else
 #define tcs_wrap_KeyControlOwner	tcs_wrap_Error
+#define tcs_wrap_OwnerReadInternalPub	tcs_wrap_Error
 #endif
 #else
 #define tcs_wrap_EvictKey		tcs_wrap_Error
@@ -71,7 +73,6 @@ DECLARE_TCSTP_FUNC(KeyControlOwner);
 #define tcs_wrap_TerminateHandle	tcs_wrap_Error
 #define tcs_wrap_LoadKeyByBlob		tcs_wrap_Error
 #define tcs_wrap_CreateWrapKey		tcs_wrap_Error
-#define tcs_wrap_OwnerReadInternalPub	tcs_wrap_Error
 #define tcs_wrap_KeyControlOwner	tcs_wrap_Error
 
 #endif
@@ -207,11 +208,11 @@ DECLARE_TCSTP_FUNC(PhysicalPresence);
 DECLARE_TCSTP_FUNC(SetTempDeactivated);
 #ifdef TSS_BUILD_TSS12
 DECLARE_TCSTP_FUNC(SetTempDeactivated2);
+DECLARE_TCSTP_FUNC(ResetLockValue);
 #else
 #define tcs_wrap_SetTempDeactivated2	tcs_wrap_Error
+#define tcs_wrap_ResetLockValue		tcs_wrap_Error
 #endif
-DECLARE_TCSTP_FUNC(SetCapability);
-DECLARE_TCSTP_FUNC(ResetLockValue);
 #else
 #define tcs_wrap_DisableOwnerClear	tcs_wrap_Error
 #define tcs_wrap_ForceClear		tcs_wrap_Error
@@ -224,7 +225,6 @@ DECLARE_TCSTP_FUNC(ResetLockValue);
 #define tcs_wrap_PhysicalPresence	tcs_wrap_Error
 #define tcs_wrap_SetTempDeactivated	tcs_wrap_Error
 #define tcs_wrap_SetTempDeactivated2	tcs_wrap_Error
-#define tcs_wrap_SetCapability		tcs_wrap_Error
 #define tcs_wrap_ResetLockValue		tcs_wrap_Error
 #endif
 
@@ -236,19 +236,16 @@ DECLARE_TCSTP_FUNC(CertifyKey);
 
 #ifdef TSS_BUILD_AIK
 DECLARE_TCSTP_FUNC(MakeIdentity);
-DECLARE_TCSTP_FUNC(MakeIdentity2);
-DECLARE_TCSTP_FUNC(GetCredential);
 DECLARE_TCSTP_FUNC(ActivateIdentity);
 #ifdef TSS_BUILD_TSS12
-DECLARE_TCSTP_FUNC(MakeIdentity2);
+DECLARE_TCSTP_FUNC(GetCredential);
 #else
-#define tcs_wrap_MakeIdentity2		tcs_wrap_Error
+#define tcs_wrap_GetCredential		tcs_wrap_Error
 #endif
 #else
 #define tcs_wrap_MakeIdentity		tcs_wrap_Error
-#define tcs_wrap_MakeIdentity2      tcs_wrap_Error
-#define tcs_wrap_GetCredential		tcs_wrap_Error
 #define tcs_wrap_ActivateIdentity	tcs_wrap_Error
+#define tcs_wrap_GetCredential		tcs_wrap_Error
 #endif
 
 #ifdef TSS_BUILD_MIGRATION
