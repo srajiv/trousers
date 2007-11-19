@@ -58,8 +58,12 @@ extern struct tpm_properties tpm_metrics;
 	 (!uuid->rgbNode[1]) && (!uuid->rgbNode[2]) && (!uuid->rgbNode[3]) && \
 	 (uuid->rgbNode[4] == 1))
 
+#ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 TSS_RESULT get_tpm_metrics(struct tpm_properties *);
 
@@ -204,7 +208,12 @@ void UnloadBlob_BOOL(UINT64 *, TSS_BOOL *, BYTE *);
 void LoadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
 void UnloadBlob(UINT64 *, UINT32, BYTE *, BYTE *);
 void LoadBlob_Header(UINT16, UINT32, UINT32, BYTE *);
+#ifdef TSS_DEBUG
+#define UnloadBlob_Header(b,u)	LogUnloadBlob_Header(b,u, __FILE__, __LINE__)
+TSS_RESULT LogUnloadBlob_Header(BYTE *, UINT32 *, char *, int);
+#else
 TSS_RESULT UnloadBlob_Header(BYTE *, UINT32 *);
+#endif
 TSS_RESULT UnloadBlob_MIGRATIONKEYAUTH(UINT64 *, BYTE *, TCPA_MIGRATIONKEYAUTH *);
 void LoadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
 void UnloadBlob_Auth(UINT64 *, BYTE *, TPM_AUTH *);
