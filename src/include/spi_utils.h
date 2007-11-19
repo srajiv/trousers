@@ -34,7 +34,9 @@ struct key_mem_cache
 extern struct key_mem_cache *key_mem_cache_head;
 MUTEX_DECLARE_EXTERN(mem_cache_lock);
 
+#ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define BOOL(x)		((x) == 0) ? FALSE : TRUE
 #define INVBOOL(x)	((x) == 0) ? TRUE : FALSE
@@ -621,6 +623,8 @@ struct tcs_api_table {
 };
 
 extern struct tcs_api_table tcs_normal_api;
+#ifdef TSS_BUILD_TRANSPORT
 extern struct tcs_api_table tcs_transport_api;
+#endif
 
 #endif
