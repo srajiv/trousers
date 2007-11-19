@@ -1718,7 +1718,7 @@ obj_rsakey_set_srk_pubkey(BYTE *pubkey)
 	struct tsp_object *obj, *prev = NULL;
 	struct obj_list *list = &rsakey_list;
 	struct tr_rsakey_obj *rsakey;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
 	MUTEX_LOCK(list->lock);
 
@@ -1728,13 +1728,14 @@ obj_rsakey_set_srk_pubkey(BYTE *pubkey)
 		/* we found the SRK, set this data as its public key */
 		if (rsakey->tcsHandle == TPM_KEYHND_SRK) {
 			result = rsakey_set_pubkey(rsakey, pubkey);
-			break;
+			MUTEX_UNLOCK(list->lock);
+			return result;
 		}
 	}
 
 	MUTEX_UNLOCK(list->lock);
 
-	return result;
+	return TSPERR(TSS_E_INVALID_HANDLE);
 }
 
 TSS_RESULT

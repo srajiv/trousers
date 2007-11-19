@@ -163,7 +163,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &encDataSize, &encData)))
-		return result == TSPERR(TSS_E_INVALID_OBJ_ACCESS) ?
+		return result == (TSS_E_INVALID_OBJ_ACCESS | TSS_LAYER_TSP) ?
 		       TSPERR(TSS_E_ENC_NO_DATA) :
 		       result;
 

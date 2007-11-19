@@ -167,7 +167,6 @@ TSS_RESULT
 obj_list_remove(struct obj_list *list, void (*freeFcn)(void *), TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
 	struct tsp_object *obj, *prev = NULL;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
 
 	MUTEX_LOCK(list->lock);
 
@@ -184,14 +183,15 @@ obj_list_remove(struct obj_list *list, void (*freeFcn)(void *), TSS_HOBJECT hObj
 			else
 				list->head = obj->next;
 			free(obj);
-			result = TSS_SUCCESS;
-			break;
+
+			MUTEX_UNLOCK(list->lock);
+			return TSS_SUCCESS;
 		}
 	}
 
 	MUTEX_UNLOCK(list->lock);
 
-	return result;
+	return TSPERR(TSS_E_INVALID_HANDLE);
 }
 
 /* a generic routine for removing all members of a list who's tsp context
