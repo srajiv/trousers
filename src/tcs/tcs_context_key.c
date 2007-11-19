@@ -113,7 +113,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 {
 	struct tcs_context *c;
 	struct keys_loaded *k = NULL, *new;
-	TSS_RESULT result = TCSERR(TSS_E_FAIL);
+	TSS_RESULT result;
 
 	MUTEX_LOCK(tcs_ctx_lock);
 
@@ -135,7 +135,7 @@ ctx_mark_key_loaded(TCS_CONTEXT_HANDLE ctx_handle, TCS_KEY_HANDLE key_handle)
 		}
 	} else {
 		MUTEX_UNLOCK(tcs_ctx_lock);
-		return result;
+		return TCSERR(TSS_E_FAIL);
 	}
 
 	/* if we have no record of this key being loaded by this context, create a new
