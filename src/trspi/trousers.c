@@ -1512,7 +1512,8 @@ char_width(char *codeset)
 BYTE *
 Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 {
-	char *ptr, *ret, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	char *ret, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	BSD_CONST char *ptr;
 	unsigned len = 0, tmplen;
 	iconv_t cd = 0;
 	size_t rc, outbytesleft, inbytesleft;
@@ -1570,7 +1571,8 @@ alloc_string:
 BYTE *
 Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 {
-	char *ret, *ptr, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	char *ret, *outbuf, tmpbuf[MAX_BUF_SIZE] = { 0, };
+	BSD_CONST char *ptr;
 	unsigned len = 0, tmplen;
 	iconv_t cd;
 	size_t rc, outbytesleft, inbytesleft;
