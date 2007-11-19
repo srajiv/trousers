@@ -86,9 +86,11 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_VERSION:
 			Trspi_LoadBlob_TCPA_VERSION(offset, blob, *((TCPA_VERSION *)data));
 			break;
+#ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			LoadBlob_LOADKEY_INFO(offset, blob, ((TCS_LOADKEY_INFO *)data));
 			break;
+#endif
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			Trspi_LoadBlob_PCR_EVENT(offset, blob, ((TSS_PCR_EVENT *)data));
 			break;
@@ -100,7 +102,7 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 			break;
 		default:
 			LogError("TCSD packet type unknown! (0x%x)", data_type & 0xff);
-			return TCSERR(TSS_E_INTERNAL_ERROR);
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -123,7 +125,7 @@ setData(TCSD_PACKET_TYPE dataType,
                 return result;
         if (((int)comm->hdr.packet_size + (int)offset) < 0) {
                 LogError("Too much data to be transmitted!");
-                return TCSERR(TSS_E_INTERNAL_ERROR);
+                return TSPERR(TSS_E_INTERNAL_ERROR);
         }
         if (((int)comm->hdr.packet_size + (int)offset) > comm->buf_size) {
                 /* reallocate the buffer */
@@ -134,7 +136,7 @@ setData(TCSD_PACKET_TYPE dataType,
                 buffer = realloc(comm->buf, buffer_size);
                 if (buffer == NULL) {
                         LogError("realloc of %d bytes failed.", buffer_size);
-                        return TCSERR(TSS_E_INTERNAL_ERROR);
+                        return TSPERR(TSS_E_INTERNAL_ERROR);
                 }
                 comm->buf_size = buffer_size;
                 comm->buf = buffer;
@@ -220,9 +222,11 @@ getData(TCSD_PACKET_TYPE dataType,
 								   ((TSS_KM_KEYINFO2 *)theData))))
 				return result;
 			break;
+#ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			UnloadBlob_LOADKEY_INFO(&offset, comm->buf, ((TCS_LOADKEY_INFO *)theData));
 			break;
+#endif
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			if ((result = Trspi_UnloadBlob_PCR_EVENT(&offset, comm->buf,
 								 ((TSS_PCR_EVENT *)theData))))
