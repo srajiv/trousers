@@ -202,6 +202,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				} else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
+#ifdef TSS_BUILD_TRANSPORT
 			case TSS_TSPATTRIB_CONTEXT_TRANSPORT:
 				if (subFlag == TSS_TSPATTRIB_CONTEXTTRANS_CONTROL) {
 					if (ulAttrib != TSS_TSPATTRIB_DISABLE_TRANSPORT &&
@@ -227,6 +228,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 
 				break;
+#endif
 			case TSS_TSPATTRIB_SECRET_HASH_MODE:
 				result = obj_context_set_hash_mode(hObject, ulAttrib);
 				break;
@@ -552,6 +554,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
+#ifdef TSS_BUILD_TRANSPORT
 			case TSS_TSPATTRIB_CONTEXT_TRANSPORT:
 				if (subFlag == TSS_TSPATTRIB_DISABLE_TRANSPORT ||
 				    subFlag == TSS_TSPATTRIB_ENABLE_TRANSPORT) {
@@ -568,6 +571,7 @@ Tspi_GetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				} else
 					return TSPERR(TSS_E_INVALID_ATTRIB_SUBFLAG);
 				break;
+#endif
 			default:
 				return TSPERR(TSS_E_INVALID_ATTRIB_FLAG);
 				break;

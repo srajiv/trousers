@@ -481,6 +481,7 @@ obj_tpm_remove_policy_refs(TSS_HPOLICY hPolicy, TSS_HCONTEXT tspContext)
 	pthread_mutex_unlock(&list->lock);
 }
 
+#ifdef TSS_BUILD_COUNTER
 TSS_RESULT
 obj_tpm_get_current_counter(TSS_HTPM hTPM, TSS_COUNTER_ID *ctr_id)
 {
@@ -526,4 +527,5 @@ done:
 
 	return result;
 }
+#endif
 

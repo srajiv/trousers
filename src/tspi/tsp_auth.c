@@ -607,6 +607,7 @@ authsess_oiap_put(TPM_AUTH *auth)
 }
 #endif
 
+#ifdef TSS_BUILD_DELEGATION
 TSS_RESULT
 authsess_do_dsap(struct authsess *sess)
 {
@@ -641,6 +642,7 @@ authsess_do_dsap(struct authsess *sess)
 
 	return result;
 }
+#endif
 
 TSS_RESULT
 authsess_do_osap(struct authsess *sess)
@@ -873,13 +875,15 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 			goto error;
 		break;
 	/* Child is an Encdata object */
-	case TPM_ORD_Sealx:
 	case TPM_ORD_Unseal:
+#ifdef TSS_BUILD_SEALX
+	case TPM_ORD_Sealx:
 		/* These may be overwritten down below, when obj_policy_get_xsap_params is called
 		 * on the child usage policy */
 		sess->cb_sealx.callback = sealx_mask_cb;
 		sess->cb_sealx.appData = (PVOID)sess;
 		/* fall through */
+#endif
 	case TPM_ORD_Seal:
 		if ((result = obj_encdata_get_policy(obj_child, TSS_POLICY_USAGE,
 						     &sess->hUsageChild)))
@@ -888,6 +892,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		if ((result = obj_rsakey_get_tcs_handle(obj_parent, &sess->obj_parent)))
 			goto error;
 		break;
+#ifdef TSS_BUILD_NV
 	/* Child is an NV object */
 	case TPM_ORD_NV_DefineSpace:
 		/* The requirements variable tells us whether nv object auth is required */
@@ -921,6 +926,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		}
 
 		break;
+#endif
 	/* Child is a Key object */
 	case TPM_ORD_MakeIdentity:
 		if ((result = obj_rsakey_get_policy(obj_child, TSS_POLICY_USAGE,
@@ -964,13 +970,16 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	sess->pAuth = &sess->auth;
 	sess->command = command;
 
+#ifdef TSS_BUILD_DELEGATION
 	/* if entityValue is set, we have a custom entity, i.e. delegation blob or row */
 	if (sess->entityValue) {
 		/* DSAP's entity type was pulled from the policy in the authsess_xsap_init call
 		 * above */
 		if ((result = authsess_do_dsap(sess)))
 			goto error;
-	} else {
+	}
+#endif
+	if (!sess->entityValue) {
 		sess->entity_type = entity_type;
 		if ((result = authsess_do_osap(sess)))
 			goto error;
@@ -1071,6 +1080,7 @@ TSS_RESULT
 free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
 {
 	TSS_RESULT result = TSS_SUCCESS;
+#ifdef TSS_BUILD_TSS12
 	UINT32 version = 0;
 
 	if ((result = obj_context_get_tpm_version(tspContext, &version)))
@@ -1079,6 +1089,7 @@ free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
 	if (version == 2) {
 		return TCS_API(tspContext)->FlushSpecific(tspContext, handle, resourceType);
 	}
+#endif
 
 	switch (resourceType) {
 		case TPM_RT_KEY:

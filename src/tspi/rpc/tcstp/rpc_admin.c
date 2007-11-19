@@ -254,6 +254,7 @@ RPC_SetTempDeactivated_TP(struct host_table_entry *hte)
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_SetTempDeactivated2_TP(struct host_table_entry *hte,
 			   TPM_AUTH *operatorAuth)		/* in/out */
@@ -291,6 +292,7 @@ RPC_SetTempDeactivated2_TP(struct host_table_entry *hte,
 
 	return result;
 }
+#endif
 
 TSS_RESULT
 RPC_FieldUpgrade_TP(struct host_table_entry *hte,
@@ -314,6 +316,7 @@ RPC_SetRedirection_TP(struct host_table_entry *hte,
 
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_ResetLockValue_TP(struct host_table_entry *hte,
 		      TPM_AUTH * ownerAuth)   /* in, out */
@@ -367,3 +370,4 @@ RPC_FlushSpecific_TP(struct host_table_entry *hte,
 
 	return result;
 }
+#endif

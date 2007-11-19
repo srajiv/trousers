@@ -213,6 +213,7 @@ done:
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_CreateRevocableEndorsementKeyPair_TP(struct host_table_entry *hte,
 					 TPM_NONCE antiReplay,		/* in */
@@ -300,4 +301,4 @@ RPC_RevokeEndorsementKeyPair_TP(struct host_table_entry *hte,
 
 	return result;
 }
-
+#endif

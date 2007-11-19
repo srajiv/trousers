@@ -257,6 +257,7 @@ done:
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 Tspi_TPM_CreateRevocableEndorsementKey(TSS_HTPM hTPM,			/* in */
 				       TSS_HKEY hKey,			/* in */
@@ -433,4 +434,5 @@ Tspi_TPM_RevokeEndorsementKey(TSS_HTPM hTPM,			/* in */
 
 	return result;
 }
+#endif
 

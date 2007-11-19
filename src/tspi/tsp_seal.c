@@ -21,6 +21,8 @@
 #include "tsplog.h"
 #include "authsess.h"
 
+
+#ifdef TSS_BUILD_SEALX
 TSS_RESULT
 sealx_mask_cb(PVOID lpAppData,
 	      TSS_HKEY hEncKey,
@@ -67,6 +69,7 @@ done:
 
 	return result;
 }
+#endif
 
 #ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT

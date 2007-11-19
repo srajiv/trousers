@@ -901,7 +901,7 @@ obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
 		result = TSPERR(TSS_E_INVALID_OBJ_ACCESS);
 		goto done;
 	}
-
+#ifdef TSS_BUILD_DELEGATION
 	/* if the delegation index or blob is set, check to see if the command is delegated, if so,
 	 * return the blob or index as the secret data */
 	if (command && (policy->delegationType != TSS_DELEGATIONTYPE_NONE)) {
@@ -931,7 +931,7 @@ obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
 			*et = TPM_ET_DEL_ROW;
 		}
 	}
-
+#endif
 	/* Either this is a policy set to mode callback, in which case both xor and hmac addresses
 	 * must be set, or this is an encrypted data object's policy, where its mode is independent
 	 * of whether a sealx callback is set */
@@ -949,10 +949,12 @@ obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
 		cb_hmac->callback = policy->Tspicb_CallbackHMACAuth;
 		cb_hmac->appData = policy->hmacAppData;
 		cb_hmac->alg = policy->hmacAlg;
+#ifdef TSS_BUILD_SEALX
 	} else if (cb_sealx && policy->Tspicb_CallbackSealxMask) {
 		cb_sealx->callback = policy->Tspicb_CallbackSealxMask;
 		cb_sealx->appData = policy->sealxAppData;
 		cb_sealx->alg = policy->sealxAlg;
+#endif
 	}
 
 	memcpy(secret, policy->Secret, TPM_SHA1_160_HASH_LEN);

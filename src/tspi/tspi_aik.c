@@ -34,6 +34,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 				UINT32 * pulTcpaIdentityReqLength,	/* out */
 				BYTE ** prgbTcpaIdentityReq)		/* out */
 {
+#ifdef TSS_BUILD_TRANSPORT
+	UINT32 transport;
+#endif
 	TPM_AUTH srkAuth;
 	TCPA_RESULT result;
 	UINT64 offset;
@@ -55,7 +58,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 #define CHOSENID_BLOB_SIZE 2048
 	BYTE chosenIDBlob[CHOSENID_BLOB_SIZE];
 	TSS_HCONTEXT tspContext;
-	UINT32 encSymKeySize = 256, tmp, transport;
+	UINT32 encSymKeySize = 256, tmp;
 	BYTE encSymKey[256], *cb_var;
 	TSS_BOOL usesAuth;
 	TPM_AUTH *pSrkAuth = &srkAuth;
@@ -202,6 +205,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	if ((result = authsess_xsap_hmac(xsap, &digest)))
 		goto error;
 
+#ifdef TSS_BUILD_TRANSPORT
 	if ((result = obj_context_transport_get_control(tspContext, TSS_TSPATTRIB_ENABLE_TRANSPORT,
 							&transport)))
 		goto error;
@@ -213,6 +217,7 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 						      &prgbIdentityBinding)))
 			goto error;
 	} else {
+#endif
 		if ((result = RPC_MakeIdentity(tspContext, xsap->encAuthUse, chosenIDHash,
 					       idKeySize, idKey, pSrkAuth, xsap->pAuth, &idKeySize,
 					       &newIdKey, &pcIdentityBindingSize,
@@ -222,7 +227,9 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 					       &pcConformanceCredentialSize,
 					       &prgbConformanceCredential)))
 			goto error;
+#ifdef TSS_BUILD_TRANSPORT
 	}
+#endif
 
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, result);

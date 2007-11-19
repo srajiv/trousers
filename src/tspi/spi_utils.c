@@ -79,8 +79,10 @@ struct tcs_api_table tcs_normal_api = {
 #endif
 #ifdef TSS_BUILD_SEAL
 	.Seal = RPC_Seal,
-	.Sealx = RPC_Sealx,
 	.Unseal = RPC_Unseal,
+#ifdef TSS_BUILD_SEALX
+	.Sealx = RPC_Sealx,
+#endif
 #endif
 #ifdef TSS_BUILD_BIND
 	.UnBind = RPC_UnBind,
@@ -116,7 +118,6 @@ struct tcs_api_table tcs_normal_api = {
 	.SetOwnerInstall = RPC_SetOwnerInstall,
 	.DisablePubekRead = RPC_DisablePubekRead,
 	.OwnerSetDisable = RPC_OwnerSetDisable,
-	.ResetLockValue = RPC_ResetLockValue,
 	.DisableOwnerClear = RPC_DisableOwnerClear,
 	.DisableForceClear = RPC_DisableForceClear,
 	.PhysicalDisable = RPC_PhysicalDisable,
@@ -124,7 +125,10 @@ struct tcs_api_table tcs_normal_api = {
 	.PhysicalSetDeactivated = RPC_PhysicalSetDeactivated,
 	.PhysicalPresence = RPC_PhysicalPresence,
 	.SetTempDeactivated = RPC_SetTempDeactivated,
+#ifdef TSS_BUILD_TSS12
 	.SetTempDeactivated2 = RPC_SetTempDeactivated2,
+	.ResetLockValue = RPC_ResetLockValue,
+#endif
 #endif
 #ifdef TSS_BUILD_MAINT
 	.CreateMaintenanceArchive = RPC_CreateMaintenanceArchive,
@@ -178,6 +182,7 @@ struct tcs_api_table tcs_normal_api = {
 	.SetRedirection = RPC_SetRedirection,
 };
 
+#ifdef TSS_BUILD_TRANSPORT
 struct tcs_api_table tcs_transport_api = {
 #ifdef TSS_BUILD_KEY
 	.LoadKeyByBlob = Transport_LoadKeyByBlob,
@@ -323,6 +328,7 @@ struct tcs_api_table tcs_transport_api = {
 	.FieldUpgrade = RPC_FieldUpgrade,
 	.SetRedirection = RPC_SetRedirection,
 };
+#endif
 
 UINT16
 Decode_UINT16(BYTE * in)
