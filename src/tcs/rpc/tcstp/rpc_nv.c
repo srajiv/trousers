@@ -56,7 +56,7 @@ tcs_wrap_NV_DefineOrReleaseSpace(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &cPubInfoSize, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	pubInfo = calloc(1, cPubInfoSize);
 	if (pubInfo == NULL) {
@@ -116,13 +116,13 @@ tcs_wrap_NV_WriteValue(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hNVStore, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &offset, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &ulDataLength, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	rgbDataToWrite = calloc(1, ulDataLength);
 	if (rgbDataToWrite == NULL) {
@@ -132,7 +132,7 @@ tcs_wrap_NV_WriteValue(struct tcsd_thread_data *data)
 
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 4, rgbDataToWrite, ulDataLength, &data->comm)) {
 		free(rgbDataToWrite);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &Auth, 0, &data->comm))
@@ -177,13 +177,13 @@ tcs_wrap_NV_WriteValueAuth(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hNVStore, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &offset, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &ulDataLength, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	rgbDataToWrite = calloc(1, ulDataLength);
 	if (rgbDataToWrite == NULL) {
@@ -193,7 +193,7 @@ tcs_wrap_NV_WriteValueAuth(struct tcsd_thread_data *data)
 
 	if (getData(TCSD_PACKET_TYPE_PBYTE, 4, rgbDataToWrite, ulDataLength, &data->comm)) {
 		free(rgbDataToWrite);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	if (getData(TCSD_PACKET_TYPE_AUTH, 5, &Auth, 0, &data->comm))
 		pAuth = NULL;
@@ -237,13 +237,13 @@ tcs_wrap_NV_ReadValue(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hNVStore, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &offset, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &ulDataLength, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &Auth, 0, &data->comm))
 		pAuth = NULL;
@@ -296,13 +296,13 @@ tcs_wrap_NV_ReadValueAuth(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hNVStore, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &offset, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &ulDataLength, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_AUTH, 4, &NVAuth, 0, &data->comm)) {
 		pNVAuth = NULL;
