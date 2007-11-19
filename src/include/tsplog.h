@@ -36,6 +36,8 @@
 #define LogWarn(fmt, ...)	LogMessage(stdout, "LOG_WARNING", APPID, "WARNING: " fmt, ##__VA_ARGS__)
 /* Info Logging */
 #define LogInfo(fmt, ...)	LogMessage(stdout, "LOG_INFO", APPID, fmt, ##__VA_ARGS__)
+/* Return Value logging */
+extern TSS_RESULT LogTSPERR(TSS_RESULT, char *, int);
 #else
 #define LogDebug(fmt, ...)
 #define LogDebugFn(fmt, ...)
