@@ -17,7 +17,7 @@ libtspi_la_LIBADD=../trspi/libtrousers.la
 # 5. If any interfaces have been added since the last public release, then increment age.
 # 6. If any interfaces have been removed since the last public release, then set age to 0.
 
-libtspi_la_LDFLAGS=-version-info 2:1:1 -lpthread @CRYPTOLIB@
+libtspi_la_LDFLAGS=-version-info 2:2:1 -lpthread @CRYPTOLIB@
 
 libtspi_la_CFLAGS=-I../include -DAPPID=\"TSPI\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
 
