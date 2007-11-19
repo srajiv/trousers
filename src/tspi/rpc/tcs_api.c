@@ -67,7 +67,7 @@ TSS_RESULT RPC_GetRegisteredKeyByPublicInfo(TSS_HCONTEXT tspContext,
 					    BYTE * rgbPublicInfo, /* in */
 					    UINT32 * keySize, BYTE ** keyBlob)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -91,7 +91,7 @@ TSS_RESULT RPC_GetRegisteredKeyByPublicInfo(TSS_HCONTEXT tspContext,
 
 TSS_RESULT RPC_CloseContext(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -117,7 +117,7 @@ TSS_RESULT RPC_CloseContext(TSS_HCONTEXT tspContext)	/* in */
 TSS_RESULT RPC_FreeMemory(TSS_HCONTEXT tspContext,	/* in */
 			  BYTE * pMemory)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -140,7 +140,7 @@ TSS_RESULT RPC_LogPcrEvent(TSS_HCONTEXT tspContext,	/* in */
 			   TSS_PCR_EVENT Event,	/* in */
 			   UINT32 * pNumber)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -164,7 +164,7 @@ TSS_RESULT RPC_GetPcrEvent(TSS_HCONTEXT tspContext,	/* in */
 			   UINT32 * pNumber,	/* in, out */
 			   TSS_PCR_EVENT ** ppEvent)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -190,7 +190,7 @@ TSS_RESULT RPC_GetPcrEventsByPcr(TSS_HCONTEXT tspContext,	/* in */
 				 UINT32 * pEventCount,	/* in,out */
 				 TSS_PCR_EVENT ** ppEvents)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -214,7 +214,7 @@ TSS_RESULT RPC_GetPcrEventLog(TSS_HCONTEXT tspContext,	/* in */
 			      UINT32 * pEventCount,	/* out */
 			      TSS_PCR_EVENT ** ppEvents)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -241,7 +241,7 @@ TSS_RESULT RPC_RegisterKey(TSS_HCONTEXT tspContext,	/* in */
 			   UINT32 cVendorData,	/* in */
 			   BYTE * gbVendorData)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -264,7 +264,7 @@ TSS_RESULT RPC_RegisterKey(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_UnregisterKey(TSS_HCONTEXT tspContext,	/* in */
 			     TSS_UUID KeyUUID)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -288,7 +288,7 @@ TSS_RESULT RPC_EnumRegisteredKeys(TSS_HCONTEXT tspContext,	/* in */
 				  UINT32 * pcKeyHierarchySize,	/* out */
 				  TSS_KM_KEYINFO ** ppKeyHierarchy)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -313,7 +313,7 @@ TSS_RESULT RPC_EnumRegisteredKeys2(TSS_HCONTEXT tspContext,	/* in */
 				   UINT32 * pcKeyHierarchySize,	/* out */
 				   TSS_KM_KEYINFO2 ** ppKeyHierarchy)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -338,7 +338,7 @@ TSS_RESULT RPC_GetRegisteredKey(TSS_HCONTEXT tspContext,	/* in */
 				TSS_UUID KeyUUID,	/* in */
 				TSS_KM_KEYINFO ** ppKeyInfo)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -362,7 +362,7 @@ TSS_RESULT RPC_GetRegisteredKeyBlob(TSS_HCONTEXT tspContext,	/* in */
 				    UINT32 * pcKeySize,	/* out */
 				    BYTE ** prgbKey)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -389,7 +389,7 @@ TSS_RESULT RPC_LoadKeyByBlob(TSS_HCONTEXT tspContext,	/* in */
 			     TCS_KEY_HANDLE * phKeyTCSI,	/* out */
 			     TCS_KEY_HANDLE * phKeyHMAC)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -415,7 +415,7 @@ TSS_RESULT RPC_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/* in */
 			     TCS_LOADKEY_INFO * pLoadKeyInfo,	/* in, out */
 			     TCS_KEY_HANDLE * phKeyTCSI)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -437,7 +437,7 @@ TSS_RESULT RPC_LoadKeyByUUID(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_EvictKey(TSS_HCONTEXT tspContext,	/* in */
 			TCS_KEY_HANDLE hKey)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -466,7 +466,7 @@ TSS_RESULT RPC_CreateWrapKey(TSS_HCONTEXT tspContext,	/* in */
 			     BYTE ** keyData,	/* out */
 			     TPM_AUTH * pAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -493,7 +493,7 @@ TSS_RESULT RPC_GetPubKey(TSS_HCONTEXT tspContext,	/* in */
 			 UINT32 * pcPubKeySize,	/* out */
 			 BYTE ** prgbPubKey)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -530,7 +530,7 @@ TSS_RESULT RPC_MakeIdentity(TSS_HCONTEXT tspContext,	/* in */
 			    UINT32 * pcConformanceCredentialSize,	/* out */
 			    BYTE ** prgbConformanceCredential)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -558,13 +558,14 @@ TSS_RESULT RPC_MakeIdentity(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_GetCredential(TSS_HCONTEXT tspContext,	/* in */
 			     UINT32 ulCredentialType,          /* in */
 			     UINT32 ulCredentialAccessMode,    /* in */
 			     UINT32 * pulCredentialSize,       /* out */
 			     BYTE ** prgbCredentialData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -584,11 +585,12 @@ TSS_RESULT RPC_GetCredential(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_SetOwnerInstall(TSS_HCONTEXT tspContext,	/* in */
 			       TSS_BOOL state)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -619,7 +621,7 @@ TSS_RESULT RPC_TakeOwnership(TSS_HCONTEXT tspContext,	/* in */
 			     UINT32 * srkKeySize,
 			     BYTE ** srkKey)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -645,7 +647,7 @@ TSS_RESULT RPC_OIAP(TSS_HCONTEXT tspContext,	/* in */
 		    TCS_AUTHHANDLE * authHandle,	/* out */
 		    TCPA_NONCE * nonce0)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -672,7 +674,7 @@ TSS_RESULT RPC_OSAP(TSS_HCONTEXT tspContext,	/* in */
 		    TCPA_NONCE * nonceEven,	/* out */
 		    TCPA_NONCE * nonceEvenOSAP)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -704,7 +706,7 @@ TSS_RESULT RPC_ChangeAuth(TSS_HCONTEXT tspContext,	/* in */
 			  UINT32 * outDataSize,	/* out */
 			  BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -731,7 +733,7 @@ TSS_RESULT RPC_ChangeAuthOwner(TSS_HCONTEXT tspContext,	/* in */
 				TCPA_ENTITY_TYPE entityType,	/* in */
 				TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -765,7 +767,7 @@ TSS_RESULT RPC_ChangeAuthAsymStart(TSS_HCONTEXT tspContext,	/* in */
 				   BYTE ** sig,	/* out */
 				   TCS_KEY_HANDLE * ephHandle)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -803,7 +805,7 @@ TSS_RESULT RPC_ChangeAuthAsymFinish(TSS_HCONTEXT tspContext,	/* in */
 				    TCPA_SALT_NONCE * saltNonce,	/* out */
 				    TCPA_DIGEST * changeProof)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -830,7 +832,7 @@ TSS_RESULT RPC_ChangeAuthAsymFinish(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_TerminateHandle(TSS_HCONTEXT tspContext,	/* in */
 			       TCS_AUTHHANDLE handle)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -858,7 +860,7 @@ TSS_RESULT RPC_ActivateTPMIdentity(TSS_HCONTEXT tspContext,	/* in */
 				   UINT32 * SymmetricKeySize,	/* out */
 				   BYTE ** SymmetricKey)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -884,7 +886,7 @@ TSS_RESULT RPC_Extend(TSS_HCONTEXT tspContext,	/* in */
 		      TCPA_DIGEST inDigest,	/* in */
 		      TCPA_PCRVALUE * outDigest)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -907,7 +909,7 @@ TSS_RESULT RPC_PcrRead(TSS_HCONTEXT tspContext,	/* in */
 		       TCPA_PCRINDEX pcrNum,	/* in */
 		       TCPA_PCRVALUE * outDigest)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -930,7 +932,7 @@ TSS_RESULT RPC_PcrReset(TSS_HCONTEXT tspContext,	/* in */
 			UINT32 pcrDataSizeIn,		/* in */
 			BYTE * pcrDataIn)		/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -961,7 +963,7 @@ TSS_RESULT RPC_Quote(TSS_HCONTEXT tspContext,	/* in */
 		     UINT32 * sigSize,	/* out */
 		     BYTE ** sig)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -982,6 +984,7 @@ TSS_RESULT RPC_Quote(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
 		      TCS_KEY_HANDLE keyHandle, /* in */
 		      TCPA_NONCE *antiReplay, /* in */
@@ -996,7 +999,7 @@ TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
 		      UINT32 * sigSize, /* out */
 		      BYTE ** sig) /* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1016,13 +1019,14 @@ TSS_RESULT RPC_Quote2(TSS_HCONTEXT tspContext, /* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_DirWriteAuth(TSS_HCONTEXT tspContext,	/* in */
 			    TCPA_DIRINDEX dirIndex,	/* in */
 			    TCPA_DIRVALUE *newContents,	/* in */
 			    TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1045,7 +1049,7 @@ TSS_RESULT RPC_DirRead(TSS_HCONTEXT tspContext,	/* in */
 		       TCPA_DIRINDEX dirIndex,	/* in */
 		       TCPA_DIRVALUE * dirValue)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1075,7 +1079,7 @@ TSS_RESULT RPC_Seal(TSS_HCONTEXT tspContext,	/* in */
 		    UINT32 * SealedDataSize,	/* out */
 		    BYTE ** SealedData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1096,6 +1100,7 @@ TSS_RESULT RPC_Seal(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_SEALX
 TSS_RESULT RPC_Sealx(TSS_HCONTEXT tspContext,	/* in */
 		     TCS_KEY_HANDLE keyHandle,	/* in */
 		     TCPA_ENCAUTH *encAuth,	/* in */
@@ -1107,7 +1112,7 @@ TSS_RESULT RPC_Sealx(TSS_HCONTEXT tspContext,	/* in */
 		     UINT32 * SealedDataSize,	/* out */
 		     BYTE ** SealedData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1127,6 +1132,7 @@ TSS_RESULT RPC_Sealx(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_Unseal(TSS_HCONTEXT tspContext,	/* in */
 		      TCS_KEY_HANDLE parentHandle,	/* in */
@@ -1137,7 +1143,7 @@ TSS_RESULT RPC_Unseal(TSS_HCONTEXT tspContext,	/* in */
 		      UINT32 * DataSize,	/* out */
 		      BYTE ** Data)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1165,7 +1171,7 @@ TSS_RESULT RPC_UnBind(TSS_HCONTEXT tspContext,	/* in */
 		       UINT32 * outDataSize,	/* out */
 		       BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1199,7 +1205,7 @@ TSS_RESULT RPC_CreateMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 				   UINT32 * outDataSize,	/* out */
 				   BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1232,7 +1238,7 @@ TSS_RESULT RPC_ConvertMigrationBlob(TSS_HCONTEXT tspContext,	/* in */
 				    UINT32 * outDataSize,	/* out */
 				    BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1262,7 +1268,7 @@ TSS_RESULT RPC_AuthorizeMigrationKey(TSS_HCONTEXT tspContext,	/* in */
 				     UINT32 * MigrationKeyAuthSize,	/* out */
 				     BYTE ** MigrationKeyAuth)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1295,7 +1301,7 @@ TSS_RESULT RPC_CertifyKey(TSS_HCONTEXT tspContext,	/* in */
 			  UINT32 * outDataSize,	/* out */
 			  BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1324,7 +1330,7 @@ TSS_RESULT RPC_Sign(TSS_HCONTEXT tspContext,	/* in */
 		    UINT32 * sigSize,	/* out */
 		    BYTE ** sig)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1348,7 +1354,7 @@ TSS_RESULT RPC_GetRandom(TSS_HCONTEXT tspContext,	/* in */
 			 UINT32 bytesRequested,	/* in */
 			 BYTE ** randomBytes)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1371,7 +1377,7 @@ TSS_RESULT RPC_StirRandom(TSS_HCONTEXT tspContext,	/* in */
 			  UINT32 inDataSize,	/* in */
 			  BYTE * inData)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1397,7 +1403,7 @@ TSS_RESULT RPC_GetTPMCapability(TSS_HCONTEXT tspContext,	/* in */
 			        UINT32 * respSize,	/* out */
 			        BYTE ** resp)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1425,7 +1431,7 @@ TSS_RESULT RPC_SetCapability(TSS_HCONTEXT tspContext,	/* in */
 			     BYTE * value,	/* in */
 			     TPM_AUTH *ownerAuth) /* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1452,7 +1458,7 @@ TSS_RESULT RPC_GetCapability(TSS_HCONTEXT tspContext,	/* in */
 			     UINT32 * respSize,	/* out */
 			     BYTE ** resp)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1485,7 +1491,7 @@ TSS_RESULT RPC_GetCapabilitySigned(TSS_HCONTEXT tspContext,	/* in */
 				   UINT32 * sigSize,	/* out */
 				   BYTE ** sig)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1512,7 +1518,7 @@ TSS_RESULT RPC_GetCapabilityOwner(TSS_HCONTEXT tspContext,	/* in */
 				  UINT32 * pNonVolatileFlags,	/* out */
 				  UINT32 * pVolatileFlags)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1540,7 +1546,7 @@ TSS_RESULT RPC_CreateEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
 					BYTE ** endorsementKey,	/* out */
 					TCPA_DIGEST * checksum)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1569,7 +1575,7 @@ TSS_RESULT RPC_ReadPubek(TSS_HCONTEXT tspContext,	/* in */
 			 BYTE ** pubEndorsementKey,	/* out */
 			 TCPA_DIGEST * checksum)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1592,7 +1598,7 @@ TSS_RESULT RPC_ReadPubek(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_DisablePubekRead(TSS_HCONTEXT tspContext,	/* in */
 				TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1616,7 +1622,7 @@ TSS_RESULT RPC_OwnerReadPubek(TSS_HCONTEXT tspContext,	/* in */
 			      UINT32 * pubEndorsementKeySize,	/* out */
 			      BYTE ** pubEndorsementKey)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1636,6 +1642,7 @@ TSS_RESULT RPC_OwnerReadPubek(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_CreateRevocableEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
 						 TPM_NONCE antiReplay,		/* in */
 						 UINT32 endorsementKeyInfoSize,/* in */
@@ -1646,7 +1653,7 @@ TSS_RESULT RPC_CreateRevocableEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in 
 						 BYTE ** endorsementKey,	/* out */
 						 TPM_DIGEST * checksum)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1674,7 +1681,7 @@ TSS_RESULT RPC_CreateRevocableEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in 
 TSS_RESULT RPC_RevokeEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
 					TPM_DIGEST *EKResetAuth)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1692,10 +1699,11 @@ TSS_RESULT RPC_RevokeEndorsementKeyPair(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_SelfTestFull(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1721,7 +1729,7 @@ TSS_RESULT RPC_CertifySelfTest(TSS_HCONTEXT tspContext,	/* in */
 			       UINT32 * sigSize,	/* out */
 			       BYTE ** sig)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1745,7 +1753,7 @@ TSS_RESULT RPC_GetTestResult(TSS_HCONTEXT tspContext,	/* in */
 			     UINT32 * outDataSize,	/* out */
 			     BYTE ** outData)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1768,7 +1776,7 @@ TSS_RESULT RPC_OwnerSetDisable(TSS_HCONTEXT tspContext,	/* in */
 			       TSS_BOOL disableState,	/* in */
 			       TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1787,10 +1795,11 @@ TSS_RESULT RPC_OwnerSetDisable(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_ResetLockValue(TSS_HCONTEXT tspContext,	/* in */
 			      TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1808,11 +1817,12 @@ TSS_RESULT RPC_ResetLockValue(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_OwnerClear(TSS_HCONTEXT tspContext,	/* in */
 			  TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1834,7 +1844,7 @@ TSS_RESULT RPC_OwnerClear(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_DisableOwnerClear(TSS_HCONTEXT tspContext,	/* in */
 				 TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1855,7 +1865,7 @@ TSS_RESULT RPC_DisableOwnerClear(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_ForceClear(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1876,7 +1886,7 @@ TSS_RESULT RPC_ForceClear(TSS_HCONTEXT tspContext)	/* in */
 
 TSS_RESULT RPC_DisableForceClear(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1897,7 +1907,7 @@ TSS_RESULT RPC_DisableForceClear(TSS_HCONTEXT tspContext)	/* in */
 
 TSS_RESULT RPC_PhysicalDisable(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1918,7 +1928,7 @@ TSS_RESULT RPC_PhysicalDisable(TSS_HCONTEXT tspContext)	/* in */
 
 TSS_RESULT RPC_PhysicalEnable(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1940,7 +1950,7 @@ TSS_RESULT RPC_PhysicalEnable(TSS_HCONTEXT tspContext)	/* in */
 TSS_RESULT RPC_PhysicalSetDeactivated(TSS_HCONTEXT tspContext,	/* in */
 				      TSS_BOOL state)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1962,7 +1972,7 @@ TSS_RESULT RPC_PhysicalSetDeactivated(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_PhysicalPresence(TSS_HCONTEXT tspContext,	/* in */
 				TCPA_PHYSICAL_PRESENCE fPhysicalPresence)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -1983,7 +1993,7 @@ TSS_RESULT RPC_PhysicalPresence(TSS_HCONTEXT tspContext,	/* in */
 
 TSS_RESULT RPC_SetTempDeactivated(TSS_HCONTEXT tspContext)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2002,10 +2012,11 @@ TSS_RESULT RPC_SetTempDeactivated(TSS_HCONTEXT tspContext)	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT RPC_SetTempDeactivated2(TSS_HCONTEXT tspContext,	/* in */
 				   TPM_AUTH *operatorAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2023,6 +2034,7 @@ TSS_RESULT RPC_SetTempDeactivated2(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
 TSS_RESULT RPC_FieldUpgrade(TSS_HCONTEXT tspContext,	/* in */
 			    UINT32 dataInSize,	/* in */
@@ -2031,7 +2043,7 @@ TSS_RESULT RPC_FieldUpgrade(TSS_HCONTEXT tspContext,	/* in */
 			    BYTE ** dataOut,	/* out */
 			    TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2056,7 +2068,7 @@ TSS_RESULT RPC_SetRedirection(TSS_HCONTEXT tspContext,	/* in */
 			      UINT32 c2,	/* in */
 			      TPM_AUTH * privAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2083,7 +2095,7 @@ TSS_RESULT RPC_CreateMaintenanceArchive(TSS_HCONTEXT tspContext,	/* in */
 					UINT32 * archiveSize,	/* out */
 					BYTE ** archive)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2111,7 +2123,7 @@ TSS_RESULT RPC_LoadMaintenanceArchive(TSS_HCONTEXT tspContext,	/* in */
 				      UINT32 * dataOutSize,	/* out */
 				      BYTE ** dataOut)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2134,7 +2146,7 @@ TSS_RESULT RPC_LoadMaintenanceArchive(TSS_HCONTEXT tspContext,	/* in */
 TSS_RESULT RPC_KillMaintenanceFeature(TSS_HCONTEXT tspContext,	/* in */
 				      TPM_AUTH * ownerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2159,7 +2171,7 @@ TSS_RESULT RPC_LoadManuMaintPub(TSS_HCONTEXT tspContext,	/* in */
 				BYTE * PubKey,	/* in */
 				TCPA_DIGEST * checksum)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2183,7 +2195,7 @@ TSS_RESULT RPC_ReadManuMaintPub(TSS_HCONTEXT tspContext,	/* in */
 				TCPA_NONCE antiReplay,	/* in */
 				TCPA_DIGEST * checksum)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2202,6 +2214,7 @@ TSS_RESULT RPC_ReadManuMaintPub(TSS_HCONTEXT tspContext,	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_DAA
 TSS_RESULT
 RPC_DaaJoin(TSS_HCONTEXT tspContext,	/* in */
 	    TPM_HANDLE daa_session,		/* in */
@@ -2214,7 +2227,7 @@ RPC_DaaJoin(TSS_HCONTEXT tspContext,	/* in */
 	    UINT32* outputSize,		/* out */
 	    BYTE** outputData)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2248,7 +2261,7 @@ RPC_DaaSign(TSS_HCONTEXT tspContext,	/* in */
 	    UINT32* outputSize,		/* out */
 	    BYTE** outputData)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2268,13 +2281,15 @@ RPC_DaaSign(TSS_HCONTEXT tspContext,	/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_COUNTER
 TSS_RESULT
 RPC_ReadCounter(TSS_HCONTEXT       tspContext,		/* in */
 		TSS_COUNTER_ID     idCounter,		/* in */
 		TPM_COUNTER_VALUE* counterValue)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2302,7 +2317,7 @@ RPC_CreateCounter(TSS_HCONTEXT       tspContext,	/* in */
 		  TSS_COUNTER_ID*    idCounter,	/* out */
 		  TPM_COUNTER_VALUE* counterValue)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2328,7 +2343,7 @@ RPC_IncrementCounter(TSS_HCONTEXT       tspContext,	/* in */
 		     TPM_AUTH*          pCounterAuth,	/* in, out */
 		     TPM_COUNTER_VALUE* counterValue)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2353,7 +2368,7 @@ RPC_ReleaseCounter(TSS_HCONTEXT   tspContext,		/* in */
 		   TSS_COUNTER_ID idCounter,		/* in */
 		   TPM_AUTH*      pCounterAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2377,7 +2392,7 @@ RPC_ReleaseCounterOwner(TSS_HCONTEXT   tspContext,	/* in */
 			TSS_COUNTER_ID idCounter,	/* in */
 			TPM_AUTH*      pOwnerAuth)	/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2395,13 +2410,15 @@ RPC_ReleaseCounterOwner(TSS_HCONTEXT   tspContext,	/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_TICK
 TSS_RESULT
 RPC_ReadCurrentTicks(TSS_HCONTEXT tspContext,		/* in */
 		     UINT32*      pulCurrentTime,	/* out */
 		     BYTE**       prgbCurrentTime)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2431,7 +2448,7 @@ RPC_TickStampBlob(TSS_HCONTEXT   tspContext,		/* in */
 		  UINT32*        pulTickCountLength,	/* out */
 		  BYTE**         prgbTickCount)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2452,8 +2469,9 @@ RPC_TickStampBlob(TSS_HCONTEXT   tspContext,		/* in */
 
 	return result;
 }
+#endif
 
-
+#ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT
 RPC_EstablishTransport(TSS_HCONTEXT            tspContext,
 		       UINT32                  ulTransControlFlags,
@@ -2469,7 +2487,7 @@ RPC_EstablishTransport(TSS_HCONTEXT            tspContext,
 		       BYTE**                  prgbCurrentTicks,
 		       TPM_NONCE*              pTransNonce)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2510,7 +2528,7 @@ RPC_ExecuteTransport(TSS_HCONTEXT            tspContext,
 		     UINT32*                 ulWrappedCmdParamOutSize,
 		     BYTE**                  rgbWrappedCmdParamOut)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2549,7 +2567,7 @@ RPC_ReleaseTransportSigned(TSS_HCONTEXT            tspContext,
 			   UINT32*                 pulSignatureSize,
 			   BYTE**                  prgbSignature)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(tspContext);
 
 	if (entry == NULL)
@@ -2572,7 +2590,9 @@ RPC_ReleaseTransportSigned(TSS_HCONTEXT            tspContext,
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_NV
 TSS_RESULT
 RPC_NV_DefineOrReleaseSpace(TSS_HCONTEXT hContext,	/* in */
 			    UINT32 cPubInfoSize,	/* in */
@@ -2580,7 +2600,7 @@ RPC_NV_DefineOrReleaseSpace(TSS_HCONTEXT hContext,	/* in */
 			    TCPA_ENCAUTH encAuth,	/* in */
 			    TPM_AUTH* pAuth)		/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2608,7 +2628,7 @@ RPC_NV_WriteValue(TSS_HCONTEXT hContext,	/* in */
 		  BYTE* rgbDataToWrite,	/* in */
 		  TPM_AUTH* privAuth)		/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2638,7 +2658,7 @@ RPC_NV_WriteValueAuth(TSS_HCONTEXT hContext,	/* in */
 		      TPM_AUTH* NVAuth)		/* in, out */
 {
 
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2668,7 +2688,7 @@ RPC_NV_ReadValue(TSS_HCONTEXT hContext,	/* in */
 		 BYTE** rgbDataRead)		/* out */
 {
 
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2696,7 +2716,7 @@ RPC_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 		     TPM_AUTH* NVAuth,		/* in, out */
 		     BYTE** rgbDataRead)       /* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2715,7 +2735,9 @@ RPC_NV_ReadValueAuth(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_AUDIT
 TSS_RESULT
 RPC_SetOrdinalAuditStatus(TSS_HCONTEXT hContext,	/* in */
 			  TPM_AUTH *ownerAuth,		/* in/out */
@@ -2808,7 +2830,9 @@ RPC_GetAuditDigestSigned(TSS_HCONTEXT hContext,		/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_SetOperatorAuth(TSS_HCONTEXT hContext,	/* in */
 		    TCPA_SECRET *operatorAuth)		/* in */
@@ -2839,7 +2863,7 @@ RPC_OwnerReadInternalPub(TSS_HCONTEXT hContext,	/* in */
 			 UINT32* punPubKeySize,	/* out */
 			 BYTE** ppbPubKeyData)		/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2858,7 +2882,9 @@ RPC_OwnerReadInternalPub(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_DELEGATION
 TSS_RESULT
 RPC_Delegate_Manage(TSS_HCONTEXT hContext,		/* in */
 		    TPM_FAMILY_ID familyID,		/* in */
@@ -2869,7 +2895,7 @@ RPC_Delegate_Manage(TSS_HCONTEXT hContext,		/* in */
 		    UINT32 *retDataSize,		/* out */
 		    BYTE **retData)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2899,7 +2925,7 @@ RPC_Delegate_CreateKeyDelegation(TSS_HCONTEXT hContext,		/* in */
 				 UINT32 *blobSize,		/* out */
 				 BYTE **blob)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2930,7 +2956,7 @@ RPC_Delegate_CreateOwnerDelegation(TSS_HCONTEXT hContext,	/* in */
 				   UINT32 *blobSize,		/* out */
 				   BYTE **blob)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2959,7 +2985,7 @@ RPC_Delegate_LoadOwnerDelegation(TSS_HCONTEXT hContext,	/* in */
 				 BYTE *blob,			/* in */
 				 TPM_AUTH *ownerAuth)		/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -2986,7 +3012,7 @@ RPC_Delegate_ReadTable(TSS_HCONTEXT hContext,		/* in */
 		       UINT32 *delegateTableSize,	/* out */
 		       BYTE **delegateTable)		/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3014,7 +3040,7 @@ RPC_Delegate_UpdateVerificationCount(TSS_HCONTEXT hContext,	/* in */
 				     UINT32 *outputSize,	/* out */
 				     BYTE **output)		/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3040,7 +3066,7 @@ RPC_Delegate_VerifyDelegation(TSS_HCONTEXT hContext,	/* in */
 			      UINT32 delegateSize,	/* in */
 			      BYTE *delegate)		/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3060,11 +3086,46 @@ RPC_Delegate_VerifyDelegation(TSS_HCONTEXT hContext,	/* in */
 }
 
 TSS_RESULT
+RPC_DSAP(TSS_HCONTEXT hContext,		/* in */
+	 TPM_ENTITY_TYPE entityType,	/* in */
+	 TCS_KEY_HANDLE keyHandle,	/* in */
+	 TPM_NONCE *nonceOddDSAP,	/* in */
+	 UINT32 entityValueSize,	/* in */
+	 BYTE * entityValue,		/* in */
+	 TCS_AUTHHANDLE *authHandle,	/* out */
+	 TPM_NONCE *nonceEven,		/* out */
+	 TPM_NONCE *nonceEvenDSAP)	/* out */
+{
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
+	struct host_table_entry *entry = get_table_entry(hContext);
+
+	if (entry == NULL)
+		return TSPERR(TSS_E_NO_CONNECTION);
+
+	switch (entry->type) {
+		case CONNECTION_TYPE_TCP_PERSISTANT:
+			result = RPC_DSAP_TP(entry, entityType, keyHandle, nonceOddDSAP,
+					     entityValueSize, entityValue, authHandle, nonceEven,
+					     nonceEvenDSAP);
+			break;
+		default:
+			break;
+	}
+
+	put_table_entry(entry);
+
+	return result;
+}
+
+#endif
+
+#ifdef TSS_BUILD_CMK
+TSS_RESULT
 RPC_CMK_SetRestrictions(TSS_HCONTEXT hContext,	/* in */
 			TSS_CMK_DELEGATE restriction,	/* in */
 			TPM_AUTH *ownerAuth)		/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3089,7 +3150,7 @@ RPC_CMK_ApproveMA(TSS_HCONTEXT hContext,		/* in */
 		  TPM_AUTH *ownerAuth,			/* in, out */
 		  TPM_HMAC *migAuthorityApproval)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3119,7 +3180,7 @@ RPC_CMK_CreateKey(TSS_HCONTEXT hContext,		/* in */
 		  BYTE **keyData,			/* in, out */
 		  TPM_AUTH *pAuth)			/* in, out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3150,7 +3211,7 @@ RPC_CMK_CreateTicket(TSS_HCONTEXT hContext,	/* in */
 		     TPM_AUTH *ownerAuth,		/* in, out */
 		     TPM_HMAC *sigTicket)		/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3192,7 +3253,7 @@ RPC_CMK_CreateBlob(TSS_HCONTEXT hContext,	/* in */
 		   UINT32 *outDataSize,			/* out */
 		   BYTE **outData)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3230,7 +3291,7 @@ RPC_CMK_ConvertMigration(TSS_HCONTEXT hContext,	/* in */
 			 UINT32 *outDataSize,		/* out */
 			 BYTE **outData)		/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3250,13 +3311,15 @@ RPC_CMK_ConvertMigration(TSS_HCONTEXT hContext,	/* in */
 
 	return result;
 }
+#endif
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_FlushSpecific(TSS_HCONTEXT hContext, /* in */
 		  TCS_HANDLE hResHandle, /* in */
 		  TPM_RESOURCE_TYPE resourceType) /* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3275,7 +3338,6 @@ RPC_FlushSpecific(TSS_HCONTEXT hContext, /* in */
 	return result;
 }
 
-#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 RPC_KeyControlOwner(TCS_CONTEXT_HANDLE hContext,		/* in */
 		    TCS_KEY_HANDLE     hKey,			/* in */
@@ -3287,7 +3349,7 @@ RPC_KeyControlOwner(TCS_CONTEXT_HANDLE hContext,		/* in */
 		    TSS_UUID*          pUuidData)		/* out */
 
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result = (TSS_E_INTERNAL_ERROR | TSS_LAYER_TSP);
 	struct host_table_entry *entry = get_table_entry(hContext);
 
 	if (entry == NULL)
@@ -3312,36 +3374,4 @@ RPC_KeyControlOwner(TCS_CONTEXT_HANDLE hContext,		/* in */
 	return result;
 }
 #endif
-
-TSS_RESULT
-RPC_DSAP(TSS_HCONTEXT hContext,		/* in */
-	 TPM_ENTITY_TYPE entityType,	/* in */
-	 TCS_KEY_HANDLE keyHandle,	/* in */
-	 TPM_NONCE *nonceOddDSAP,	/* in */
-	 UINT32 entityValueSize,	/* in */
-	 BYTE * entityValue,		/* in */
-	 TCS_AUTHHANDLE *authHandle,	/* out */
-	 TPM_NONCE *nonceEven,		/* out */
-	 TPM_NONCE *nonceEvenDSAP)	/* out */
-{
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
-	struct host_table_entry *entry = get_table_entry(hContext);
-
-	if (entry == NULL)
-		return TSPERR(TSS_E_NO_CONNECTION);
-
-	switch (entry->type) {
-		case CONNECTION_TYPE_TCP_PERSISTANT:
-			result = RPC_DSAP_TP(entry, entityType, keyHandle, nonceOddDSAP,
-					     entityValueSize, entityValue, authHandle, nonceEven,
-					     nonceEvenDSAP);
-			break;
-		default:
-			break;
-	}
-
-	put_table_entry(entry);
-
-	return result;
-}
 
