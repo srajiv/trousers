@@ -156,9 +156,9 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 		goto error;
 	}
 #else
-	if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, &encAuthUsage,
-						pcrDataSize, pcrData, ulDataLength, sealData, &auth,
-						&encDataSize, &encData)))
+	if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, &xsap->encAuthUse,
+						pcrDataSize, pcrData, ulDataLength, sealData,
+						xsap->pAuth, &encDataSize, &encData)))
 		goto error;
 #endif
 
@@ -220,7 +220,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 		return result;
 
 	if ((result = obj_encdata_get_data(hEncData, &ulDataLen, &data)))
-		return result == TSPERR(TSS_E_INVALID_OBJ_ACCESS) ?
+		return result == (TSS_E_INVALID_OBJ_ACCESS | TSS_LAYER_TSP) ?
 		       TSPERR(TSS_E_ENC_NO_DATA) :
 		       result;
 
