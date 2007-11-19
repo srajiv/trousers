@@ -30,6 +30,10 @@
 
 static int user_ps_fd = -1;
 static MUTEX_DECLARE_INIT(user_ps_lock);
+#if (defined (__FreeBSD__) || defined (__OpenBSD__))
+static MUTEX_DECLARE_INIT(user_ps_path);
+#endif
+
 
 /*
  * Determine the default path to the persistent storage file and create it if it doesn't exist.
@@ -37,9 +41,12 @@ static MUTEX_DECLARE_INIT(user_ps_lock);
 TSS_RESULT
 get_user_ps_path(char **file)
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result;
 	char *file_name = NULL, *home_dir = NULL;
-	struct passwd pw, *pwp;
+	struct passwd *pwp;
+#if (defined (__linux) || defined (linux))
+	struct passwd pw;
+#endif
 	struct stat stat_buf;
 	char buf[PASSWD_BUFSIZE];
 	uid_t euid;
@@ -49,11 +56,15 @@ get_user_ps_path(char **file)
 		*file = strdup(file_name);
 		return (*file) ? TSS_SUCCESS : TSPERR(TSS_E_OUTOFMEMORY);
 	}
+#if (defined (__FreeBSD__) || defined (__OpenBSD__))
+	MUTEX_LOCK(user_ps_path);
+#endif
 
 	euid = geteuid();
 
 	setpwent();
 	while (1) {
+#if (defined (__linux) || defined (linux))
 		rc = getpwent_r(&pw, buf, PASSWD_BUFSIZE, &pwp);
 		if (rc) {
 			LogDebugFn("USER PS: Error getting path to home directory: getpwent_r: %s",
@@ -62,12 +73,21 @@ get_user_ps_path(char **file)
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 
-		if (euid == pwp->pw_uid) {
-			home_dir = strdup(pwp->pw_dir);
-			break;
+#elif (defined (__FreeBSD__) || defined (__OpenBSD__))
+		if ((pwp = getpwent()) == NULL) {
+			LogDebugFn("USER PS: Error getting path to home directory: getpwent: %s",
+                                   strerror(rc));
+			endpwent();
+			MUTEX_UNLOCK(user_ps_path);
+			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-	}
-	endpwent();
+#endif
+		if (euid == pwp->pw_uid) {
+                        home_dir = strdup(pwp->pw_dir);
+                        break;
+                }
+        }
+        endpwent();
 
 	if (!home_dir)
 		return TSPERR(TSS_E_OUTOFMEMORY);
@@ -76,6 +96,7 @@ get_user_ps_path(char **file)
 	rc = snprintf(buf, PASSWD_BUFSIZE, "%s/%s", home_dir, TSS_USER_PS_DIR);
 	if (rc == PASSWD_BUFSIZE) {
 		LogDebugFn("USER PS: Path to file too long! (> %d bytes)", PASSWD_BUFSIZE);
+		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
 	}
 
@@ -87,10 +108,12 @@ get_user_ps_path(char **file)
 			if ((rc = mkdir(buf, 0700)) == -1) {
 				LogDebugFn("USER PS: Error creating dir: %s: %s", buf,
 					   strerror(errno));
+				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
 			}
 		} else {
 			LogDebugFn("USER PS: Error stating dir: %s: %s", buf, strerror(errno));
+			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 	}
@@ -192,7 +215,7 @@ psfile_is_key_registered(int fd, TSS_UUID *uuid, TSS_BOOL *answer)
 
 	if ((result = psfile_get_cache_entry_by_uuid(fd, uuid, &tmp)) == TSS_SUCCESS)
 		*answer = TRUE;
-	else if (result == TSPERR(TSS_E_PS_KEY_NOTFOUND))
+	else if (result == (TSS_E_PS_KEY_NOTFOUND | TSS_LAYER_TSP))
 		*answer = FALSE;
         else
                 return result;
