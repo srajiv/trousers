@@ -20,6 +20,9 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#if (defined (__OpenBSD__) || defined (__FreeBSD__))
+#include <netinet/in.h>
+#endif
 #include <arpa/inet.h>
 #include <errno.h>
 #include <getopt.h>
