@@ -30,10 +30,10 @@ read_data(int fd, void *data, UINT32 size)
 	rc = read(fd, data, size);
 	if (rc == -1) {
 		LogError("read of %d bytes: %s", size, strerror(errno));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("read of %d bytes (only %d read)", size, rc);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
@@ -47,10 +47,10 @@ write_data(int fd, void *data, UINT32 size)
 	rc = write(fd, data, size);
 	if (rc == -1) {
 		LogError("write of %d bytes: %s", size, strerror(errno));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	} else if ((unsigned)rc != size) {
 		LogError("write of %d bytes (only %d written)", size, rc);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
