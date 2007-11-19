@@ -144,7 +144,7 @@ RPC_GetAuditDigestSigned_TP(struct host_table_entry *hte,
 			    UINT32 *sigSize,			/* out */
 			    BYTE **sig)			/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INTERNAL_ERROR);
+	TSS_RESULT result;
 	TPM_AUTH null_auth;
 	int i;
 
