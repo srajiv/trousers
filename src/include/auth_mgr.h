@@ -33,12 +33,12 @@ struct _auth_mgr
 {
 	short max_auth_sessions;
 	short open_auth_sessions;
-	short sleeping_threads;
+	UINT32 sleeping_threads;
 	COND_VAR **overflow;	/* queue of TCS contexts waiting for an auth session to become
 				 * available */
-	int of_head, of_tail;	/* head and tail of the overflow queue */
+	unsigned int of_head, of_tail;	/* head and tail of the overflow queue */
 	struct auth_map *auth_mapper; /* table of currently tracked auth sessions */
-	UINT32 auth_mapper_size;
+	UINT32 auth_mapper_size, overflow_size;
 } auth_mgr;
 
 MUTEX_DECLARE_INIT(auth_mgr_lock);
