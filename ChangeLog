@@ -1,4 +1,6 @@
 
+- Fixed bug in tcsi_bind.c, one too few params were passed to
+the function parsing the TPM blob.
 - Fixed lots of erroneous TSPERR and TCSERR calls
 - Added support for logging all error return codes when debug
 is on
