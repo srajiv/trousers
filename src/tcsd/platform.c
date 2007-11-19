@@ -9,11 +9,18 @@
  */
 
 
+#if (defined (__FreeBSD__) || defined (__OpenBSD__))
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <err.h>
+#elif (defined (__linux) || defined (linux))
+#include <utmp.h>
+#endif
+
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <utmp.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
@@ -23,6 +30,8 @@
 #include "tcsps.h"
 #include "tcslog.h"
 
+
+#if (defined (__linux) || defined (linux))
 MUTEX_DECLARE_INIT(utmp_lock);
 
 char
@@ -70,4 +79,29 @@ platform_get_runlevel()
 
 	return runlevel;
 }
+#elif (defined (__FreeBSD__) || defined (__OpenBSD__))
 
+char
+platform_get_runlevel()
+{
+	int mib[2], rlevel = -1;
+	size_t len;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_SECURELVL;
+	
+	len = sizeof(rlevel);
+	if (sysctl(mib,2,&rlevel,&len, NULL,0) == -1) {
+		err(1,"Could not get runlevel");
+		return 'u';
+	}
+#if defined (__OpenBSD__)
+	if (rlevel == 0)
+#else
+	if (rlevel == -1)
+#endif
+		return 's';	
+
+	return rlevel + '0';
+}
+#endif
