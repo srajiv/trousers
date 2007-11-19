@@ -293,6 +293,7 @@ tcs_wrap_SetTempDeactivated(struct tcsd_thread_data *data)
 	return TSS_SUCCESS;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 tcs_wrap_SetTempDeactivated2(struct tcsd_thread_data *data)
 {
@@ -400,4 +401,4 @@ tcs_wrap_FlushSpecific(struct tcsd_thread_data *data)
 
 	return TSS_SUCCESS;
 }
-
+#endif

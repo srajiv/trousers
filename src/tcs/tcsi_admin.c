@@ -287,6 +287,7 @@ TCSP_SetTempDeactivated_Internal(TCS_CONTEXT_HANDLE hContext)	/* in */
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 TCSP_SetTempDeactivated2_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 				  TPM_AUTH * operatorAuth)	/* in, out */
@@ -325,6 +326,7 @@ done:
 
 	return result;
 }
+#endif
 
 TSS_RESULT
 TCSP_FieldUpgrade_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
@@ -412,6 +414,7 @@ done:
 	return result;
 }
 
+#ifdef TSS_BUILD_TSS12
 TSS_RESULT
 TCSP_ResetLockValue_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			     TPM_AUTH * ownerAuth)	/* in, out */
@@ -511,4 +514,5 @@ TCSP_FlushSpecific_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 done:
 	return result;
 }
+#endif
 
