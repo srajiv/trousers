@@ -30,23 +30,23 @@ Tspi_GetPolicyObject(TSS_HOBJECT hObject,	/* in */
 		     TSS_FLAG policyType,	/* in */
 		     TSS_HPOLICY * phPolicy)	/* out */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
 	if (phPolicy == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if (obj_is_rsakey(hObject)) {
-#ifdef TSS_BUILD_RSAKEY_LIST
-		result = obj_rsakey_get_policy(hObject, policyType, phPolicy, NULL);
-#endif
+	if (obj_is_tpm(hObject)) {
+		result = obj_tpm_get_policy(hObject, policyType, phPolicy);
 #ifdef TSS_BUILD_NV
 	} else if (obj_is_nvstore(hObject)) {
 		result = obj_nvstore_get_policy(hObject, policyType, phPolicy);
 #endif
-	} else if (obj_is_tpm(hObject)) {
-		result = obj_tpm_get_policy(hObject, policyType, phPolicy);
-	} else if (obj_is_encdata(hObject)) {
+#ifdef TSS_BUILD_RSAKEY_LIST
+	} else if (obj_is_rsakey(hObject)) {
+		result = obj_rsakey_get_policy(hObject, policyType, phPolicy, NULL);
+#endif
 #ifdef TSS_BUILD_ENCDATA_LIST
+	} else if (obj_is_encdata(hObject)) {
 		result = obj_encdata_get_policy(hObject, policyType, phPolicy);
 #endif
 	} else {
@@ -91,20 +91,20 @@ TSS_RESULT
 Tspi_Policy_AssignToObject(TSS_HPOLICY hPolicy,	/* in */
 			   TSS_HOBJECT hObject)	/* in */
 {
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
-	if (obj_is_rsakey(hObject)) {
-#ifdef TSS_BUILD_RSAKEY_LIST
-		result = obj_rsakey_set_policy(hObject, hPolicy);
-#endif
+	if (obj_is_tpm(hObject)) {
+		result = obj_tpm_set_policy(hObject, hPolicy);
 #ifdef TSS_BUILD_NV
 	} else if (obj_is_nvstore(hObject)) {
 		result = obj_nvstore_set_policy(hObject, hPolicy);
 #endif
-	} else if (obj_is_tpm(hObject)) {
-		result = obj_tpm_set_policy(hObject, hPolicy);
-	} else if (obj_is_encdata(hObject)) {
+#ifdef TSS_BUILD_RSAKEY_LIST
+	} else if (obj_is_rsakey(hObject)) {
+		result = obj_rsakey_set_policy(hObject, hPolicy);
+#endif
 #ifdef TSS_BUILD_ENCDATA_LIST
+	} else if (obj_is_encdata(hObject)) {
 		result = obj_encdata_set_policy(hObject, hPolicy);
 #endif
 	} else {

@@ -128,6 +128,7 @@ obj_context_close(TSS_HCONTEXT tspContext)
 
 	context = (struct tr_context_obj *)obj->data;
 
+#ifdef TSS_BUILD_TRANSPORT
 	if (context->transAuth.AuthHandle) {
 		RPC_FlushSpecific(tspContext, context->transAuth.AuthHandle, TPM_RT_TRANS);
 
@@ -139,6 +140,7 @@ obj_context_close(TSS_HCONTEXT tspContext)
 		memset(&context->transLogOut, 0, sizeof(TPM_TRANSPORT_LOG_OUT));
 		memset(&context->transLogDigest, 0, sizeof(TPM_DIGEST));
 	}
+#endif
 
 	obj_list_put(&context_list);
 }
@@ -173,7 +175,7 @@ obj_context_get_machine_name(TSS_HCONTEXT tspContext, UINT32 *size, BYTE **data)
 {
 	struct tsp_object *obj;
 	struct tr_context_obj *context;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -213,7 +215,7 @@ obj_context_get_machine_name_attrib(TSS_HCONTEXT tspContext, UINT32 *size, BYTE 
 	struct tr_context_obj *context;
 	BYTE *utf_string;
 	UINT32 utf_size;
-	TSS_RESULT result = TSPERR(TSS_E_INVALID_HANDLE);
+	TSS_RESULT result;
 
 	if ((obj = obj_list_get_obj(&context_list, tspContext)) == NULL)
 		return TSPERR(TSS_E_INVALID_HANDLE);
@@ -438,6 +440,7 @@ obj_context_set_connection_policy(TSS_HCONTEXT tspContext, UINT32 policy)
 	return TSS_SUCCESS;
 }
 
+#ifdef TSS_BUILD_TRANSPORT
 TSS_RESULT
 obj_context_set_transport_key(TSS_HCONTEXT tspContext, TSS_HKEY hKey)
 {
@@ -1425,6 +1428,7 @@ done:
 
 	return result;
 }
+#endif
 
 /* XXX change 0,1,2 to #defines */
 TSS_RESULT
