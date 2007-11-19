@@ -13,6 +13,10 @@
 #include <syslog.h>
 #include <string.h>
 #include <netdb.h>
+#if (defined (__OpenBSD__) || defined (__FreeBSD__))
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
 #include <errno.h>
 
 #include "trousers/tss.h"
@@ -136,15 +140,9 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_AUTH:
 			LoadBlob_Auth_Special(offset, blob, ((TPM_AUTH *)data));
 			break;
+#ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_UUID:
 			LoadBlob_UUID(offset, blob, *((TSS_UUID *)data));
-			break;
-		case TCSD_PACKET_TYPE_ENCAUTH:
-			LoadBlob(offset, sizeof(TCPA_ENCAUTH), blob,
-				 ((TCPA_ENCAUTH *)data)->authdata);
-			break;
-		case TCSD_PACKET_TYPE_VERSION:
-			LoadBlob_VERSION(offset, blob, ((TPM_VERSION *)data));
 			break;
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
 			LoadBlob_KM_KEYINFO(offset, blob, ((TSS_KM_KEYINFO *)data));
@@ -155,9 +153,19 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
 			LoadBlob_LOADKEY_INFO(offset, blob, ((TCS_LOADKEY_INFO *)data));
 			break;
+#endif
+		case TCSD_PACKET_TYPE_ENCAUTH:
+			LoadBlob(offset, sizeof(TCPA_ENCAUTH), blob,
+				 ((TCPA_ENCAUTH *)data)->authdata);
+			break;
+		case TCSD_PACKET_TYPE_VERSION:
+			LoadBlob_VERSION(offset, blob, ((TPM_VERSION *)data));
+			break;
+#ifdef TSS_BUILD_PCR_EVENTS
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 			LoadBlob_PCR_EVENT(offset, blob, ((TSS_PCR_EVENT *)data));
 			break;
+#endif
 		case TCSD_PACKET_TYPE_SECRET:
 			LoadBlob(offset, sizeof(TCPA_SECRET), blob,
 				 ((TCPA_SECRET *)data)->authdata);
@@ -392,7 +400,6 @@ getData(TCSD_PACKET_TYPE dataType,
 	int theDataSize,
 	struct tcsd_comm_data *comm)
 {
-	TSS_RESULT result;
 	UINT64 old_offset, offset;
 	TCSD_PACKET_TYPE *type = (TCSD_PACKET_TYPE *)(comm->buf + comm->hdr.type_offset) + index;
 
@@ -448,10 +455,14 @@ getData(TCSD_PACKET_TYPE dataType,
 #endif
 #ifdef TSS_BUILD_PCR_EVENTS
 		case TCSD_PACKET_TYPE_PCR_EVENT:
+		{
+			TSS_RESULT result;
+
 			if ((result = UnloadBlob_PCR_EVENT(&offset, comm->buf,
 							   ((TSS_PCR_EVENT *)theData))))
 				return result;
 			break;
+		}
 #endif
 		case TCSD_PACKET_TYPE_SECRET:
 			UnloadBlob(&offset, sizeof(TCPA_SECRET), comm->buf,
@@ -600,7 +611,7 @@ DispatchTable tcs_func_table[TCSD_MAX_NUM_ORDS] = {
 	{tcs_wrap_Delegate_VerifyDelegation,"Delegate_VerifyDelegation"},
 	{tcs_wrap_CreateRevocableEndorsementKeyPair,"CreateRevocableEndorsementKeyPair"}, /* 110 */
 	{tcs_wrap_RevokeEndorsementKeyPair,"RevokeEndorsementKeyPair"},
-	{tcs_wrap_MakeIdentity2,"MakeIdentity2"},
+	{tcs_wrap_Error,"Error - was MakeIdentity2"},
 	{tcs_wrap_Quote2,"Quote2"},
 	{tcs_wrap_CMK_SetRestrictions,"CMK_SetRestrictions"},
 	{tcs_wrap_CMK_ApproveMA,"CMK_ApproveMA"}, /* 115 */
@@ -618,16 +629,34 @@ access_control(struct tcsd_thread_data *thread_data)
 {
 	int i = 0;
 	struct hostent *local_hostent = NULL;
+	static char *localhostname = NULL;
+	static int localhostname_len = 0;
 
-	if ((local_hostent = gethostbyname("localhost")) == NULL) {
-		LogError("Error resolving localhost: %s", hstrerror(h_errno));
-		return 1;
+	if (!localhostname) {
+		if ((local_hostent = gethostbyname("localhost")) == NULL) {
+			LogError("Error resolving localhost: %s", hstrerror(h_errno));
+			return 1;
+		}
+
+		LogDebugFn("Cached local hostent:");
+		LogDebugFn("h_name: %s", local_hostent->h_name);
+		for (i = 0; local_hostent->h_aliases[i]; i++) {
+			LogDebugFn("h_aliases[%d]: %s", i, local_hostent->h_aliases[i]);
+		}
+		LogDebugFn("h_addrtype: %s",
+			   (local_hostent->h_addrtype == AF_INET6 ? "AF_INET6" : "AF_INET"));
+
+		localhostname_len = strlen(local_hostent->h_name);
+		if ((localhostname = strdup(local_hostent->h_name)) == NULL) {
+			LogError("malloc of %d bytes failed.", localhostname_len);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
 	}
 
 	/* if the request comes from localhost, or is in the accepted ops list,
 	 * approve it */
-	if (!strncmp(thread_data->hostname, local_hostent->h_name,
-		     MIN((size_t)local_hostent->h_length, strlen(thread_data->hostname)))) {
+	if (!strncmp(thread_data->hostname, localhostname,
+		     MIN((size_t)localhostname_len, strlen(thread_data->hostname)))) {
 		return 0;
 	} else {
 		while (tcsd_options.remote_ops[i]) {
@@ -657,7 +686,9 @@ dispatchCommand(struct tcsd_thread_data *data)
 	}
 
 	LogDebug("Dispatching ordinal %u", data->comm.hdr.u.ordinal);
-	if (access_control(data)) {
+	/* We only need to check access_control if there are remote operations that are defined
+	 * in the config file, which means we allow remote connections */
+	if (tcsd_options.remote_ops[0] && access_control(data)) {
 		LogWarn("Denied %s operation from %s",
 			tcs_func_table[data->comm.hdr.u.ordinal].name, data->hostname);
 
