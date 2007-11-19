@@ -2,7 +2,7 @@
 # configure.in for the trousers project
 #
 
-AC_INIT(trousers, 0.3.1, trousers-tech@lists.sf.net)
+AC_INIT(trousers, 0.3.2cvs, trousers-tech@lists.sf.net)
 
 TSS_SPEC_MAJOR=1
 TSS_SPEC_MINOR=2
