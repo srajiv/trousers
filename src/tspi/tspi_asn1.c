@@ -23,6 +23,7 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
+#include "tsplog.h"
 
 #define TSS_OPENSSL_ASN1_ERROR	(0xffffffff)
 
