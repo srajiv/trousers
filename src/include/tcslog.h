@@ -64,6 +64,12 @@ extern int foreground;
 #define LogError(fmt, ...)	LogMessage(stderr, LOG_ERR, APPID, "ERROR: %s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #define LogWarn(fmt, ...)	LogMessage(stdout, LOG_WARNING, APPID, "%s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #define LogInfo(fmt, ...)	LogMessage(stdout, LOG_INFO, APPID, "%s:%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+
+/* Return Value logging */
+TSS_RESULT LogTCSERR(TSS_RESULT, char *, int);
+TSS_RESULT LogTDDLERR(TSS_RESULT, char *, int);
+void       LogTPMERR(TSS_RESULT, char *, int);
+
 #else
 #define LogDebug(fmt, ...)
 #define LogDebugFn(fmt, ...)
@@ -79,6 +85,8 @@ extern int foreground;
 
 /* Info Logging */
 #define LogInfo(fmt, ...)	LogMessage(stdout, LOG_INFO, APPID, fmt, ##__VA_ARGS__)
+
+#define LogTPMERR(a,b,c)
 #endif
 
 void LogBlobData(char *appid, unsigned long sizeOfBlob, unsigned char *blob);
