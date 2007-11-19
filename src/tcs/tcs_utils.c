@@ -237,6 +237,25 @@ LoadBlob_Header(UINT16 tag, UINT32 paramSize, UINT32 ordinal, BYTE * blob)
 #endif
 }
 
+#ifdef TSS_DEBUG
+TSS_RESULT
+LogUnloadBlob_Header(BYTE * blob, UINT32 * size, char *file, int line)
+{
+	TSS_RESULT result;
+
+	UINT16 temp = Decode_UINT16(blob);
+	LogData("UnloadBlob_Tag:", (temp));
+	*size = Decode_UINT32(&blob[2]);
+	LogData("UnloadBlob_Header, size:", *size);
+	LogData("UnloadBlob_Header, returnCode:", Decode_UINT32(&blob[6]));
+
+	if ((result = Decode_UINT32(&blob[6]))) {
+		LogTPMERR(result, file, line);
+	}
+
+	return result;
+}
+#else
 TSS_RESULT
 UnloadBlob_Header(BYTE * blob, UINT32 * size)
 {
@@ -247,6 +266,7 @@ UnloadBlob_Header(BYTE * blob, UINT32 * size)
 	LogData("UnloadBlob_Header, returnCode:", Decode_UINT32(&blob[6]));
 	return Decode_UINT32(&blob[6]);
 }
+#endif
 
 void
 LoadBlob_Auth(UINT64 *offset, BYTE * blob, TPM_AUTH * auth)
