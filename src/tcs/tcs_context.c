@@ -132,9 +132,11 @@ destroy_context(TCS_CONTEXT_HANDLE handle)
 
 	CTX_ref_count_keys(toKill);
 
+#ifdef TSS_BUILD_TRANSPORT
 	/* Free existing transport session if necessary */
 	if (toKill->transHandle)
 		TCSP_FlushSpecific_Common(toKill->transHandle, TPM_RT_TRANS);
+#endif
 
 	free(toKill);
 }
