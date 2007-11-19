@@ -1,4 +1,15 @@
 
+- Fixed lots of erroneous TSPERR and TCSERR calls
+- Added support for logging all error return codes when debug
+is on
+- Check that parent auth is loaded in the load key path outside
+the mem_cache_lock, if a thread sleeps holding it, we deadlock
+- Added support for dynamically growing the table that holds
+sleeping threads inside the auth manager
+- In tcs_auth_mgr.c, fixed the release handle path, which didn't
+check if the handle was swapped out before calling to the TPM.
+- Updates throughout the code supporting the modular build.
+
 * TROUSERS_0_3_1
 
 - Added check of return code for ResetDALock call in tspi_admin
