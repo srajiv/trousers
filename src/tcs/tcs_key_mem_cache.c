@@ -601,6 +601,14 @@ key_mgr_load_by_blob(TCS_CONTEXT_HANDLE hContext, TCS_KEY_HANDLE hUnwrappingKey,
 {
 	TSS_RESULT result;
 
+	/* Check that auth for the parent key is loaded outside the mem_cache_lock. We have to do
+	 * this here because if the TPM can't process this request right now, the thread could be
+	 * put to sleep while holding the mem_cache_lock, which would result in a deadlock */
+	if (pAuth) {
+		if ((result = auth_mgr_check(hContext, &pAuth->AuthHandle)))
+			return result;
+	}
+
 	MUTEX_LOCK(mem_cache_lock);
 
 	if (TPM_VERSION_IS(1,2)) {
@@ -859,18 +867,16 @@ TSS_RESULT
 mc_update_time_stamp(TCPA_KEY_HANDLE tpm_handle)
 {
 	struct key_mem_cache *tmp;
-	TSS_RESULT ret = TCSERR(TSS_E_FAIL);
 
 	for (tmp = key_mem_cache_head; tmp; tmp = tmp->next) {
 		LogDebugFn("TCSD mem_cached handle: 0x%x", tmp->tcs_handle);
 		if (tmp->tpm_handle == tpm_handle) {
 			tmp->time_stamp = getNextTimeStamp();
-			ret = TSS_SUCCESS;
-			break;
+			return TSS_SUCCESS;
 		}
 	}
 
-	return ret;
+	return TCSERR(TSS_E_FAIL);
 }
 
 /* Right now this evicts the LRU key assuming it's not the parent */
