@@ -68,7 +68,7 @@ TCSP_UnBind_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	result = UnloadBlob_Header(txBlob, &paramSize);
 	if (!result) {
 		result = tpm_rsp_parse(TPM_ORD_UnBind, txBlob, paramSize, outDataSize, outData,
-				       privAuth);
+				       privAuth, NULL);
 	}
 
 done:
