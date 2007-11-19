@@ -24,6 +24,7 @@
 
 #include <gtk/gtk.h>
 
+#include "trousers/tss.h"
 #include "tsplog.h"
 
 #include "support.h"
