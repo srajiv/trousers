@@ -32,9 +32,15 @@
 #define TSS_ERROR_LAYER(x)	(x & 0x3000)
 #define TSS_ERROR_CODE(x)	(x & TSS_MAX_ERROR)
 
+#ifdef TSS_DEBUG
+#define TSPERR(x)		LogTSPERR(x, __FILE__, __LINE__)
+#define TCSERR(x)		LogTCSERR(x, __FILE__, __LINE__)
+#define TDDLERR(x)		LogTDDLERR(x, __FILE__, __LINE__)
+#else
 #define TSPERR(x)		(x | TSS_LAYER_TSP)
 #define TCSERR(x)		(x | TSS_LAYER_TCS)
 #define TDDLERR(x)		(x | TSS_LAYER_TDDL)
+#endif
 
 extern TSS_UUID	NULL_UUID;
 extern TSS_UUID	SRK_UUID;
@@ -111,5 +117,12 @@ typedef struct tdTSS_KEY {
 	UINT32 encSize;
 	BYTE *encData;
 } TSS_KEY;
+
+#if (defined (__linux) || defined (linux))
+#define BSD_CONST
+#elif (defined (__OpenBSD__) || defined (__FreeBSD__))
+#define BSD_CONST const
+#endif
+
 
 #endif
