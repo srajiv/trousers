@@ -16,7 +16,11 @@
 #ifndef _TPM_H_
 #define _TPM_H_
 
+#if (defined (__linux) || defined (linux))
 #include <linux/ioctl.h>
+#elif (defined (__OpenBSD__) || defined (__FreeBSD__))
+#include <sys/ioctl.h>
+#endif
 
 /* ioctl commands */
 #define	TPMIOC_CANCEL		_IO('T', 0x00)
