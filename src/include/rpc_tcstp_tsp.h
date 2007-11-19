@@ -243,7 +243,7 @@ TSS_RESULT RPC_GetCapabilitySigned_TP(struct host_table_entry *,TCS_KEY_HANDLE,T
 TSS_RESULT RPC_GetCapabilityOwner_TP(struct host_table_entry *,TPM_AUTH *,TCPA_VERSION *,UINT32 *,UINT32 *);
 TSS_RESULT RPC_SetCapability_TP(struct host_table_entry *,TCPA_CAPABILITY_AREA,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *);
 #else
-#define RPC_GetCapability_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
+#define RPC_GetTPMCapability_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_GetCapabilitySigned_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_GetCapabilityOwner_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_SetCapability_TP(...)		TSPERR(TSS_E_INTERNAL_ERROR)
