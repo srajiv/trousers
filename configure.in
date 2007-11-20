@@ -337,7 +337,7 @@ AC_DISABLE_STATIC
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
-CFLAGS="$CFLAGS -I../include -W -Wall -Werror -Wno-unused-parameter \
+CFLAGS="$CFLAGS -I../include -W -Wall -Werror -Wno-unused-parameter -Wsign-compare \
 	-DTCSD_DEFAULT_PORT=${TCSD_DEFAULT_PORT} -DTSS_VER_MAJOR=${TSS_VER_MAJOR} \
 	-DTSS_VER_MINOR=${TSS_VER_MINOR} -DTSS_SPEC_MAJOR=${TSS_SPEC_MAJOR} \
 	-DTSS_SPEC_MINOR=${TSS_SPEC_MINOR}"
