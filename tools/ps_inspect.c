@@ -68,6 +68,12 @@
 #define PRINTERR(...)	fprintf(stderr, ##__VA_ARGS__)
 #define PRINT(...)	printf("PS " __VA_ARGS__)
 
+#if (defined (__FreeBSD__) || defined (__OpenBSD__))
+#define OFF_T_PRINTF	"lld"
+#else
+#define OFF_T_PRINTF	"ld"
+#endif
+
 /* one global buffer we read into from the PS file */
 unsigned char buf[1024];
 
@@ -332,7 +338,7 @@ main(int argc, char ** argv)
 
 	file_size = stat_buf.st_size;
 
-	PRINT("filename: %s (%ld bytes)\n", argv[1], file_size);
+	PRINT("filename: %s (%" OFF_T_PRINTF " bytes)\n", argv[1], file_size);
 
 	rc = inspect(f, file_size);
 
