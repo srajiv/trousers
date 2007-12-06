@@ -1,4 +1,5 @@
 
+- Commented out old OSAP code, its now unused
 - Fixed bug in tcsi_bind.c, one too few params were passed to
 the function parsing the TPM blob.
 - Fixed lots of erroneous TSPERR and TCSERR calls
