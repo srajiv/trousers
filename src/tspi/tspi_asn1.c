@@ -27,6 +27,15 @@
 
 #define TSS_OPENSSL_ASN1_ERROR	(0xffffffff)
 
+#if (OPENSSL_VERSION_NUMBER >= 0x0090800FL)
+#define OPENSSL_COMPAT_CONST const
+#else
+#define OPENSSL_COMPAT_CONST
+#endif
+
+#define OPENSSL_COMPAT_ASN1_SEQUENCE(tname) \
+	static const ASN1_TEMPLATE tname##_seq_tt[] 
+
 typedef struct tdTSS_BLOB {
 	ASN1_INTEGER *		structVersion;
 	ASN1_INTEGER *		blobType;
@@ -34,7 +43,7 @@ typedef struct tdTSS_BLOB {
 	ASN1_OCTET_STRING *	blob;
 } TSS_BLOB;
 
-ASN1_SEQUENCE(TSS_BLOB) = {
+OPENSSL_COMPAT_ASN1_SEQUENCE(TSS_BLOB) = {
 	ASN1_SIMPLE(TSS_BLOB, structVersion, ASN1_INTEGER),
 	ASN1_SIMPLE(TSS_BLOB, blobType, ASN1_INTEGER),
 	ASN1_SIMPLE(TSS_BLOB, blobLength, ASN1_INTEGER),
@@ -185,7 +194,8 @@ Tspi_DecodeBER_TssBlob(UINT32 berBlobSize,		/* in */
 			BYTE *rawBlob)			/* out */
 {
 	TSS_BLOB *tssBlob = NULL;
-	const BYTE *encBlob = berBlob;
+	OPENSSL_COMPAT_CONST BYTE *encBlob = berBlob;
+
 	UINT32 encBlobLen = berBlobSize;
 	UINT32 decStructVersion, decBlobType, decBlobSize;
 
