@@ -121,7 +121,7 @@ secret_PerformAuth_OIAP(TSS_HOBJECT hAuthorizedObject,
 
 	return obj_policy_dec_counter(hPolicy);
 }
-
+#if 0
 TSS_RESULT
 secret_PerformXOR_OSAP(TSS_HPOLICY hPolicy, TSS_HPOLICY hUsagePolicy,
 		       TSS_HPOLICY hMigrationPolicy, TSS_HOBJECT hOSAPObject,
@@ -335,7 +335,7 @@ secret_ValidateAuth_OSAP(TSS_HOBJECT hAuthorizedObject, UINT32 ulPendingFn,
 
 	return TSS_SUCCESS;
 }
-
+#endif
 TSS_RESULT
 Init_AuthNonce(TSS_HCONTEXT tspContext, TSS_BOOL cas, TPM_AUTH * auth)
 {
