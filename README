@@ -35,7 +35,7 @@ BUILD REQUIREMENTS
   pkgconfig
   libtool
   gtk2-devel
-  openssl-devel >= 0.9.8
+  openssl-devel >= 0.9.7
   pthreads library (glibc-devel)
 
 
