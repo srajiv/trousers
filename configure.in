@@ -335,7 +335,7 @@ dnl Add the languages which your application supports here.
 
 # end Glade section
 
-AC_CHECK_HEADER(pthread.h, [AC_DEFINE(HAVE_PTHREAD_H)])
+AC_CHECK_HEADER(pthread.h, [AC_DEFINE(HAVE_PTHREAD_H, 1, [pthread header])])
 
 AC_DISABLE_STATIC
 AC_PROG_CC
