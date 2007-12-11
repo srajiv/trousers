@@ -239,6 +239,22 @@ LoadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 TSS_RESULT
 UnloadBlob_PCR_EVENT(UINT64 *offset, BYTE *blob, TSS_PCR_EVENT *event)
 {
+	if (!event) {
+		UINT32 ulPcrValueLength, ulEventLength;
+
+		UnloadBlob_VERSION(offset, blob, NULL);
+		UnloadBlob_UINT32(offset, NULL, blob);
+		UnloadBlob_UINT32(offset, NULL, blob);
+
+		UnloadBlob_UINT32(offset, &ulPcrValueLength, blob);
+		(*offset) += ulPcrValueLength;
+
+		UnloadBlob_UINT32(offset, &ulEventLength, blob);
+		(*offset) += ulEventLength;
+
+		return TSS_SUCCESS;
+	}
+
 	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&(event->versionInfo));
 	UnloadBlob_UINT32(offset, &event->ulPcrIndex, blob);
 	UnloadBlob_UINT32(offset, &event->eventType, blob);
