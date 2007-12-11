@@ -378,6 +378,19 @@ LoadBlob_LOADKEY_INFO(UINT64 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 void
 UnloadBlob_LOADKEY_INFO(UINT64 *offset, BYTE *blob, TCS_LOADKEY_INFO *info)
 {
+	if (!info) {
+		UnloadBlob_UUID(offset, blob, NULL);
+		UnloadBlob_UUID(offset, blob, NULL);
+		UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, NULL);
+		UnloadBlob_UINT32(offset, NULL, blob);
+		UnloadBlob(offset, TCPA_NONCE_SIZE, blob, NULL);
+		UnloadBlob(offset, TCPA_NONCE_SIZE, blob, NULL);
+		UnloadBlob_BOOL(offset, NULL, blob);
+		UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, NULL);
+
+		return;
+	}
+
 	UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
 	UnloadBlob(offset, TCPA_DIGEST_SIZE, blob, info->paramDigest.digest);
@@ -453,6 +466,21 @@ LoadBlob_KM_KEYINFO2(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO2 *info)
 void
 UnloadBlob_KM_KEYINFO(UINT64 *offset, BYTE *blob, TSS_KM_KEYINFO *info)
 {
+	if (!info) {
+		UINT32 ulVendorDataLength;
+
+		UnloadBlob_VERSION(offset, blob, NULL);
+		UnloadBlob_UUID(offset, blob, NULL);
+		UnloadBlob_UUID(offset, blob, NULL);
+		UnloadBlob_BYTE(offset, blob, NULL);
+		UnloadBlob_BOOL(offset, NULL, blob);
+		UnloadBlob_UINT32(offset, &ulVendorDataLength, blob);
+
+		(*offset) += ulVendorDataLength;
+
+		return;
+	}
+
 	UnloadBlob_VERSION(offset, blob, (TPM_VERSION *)&(info->versionInfo));
 	UnloadBlob_UUID(offset, blob, &info->keyUUID);
 	UnloadBlob_UUID(offset, blob, &info->parentKeyUUID);
