@@ -179,82 +179,6 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 }
 
 
-#if 0
-int
-setData(BYTE dataType, int index, void *theData, int theDataSize, struct tcsd_packet_hdr *hdr)
-{
-	UINT64 offset;
-
-	if (index == 0) {
-		/* min packet size should be everything except the 1 byte 'data' field */
-		hdr->packet_size = sizeof(struct tcsd_packet_hdr) - 1;
-		hdr->num_parms = 0;
-		memset(hdr->parm_types, 0, sizeof(hdr->parm_types));
-	}
-	DBG_ASSERT(hdr->packet_size + theDataSize < USHRT_MAX);
-	offset = hdr->packet_size;
-	if (index >= TCSD_MAX_NUM_PARMS) {
-		LogError("Too many elements in TCSD packet!");
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	switch (dataType) {
-	case TCSD_PACKET_TYPE_BYTE:
-		LoadBlob_BYTE(&offset, *((BYTE *) (theData)), (void *)hdr);
-		break;
-	case TCSD_PACKET_TYPE_BOOL:
-		LoadBlob_BOOL(&offset, *((TSS_BOOL *) (theData)), (void *)hdr);
-		break;
-	case TCSD_PACKET_TYPE_UINT16:
-		LoadBlob_UINT16(&offset, *((UINT16 *) (theData)), (void *)hdr);
-		break;
-	case TCSD_PACKET_TYPE_UINT32:
-		LoadBlob_UINT32(&offset, *((UINT32 *) (theData)), (void *)hdr);
-		break;
-	case TCSD_PACKET_TYPE_PBYTE:
-		LoadBlob(&offset, theDataSize, (void *)hdr, theData);
-		break;
-	case TCSD_PACKET_TYPE_NONCE:
-		LoadBlob(&offset, sizeof(TCPA_NONCE), (void *)hdr, ((TCPA_NONCE *)theData)->nonce);
-		break;
-	case TCSD_PACKET_TYPE_DIGEST:
-		LoadBlob(&offset, sizeof(TCPA_DIGEST), (void *)hdr, ((TCPA_DIGEST *)theData)->digest);
-		break;
-	case TCSD_PACKET_TYPE_AUTH:
-		LoadBlob_Auth_Special(&offset, (void *)hdr, ((TPM_AUTH *)theData));
-		break;
-	case TCSD_PACKET_TYPE_ENCAUTH:
-		LoadBlob(&offset, sizeof(TCPA_ENCAUTH), (void *)hdr, ((TCPA_ENCAUTH *)theData)->authdata);
-		break;
-	case TCSD_PACKET_TYPE_VERSION:
-		LoadBlob_VERSION(&offset, (void *)hdr, ((TCPA_VERSION *)theData));
-		break;
-#ifdef TSS_BUILD_PS
-	case TCSD_PACKET_TYPE_KM_KEYINFO:
-		LoadBlob_KM_KEYINFO(&offset, (void *)hdr, ((TSS_KM_KEYINFO *)theData));
-		break;
-	case TCSD_PACKET_TYPE_LOADKEY_INFO:
-		LoadBlob_LOADKEY_INFO(&offset, (void *)hdr, ((TCS_LOADKEY_INFO *)theData));
-		break;
-	case TCSD_PACKET_TYPE_UUID:
-		LoadBlob_UUID(&offset, (void *)hdr, *((TSS_UUID *)theData));
-		break;
-#endif
-#ifdef TSS_BUILD_PCR_EVENT
-	case TCSD_PACKET_TYPE_PCR_EVENT:
-		LoadBlob_PCR_EVENT(&offset, (void *)hdr, ((TSS_PCR_EVENT *)theData));
-		break;
-#endif
-	default:
-		LogError("TCSD packet type unknown! (0x%x)", dataType & 0xff);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	hdr->parm_types[index] = dataType;
-	hdr->packet_size = offset;
-	hdr->num_parms++;
-	return 0;
-}
-#else
 int
 setData(TCSD_PACKET_TYPE dataType,
 	int index,
@@ -278,19 +202,7 @@ setData(TCSD_PACKET_TYPE dataType,
 		/* reallocate the buffer */
 		BYTE *buffer;
 		int buffer_size = comm->hdr.packet_size + offset;
-#if 0
-		static int realloc_scalar = 1;
 
-		realloc_scalar *= TCSD_COMMBUF_REALLOC_SCALAR;
-
-		if (((int)offset * realloc_scalar) + buffer_size < 0)
-			buffer_size = INT_MAX;
-		else
-			buffer_size += (int)offset * realloc_scalar;
-
-		LogDebug("Increasing communication buffer by %d bytes.",
-				(int)offset * realloc_scalar);
-#endif
 		LogDebug("Increasing communication buffer to %d bytes.", buffer_size);
 		buffer = realloc(comm->buf, buffer_size);
 		if (buffer == NULL) {
@@ -314,85 +226,7 @@ setData(TCSD_PACKET_TYPE dataType,
 
 	return TSS_SUCCESS;
 }
-#endif
 
-#if 0
-UINT32
-getData(BYTE dataType, int index, void *theData, int theDataSize, struct tsp_packet * packet)
-{
-	UINT64 offset;
-
-	if (index == 0)
-		packet->dataSize = 0;
-	offset = packet->dataSize;
-	if (index >= TCSD_MAX_NUM_PARMS) {
-		LogError("Too many elements in TCSD packet!");
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	if (index >= packet->numParms ||
-	    dataType != packet->types[index]) {
-		LogDebug("Data type of TCS packet element %d doesn't match.", index);
-		return TSS_TCP_RPC_BAD_PACKET_TYPE;
-	}
-	switch (dataType) {
-	case TCSD_PACKET_TYPE_BYTE:
-		UnloadBlob_BYTE(&offset, (BYTE *) (theData), packet->dataBuffer);
-		break;
-	case TCSD_PACKET_TYPE_BOOL:
-		UnloadBlob_BOOL(&offset, (TSS_BOOL *) (theData), packet->dataBuffer);
-		break;
-	case TCSD_PACKET_TYPE_UINT16:
-		UnloadBlob_UINT16(&offset, (UINT16 *) (theData), packet->dataBuffer);
-		break;
-	case TCSD_PACKET_TYPE_UINT32:
-		UnloadBlob_UINT32(&offset, (UINT32 *) (theData), packet->dataBuffer);
-		break;
-	case TCSD_PACKET_TYPE_PBYTE:
-		UnloadBlob(&offset, theDataSize, packet->dataBuffer, theData);
-		break;
-	case TCSD_PACKET_TYPE_NONCE:
-		UnloadBlob(&offset, sizeof(TCPA_NONCE), packet->dataBuffer,
-			   ((TCPA_NONCE *) (theData))->nonce);
-		break;
-	case TCSD_PACKET_TYPE_DIGEST:
-		UnloadBlob(&offset, sizeof(TCPA_DIGEST), packet->dataBuffer,
-			   ((TCPA_DIGEST *) (theData))->digest);
-		break;
-	case TCSD_PACKET_TYPE_AUTH:
-		UnloadBlob_Auth_Special(&offset, packet->dataBuffer, ((TPM_AUTH *) theData));
-		break;
-	case TCSD_PACKET_TYPE_ENCAUTH:
-		UnloadBlob(&offset, sizeof(TCPA_ENCAUTH), packet->dataBuffer,
-			   ((TCPA_ENCAUTH *) theData)->authdata);
-		break;
-	case TCSD_PACKET_TYPE_VERSION:
-		UnloadBlob_VERSION(&offset, packet->dataBuffer, ((TCPA_VERSION *) theData));
-		break;
-#ifdef TSS_BUILD_PS
-	case TCSD_PACKET_TYPE_KM_KEYINFO:
-		UnloadBlob_KM_KEYINFO(&offset, packet->dataBuffer, ((TSS_KM_KEYINFO*)theData));
-		break;
-	case TCSD_PACKET_TYPE_LOADKEY_INFO:
-		UnloadBlob_LOADKEY_INFO(&offset, packet->dataBuffer, ((TCS_LOADKEY_INFO *)theData));
-		break;
-	case TCSD_PACKET_TYPE_UUID:
-		UnloadBlob_UUID(&offset, packet->dataBuffer, (TSS_UUID *) theData);
-		break;
-#endif
-#ifdef TSS_BUILD_PCR_EVENT
-	case TCSD_PACKET_TYPE_PCR_EVENT:
-		if ((UnloadBlob_PCR_EVENT(&offset, packet->dataBuffer, ((TSS_PCR_EVENT *)theData))))
-			return TCSERR(TSS_E_OUTOFMEMORY);
-#endif
-		break;
-	default:
-		LogError("TCSD packet type unknown! (0x%x)", dataType & 0xff);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	packet->dataSize = offset;
-	return TSS_SUCCESS;
-}
-#else
 UINT32
 getData(TCSD_PACKET_TYPE dataType,
 	int index,
@@ -410,46 +244,99 @@ getData(TCSD_PACKET_TYPE dataType,
 	old_offset = offset = comm->hdr.parm_offset;
 	switch (dataType) {
 		case TCSD_PACKET_TYPE_BYTE:
+			if (old_offset + sizeof(BYTE) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_BYTE(&offset, (BYTE *) (theData), comm->buf);
 			break;
 		case TCSD_PACKET_TYPE_BOOL:
+			if (old_offset + sizeof(TSS_BOOL) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_BOOL(&offset, (TSS_BOOL *) (theData), comm->buf);
 			break;
 		case TCSD_PACKET_TYPE_UINT16:
+			if (old_offset + sizeof(UINT16) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_UINT16(&offset, (UINT16 *) (theData), comm->buf);
 			break;
 		case TCSD_PACKET_TYPE_UINT32:
+			if (old_offset + sizeof(UINT32) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_UINT32(&offset, (UINT32 *) (theData), comm->buf);
 			break;
 		case TCSD_PACKET_TYPE_PBYTE:
+			if (old_offset + theDataSize > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob(&offset, theDataSize, comm->buf, theData);
 			break;
 		case TCSD_PACKET_TYPE_NONCE:
+			if (old_offset + sizeof(TPM_NONCE) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob(&offset, sizeof(TCPA_NONCE), comm->buf,
 					((TCPA_NONCE *) (theData))->nonce);
 			break;
 		case TCSD_PACKET_TYPE_DIGEST:
+			if (old_offset + sizeof(TPM_DIGEST) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob(&offset, sizeof(TCPA_DIGEST), comm->buf,
 					((TCPA_DIGEST *) (theData))->digest);
 			break;
 		case TCSD_PACKET_TYPE_AUTH:
+			if (old_offset + sizeof(TPM_AUTH) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_Auth_Special(&offset, comm->buf, ((TPM_AUTH *) theData));
 			break;
 		case TCSD_PACKET_TYPE_ENCAUTH:
+			if (old_offset + sizeof(TPM_ENCAUTH) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob(&offset, sizeof(TCPA_ENCAUTH), comm->buf,
 					((TCPA_ENCAUTH *) theData)->authdata);
 			break;
 		case TCSD_PACKET_TYPE_VERSION:
+			if (old_offset + sizeof(TPM_VERSION) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_VERSION(&offset, comm->buf, ((TPM_VERSION *) theData));
 			break;
 #ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
-			UnloadBlob_KM_KEYINFO(&offset, comm->buf, ((TSS_KM_KEYINFO*)theData));
+			{
+				UINT64 keyinfo_len = 0;
+
+				UnloadBlob_KM_KEYINFO(&keyinfo_len, comm->buf, NULL);
+
+				if (old_offset + keyinfo_len > comm->hdr.packet_size)
+					return TCSERR(TSS_E_INTERNAL_ERROR);
+
+				UnloadBlob_KM_KEYINFO(&offset, comm->buf,
+						      ((TSS_KM_KEYINFO *)theData));
+			}
 			break;
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
-			UnloadBlob_LOADKEY_INFO(&offset, comm->buf, ((TCS_LOADKEY_INFO *)theData));
+			{
+				UINT64 loadkeyinfo_len = 0;
+
+				UnloadBlob_LOADKEY_INFO(&loadkeyinfo_len, comm->buf, NULL);
+
+				if (old_offset + loadkeyinfo_len > comm->hdr.packet_size)
+					return TCSERR(TSS_E_INTERNAL_ERROR);
+
+				UnloadBlob_LOADKEY_INFO(&offset, comm->buf,
+							((TCS_LOADKEY_INFO *)theData));
+			}
 			break;
 		case TCSD_PACKET_TYPE_UUID:
+			if (old_offset + sizeof(TSS_UUID) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob_UUID(&offset, comm->buf, (TSS_UUID *) theData);
 			break;
 #endif
@@ -457,6 +344,12 @@ getData(TCSD_PACKET_TYPE dataType,
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 		{
 			TSS_RESULT result;
+			UINT64 pcrevent_len = 0;
+
+			(void)UnloadBlob_PCR_EVENT(&pcrevent_len, comm->buf, NULL);
+
+			if (old_offset + pcrevent_len > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if ((result = UnloadBlob_PCR_EVENT(&offset, comm->buf,
 							   ((TSS_PCR_EVENT *)theData))))
@@ -465,6 +358,9 @@ getData(TCSD_PACKET_TYPE dataType,
 		}
 #endif
 		case TCSD_PACKET_TYPE_SECRET:
+			if (old_offset + sizeof(TPM_SECRET) > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
+
 			UnloadBlob(&offset, sizeof(TCPA_SECRET), comm->buf,
 					((TCPA_SECRET *) theData)->authdata);
 			break;
@@ -477,7 +373,6 @@ getData(TCSD_PACKET_TYPE dataType,
 
 	return TSS_SUCCESS;
 }
-#endif
 
 TSS_RESULT
 tcs_wrap_Error(struct tcsd_thread_data *data)
@@ -723,70 +618,6 @@ dispatchCommand(struct tcsd_thread_data *data)
 
 }
 
-#if 0
-TSS_RESULT
-getTCSDPacket(struct tcsd_thread_data *data, struct tcsd_packet_hdr **hdr)
-{
-	struct tsp_packet tsp_data;
-	BYTE tmp_data[TSS_TCP_RPC_MAX_DATA_LEN];
-	UINT64 offset = 0, tmp_offset;
-	UINT32 totalSize;
-	UINT32 result, operation_result;
-
-	/* unload the wire blob (data->buf) into a host blob (tsp_data) */
-	UnloadBlob_UINT32(&offset, &tsp_data.ordinal, data->buf);
-	UnloadBlob_UINT32(&offset, &totalSize, data->buf);
-	UnloadBlob_UINT16(&offset, &tsp_data.numParms, data->buf);
-
-	/* Invalid packet check */
-	if ((int)totalSize != data->buf_size) {
-		LogDebug("Corrupt packet received. Actual size: %u, reported size: %u",
-			 data->buf_size, totalSize);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	if (tsp_data.numParms > 0) {
-		UnloadBlob(&offset, tsp_data.numParms, data->buf, tsp_data.types);
-
-		/* if we've already unloaded totalSize bytes or more, the TSP's
-		 * packet is bogus, return a code indicating that its the
-		 * TSP's problem */
-		if (offset < totalSize)
-			UnloadBlob(&offset, totalSize - offset, data->buf, tsp_data.dataBuffer);
-		else
-			return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	/* dispatch the command to the TCS */
-	if ((result = dispatchCommand(data, &tsp_data, hdr)))
-		return result;
-
-	operation_result = (*hdr)->result;
-	totalSize = (*hdr)->packet_size;
-
-	offset = 0;
-	LoadBlob_UINT32(&offset, (*hdr)->result, (BYTE *)*hdr);
-	LoadBlob_UINT32(&offset, (*hdr)->packet_size, (BYTE *)*hdr);
-
-	if (operation_result == TSS_SUCCESS ||
-	    (tsp_data.ordinal == TCSD_ORD_LOADKEYBYUUID &&
-	     operation_result == TCSERR(TCS_E_KM_LOADFAILED))) {
-		LoadBlob_UINT16(&offset, (*hdr)->num_parms, (BYTE *)*hdr);
-
-		tmp_offset = 0;
-		LoadBlob(&tmp_offset, TCSD_MAX_NUM_PARMS, tmp_data, (*hdr)->parm_types);
-		LoadBlob(&offset, TCSD_MAX_NUM_PARMS, (BYTE *)*hdr, tmp_data);
-
-		tmp_offset = 0;
-		if (totalSize - offset > TSS_TCP_RPC_MAX_DATA_LEN)
-			LogError("%s: ************** ERROR ***********************", __FUNCTION__);
-		LoadBlob(&tmp_offset, totalSize - offset, tmp_data, &((*hdr)->data));
-		LoadBlob(&offset, totalSize - offset, (BYTE *)*hdr, tmp_data);
-	}
-
-	return result;
-}
-#else
 TSS_RESULT
 getTCSDPacket(struct tcsd_thread_data *data)
 {
@@ -799,4 +630,3 @@ getTCSDPacket(struct tcsd_thread_data *data)
 	/* dispatch the command to the TCS */
 	return dispatchCommand(data);
 }
-#endif
