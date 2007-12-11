@@ -1,4 +1,7 @@
 
+- Added bounds checking in the data parsing routines of the TCSD's
+tcstp RPC code, preventing attacks from malicious clients.
+- Removed commented out code in src/tcs/rpc/tcstp/rpc.c
 - Commented out old OSAP code, its now unused
 - Fixed bug in tcsi_bind.c, one too few params were passed to
 the function parsing the TPM blob.
