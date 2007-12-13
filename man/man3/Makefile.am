@@ -85,5 +85,6 @@ man3_MANS = Tspi_ChangeAuth.3 \
 	    Tspi_TPM_DAA_Sign.3 \
 	    Tspi_TPM_GetAuditDigest.3 \
 	    Tspi_TPM_OwnerGetSRKPubKey.3 \
-	    Tspi_TPM_Quote.3
+	    Tspi_TPM_Quote.3 \
+	    Tspi_TPM_CMKSetRestrictions.3
 EXTRA_DIST = $(man3_MANS)
