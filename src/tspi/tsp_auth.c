@@ -1049,9 +1049,14 @@ authsess_xsap_hmac(struct authsess *sess, TPM_DIGEST *digest)
 					      digest->digest, sess->auth.HMAC.authdata)))
 		return result;
 
-	obj_policy_dec_counter(sess->hUsageParent);
-	obj_policy_dec_counter(sess->hUsageChild);
-	obj_policy_dec_counter(sess->hMigChild);
+	if (sess->hUsageParent)
+		obj_policy_dec_counter(sess->hUsageParent);
+
+	if (sess->hUsageChild)
+		obj_policy_dec_counter(sess->hUsageChild);
+
+	if (sess->hMigChild)
+		obj_policy_dec_counter(sess->hMigChild);
 
 	return TSS_SUCCESS;
 }
