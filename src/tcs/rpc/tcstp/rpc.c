@@ -288,7 +288,9 @@ getData(TCSD_PACKET_TYPE dataType,
 					((TCPA_DIGEST *) (theData))->digest);
 			break;
 		case TCSD_PACKET_TYPE_AUTH:
-			if (old_offset + sizeof(TPM_AUTH) > comm->hdr.packet_size)
+			if ((old_offset + sizeof(TCS_AUTHHANDLE)
+					+ sizeof(TPM_BOOL)
+					+ (2 * sizeof(TPM_NONCE))) > comm->hdr.packet_size)
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			UnloadBlob_Auth_Special(&offset, comm->buf, ((TPM_AUTH *) theData));
