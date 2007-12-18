@@ -310,30 +310,22 @@ getData(TCSD_PACKET_TYPE dataType,
 			break;
 #ifdef TSS_BUILD_PS
 		case TCSD_PACKET_TYPE_KM_KEYINFO:
-			{
-				UINT64 keyinfo_len = 0;
+			UnloadBlob_KM_KEYINFO(&old_offset, comm->buf, NULL);
 
-				UnloadBlob_KM_KEYINFO(&keyinfo_len, comm->buf, NULL);
+			if (old_offset > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
-				if (old_offset + keyinfo_len > comm->hdr.packet_size)
-					return TCSERR(TSS_E_INTERNAL_ERROR);
-
-				UnloadBlob_KM_KEYINFO(&offset, comm->buf,
-						      ((TSS_KM_KEYINFO *)theData));
-			}
+			old_offset = offset;
+			UnloadBlob_KM_KEYINFO(&offset, comm->buf, ((TSS_KM_KEYINFO *)theData));
 			break;
 		case TCSD_PACKET_TYPE_LOADKEY_INFO:
-			{
-				UINT64 loadkeyinfo_len = 0;
+			UnloadBlob_LOADKEY_INFO(&old_offset, comm->buf, NULL);
 
-				UnloadBlob_LOADKEY_INFO(&loadkeyinfo_len, comm->buf, NULL);
+			if (old_offset > comm->hdr.packet_size)
+				return TCSERR(TSS_E_INTERNAL_ERROR);
 
-				if (old_offset + loadkeyinfo_len > comm->hdr.packet_size)
-					return TCSERR(TSS_E_INTERNAL_ERROR);
-
-				UnloadBlob_LOADKEY_INFO(&offset, comm->buf,
-							((TCS_LOADKEY_INFO *)theData));
-			}
+			old_offset = offset;
+			UnloadBlob_LOADKEY_INFO(&offset, comm->buf, ((TCS_LOADKEY_INFO *)theData));
 			break;
 		case TCSD_PACKET_TYPE_UUID:
 			if (old_offset + sizeof(TSS_UUID) > comm->hdr.packet_size)
@@ -346,13 +338,13 @@ getData(TCSD_PACKET_TYPE dataType,
 		case TCSD_PACKET_TYPE_PCR_EVENT:
 		{
 			TSS_RESULT result;
-			UINT64 pcrevent_len = 0;
 
-			(void)UnloadBlob_PCR_EVENT(&pcrevent_len, comm->buf, NULL);
+			(void)UnloadBlob_PCR_EVENT(&old_offset, comm->buf, NULL);
 
-			if (old_offset + pcrevent_len > comm->hdr.packet_size)
+			if (old_offset > comm->hdr.packet_size)
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 
+			old_offset = offset;
 			if ((result = UnloadBlob_PCR_EVENT(&offset, comm->buf,
 							   ((TSS_PCR_EVENT *)theData))))
 				return result;
