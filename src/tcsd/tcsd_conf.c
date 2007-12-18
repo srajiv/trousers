@@ -190,7 +190,7 @@ get_file_path(char *ptr, char **dest)
 	int i = 0;
 
 	while (isalpha(*ptr) || isdigit(*ptr) ||
-		*ptr == '/' || *ptr == '.' || *ptr == '#' || *ptr == '_')
+		*ptr == '/' || *ptr == '.' || *ptr == '#' || *ptr == '_' || *ptr == '-')
 	{
 		tmp_buf[i] = *ptr;
 		ptr++;
