@@ -67,7 +67,9 @@ TSS_RESULT	   obj_tcskey_get_pubkeyhash(TCS_KEY_HANDLE, BYTE *);
 #include "obj_policy.h"
 #include "obj_rsakey.h"
 #include "obj_encdata.h"
-#include "obj_daa.h"
+#include "obj_daacred.h"
+#include "obj_daaarakey.h"
+#include "obj_daaissuerkey.h"
 #include "obj_nv.h"
 #include "obj_delfamily.h"
 #include "obj_migdata.h"
@@ -80,7 +82,9 @@ PCRS_LIST_DECLARE_EXTERN;
 POLICY_LIST_DECLARE_EXTERN;
 RSAKEY_LIST_DECLARE_EXTERN;
 ENCDATA_LIST_DECLARE_EXTERN;
-DAA_LIST_DECLARE_EXTERN;
+DAACRED_LIST_DECLARE_EXTERN;
+DAAARAKEY_LIST_DECLARE_EXTERN;
+DAAISSUERKEY_LIST_DECLARE_EXTERN;
 NVSTORE_LIST_DECLARE_EXTERN;
 DELFAMILY_LIST_DECLARE_EXTERN;
 MIGDATA_LIST_DECLARE_EXTERN;
