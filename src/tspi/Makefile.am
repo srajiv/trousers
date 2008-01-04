@@ -164,7 +164,8 @@ libtspi_la_SOURCES+=tspi_selftest.c tsp_selftest.c rpc/@RPC@/rpc_selftest.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_SELFTEST
 endif
 if TSS_BUILD_DAA
-libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c obj_daa.c rpc/@RPC@/rpc_daa.c \
+libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c obj_daacred.c obj_daaarakey.c obj_daaissuerkey.c \
+		    rpc/@RPC@/rpc_daa.c \
 		    daa/daa_issuer/keypair_generator.c daa/daa_issuer/prime_gen.c \
 		    daa/daa_issuer/key_correctness_proof.c daa/daa_platform/platform.c \
 		    daa/daa_issuer/issuer_init.c daa/daa_issuer/issue_credential.c \

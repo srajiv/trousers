@@ -266,12 +266,24 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		break;
 #endif
 #ifdef TSS_BUILD_DAA
-	case TSS_OBJECT_TYPE_DAA:
-		/* There are no valid flags for a DAA object */
+	//case TSS_OBJECT_TYPE_DAA_CREDENTIAL:
+	case TSS_OBJECT_TYPE_DAA_CERTIFICATE:
 		if (initFlags & ~(0UL))
 			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
 
-		result = obj_daa_add(tspContext, phObject);
+		result = obj_daacred_add(tspContext, phObject);
+		break;
+	case TSS_OBJECT_TYPE_DAA_ISSUER_KEY:
+		if (initFlags & ~(0UL))
+			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+
+		result = obj_daaissuerkey_add(tspContext, phObject);
+		break;
+	case TSS_OBJECT_TYPE_DAA_ARA_KEY:
+		if (initFlags & ~(0UL))
+			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
+
+		result = obj_daaarakey_add(tspContext, phObject);
 		break;
 #endif
 #ifdef TSS_BUILD_NV
@@ -279,7 +291,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		/* There are no valid flags for a NV object */
 		if (initFlags & ~(0UL))
 			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
-	
+
 		result = obj_nvstore_add(tspContext, phObject);
 		break;
 #endif
@@ -288,7 +300,7 @@ Tspi_Context_CreateObject(TSS_HCONTEXT tspContext,	/* in */
 		/* There are no valid flags for a DELFAMILY object */
 		if (initFlags & ~(0UL))
 			return TSPERR(TSS_E_INVALID_OBJECT_INITFLAG);
-	
+
 		result = obj_delfamily_add(tspContext, phObject);
 		break;
 #endif
