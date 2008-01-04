@@ -301,8 +301,8 @@ TSS_RESULT RPC_ReadManuMaintPub_TP(struct host_table_entry *,TCPA_NONCE,TCPA_DIG
 #endif
 
 #ifdef TSS_BUILD_DAA
-TSS_RESULT RPC_DaaJoin_TP(struct host_table_entry *,TSS_HDAA,BYTE,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
-TSS_RESULT RPC_DaaSign_TP(struct host_table_entry *,TSS_HDAA,BYTE,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
+TSS_RESULT RPC_DaaJoin_TP(struct host_table_entry *,TPM_HANDLE,BYTE,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
+TSS_RESULT RPC_DaaSign_TP(struct host_table_entry *,TPM_HANDLE,BYTE,UINT32,BYTE *,UINT32,BYTE *,TPM_AUTH *,UINT32 *,BYTE **);
 #else
 #define RPC_DaaJoin_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
 #define RPC_DaaSign_TP(...)	TSPERR(TSS_E_INTERNAL_ERROR)
