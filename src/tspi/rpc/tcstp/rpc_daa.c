@@ -89,7 +89,7 @@ RPC_DaaJoin_TP(struct host_table_entry *hte,
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
-		LogDebugFn("getData outputData (outputSize=%d)", *outputSize);
+		LogDebugFn("getData outputData (outputSize=%u)", *outputSize);
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *outputData, *outputSize, &hte->comm)) {
 			free(*outputData);
 			*outputData = NULL;
