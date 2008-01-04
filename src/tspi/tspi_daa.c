@@ -17,15 +17,15 @@
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
 #include "trousers_types.h"
-#include "trousers_types.h"
+//#include "trousers_types.h"
 #include "spi_utils.h"
-#include "capabilities.h"
+//#include "capabilities.h"
 #include "tsplog.h"
-#include "tcs_tsp.h"
-#include "tspps.h"
-#include "hosttable.h"
-#include "tcsd_wrap.h"
-#include "tcsd.h"
+//#include "tcs_tsp.h"
+//#include "tspps.h"
+//#include "hosttable.h"
+//#include "tcsd_wrap.h"
+//#include "tcsd.h"
 #include "obj.h"
 #include "daa/issuer.h"
 #include "daa/platform.h"
@@ -77,6 +77,7 @@ Parameters
 	- identityProof: This structure contains the endorsement, platform and conformance credential.
 	- joinSession: This structure contains DAA Join session information.
 */
+#if 0
 TSPICALL
 Tspi_TPM_DAA_JoinInit(TSS_HDAA                 hDAA,				// in
 		      TSS_HTPM                 hTPM,				// in
@@ -92,7 +93,7 @@ Tspi_TPM_DAA_JoinInit(TSS_HDAA                 hDAA,				// in
 		      TSS_DAA_JOIN_SESSION**   joinSession)			// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -112,13 +113,51 @@ Tspi_TPM_DAA_JoinInit(TSS_HDAA                 hDAA,				// in
 		identityProof,
 		joinSession);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+
 	LogDebug("TSPI_TPM_DAA_joinInit ALLOC DELTA:%d",mallinfo().uordblks-before);
-#endif
 	LogDebug("<- TSPI_TPM_DAA_joinInit result=%d", result);
 	return result;
 }
+#else
+TSS_RESULT
+Tspi_TPM_DAA_JoinInit(TSS_HTPM                 hTPM,                          /* in */
+		      TSS_HDAA_ISSUER_KEY      hIssuerKey,                    /* in */
+		      UINT32                   daaCounter,                    /* in */
+		      UINT32                   issuerAuthPKsLength,           /* in */
+		      TSS_HKEY*                issuerAuthPKs,                 /* in */
+		      UINT32                   issuerAuthPKSignaturesLength,  /* in */
+		      UINT32                   issuerAuthPKSignaturesLength2, /* in */
+		      BYTE**                   issuerAuthPKSignatures,        /* in */
+		      UINT32*                  capitalUprimeLength,           /* out */
+		      BYTE**                   capitalUprime,                 /* out */
+		      TSS_DAA_IDENTITY_PROOF** identityProof,                 /* out */
+		      UINT32*                  joinSessionLength,             /* out */
+		      BYTE**                   joinSession)                   /* out */
+{
+	TSS_RESULT result;
+#ifdef TSS_DEBUG
+	int before = mallinfo().uordblks;
+#endif
 
+	if (!capitalUprimeLength || !capitalUprime || !identityProof || !joinSessionLength ||
+	    !joinSession)
+		return TSPERR(TSS_E_BAD_PARAMETER);
+
+	result = Tspi_TPM_DAA_JoinInit_internal(hTPM, hIssuerKey, daaCounter, issuerAuthPKsLength,
+						issuerAuthPKs, issuerAuthPKSignaturesLength,
+						issuerAuthPKSignaturesLength2,
+						issuerAuthPKSignatures, capitalUprimeLength,
+						capitalUprime, identityProof, joinSessionLength,
+						joinSession);
+
+	bi_flush_memory();
+
+	LogDebug("TSPI_TPM_DAA_joinInit ALLOC DELTA:%d",mallinfo().uordblks-before);
+	LogDebug("<- TSPI_TPM_DAA_joinInit result=%d", result);
+
+	return result;
+}
+#endif
 /**
 This function is part of the DAA Issuer component. It defines the generation of a DAA Issuer
 public and secret key. Further it defines the generation of a non-interactive proof (using
@@ -140,6 +179,7 @@ Parameters
 	- keyPair:	Handle of the main DAA Issuer key pair (private and public portion)
 	- publicKeyProof:Handle of the proof of the main DAA Issuer public key
 */
+#if 0
 TSPICALL
 Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 		    UINT32         issuerBaseNameLength,	// in
@@ -153,7 +193,7 @@ Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 	KEY_PAIR_WITH_PROOF_internal *key_proof;
 	TSS_DAA_KEY_PAIR *tss_daa_key_pair;
 	TSS_HCONTEXT hContext;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -166,7 +206,8 @@ Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 						issuerBaseNameLength,
 						issuerBaseName,
 						&key_proof);
-	if( result != TSS_SUCCESS) return result;
+	if (result != TSS_SUCCESS)
+		return result;
 	LogDebug("TSPI_DAA_IssueSetup convert internal structure to public allocated using tspi_alloc");
 	LogDebug("key_proof->proof->length_challenge=%d  key_proof->proof->length_response=%d",
 			key_proof->proof->length_challenge, key_proof->proof->length_response);
@@ -188,13 +229,65 @@ Tspi_DAA_IssueSetup(TSS_HDAA       hDAA,			// in
 	*keyPair = (TSS_HKEY)tss_daa_key_pair;
 close:
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+
 	LogDebug("TSPI_DAA_IssueSetup ALLOC DELTA:%d", mallinfo().uordblks-before);
-#endif
 	LogDebug( "TSPI_DAA_IssueSetup end return=%d ",result);
 	return result;
 }
+#else
+TSS_RESULT
+Tspi_DAA_Issuer_GenerateKey(TSS_HDAA_ISSUER_KEY hIssuerKey,           // in
+			    UINT32              issuerBaseNameLength, // in
+			    BYTE*               issuerBaseName)       // in
+{
+	TSS_RESULT result;
+	KEY_PAIR_WITH_PROOF_internal *key_proof;
+	TSS_DAA_KEY_PAIR *tss_daa_key_pair;
+	TSS_HCONTEXT tspContext;
+	UINT32 numberPlatformAttributes, numberIssuerAttributes;
+#ifdef TSS_DEBUG
+	int before = mallinfo().uordblks;
+#endif
 
+	if ((result = obj_daaissuerkey_get_tsp_context(hIssuerKey, &tspContext)))
+		return result;
+
+	if ((result = obj_daaissuerkey_get_attribs(hIssuerKey, &numberIssuerAttributes,
+						   &numberPlatformAttributes)))
+		return result;
+
+	if ((result = generate_key_pair(numberIssuerAttributes, numberPlatformAttributes,
+					issuerBaseNameLength, issuerBaseName, &key_proof)))
+		return result;
+
+	LogDebugFn("convert internal structure to public allocated using tspi_alloc");
+	LogDebug("key_proof->proof->length_challenge=%d  key_proof->proof->length_response=%d",
+		 key_proof->proof->length_challenge, key_proof->proof->length_response);
+
+	// prepare out parameters
+	*publicKeyProof = i_2_e_TSS_DAA_PK_PROOF( key_proof->proof, &tss_alloc, tspContext);
+
+	tss_daa_key_pair = (TSS_DAA_KEY_PAIR *)tss_alloc( sizeof(TSS_DAA_KEY_PAIR), tspContext);
+	if (tss_daa_key_pair == NULL) {
+		LogError("malloc of %d bytes failed", sizeof(TSS_DAA_KEY_PAIR));
+		result = TSPERR(TSS_E_OUTOFMEMORY);
+		goto close;
+	}
+	tss_daa_key_pair->private_key = i_2_e_TSS_DAA_PRIVATE_KEY( key_proof->private_key,
+								&tss_alloc,
+								tspContext);
+	tss_daa_key_pair->public_key = i_2_e_TSS_DAA_PK( key_proof->pk,
+							&tss_alloc,
+							tspContext);
+	*keyPair = (TSS_HKEY)tss_daa_key_pair;
+close:
+	bi_flush_memory();
+
+	LogDebug("TSPI_DAA_IssueSetup ALLOC DELTA:%d", mallinfo().uordblks-before);
+	LogDebug( "TSPI_DAA_IssueSetup end return=%d ",result);
+	return result;
+}
+#endif
 /**
 This function is part of the DAA Issuer component. It's the first function out of 2 in order to
 issue a DAA Credential for a TCG Platform. It assumes that the endorsement key and its
@@ -237,9 +330,9 @@ Tspi_DAA_IssueInit(TSS_HDAA                      hDAA,                          
 		joinSession	// out
 	);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+
 	LogDebug("Tspi_DAA_IssueInit_internal ALLOC DELTA:%d", mallinfo().uordblks-before);
-#endif
+
 	return result;
 }
 
@@ -261,7 +354,7 @@ Tspi_DAA_IssuerKeyVerification(TSS_HDAA          hDAA,		// in
 {
 	TSS_RESULT result;
 	int is_correct;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -275,7 +368,7 @@ Tspi_DAA_IssuerKeyVerification(TSS_HDAA          hDAA,		// in
 	if( is_correct) *isCorrect = TRUE;
 	else *isCorrect = FALSE;
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("TSPI_DAA_IssuerKeyVerification ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -296,7 +389,7 @@ Tspi_DAA_IssueCredential(TSS_HDAA                      hDAA,			// in
 			 TSS_DAA_CRED_ISSUER**         credIssuer)		// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -312,7 +405,7 @@ Tspi_DAA_IssueCredential(TSS_HDAA                      hDAA,			// in
 		credIssuer
 	);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_DAA_IssueCredential ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -333,7 +426,7 @@ Tspi_DAA_VerifyInit(TSS_HDAA hDAA,			// in
 		    BYTE**   baseName)			// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -345,7 +438,7 @@ Tspi_DAA_VerifyInit(TSS_HDAA hDAA,			// in
 						baseNameLength,
 						baseName);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_DAA_VerifyInit ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -372,7 +465,7 @@ Tspi_DAA_VerifySignature(TSS_HDAA           hDAA,		// in
 			 TSS_BOOL*          isCorrect)		// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -389,7 +482,7 @@ Tspi_DAA_VerifySignature(TSS_HDAA           hDAA,		// in
 						baseName,
 						isCorrect);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_DAA_VerifySignature ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -415,7 +508,7 @@ Tspi_DAA_RevokeSetup(TSS_HDAA       hDAA,		// in
 		     TSS_HDAA_DATA* arPrivateKey)	// out (TSS_DAA_AR_SK)
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -426,7 +519,7 @@ Tspi_DAA_RevokeSetup(TSS_HDAA       hDAA,		// in
 		keyPair		// out
 	);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_DAA_RevokeSetup ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return TSS_SUCCESS;
@@ -460,7 +553,7 @@ Tspi_DAA_ARDecrypt(TSS_HDAA                     hDAA,			// in
 		   TSS_DAA_PSEUDONYM_PLAIN**    pseudonym)		// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -474,7 +567,7 @@ Tspi_DAA_ARDecrypt(TSS_HDAA                     hDAA,			// in
 		pseudonym		// out
 	);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_DAA_ARDecrypt ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -499,7 +592,7 @@ Tspi_TPM_DAA_JoinCreateDaaPubKey(TSS_HDAA                     hDAA,	            
 				 TSS_DAA_CREDENTIAL_REQUEST** credentialRequest)            // out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -518,7 +611,7 @@ Tspi_TPM_DAA_JoinCreateDaaPubKey(TSS_HDAA                     hDAA,	            
 		credentialRequest	// out
 	);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("Tspi_TPM_DAA_JoinCreateDaaPubKey ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	return result;
@@ -580,7 +673,7 @@ Tspi_TPM_DAA_Sign(TSS_HDAA                 hDAA,			// in
 		  TSS_DAA_SIGNATURE**      daaSignature)		// out
 {
 	TSS_RESULT result;
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	int before = mallinfo().uordblks;
 #endif
 
@@ -597,7 +690,7 @@ Tspi_TPM_DAA_Sign(TSS_HDAA                 hDAA,			// in
 					signData,
 					daaSignature);
 	bi_flush_memory();
-#ifdef 	TSS_DEBUG
+#ifdef TSS_DEBUG
 	LogDebug("TSPI_TPM_DAA_joinInit ALLOC DELTA:%d", mallinfo().uordblks-before);
 #endif
 	LogDebug("<- TSPI_TPM_DAA_joinInit result=%d", result);
