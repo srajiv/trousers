@@ -31,7 +31,7 @@ TSS_RESULT
 tcs_wrap_DaaJoin(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
-	TSS_HDAA hDAA;
+	TPM_HANDLE hDAA;
 	BYTE stage;
 	UINT32 inputSize0, inputSize1, outputSize, i;
 	BYTE *inputData0 = NULL, *inputData1 = NULL,*outputData;
@@ -42,15 +42,16 @@ tcs_wrap_DaaJoin(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	LogDebugFn("thread %zd hDAA %x", THREAD_ID, hDAA);
+
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hDAA, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	LogDebug("getData 2 (stage=%d)", (int)stage);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	LogDebug("getData 3  inputSize0=%d", inputSize0);
 
 	inputData0 = calloc(1, inputSize0);
@@ -68,7 +69,7 @@ tcs_wrap_DaaJoin(struct tcsd_thread_data *data)
 	LogDebug("getData 5");
 	if (getData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &data->comm)) {
 		free( inputData0);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	LogDebug("getData 5  inputSize1=%d", inputSize1);
 
@@ -134,7 +135,7 @@ TSS_RESULT
 tcs_wrap_DaaSign(struct tcsd_thread_data *data)
 {
 	TCS_CONTEXT_HANDLE hContext;
-	TSS_HDAA hDAA;
+	TPM_HANDLE hDAA;
 	BYTE stage;
 	UINT32 inputSize0, inputSize1, outputSize, i;
 	BYTE *inputData0 = NULL, *inputData1 = NULL,*outputData;
@@ -146,14 +147,14 @@ tcs_wrap_DaaSign(struct tcsd_thread_data *data)
 
 	LogDebugFn("thread %zd hDAA %x", THREAD_ID, hDAA);
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &hDAA, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 
 	if (getData(TCSD_PACKET_TYPE_BYTE, 2, &stage, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	LogDebugFn("getData 2 (stage=%d)", (int)stage);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 3, &inputSize0, 0, &data->comm))
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	LogDebug("getData 3  inputSize0=%d", inputSize0);
 
 	inputData0 = calloc(1, inputSize0);
@@ -171,7 +172,7 @@ tcs_wrap_DaaSign(struct tcsd_thread_data *data)
 	LogDebug("getData 5");
 	if (getData(TCSD_PACKET_TYPE_UINT32, 5, &inputSize1, 0, &data->comm)) {
 		free( inputData0);
-		return TSPERR(TSS_E_INTERNAL_ERROR);
+		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	LogDebug("getData 5  inputSize1=%d", inputSize1);
 
