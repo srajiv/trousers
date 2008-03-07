@@ -20,6 +20,7 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <limits.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
