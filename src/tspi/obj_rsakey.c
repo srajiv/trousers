@@ -1458,7 +1458,7 @@ obj_rsakey_get_tcs_handle(TSS_HKEY hKey, TCS_KEY_HANDLE *tcsHandle)
 
 	obj_list_put(&rsakey_list);
 
-	return TSS_SUCCESS;
+	return result;
 }
 
 TSS_RESULT
