@@ -21,7 +21,8 @@ Source:		%{name}-%{version}.tar.gz
 Url:		http://www.sf.net/projects/trousers
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root
 PreReq:		/usr/sbin/groupadd /usr/sbin/useradd /bin/chown
-Requires:	gtk+ >= 2.0, openssl %{?arch64:,%{packages64}}
+Requires:	gtk+ >= 2.0, openssl
+BuildRequires:	gtk+ >= 2.0, openssl %{?arch64:,%{packages64}}
 
 %description
 TrouSerS is an implementation of the Trusted Computing Group's Software Stack
