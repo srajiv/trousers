@@ -3,6 +3,12 @@
 %define version		@VERSION@
 %define release		1
 
+%ifarch ppc64 x86_64 ia64 s390x
+%define arch64 1
+%define packages64 cairo-devel-64bit, glitz-devel-64bit, fontconfig-devel-64bit, freetype2-devel-64bit, xorg-x11-devel-64bit, libpng-devel-64bit
+%define pkgconfig_path /opt/gnome/lib64/pkgconfig:/usr/lib64/pkgconfig
+%endif
+
 # RPM specfile for the trousers project
 
 Name:		%{name}
@@ -15,7 +21,7 @@ Source:		%{name}-%{version}.tar.gz
 Url:		http://www.sf.net/projects/trousers
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root
 PreReq:		/usr/sbin/groupadd /usr/sbin/useradd /bin/chown
-Requires:	gtk+ >= 2.0, openssl
+Requires:	gtk+ >= 2.0, openssl %{?arch64:,%{packages64}}
 
 %description
 TrouSerS is an implementation of the Trusted Computing Group's Software Stack
@@ -37,6 +43,7 @@ applications.
 %setup
 
 %build
+%{?arch64:export PKG_CONFIG_PATH=%{pkgconfig_path}:$PKG_CONFIG_PATH}
 ./configure --prefix=/usr --libdir=%{_libdir}
 make
 
