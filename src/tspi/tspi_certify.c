@@ -119,6 +119,8 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 		result |= Trspi_Hash_UINT32(&hashCtx, result);
 		result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_CertifyKey);
 		result |= Trspi_HashUpdate(&hashCtx, CertifyInfoSize, CertifyInfo);
+		result |= Trspi_Hash_UINT32(&hashCtx, outDataSize);
+		result |= Trspi_HashUpdate(&hashCtx, outDataSize, outData);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
 			return result;
 
