@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <syslog.h>
 
-extern int foreground;
+int foreground;
 
 /* log to syslog -- change your syslog destination here */
 #define TSS_SYSLOG_LVL	LOG_LOCAL5
