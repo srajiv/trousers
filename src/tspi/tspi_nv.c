@@ -217,7 +217,7 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 
 	nv_data_public.tag = TPM_TAG_NV_DATA_PUBLIC;
 
-	if ((result = obj_nvstore_create_pcrshortinfo(hNvstore, (TSS_HPCRS)NULL, &pPCR_len, &pPCR)))
+	if ((result = obj_nvstore_create_pcrshortinfo(hNvstore, (TSS_HPCRS)0, &pPCR_len, &pPCR)))
 		return result;
 
 	NVPublic_DataSize = 0;
