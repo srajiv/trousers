@@ -6,7 +6,7 @@
 #include <bi.h>
 
 /* for the logging system used by TSS */
-int foreground = 1;
+setenv("TCSD_FOREGROUND", "1", 1);
 
  /*
    * standard bit length extension to obtain a uniformly distributed number

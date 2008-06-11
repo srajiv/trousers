@@ -9,7 +9,7 @@
 #include "tsplog.h"
 #include "daa_parameter.h"
 
-int foreground = 1; // for debug
+setenv("TCSD_FOREGROUND", "1", 1);
 
 // simulating Tspi_TPM_DAA_JoinInit (spi_daa.c)
 TSS_RESULT Tspi_DAA_Join(TSS_HTPM hTPM, int stage, UINT32 inputSize0, BYTE *inputData0, UINT32 inputSize1, BYTE *inputData1, UINT32 *outputSize, BYTE **outputData) {

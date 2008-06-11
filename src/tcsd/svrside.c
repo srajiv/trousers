@@ -26,7 +26,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <getopt.h>
-
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "tcs_tsp.h"
@@ -228,11 +227,10 @@ main(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-
 	while ((c = getopt_long(argc, argv, "fh", long_options, &option_index)) != -1) {
 		switch (c) {
 			case 'f':
-				foreground = 1;
+				setenv("TCSD_FOREGROUND", "1", 1);
 				break;
 			case 'h':
 				/* fall through */
@@ -246,7 +244,7 @@ main(int argc, char **argv)
 	if ((result = tcsd_startup()))
 		return (int)result;
 
-	if (!foreground) {
+	if (getenv("TCSD_FOREGROUND") == NULL) {
 		if (daemon(0, 0) == -1) {
 			perror("daemon");
 			tcsd_shutdown();

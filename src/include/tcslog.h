@@ -14,15 +14,16 @@
 
 #include <stdio.h>
 #include <syslog.h>
+#include <string.h>
 
-extern int foreground;
 
 /* log to syslog -- change your syslog destination here */
 #define TSS_SYSLOG_LVL	LOG_LOCAL5
 
+
 #define LogMessage(dest, priority, layer, fmt, ...) \
         do { \
-		if (foreground) { \
+		if (getenv("TCSD_FOREGROUND") != NULL) { \
 			fprintf(dest, "%s " fmt "\n", layer, ## __VA_ARGS__); \
 		} else { \
 			openlog(layer, LOG_NDELAY|LOG_PID, TSS_SYSLOG_LVL); \

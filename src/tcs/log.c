@@ -16,8 +16,6 @@
 #include "trousers/tss.h"
 #include "tcslog.h"
 
-int foreground = 0;
-
 #ifdef TSS_DEBUG
 
 /*
@@ -37,13 +35,14 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	char temp[64];
 	unsigned int i;
 
-	if (!foreground)
+
+	if (getenv("TCSD_FOREGROUND") == NULL)
 		openlog(szDescriptor, LOG_NDELAY|LOG_PID, TSS_SYSLOG_LVL);
 	memset(temp, 0, sizeof(temp));
 
 	for (i = 0; (unsigned long)i < sizeOfBlob; i++) {
 		if ((i > 0) && ((i % 16) == 0)) {
-			if (foreground)
+			if (getenv("TCSD_FOREGROUND") != NULL)
 				fprintf(stdout, "%s %s\n", szDescriptor, temp);
 			else
 				syslog(LOG_DEBUG, temp);
@@ -53,7 +52,7 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 	}
 
 	if (i == sizeOfBlob) {
-		if (foreground)
+		if (getenv("TCSD_FOREGROUND") != NULL)
 			fprintf(stdout, "%s %s\n", szDescriptor, temp);
 		else
 			syslog(LOG_DEBUG, temp);

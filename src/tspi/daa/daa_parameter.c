@@ -10,7 +10,7 @@
 
 #include "daa_parameter.h"
 
-int foreground = 1;
+setenv("TCSD_FOREGROUND", "1", 1);
 
 static EVP_MD *digest = NULL;
 
