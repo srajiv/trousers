@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 #include <syslog.h>
-#include <string.h>
 
 
 /* log to syslog -- change your syslog destination here */
