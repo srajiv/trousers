@@ -93,7 +93,8 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				case TSS_TSPATTRIB_KEYINFO_SIGSCHEME:
 					if (ulAttrib != TSS_SS_NONE &&
 					    ulAttrib != TSS_SS_RSASSAPKCS1V15_SHA1 &&
-					    ulAttrib != TSS_SS_RSASSAPKCS1V15_DER)
+					    ulAttrib != TSS_SS_RSASSAPKCS1V15_DER  &&
+					    ulAttrib !=	TSS_SS_RSASSAPKCS1V15_INFO)
 						return TSPERR(TSS_E_INVALID_ATTRIB_DATA);
 
 					result = obj_rsakey_set_ss(hObject, ulAttrib);

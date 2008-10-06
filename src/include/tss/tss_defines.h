@@ -976,6 +976,7 @@ Global defines for TSS.
 #define TSS_SS_NONE                 (0x10)
 #define TSS_SS_RSASSAPKCS1V15_SHA1  (0x11)
 #define TSS_SS_RSASSAPKCS1V15_DER   (0x12)
+#define	TSS_SS_RSASSAPKCS1V15_INFO  (0x13)
 
 //
 // key encryption scheme definitions

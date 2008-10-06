@@ -754,6 +754,9 @@ obj_rsakey_get_ss(TSS_HKEY hKey, UINT32 *ss)
 		case TCPA_SS_RSASSAPKCS1v15_DER:
 			*ss = TSS_SS_RSASSAPKCS1V15_DER;
 			break;
+		case TCPA_SS_RSASSAPKCS1v15_INFO:
+			*ss = TSS_SS_RSASSAPKCS1V15_INFO;
+			break;
 		default:
 			*ss = rsakey->key.algorithmParms.sigScheme;
 			break;
@@ -792,6 +795,9 @@ obj_rsakey_set_ss(TSS_HKEY hKey, UINT32 ss)
 			break;
 		case TSS_SS_RSASSAPKCS1V15_DER:
 			rsakey->key.algorithmParms.sigScheme = TCPA_SS_RSASSAPKCS1v15_DER;
+			break;
+		case TSS_SS_RSASSAPKCS1V15_INFO:
+			rsakey->key.algorithmParms.sigScheme = TCPA_SS_RSASSAPKCS1v15_INFO;
 			break;
 		default:
 			rsakey->key.algorithmParms.sigScheme = ss;
