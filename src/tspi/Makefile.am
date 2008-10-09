@@ -216,6 +216,10 @@ libtspi_la_CFLAGS+=@GTK_CFLAGS@
 libtspi_la_LDFLAGS+=@GTK_LIBS@
 libtspi_la_SOURCES+=gtk/main.c gtk/support.c gtk/interface.c gtk/callbacks.c
 endif
+if OPENSSL_UI
+libtspi_la_LDFLAGS+=-lssl
+libtspi_la_SOURCES+=ssl_ui.c
+endif
 
 if TSS_BUILD_NV
 libtspi_la_SOURCES+=tspi_nv.c obj_nv.c tsp_nv.c rpc/@RPC@/rpc_nv.c

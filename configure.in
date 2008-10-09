@@ -104,7 +104,7 @@ BI_OPENSSL)
 esac
 CFLAGS="$CFLAGS -D$MATH_DEFINE"
 
-GUI=gtk
+GUI=openssl
 AC_ARG_WITH(gui,
 	    [AC_HELP_STRING([--with-gui], [type of gui popup (gtk/none) [default=gtk]])],
 	    [GUI=$withval],
@@ -117,9 +117,14 @@ if test "x$GUI" = "xgtk"; then
 		[$pkg_modules],
 		AM_CONDITIONAL(HAVE_GTK, true),
 		[AM_CONDITIONAL(HAVE_GTK, false)
-		AC_MSG_ERROR([GTK libs are currently the only supported GUI library for trousers. Please install the gtk2-devel package for your distro.]) ])
+		AC_MSG_ERROR([Please install the gtk2-devel package for your distro or select another gui option.]) ])
+	AM_CONDITIONAL(OPENSSL_UI, false)
 	AC_SUBST(GTK_CFLAGS)
 	AC_SUBST(GTK_LIBS)
+elif test "x$GUI" = "xopenssl"; then
+	# We know we have OpenSSL
+	AM_CONDITIONAL(OPENSSL_UI, true)
+	AM_CONDITIONAL(HAVE_GTK, false)
 elif test "x$GUI" = "xnone"; then
 	if test $SPEC_COMP -eq 1; then
 		AC_MSG_ERROR([Popups must be enabled in strict spec compliance mode])
@@ -128,8 +133,9 @@ elif test "x$GUI" = "xnone"; then
 	AC_MSG_RESULT([*** WARNING: This may break apps! ***])
 	CFLAGS="$CFLAGS -DTSS_NO_GUI"
 	AM_CONDITIONAL(HAVE_GTK, false)
+	AM_CONDITIONAL(OPENSSL_UI, false)
 else
-	AC_MSG_ERROR(["gtk" and "none" are the only supported gui options for trousers])
+	AC_MSG_ERROR(["gtk", "openssl" and "none" are the only supported gui options for trousers])
 fi
 
 #
