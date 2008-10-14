@@ -60,7 +60,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 
 	/* Add the default policy */
 	if ((result = obj_policy_add(*phObject, TSS_POLICY_USAGE, &context->policy))) {
-		obj_list_remove(&context_list, &context_free, *phObject, *phObject);
+		obj_list_remove(&context_list, &obj_context_free, *phObject, *phObject);
 		return result;
 	}
 
@@ -95,7 +95,7 @@ obj_context_get_tcs_api(TSS_HCONTEXT tspContext)
 }
 
 void
-context_free(void *data)
+obj_context_free(void *data)
 {
 	struct tr_context_obj *context = (struct tr_context_obj *)data;
 
