@@ -269,6 +269,8 @@ main(int argc, char **argv)
 	else
 		serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+	c = 1;
+	setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &c, sizeof(c));
 	if (bind(sd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
 		LogError("Failed bind: %s", strerror(errno));
 		return -1;
