@@ -82,13 +82,16 @@ RPC_CreateMaintenanceArchive_TP(struct host_table_entry *hte,
 		if (*archiveSize > 0) {
 			*archive = malloc(*archiveSize);
 			if (*archive == NULL) {
+				if (*random)
+					free(*random);
 				LogError("malloc of %u bytes failed.", *archiveSize);
 				result = TSPERR(TSS_E_OUTOFMEMORY);
 				goto done;
 			}
 
 			if (getData(TCSD_PACKET_TYPE_PBYTE, 4, *archive, *archiveSize, &hte->comm)) {
-				free(*random);
+				if (*random)
+					free(*random);
 				free(*archive);
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
 				goto done;
