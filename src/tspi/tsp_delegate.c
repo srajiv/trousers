@@ -110,7 +110,7 @@ create_owner_delegation(TSS_HTPM       hTpm,
 	Trspi_HashCtx hashCtx;
 	TCPA_DIGEST digest;
 	UINT32 blobSize;
-	BYTE *blob;
+	BYTE *blob = NULL;
 	TSS_RESULT result;
 	struct authsess *xsap = NULL;
 
@@ -176,6 +176,8 @@ create_owner_delegation(TSS_HTPM       hTpm,
 done:
 	authsess_free(xsap);
 	free(publicInfo);
+	if (blob)
+		free(blob);
 
 	return result;
 }
