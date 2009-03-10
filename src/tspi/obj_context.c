@@ -54,6 +54,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 	context->connection_policy = TSS_TSPATTRIB_CONTEXT_VERSION_V1_1;
 
 	if ((result = obj_list_add(&context_list, NULL_HCONTEXT, 0, context, phObject))) {
+		free(context->machineName);
 		free(context);
 		return result;
 	}
