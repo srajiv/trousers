@@ -238,15 +238,21 @@ Tspi_TPM_CollateIdentityRequest(TSS_HTPM hTPM,				/* in */
 	result |= Trspi_HashUpdate(&hashCtx, idKeySize, newIdKey);
 	result |= Trspi_Hash_UINT32(&hashCtx, pcIdentityBindingSize);
 	result |= Trspi_HashUpdate(&hashCtx, pcIdentityBindingSize, prgbIdentityBinding);
-	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+		free(newIdKey);
 		goto error;
+	}
 
-	if ((result = authsess_xsap_verify(xsap, &digest)))
+	if ((result = authsess_xsap_verify(xsap, &digest))) {
+		free(newIdKey);
 		goto error;
+	}
 
 	if (usesAuth == TRUE) {
-		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy, &digest, &srkAuth)))
+		if ((result = obj_policy_validate_auth_oiap(hSRKPolicy, &digest, &srkAuth))) {
+			free(newIdKey);
 			goto error;
+		}
 	}
 
 	if ((result = obj_rsakey_set_tcpakey(hIdentityKey, idKeySize, newIdKey))) {
