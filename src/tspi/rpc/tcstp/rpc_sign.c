@@ -81,8 +81,10 @@ RPC_Sign_TP(struct host_table_entry *hte,
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *sig, *sigSize, &hte->comm)) {
 			result = free_tspi(hte->tspContext, *sig);
-			if (result == TSS_SUCCESS)
+			if (result == TSS_SUCCESS) 
 				result = TSPERR(TSS_E_INTERNAL_ERROR);
+			else
+				free(*sig);	
 		}
 	}
 
