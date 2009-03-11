@@ -198,7 +198,7 @@ create_key_delegation(TSS_HKEY       hKey,
 	Trspi_HashCtx hashCtx;
 	TCPA_DIGEST digest;
 	UINT32 blobSize;
-	BYTE *blob;
+	BYTE *blob = NULL;
 	TSS_RESULT result;
 	struct authsess *xsap = NULL;
 
@@ -261,6 +261,8 @@ create_key_delegation(TSS_HKEY       hKey,
 						blob);
 
 done:
+	if (blob)
+		free(blob);
 	authsess_free(xsap);
 	free(publicInfo);
 
