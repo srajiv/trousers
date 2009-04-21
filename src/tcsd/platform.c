@@ -39,28 +39,40 @@ platform_get_runlevel()
 {
 	char runlevel;
 	struct utmp ut, save, *next = NULL;
+#ifdef SOLARIS
+	time_t tv = 0;
+#else
 	struct timeval tv;
+#endif /* SOLARIS */
 	int flag = 0, counter = 0;
 
 	MUTEX_LOCK(utmp_lock);
 
 	memset(&ut, 0, sizeof(struct utmp));
 	memset(&save, 0, sizeof(struct utmp));
+#ifndef SOLARIS
 	memset(&tv, 0, sizeof(struct timeval));
+#endif
 
 	ut.ut_type = RUN_LVL;
 
 	next = getutid(&ut);
 
 	while (next != NULL) {
+#ifdef SOLARIS
+		if (next->ut_time >= tv) {
+#else
 		if (next->ut_tv.tv_sec > tv.tv_sec) {
+#endif
 			memcpy(&save, next, sizeof(*next));
 			flag = 1;
+#ifndef SOLARIS
 		} else if (next->ut_tv.tv_sec == tv.tv_sec) {
 			if (next->ut_tv.tv_usec > tv.tv_usec) {
 				memcpy(&save, next, sizeof(*next));
 				flag = 1;
 			}
+#endif /* SOLARIS */
 		}
 
 		counter++;
