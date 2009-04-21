@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/varargs.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -597,7 +598,6 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 	case TPM_ORD_DAA_Sign:
 	case TPM_ORD_ChangeAuth:
 	case TPM_ORD_GetCapability:
-	case TPM_ORD_UnBind:
 	case TPM_ORD_LoadMaintenanceArchive:
 	case TPM_ORD_ConvertMigrationBlob:
 	case TPM_ORD_NV_ReadValue:
@@ -630,6 +630,35 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 			offset1 = len - TSS_TPM_RSP_BLOB_AUTH_LEN;
 			UnloadBlob_Auth(&offset1, b, auth2);
 		}
+
+		offset1 = TSS_TPM_TXBLOB_HDR_LEN;
+		UnloadBlob_UINT32(&offset1, data_len, b);
+		if ((*data = malloc(*data_len)) == NULL) {
+			LogError("malloc of %u bytes failed", *data_len);
+			return TCSERR(TSS_E_OUTOFMEMORY);
+		}
+
+		UnloadBlob(&offset1, *data_len, b, *data);
+		break;
+	}
+	/* TPM BLOB: 1 UINT32, 1 BLOB, 1 optional AUTH
+	* return: UINT32 *, BYTE**, 1 optional AUTH*/
+	case TPM_ORD_UnBind:
+	{
+		UINT32 *data_len = va_arg(ap, UINT32 *);
+		BYTE **data = va_arg(ap, BYTE **);
+		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
+		va_end(ap);
+
+		if (!data || !data_len) {
+			LogError("Internal error for ordinal 0x%x", ordinal);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
+
+		if (auth1) {
+			offset1 = len - TSS_TPM_RSP_BLOB_AUTH_LEN;
+			UnloadBlob_Auth(&offset1, b, auth1);
+		} 
 
 		offset1 = TSS_TPM_TXBLOB_HDR_LEN;
 		UnloadBlob_UINT32(&offset1, data_len, b);
