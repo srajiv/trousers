@@ -18,6 +18,8 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <limits.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
@@ -32,14 +34,29 @@
 int system_ps_fd = -1;
 MUTEX_DECLARE(disk_cache_lock);
 
+static struct flock fl = {
+	0,      /* l_type */
+	0,      /* l_whence */
+	0,      /* l_start */
+	0,      /* l_len */
+#ifdef SOLARIS
+	0,      /* l_sysid */
+	0,      /* l_pid */
+	{0,0,0,0}
+#else
+	0	/* l_pid */
+#endif
+	};
 int
 get_file()
 {
-	int rc = 0;
-
+	int rc;
 	/* check the global file handle first.  If it exists, lock it and return */
 	if (system_ps_fd != -1) {
-		if ((rc = flock(system_ps_fd, LOCK_EX))) {
+		int rc = 0;
+
+		fl.l_type = F_WRLCK;
+		if ((rc = fcntl(system_ps_fd, F_SETLKW, &fl))) {
 			LogError("failed to get system PS lock: %s", strerror(errno));
 			return -1;
 		}
@@ -55,9 +72,10 @@ get_file()
 		return -1;
 	}
 
-	if ((rc = flock(system_ps_fd, LOCK_EX))) {
+	fl.l_type = F_WRLCK;
+	if ((rc = fcntl(system_ps_fd, F_SETLKW, &fl))) {
 		LogError("failed to get system PS lock of file %s: %s",
-				tcsd_options.system_ps_file, strerror(errno));
+			tcsd_options.system_ps_file, strerror(errno));
 		return -1;
 	}
 
@@ -68,10 +86,12 @@ int
 put_file(int fd)
 {
 	int rc = 0;
-
 	/* release the file lock */
-	if ((rc = flock(fd, LOCK_UN))) {
-		LogError("failed to unlock system PS file: %s", strerror(errno));
+	
+	fl.l_type = F_UNLCK;
+	if ((rc = fcntl(fd, F_SETLKW, &fl))) {
+		LogError("failed to unlock system PS file: %s",
+			strerror(errno));
 		return -1;
 	}
 
