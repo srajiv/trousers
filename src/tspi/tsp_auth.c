@@ -359,7 +359,7 @@ validateReturnAuth(BYTE *secret, BYTE *hash, TPM_AUTH *auth)
 	memcpy(digest, &auth->HMAC, 20);
 	HMAC_Auth(secret, hash, auth);
 
-	return (TSS_BOOL) memcmp(digest, &auth->HMAC, 20);
+	return ((TSS_BOOL) memcmp(digest, &auth->HMAC, 20) != 0);
 }
 
 void
@@ -755,6 +755,8 @@ authsess_callback_hmac(PVOID lpAppData,
 		Trspi_HMAC(TSS_HASH_SHA1, ulSizeDigestHmac, sess->sharedSecret.digest, offset, Blob,
 			   hmacVerify.digest);
 		result = memcmp(rgbHmacData, hmacVerify.digest, ulSizeDigestHmac);
+		if (result)
+			result = TPM_E_AUTHFAIL;
 	}
 
 	return result;
@@ -911,7 +913,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 			/* According to the spec, we must fall back on the TSP context's policy for
 			 * auth if none is set in the NV object */
 			if (!sess->hUsageChild) {
-				if ((result = obj_context_get_policy(obj_child, TSS_POLICY_USAGE,
+				if ((result = obj_context_get_policy(tspContext, TSS_POLICY_USAGE,
 								     &sess->hUsageChild)))
 					goto error;
 			}
