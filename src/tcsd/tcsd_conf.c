@@ -21,6 +21,10 @@
 #include <grp.h>
 #include <stdlib.h>
 
+#ifdef SOLARIS
+#include <libscf.h>
+#endif
+
 #include "trousers/tss.h"
 #include "trousers_types.h"
 #include "tcs_tsp.h"
@@ -674,18 +678,51 @@ conf_file_final(struct tcsd_config *conf)
 	free_platform_lists(conf->all_platform_classes);
 }
 
+#ifdef SOLARIS
+static int
+get_smf_prop(const char *var, boolean_t def_val)
+{
+	scf_simple_prop_t *prop;
+	uint8_t *val;
+	boolean_t res = def_val;
+	prop = scf_simple_prop_get(NULL, "svc:/application/security/tcsd:default",
+		"config", var);
+	if (prop) {
+		if ((val = scf_simple_prop_next_boolean(prop)) != NULL)
+			res = (*val == 0) ? B_FALSE : B_TRUE;
+		scf_simple_prop_free(prop);
+	}
+	if (prop == NULL || val == NULL) {
+		syslog(LOG_ALERT, "no value for config/%s (%s). "
+			"Using default \"%s\"", var, scf_strerror(scf_error()),
+			def_val ? "true" : "false");
+	}
+	return (res);
+}
+#endif
+
 TSS_RESULT
 conf_file_init(struct tcsd_config *conf)
 {
 	FILE *f = NULL;
 	struct stat stat_buf;
+#ifndef SOLARIS
 	struct group *grp;
 	struct passwd *pw;
 	mode_t mode = (S_IRUSR|S_IWUSR);
+#endif /* SOLARIS */
 	TSS_RESULT result;
 
 	init_tcsd_config(conf);
 
+#ifdef SOLARIS
+       /*
+	* Solaris runs as Rajiv Andrade <srajiv@linux.vnet.:sys but with reduced privileges
+	* so we don't need to create a new user/group and also so
+	* we can have auditing support.  The permissions on
+	* the tcsd configuration file are not checked on Solaris.
+	*/
+#endif
 	/* look for a config file, create if it doesn't exist */
 	if (stat(TCSD_CONFIG_FILE, &stat_buf) == -1) {
 		if (errno == ENOENT) {
@@ -699,6 +736,7 @@ conf_file_init(struct tcsd_config *conf)
 		}
 	}
 
+#ifndef SOLARIS
 	/* find the gid that owns the conf file */
 	errno = 0;
 	grp = getgrnam(TSS_GROUP_NAME);
@@ -736,6 +774,7 @@ conf_file_init(struct tcsd_config *conf)
 		LogError("TCSD config file (%s) must be mode 0600", TCSD_CONFIG_FILE);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
+#endif /* SOLARIS */
 
 	if ((f = fopen(TCSD_CONFIG_FILE, "r")) == NULL) {
 		LogError("fopen(%s): %s", TCSD_CONFIG_FILE, strerror(errno));
@@ -748,6 +787,17 @@ conf_file_init(struct tcsd_config *conf)
 	/* fill out any uninitialized options */
 	config_set_defaults(conf);
 
+#ifdef SOLARIS
+	/*
+	* The SMF value for "local_only" overrides the config file and
+	* disables all remote operations.
+	*/
+if (get_smf_prop("local_only", B_TRUE)) {
+		(void) memset(conf->remote_ops, 0, sizeof(conf->remote_ops));
+		conf->unset |= TCSD_OPTION_REMOTE_OPS;
+	
+	}
+#endif
 	return result;
 }
 
@@ -789,7 +839,7 @@ ps_dirs_init()
 	} else if (((stat_buf.st_mode & 0777) ^ mode) != 0) {
 		/* This path is likely to be hit since open &'s mode with ~umask */
 		LogInfo("resetting mode of %s from %o to: %o", tcsd_options.system_ps_dir,
-			stat_buf.st_mode, mode);
+			(unsigned int) stat_buf.st_mode, (unsigned int) mode);
 		if (chmod(tcsd_options.system_ps_dir, mode) == -1) {
 			LogError("chmod(%s) failed: %s", tcsd_options.system_ps_dir,
 				 strerror(errno));
