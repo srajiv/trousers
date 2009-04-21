@@ -1086,9 +1086,13 @@ owner_evict_init()
 
 		LoadBlob_UINT32(&offset, keyList.handle[i], (BYTE *)&keyHandle);
 		/* get the ownerEvict flag for this key handle */
-		if ((result = TCSP_GetCapability_Internal(InternalContext, TPM_CAP_KEY_STATUS,
+		result = TCSP_GetCapability_Internal(InternalContext, TPM_CAP_KEY_STATUS,
 							  sizeof(UINT32), (BYTE *)&keyHandle,
-							  &respDataSize, &respData))) {
+							  &respDataSize, &respData);
+		/* special case, invalid keys are automatically evicted later */
+		if (result == TPM_E_INVALID_KEYHANDLE)
+			continue;
+		if (result != TSS_SUCCESS) {
 			free(keyList.handle);
 			return result;
 		}
