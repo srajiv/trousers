@@ -439,7 +439,7 @@ Transport_Delegate_Manage(TSS_HCONTEXT tspContext,              /* in */
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, decLen, dataLen;
 	UINT64 offset;
-	BYTE *data, *dec;
+	BYTE *data, *dec = NULL;
 
 
 	if ((result = obj_context_transport_init(tspContext)))
@@ -502,8 +502,7 @@ Transport_Delegate_CreateKeyDelegation(TSS_HCONTEXT tspContext,         /* in */
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	UINT64 offset;
-	BYTE *data, *dec;
-
+	BYTE *data, *dec = NULL;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -570,8 +569,7 @@ Transport_Delegate_CreateOwnerDelegation(TSS_HCONTEXT tspContext,       /* in */
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, decLen, dataLen;
 	UINT64 offset;
-	BYTE *data, *dec;
-
+	BYTE *data, *dec = NULL;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -622,10 +620,9 @@ Transport_Delegate_LoadOwnerDelegation(TSS_HCONTEXT tspContext, /* in */
 				       TPM_AUTH *ownerAuth)           /* in, out */
 {
 	TSS_RESULT result;
-	UINT32 handlesLen = 0, dataLen;
+	UINT32 handlesLen = 0, dataLen, decLen;
 	UINT64 offset;
-	BYTE *data;
-
+	BYTE *data, *dec = NULL;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -646,11 +643,13 @@ Transport_Delegate_LoadOwnerDelegation(TSS_HCONTEXT tspContext, /* in */
 	if ((result = obj_context_transport_execute(tspContext,
 						    TPM_ORD_Delegate_LoadOwnerDelegation, dataLen,
 						    data, NULL, &handlesLen, NULL, ownerAuth,
-						    NULL, NULL, NULL))) {
+						    NULL, &decLen, &dec))) {
 		free(data);
 		return result;
 	}
 	free(data);
+	if (dec)
+		free(dec);
 
 	return result;
 }
@@ -665,8 +664,7 @@ Transport_Delegate_ReadTable(TSS_HCONTEXT tspContext,           /* in */
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, decLen;
 	UINT64 offset;
-	BYTE *dec;
-
+	BYTE *dec = NULL;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -718,7 +716,7 @@ Transport_Delegate_UpdateVerificationCount(TSS_HCONTEXT tspContext,     /* in */
 	TSS_RESULT result;
 	UINT32 handlesLen = 0, decLen, dataLen;
 	UINT64 offset;
-	BYTE *data, *dec;
+	BYTE *data, *dec = NULL;
 
 
 	if ((result = obj_context_transport_init(tspContext)))
@@ -744,7 +742,6 @@ Transport_Delegate_UpdateVerificationCount(TSS_HCONTEXT tspContext,     /* in */
 	}
 	free(data);
 
-
 	offset = 0;
 	Trspi_UnloadBlob_UINT32(&offset, outputSize, dec);
 
@@ -767,9 +764,9 @@ Transport_Delegate_VerifyDelegation(TSS_HCONTEXT tspContext,    /* in */
 				    BYTE *delegate)           /* in */
 {
 	TSS_RESULT result;
-	UINT32 handlesLen = 0, dataLen;
+	UINT32 handlesLen = 0, dataLen, decLen;
 	UINT64 offset;
-	BYTE *data;
+	BYTE *data, *dec = NULL;
 
 
 	if ((result = obj_context_transport_init(tspContext)))
@@ -789,8 +786,10 @@ Transport_Delegate_VerifyDelegation(TSS_HCONTEXT tspContext,    /* in */
 
 	result = obj_context_transport_execute(tspContext, TPM_ORD_Delegate_VerifyDelegation,
 					       dataLen, data, NULL, &handlesLen, NULL, NULL, NULL,
-					       NULL, NULL);
+					       &decLen, &dec);
 	free(data);
+	if (dec)
+		free(dec);
 
 	return result;
 }
@@ -812,8 +811,7 @@ Transport_DSAP(TSS_HCONTEXT tspContext,		/* in */
 	TPM_DIGEST pubKeyHash;
 	Trspi_HashCtx hashCtx;
 	UINT64 offset;
-	BYTE *data, *dec;
-
+	BYTE *data, *dec = NULL;
 
 	if ((result = obj_context_transport_init(tspContext)))
 		return result;
@@ -862,6 +860,7 @@ Transport_DSAP(TSS_HCONTEXT tspContext,		/* in */
 	Trspi_UnloadBlob(&offset, sizeof(TPM_NONCE), dec, nonceEven->nonce);
 	Trspi_UnloadBlob(&offset, sizeof(TPM_NONCE), dec, nonceEvenDSAP->nonce);
 
+	free(dec);
 
 	return result;
 }
