@@ -256,6 +256,12 @@ Tspi_NV_ReleaseSpace(TSS_HNVSTORE hNvstore)	/* in */
 								   xsap->pAuth)))
 		goto error;
 
+	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_SUCCESS);
+	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
+	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		goto error;
+
 	result = authsess_xsap_verify(xsap, &digest);
 error:
 	authsess_free(xsap);
