@@ -99,16 +99,19 @@ RPC_GetAuditDigest_TP(struct host_table_entry *hte,
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 2, *counterValue, *counterValueSize, &hte->comm)) {
 			free(*counterValue);
+			*counterValue = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_BOOL, 3, more, 0, &hte->comm)) {
 			free(*counterValue);
+			*counterValue = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, 4, ordSize, 0, &hte->comm)) {
 			free(*counterValue);
+			*counterValue = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -116,12 +119,15 @@ RPC_GetAuditDigest_TP(struct host_table_entry *hte,
 		if (*ordList == NULL) {
 			LogError("malloc of %u bytes failed.", *ordSize);
 			free(*counterValue);
+			*counterValue = NULL;
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, 5, *ordList, *ordSize * sizeof(UINT32), &hte->comm)) {
 			free(*counterValue);
+			*counterValue = NULL;
 			free(*ordList);
+			*ordList = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
