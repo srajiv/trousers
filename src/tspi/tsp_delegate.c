@@ -176,8 +176,7 @@ create_owner_delegation(TSS_HTPM       hTpm,
 done:
 	authsess_free(xsap);
 	free(publicInfo);
-	if (blob)
-		free(blob);
+	free(blob);
 
 	return result;
 }
@@ -261,8 +260,7 @@ create_key_delegation(TSS_HKEY       hKey,
 						blob);
 
 done:
-	if (blob)
-		free(blob);
+	free(blob);
 	authsess_free(xsap);
 	free(publicInfo);
 
