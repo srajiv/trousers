@@ -370,6 +370,7 @@ RPC_Delegate_UpdateVerificationCount_TP(struct host_table_entry *hte,
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *output, *outputSize, &hte->comm)) {
 			free(*output);
+			output = NULL;
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
 	}
