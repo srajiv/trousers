@@ -134,25 +134,25 @@ RPC_MakeIdentity_TP(struct host_table_entry *hte,
 			LogError("malloc of %u bytes failed.", *pcEndorsementCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbEndorsementCredential, *pcEndorsementCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcPlatformCredentialSize, 0, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -162,31 +162,31 @@ RPC_MakeIdentity_TP(struct host_table_entry *hte,
 			LogError("malloc of %u bytes failed.", *pcPlatformCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbPlatformCredential, *pcPlatformCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			free(*prgbPlatformCredential);
-			*prgPlatformCredential = NULL;
+			*prgbPlatformCredential = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_UINT32, i++, pcConformanceCredentialSize, 0, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			free(*prgbPlatformCredential);
-			*prgPlatformCredential = NULL;
+			*prgbPlatformCredential = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
 			goto done;
 		}
@@ -196,22 +196,22 @@ RPC_MakeIdentity_TP(struct host_table_entry *hte,
 			LogError("malloc of %u bytes failed.", *pcConformanceCredentialSize);
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			free(*prgbPlatformCredential);
-			*prgPlatformCredential = NULL;
+			*prgbPlatformCredential = NULL;
 			result = TSPERR(TSS_E_OUTOFMEMORY);
 			goto done;
 		}
 		if (getData(TCSD_PACKET_TYPE_PBYTE, i++, *prgbConformanceCredential, *pcConformanceCredentialSize, &hte->comm)) {
 			free(*idKey);
 			free(*prgbIdentityBinding);
-			*prgIdentityBinding = NULL;
+			*prgbIdentityBinding = NULL;
 			free(*prgbEndorsementCredential);
-			*prgEndorsementCredential = NULL;
+			*prgbEndorsementCredential = NULL;
 			free(*prgbPlatformCredential);
-			*prgPlatformCredential = NULL;
+			*prgbPlatformCredential = NULL;
 			free(*prgbConformanceCredential);
 			*prgbConformanceCredential = NULL;
 			result = TSPERR(TSS_E_INTERNAL_ERROR);
