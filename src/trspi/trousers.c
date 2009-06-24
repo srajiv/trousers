@@ -1539,7 +1539,7 @@ Trspi_Native_To_UNICODE(BYTE *string, unsigned *size)
 		ptr = (char *)string;
 		errno = 0;
 
-		rc = iconv(cd, (const char **)&ptr, &inbytesleft, &outbuf, &outbytesleft);
+		rc = iconv(cd, (BSD_CONST char **)&ptr, &inbytesleft, &outbuf, &outbytesleft);
 	} while (rc == (size_t)-1 && errno == E2BIG);
 
 	if (len > MAX_BUF_SIZE) {
@@ -1601,7 +1601,7 @@ Trspi_UNICODE_To_Native(BYTE *string, unsigned *size)
 		ptr = (char *)string;
 		errno = 0;
 
-		rc = iconv(cd, (const char **)&ptr, &inbytesleft, &outbuf, &outbytesleft);
+		rc = iconv(cd, (BSD_CONST char **)&ptr, &inbytesleft, &outbuf, &outbytesleft);
 	} while (rc == (size_t)-1 && errno == E2BIG);
 
 	/* add terminating bytes of the correct width */
