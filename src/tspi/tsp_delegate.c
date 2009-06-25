@@ -648,8 +648,7 @@ Transport_Delegate_LoadOwnerDelegation(TSS_HCONTEXT tspContext, /* in */
 		return result;
 	}
 	free(data);
-	if (dec)
-		free(dec);
+	free(dec);
 
 	return result;
 }
@@ -788,8 +787,7 @@ Transport_Delegate_VerifyDelegation(TSS_HCONTEXT tspContext,    /* in */
 					       dataLen, data, NULL, &handlesLen, NULL, NULL, NULL,
 					       &decLen, &dec);
 	free(data);
-	if (dec)
-		free(dec);
+	free(dec);
 
 	return result;
 }
