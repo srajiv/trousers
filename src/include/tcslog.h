@@ -15,10 +15,12 @@
 #include <stdio.h>
 #include <syslog.h>
 
-
 /* log to syslog -- change your syslog destination here */
 #define TSS_SYSLOG_LVL	LOG_LOCAL5
 
+#ifndef __FUNCTION__
+#define __FUNCTION__ __func__
+#endif
 
 #define LogMessage(dest, priority, layer, fmt, ...) \
         do { \
