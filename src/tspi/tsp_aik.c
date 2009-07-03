@@ -11,6 +11,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
