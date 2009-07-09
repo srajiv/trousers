@@ -15,6 +15,8 @@
 #include <err.h>
 #elif (defined (__linux) || defined (linux))
 #include <utmp.h>
+#elif (defined (SOLARIS))
+#include <utmpx.h>
 #endif
 
 #include <sys/time.h>
@@ -39,40 +41,28 @@ platform_get_runlevel()
 {
 	char runlevel;
 	struct utmp ut, save, *next = NULL;
-#ifdef SOLARIS
-	time_t tv = 0;
-#else
 	struct timeval tv;
-#endif /* SOLARIS */
 	int flag = 0, counter = 0;
 
 	MUTEX_LOCK(utmp_lock);
 
 	memset(&ut, 0, sizeof(struct utmp));
 	memset(&save, 0, sizeof(struct utmp));
-#ifndef SOLARIS
 	memset(&tv, 0, sizeof(struct timeval));
-#endif
 
 	ut.ut_type = RUN_LVL;
 
 	next = getutid(&ut);
 
 	while (next != NULL) {
-#ifdef SOLARIS
-		if (next->ut_time >= tv) {
-#else
 		if (next->ut_tv.tv_sec > tv.tv_sec) {
-#endif
 			memcpy(&save, next, sizeof(*next));
 			flag = 1;
-#ifndef SOLARIS
 		} else if (next->ut_tv.tv_sec == tv.tv_sec) {
 			if (next->ut_tv.tv_usec > tv.tv_usec) {
 				memcpy(&save, next, sizeof(*next));
 				flag = 1;
 			}
-#endif /* SOLARIS */
 		}
 
 		counter++;
@@ -115,5 +105,30 @@ platform_get_runlevel()
 		return 's';	
 
 	return rlevel + '0';
+}
+#elif (defined (SOLARIS))
+
+MUTEX_DECLARE_INIT(utmp_lock);
+char
+platform_get_runlevel()
+{
+	char runlevel;
+	struct utmpx ut, *utp = NULL;
+
+	MUTEX_LOCK(utmp_lock);
+
+	memset(&ut, 0, sizeof(ut));
+	ut.ut_type = RUN_LVL;
+
+	setutxent();
+	utp = getutxid(&ut);
+	if (utp->ut_type == RUN_LVL &&
+	    sscanf(utp->ut_line, "run-level %c", &runlevel) != 1)
+			runlevel = 'u';
+	endutxent();
+
+	MUTEX_UNLOCK(utmp_lock);
+
+	return runlevel;
 }
 #endif
