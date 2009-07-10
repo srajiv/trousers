@@ -152,8 +152,10 @@ tcs_wrap_CMK_CreateKey(struct tcsd_thread_data *data)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if (getData(TCSD_PACKET_TYPE_AUTH, 7, &parentAuth, 0, &data->comm))
+	if (getData(TCSD_PACKET_TYPE_AUTH, 7, &parentAuth, 0, &data->comm)) {
+		free(keyData);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	if (memcmp(&nullAuth, &parentAuth, sizeof(TPM_AUTH)))
 		pAuth = &parentAuth;
