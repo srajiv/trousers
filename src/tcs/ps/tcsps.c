@@ -476,6 +476,12 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                 }
 
 		DBG_ASSERT(tmp->blob_size < 4096);
+		if (tmp->blob_size < 4096) {
+			LogError("Blob size greater than 4096! Size:  %s",
+				 tmp->blob_size);
+			MUTEX_UNLOCK(disk_cache_lock);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 
 		/* read in the key blob */
                 if ((rc = read_data(fd, tmp_buffer, tmp->blob_size))) {
