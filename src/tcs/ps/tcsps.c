@@ -388,6 +388,12 @@ psfile_get_uuid_by_pub(int fd, TCPA_STORE_PUBKEY *pub, TSS_UUID **ret_uuid)
 
 		DBG_ASSERT(tmp->pub_data_size < 2048);
 
+		if (tmp->pub_data_size > sizeof(tpm_buffer)) {
+			LogError("Source buffer size too big! Size:  %s",
+				 tmp->pub_data_size);
+			MUTEX_UNLOCK(disk_cache_lock);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
 			LogError("%s", __FUNCTION__);
@@ -451,6 +457,12 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                 }
 
 		DBG_ASSERT(tmp->pub_data_size < 2048);
+		if (tmp->pub_data_size > sizeof(tpm_buffer)) {
+			LogError("Source buffer size too big! Size:  %s",
+				 tmp->pub_data_size);
+			MUTEX_UNLOCK(disk_cache_lock);
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+		}
 
 		/* read in the key */
                 if ((rc = read_data(fd, tmp_buffer, tmp->pub_data_size))) {
@@ -476,7 +488,7 @@ psfile_get_key_by_pub(int fd, TCPA_STORE_PUBKEY *pub, UINT32 *size, BYTE **ret_k
                 }
 
 		DBG_ASSERT(tmp->blob_size < 4096);
-		if (tmp->blob_size < 4096) {
+		if (tmp->blob_size > sizeof(tpm_buffer)) {
 			LogError("Blob size greater than 4096! Size:  %s",
 				 tmp->blob_size);
 			MUTEX_UNLOCK(disk_cache_lock);
