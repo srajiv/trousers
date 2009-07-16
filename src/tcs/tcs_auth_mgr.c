@@ -213,8 +213,14 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 				auth_mgr.auth_mapper[i].swap = NULL;
 				auth_mgr.auth_mapper[i].swap_size = 0;
 			} else {
-				result =
-				       internal_TerminateHandle(auth_mgr.auth_mapper[i].tpm_handle);
+				result = TCSP_FlushSpecific_Common(auth_mgr.auth_mapper[i].tpm_handle,
+								   TPM_RT_AUTH);
+
+				/* Ok, probably dealing with a 1.1 TPM */
+				if (result == TPM_E_BAD_ORDINAL)
+				      result = internal_TerminateHandle(
+									auth_mgr.auth_mapper[i].tpm_handle);
+
 				if (result == TCPA_E_INVALID_AUTHHANDLE) {
 					LogDebug("Tried to close an invalid auth handle: %x",
 						 auth_mgr.auth_mapper[i].tpm_handle);
@@ -259,8 +265,14 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE 
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcs_handle) {
 			if (cont) {
 				/* Only termininate when still in use */
-				result = internal_TerminateHandle(
-								auth_mgr.auth_mapper[i].tpm_handle);
+				result = TCSP_FlushSpecific_Common(auth_mgr.auth_mapper[i].tpm_handle,
+								   TPM_RT_AUTH);
+
+				/* Ok, probably dealing with a 1.1 TPM */
+				if (result == TPM_E_BAD_ORDINAL)
+				      result = internal_TerminateHandle(
+									auth_mgr.auth_mapper[i].tpm_handle);
+
 				if (result == TCPA_E_INVALID_AUTHHANDLE) {
 					LogDebug("Tried to close an invalid auth handle: %x",
 						 auth_mgr.auth_mapper[i].tpm_handle);
