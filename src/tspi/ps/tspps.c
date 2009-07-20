@@ -280,8 +280,8 @@ psfile_get_key_by_uuid(int fd, TSS_UUID *uuid, BYTE *key)
 
 	if (tmp.blob_size > 4096) {
 		LogError("Blob size greater than 4096! Size:  %d",
-			  tmp->blob_size);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+			  tmp.blob_size);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 	if ((rc = read_data(fd, buf, tmp.blob_size))) {
 		LogDebugFn("Blob read from disk failed.");
@@ -318,8 +318,8 @@ psfile_get_key_by_pub(int fd, TSS_UUID *uuid, UINT32 pub_size, BYTE *pub, BYTE *
 
 	if (tmp.blob_size > 4096) {
 		LogError("Blob size greater than 4096! Size:  %d",
-			  tmp->blob_size);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+			  tmp.blob_size);
+		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	if ((result = read_data(fd, buf, tmp.blob_size))) {
