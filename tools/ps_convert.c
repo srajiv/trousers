@@ -136,13 +136,14 @@ int
 version_0_convert(FILE *in, FILE *out)
 {
 	int rc, members = 0;
-	UINT32 i, u32 = *(UINT32 *)buf;
+	UINT32 i;
+	UINT32 *u32 = (UINT32 *) &buf;
 
 	/* output the PS version */
 	OUT(out, "\1", 1);
 
 	/* number of keys */
-	OUT(out, &u32, sizeof(UINT32));
+	OUT(out, u32, sizeof(UINT32));
 
 	/* The +- 1's below account for the byte we read in to determine
 	 * if the PS file had a version byte at the beginning */
@@ -163,7 +164,7 @@ version_0_convert(FILE *in, FILE *out)
 		return -1;
 	}
 
-	for (i = 1; i < u32; i++) {
+	for (i = 1; i < *u32; i++) {
 		/* read in subsequent key's headers */
 		if ((members = fread(buf, 2*sizeof(TSS_UUID) + 3*sizeof(UINT16),
 					1, in)) != 1) {

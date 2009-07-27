@@ -185,10 +185,11 @@ int
 version_0_print(FILE *f)
 {
 	int rc, members = 0;
-	UINT32 i, u32 = *(UINT32 *)buf;
+	UINT32 i;
+	UINT32 *u32 = (UINT32 *) &buf;
 
 	PRINT("version:        0\n");
-	PRINT("number of keys: %u\n", u32);
+	PRINT("number of keys: %u\n", *u32);
 
 	/* The +- 1's below account for the byte we read in to determine
 	 * if the PS file had a version byte at the beginning */
@@ -209,7 +210,7 @@ version_0_print(FILE *f)
 		return -1;
 	}
 
-	for (i = 1; i < u32; i++) {
+	for (i = 1; i < *u32; i++) {
 		/* read in subsequent key's headers */
 		if ((members = fread(buf, 2*sizeof(TSS_UUID) + 3*sizeof(UINT16),
 					1, f)) != 1) {
