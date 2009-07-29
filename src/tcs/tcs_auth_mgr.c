@@ -263,8 +263,8 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE 
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].tpm_handle == tpm_auth_handle &&
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcs_handle) {
-			if (cont) {
-				/* Only termininate when still in use */
+			if (!cont) {
+				/* Only termininate when not in use anymore */
 				result = TCSP_FlushSpecific_Common(auth_mgr.auth_mapper[i].tpm_handle,
 								   TPM_RT_AUTH);
 
