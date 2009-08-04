@@ -54,7 +54,7 @@ event_log_init()
 	/* assign external event log sources here */
 	//tcs_event_log->firmware_source = EVLOG_IMA_SOURCE;
 	tcs_event_log->firmware_source = EVLOG_BIOS_SOURCE;
-	tcs_event_log->kernel_source = EVLOG_BIOS_SOURCE;
+	tcs_event_log->kernel_source = EVLOG_IMA_SOURCE;
 
 	return TSS_SUCCESS;
 }

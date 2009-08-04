@@ -17,10 +17,14 @@
  * The external event source format used by IMA:
  *
  *     4 bytes PCR Index (bin)
- *    20 bytes SHA1 (bin)
- *     4 bytes event type (bin)
+ *    20 bytes SHA1 template (bin)
+ *     4 bytes template name_len
+ * 1-255 bytes template name
+ *    20 bytes SHA1 IMA(bin)
+ *     4 bytes IMA name len
  * 1-255 bytes eventname
  *     1 byte  separator = '\0'
+ *
  *
  */
 
@@ -56,15 +60,15 @@ struct ext_log_source ima_source = {
 int
 ima_open(void *source, int *handle)
 {
-	int fd;
+ 	FILE *fd;
 
-	if ((fd = open((char *)source, O_RDONLY)) < 0) {
-		LogError("Error opening PCR log file %s: %s", (char *)source, strerror(errno));
+	if ((fd = fopen((char *)source, "r")) == NULL) {
+		LogError("Error opening PCR log file %s: %s",
+			(char *)source, strerror(errno));
 		return -1;
 	}
 
-	*handle = fd;
-
+	*handle = (int) fd;
 	return 0;
 }
 
@@ -74,11 +78,16 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 {
 	int pcr_value;
 	char page[IMA_READ_SIZE];
-	int error_path = 1, bytes_read, bytes_left, ptr = 0, tmp_ptr;
-	UINT32 seen_indices = 0, copied_events = 0, i;
+	int error_path = 1, ptr = 0;
+	UINT32 copied_events = 0, i;
 	struct event_wrapper *list = calloc(1, sizeof(struct event_wrapper));
 	struct event_wrapper *cur = list;
 	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
+
+/* Changes for kernel IMA */
+FILE *fp = (FILE *) handle;
+int len;
+char name[255];
 
 	if (list == NULL) {
 		LogError("malloc of %zd bytes failed.", sizeof(struct event_wrapper));
@@ -90,134 +99,77 @@ ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 		goto free_list;
 	}
 
-	/* make the initial read from the file */
-	if ((bytes_read = read(handle, page, IMA_READ_SIZE)) <= 0) {
-		LogError("read from event source failed: %s", strerror(errno));
-		free(list);
-		return result;
+	if (!fp) {
+		perror("unable to open file\n");
+		return 1;
 	}
+	rewind(fp);
 
-	while (1) {
-		bytes_left = bytes_read - ptr;
-		if (bytes_left < IMA_MIN_EVENT_SIZE) {
-			/* We need to do another read from the file to get the next complete
-			 * log entry
-			 */
-			memcpy(page, &page[ptr], bytes_left);
-
-			if ((bytes_read = read(handle, &page[bytes_left],
-							IMA_READ_SIZE - bytes_left)) < 0) {
-				if (bytes_left == 0)
-					goto copy_events;
-
-				LogError("read from event source failed: %s", strerror(errno));
-				goto free_list;
-			}
-
-			/* if we *still* haven't read out one more entry from the file,
-			 * just exit. Hopefully we've processed the entire file.
-			 */
-			if (bytes_read + bytes_left < IMA_MIN_EVENT_SIZE)
-				break;
-
-			/* page has new data in it now, so reset ptr to read the fresh data */
-			ptr = 0;
-		} else if (bytes_left < IMA_MAX_EVENT_SIZE) {
-			/* if the last byte of the read data is not a zero, we're not looking
-			 * at a complete log entry. Read more data to get the next complete
-			 * entry.
-			 */
-			if (page[bytes_read - 1] != '\0') {
-				memcpy(page, &page[ptr], bytes_left);
-
-				if ((bytes_read = read(handle, &page[bytes_left],
-							IMA_READ_SIZE - bytes_left)) < 0) {
-					LogError("read from event source failed: %s", strerror(errno));
-					goto free_list;
-				}
-
-				/* page has new data in it now, so reset ptr to read the
-				 * fresh data.
-				 */
-				ptr = 0;
-			}
-		}
-
+        while (fread(page, 24, 1, fp)) {
 		/* copy the initial 4 bytes (PCR index) XXX endianess ignored */
+		ptr = 0;
 		memcpy(&pcr_value, &page[ptr], sizeof(int));
+		cur->event.ulPcrIndex = pcr_value;
 		ptr += sizeof(int);
 
-		/* if the index is the one we're looking for, grab the entry */
-		if (pcr_index == (UINT32)pcr_value) {
-			if (seen_indices >= first) {
-				/* grab this entry */
-				cur->event.rgbPcrValue = malloc(20);
-				if (cur->event.rgbPcrValue == NULL) {
-					LogError("malloc of %d bytes failed.", 20);
-					result = TCSERR(TSS_E_OUTOFMEMORY);
-					goto free_list;
-				}
-
-				cur->event.ulPcrIndex = pcr_index;
-				cur->event.ulPcrValueLength = 20;
-
-				/* copy the SHA1 XXX endianess ignored */
-				memcpy(cur->event.rgbPcrValue, &page[ptr], 20);
-				ptr += 20;
-
-				/* copy the 4 bytes of event type XXX endianess ignored */
-				memcpy(&cur->event.eventType, &page[ptr], sizeof(int));
-				ptr += sizeof(int);
-
-				/* copy the event name XXX endianess ignored */
-				tmp_ptr = ptr;
-				while (page[ptr] != '\0')
-					ptr++;
-				cur->event.ulEventLength = ptr - tmp_ptr + 1; //add the terminator
-
-				cur->event.rgbEvent = malloc(cur->event.ulEventLength);
-				if (cur->event.rgbEvent == NULL) {
-					free(cur->event.rgbPcrValue);
-					LogError("malloc of %u bytes failed.",
-						 cur->event.ulEventLength);
-					result = TCSERR(TSS_E_OUTOFMEMORY);
-					goto free_list;
-				}
-
-				memcpy(cur->event.rgbEvent, &page[tmp_ptr],
-				       cur->event.ulEventLength);
-				/* add 1 to skip over the '\0' */
-				ptr++;
-
-				copied_events++;
-				if (copied_events == *count)
-					goto copy_events;
-
-				cur->next = calloc(1, sizeof(struct event_wrapper));
-				if (cur->next == NULL) {
-					LogError("malloc of %zd bytes failed.",
-						 sizeof(struct event_wrapper));
-					result = TCSERR(TSS_E_OUTOFMEMORY);
-					goto free_list;
-				}
-				cur = cur->next;
-			}
-			seen_indices++;
-			continue;
+		/* grab this entry */
+		cur->event.ulPcrValueLength = 20;
+		cur->event.rgbPcrValue = malloc(cur->event.ulPcrValueLength);
+		if (cur->event.rgbPcrValue == NULL) {
+			LogError("malloc of %d bytes failed.", 20);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto free_list;
 		}
 
-		/* move the data pointer through the 20 bytes of SHA1 +
-		 * event type + event name + '\0' */
-		ptr += 20 + sizeof(UINT32);
-		while (page[ptr] != '\0')
-			ptr++;
-		ptr++;
+		/* copy the template SHA1 XXX endianess ignored */
+		memcpy(cur->event.rgbPcrValue, &page[ptr],
+		       cur->event.ulPcrValueLength);
+
+/* Get the template name size, template name */
+{
+		char digest[20];
+
+		fread(&len, sizeof len, 1, fp);
+		memset(name, 0, sizeof name);
+		fread(name, len, 1, fp);
+
+		fread(digest, sizeof digest, 1, fp);
+}
+		/* Get the template data namelen and data */
+		fread(&cur->event.ulEventLength, sizeof(int), 1, fp);
+		cur->event.rgbEvent = malloc(cur->event.ulEventLength + 1);
+		if (cur->event.rgbEvent == NULL) {
+			free(cur->event.rgbPcrValue);
+			LogError("malloc of %u bytes failed.",
+				 cur->event.ulEventLength);
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto free_list;
+		}
+		memset(cur->event.rgbEvent, 0, cur->event.ulEventLength);
+		fread(cur->event.rgbEvent, cur->event.ulEventLength, 1, fp);
+
+		copied_events++;
+printf("%d %s ", copied_events, name);
+
+printf("%s\n", cur->event.rgbEvent);
+		if (copied_events == *count)
+			goto copy_events;
+
+		cur->next = calloc(1, sizeof(struct event_wrapper));
+		if (cur->next == NULL) {
+			LogError("malloc of %zd bytes failed.",
+				 sizeof(struct event_wrapper));
+			result = TCSERR(TSS_E_OUTOFMEMORY);
+			goto free_list;
+		}
+		cur = cur->next;
 	}
 
 copy_events:
 	/* we've copied all the events we need to from this PCR, now
 	 * copy them all into one contiguous memory block
 	 */
+printf("copied_events: %d\n", copied_events);
 	*events = calloc(copied_events, sizeof(TSS_PCR_EVENT));
 	if (*events == NULL) {
 		LogError("malloc of %zd bytes failed.", copied_events * sizeof(TSS_PCR_EVENT));
@@ -254,140 +206,84 @@ free_list:
 TSS_RESULT
 ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent)
 {
-	int pcr_value, bytes_read, bytes_left, tmp_ptr, ptr = 0;
+	int pcr_value, ptr = 0, len;
 	char page[IMA_READ_SIZE];
 	UINT32 seen_indices = 0;
 	TSS_RESULT result = TCSERR(TSS_E_INTERNAL_ERROR);
-	TSS_PCR_EVENT *e = NULL;
+	TSS_PCR_EVENT *event;
+	FILE *fp = (FILE *) handle;
+	char name[255];
+printf("ima_get_entry \n");
+fflush(stdout);
 
-	/* make the initial read from the file */
-	if ((bytes_read = read(handle, page, IMA_READ_SIZE)) <= 0) {
-		LogError("read from event source failed: %s", strerror(errno));
-		return result;
-	}
-
-	while (1) {
-		bytes_left = bytes_read - ptr;
-		if (bytes_left < IMA_MIN_EVENT_SIZE) {
-			memcpy(page, &page[ptr], bytes_left);
-
-			if ((bytes_read = read(handle, &page[bytes_left],
-							IMA_READ_SIZE - bytes_left)) < 0) {
-				LogError("read from event source failed: %s", strerror(errno));
-				goto done;
-			}
-
-			/* if we *still* haven't read out one more entry from the file,
-			 * just exit. Hopefully we've processed the entire file.
-			 */
-			if (bytes_read + bytes_left < IMA_MIN_EVENT_SIZE)
-				break;
-
-			/* page has new data in it now, so reset ptr to read the fresh data */
-			ptr = 0;
-		} else if (bytes_left < IMA_MAX_EVENT_SIZE) {
-			/* if the last byte of the read data is not a zero, we're not looking
-			 * at a complete log entry. Read more data to get the next complete
-			 * entry.
-			 */
-			if (page[bytes_read - 1] != '\0') {
-				memcpy(page, &page[ptr], bytes_left);
-
-				if ((bytes_read = read(handle, &page[bytes_left],
-							IMA_READ_SIZE - bytes_left)) < 0) {
-					LogError("read from event source failed: %s", strerror(errno));
-					goto done;
-				}
-
-				/* page has new data in it now, so reset ptr to read the
-				 * fresh data.
-				 */
-				ptr = 0;
-			}
-		}
-
+	rewind(fp);
+	while (fread(page, 24, 1, fp)) {
 		/* copy the initial 4 bytes (PCR index) XXX endianess ignored */
+		ptr = 0;
 		memcpy(&pcr_value, &page[ptr], sizeof(int));
-		ptr += sizeof(int);
 
+printf("pcr_index %u\n", (UINT32)pcr_value);
+fflush(stdout);
 		if (pcr_index == (UINT32)pcr_value) {
+			event = calloc(1, sizeof(TSS_PCR_EVENT));
+			event->ulPcrIndex = pcr_value;
+			ptr += sizeof(int);
 			/* This is the case where we're looking for a specific event number in a
 			 * specific PCR index. When we've reached the correct event, malloc
 			 * space for it, copy it in, then break out of the while loop */
 			if (ppEvent && seen_indices == *num) {
-				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
-				if (*ppEvent == NULL) {
-					LogError("malloc of %zd bytes failed.",
-						 sizeof(TSS_PCR_EVENT));
-					return TCSERR(TSS_E_OUTOFMEMORY);
-				}
-
-				e = *ppEvent;
-
-				e->rgbPcrValue = malloc(20);
-				if (e->rgbPcrValue == NULL) {
+				/* grab this entry */
+				event->ulPcrValueLength = 20;
+				event->rgbPcrValue = malloc(event->ulPcrValueLength);
+				if (event->rgbPcrValue == NULL) {
 					LogError("malloc of %d bytes failed.", 20);
-					free(e);
-					e = NULL;
+					result = TCSERR(TSS_E_OUTOFMEMORY);
 					goto done;
 				}
 
-				e->ulPcrIndex = pcr_index;
-				e->ulPcrValueLength = 20;
+				/* copy the template SHA1 XXX endianess ignored */
+				memcpy(event->rgbPcrValue, &page[ptr],
+						event->ulPcrValueLength);
 
-				/* copy the SHA1 XXX endianess ignored */
-				memcpy(e->rgbPcrValue, &page[ptr], 20);
-				ptr += 20;
+				/* Get the template name size, template name */
+				{
+					char digest[20];
 
-				/* copy the 4 bytes of event type XXX endianess ignored */
-				memcpy(&e->eventType, &page[ptr], sizeof(int));
-				ptr += sizeof(int);
-
-				/* copy the event name XXX endianess ignored */
-				tmp_ptr = ptr;
-				while (page[ptr] != '\0')
-					ptr++;
-				e->ulEventLength = ptr - tmp_ptr + 1; // add the terminator
-
-				if (e->ulEventLength > 41) {
-					LogError("Error parsing IMA PCR Log event structure, event "
-						 "length is %u", e->ulEventLength);
-					free(e->rgbPcrValue);
-					free(e);
-					e = NULL;
+					fread(&len, sizeof len, 1, fp);
+					memset(name, 0, sizeof name);
+					fread(name, len, 1, fp);
+					fread(digest, sizeof digest, 1, fp);
+				}
+				/* Get the template data namelen and data */
+				fread(&event->ulEventLength, sizeof(int), 1, fp);
+				event->rgbEvent = malloc(event->ulEventLength + 1);
+				if (event->rgbEvent == NULL) {
+					free(event->rgbPcrValue);
+					LogError("malloc of %u bytes failed.",
+							event->ulEventLength);
+					result = TCSERR(TSS_E_OUTOFMEMORY);
+					free(event->rgbPcrValue);
+					event->rgbPcrValue = NULL;
 					goto done;
 				}
-
-				e->rgbEvent = malloc(e->ulEventLength);
-				if (e->rgbEvent == NULL) {
-					LogError("malloc of %d bytes failed.", e->ulEventLength);
-					free(e->rgbPcrValue);
-					free(e);
-					e = NULL;
-					goto done;
-				}
-
-				memcpy(e->rgbEvent, &page[tmp_ptr], e->ulEventLength);
-
+				memset(event->rgbEvent, 0, event->ulEventLength);
+				fread(event->rgbEvent, event->ulEventLength, 1, fp);
+				*ppEvent = event;
+				result = TSS_SUCCESS;
 				break;
 			}
-			seen_indices++;
 		}
-
-		/* move the data pointer through the 20 bytes of SHA1 +
-		 * event type + event name + '\0' */
-		ptr += 20 + sizeof(UINT32);
-		while (page[ptr] != '\0')
-			ptr++;
-		ptr++;
+		fread(&len, sizeof len, 1, fp);
+		fseek(fp, len + 20, SEEK_CUR);
+		fread(&len, sizeof len, 1, fp);
+		fseek(fp, len, SEEK_CUR);
+		seen_indices++;
+		printf("%d - index\n", seen_indices);
 	}
-
-	result = TSS_SUCCESS;
 done:
+fflush(stdout);
 	if (ppEvent == NULL)
 		*num = seen_indices;
-	else if (e == NULL)
-		*ppEvent = NULL;
 
 	return result;
 }
@@ -395,9 +291,8 @@ done:
 int
 ima_close(int handle)
 {
-	close(handle);
+	fclose((FILE *)handle);
 
 	return 0;
 }
-
 #endif
