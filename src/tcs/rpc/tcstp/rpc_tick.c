@@ -104,7 +104,7 @@ tcs_wrap_TickStampBlob(struct tcsd_thread_data *data)
 		initData(&data->comm, 5);
 		i = 0;
 		if (pAuth) {
-			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pAuth, 0, &data->comm)) {
+			if (setData(TCSD_PACKET_TYPE_AUTH, i++, pAuth, 0, &data->comm)) {
 				free(sig);
 				free(tc);
 				return TCSERR(TSS_E_INTERNAL_ERROR);

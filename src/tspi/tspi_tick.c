@@ -34,7 +34,7 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 	TPM_DIGEST digest;
 	TSS_BOOL usesAuth;
 	TPM_AUTH auth, *pAuth;
-	UINT32 hashLen, sigLen, tcLen;
+	UINT32 hashLen, sigLen, tcLen, signInfoLen;
 	BYTE *hash, *sig, *tc, *signInfo = NULL;
 	UINT64 offset;
 	Trspi_HashCtx hashCtx;
@@ -99,16 +99,22 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 		result |= Trspi_HashUpdate(&hashCtx, sigLen, sig);
 		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
 			free_tspi(tspContext, hash);
+			free(sig);
+			free(tc);
 			return result;
 		}
 
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, pAuth))) {
 			free_tspi(tspContext, hash);
+			free(sig);
+			free(tc);
 			return result;
 		}
 	}
-
-	if ((signInfo = calloc_tspi(tspContext, tcLen + sizeof(TPM_SIGN_INFO))) == NULL) {
+	
+	/*                 tag       fixed      replay          length(Data)                 Data        */
+	signInfoLen = sizeof(UINT16) + 4 + sizeof(TPM_NONCE) + sizeof(UINT32) + sizeof(TPM_DIGEST) + tcLen;
+	if ((signInfo = calloc_tspi(tspContext, signInfoLen)) == NULL) {
 		free_tspi(tspContext, hash);
 		free(sig);
 		free(tc);
@@ -116,17 +122,22 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 	}
 
 	offset = 0;
-	Trspi_LoadBlob_UINT16(&offset, endian16(TPM_TAG_SIGNINFO), signInfo);
+	Trspi_LoadBlob_UINT16(&offset, TPM_TAG_SIGNINFO, signInfo);
 	Trspi_LoadBlob_BYTE(&offset, 'T', signInfo);
 	Trspi_LoadBlob_BYTE(&offset, 'S', signInfo);
 	Trspi_LoadBlob_BYTE(&offset, 'T', signInfo);
 	Trspi_LoadBlob_BYTE(&offset, 'P', signInfo);
+	Trspi_LoadBlob(&offset, sizeof(TPM_NONCE), signInfo, pValidationData->rgbExternalData);
+	Trspi_LoadBlob_UINT32(&offset, sizeof(TPM_DIGEST) + tcLen, signInfo);
 	Trspi_LoadBlob(&offset, sizeof(TPM_DIGEST), signInfo, hash);
 	Trspi_LoadBlob(&offset, (size_t)tcLen, signInfo, tc);
 
 	free(tc);
 	free_tspi(tspContext, hash);
 
+	pValidationData->rgbData = signInfo;
+	pValidationData->ulDataLength = signInfoLen;
+		
 	/* tag sig so that it can be free'd by the app through Tspi_Context_FreeMemory */
 	if ((result = add_mem_entry(tspContext, sig))) {
 		free_tspi(tspContext, signInfo);

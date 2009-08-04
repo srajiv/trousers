@@ -140,8 +140,13 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 			result |= Trspi_HashUpdate(&hashCtx, *versionInfoSize,*versionInfo);
 		result |= Trspi_Hash_UINT32(&hashCtx, sigSize);
 		result |= Trspi_HashUpdate(&hashCtx, sigSize, sig);
-		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest)))
+		if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
+			free(pcrDataOut);
+			if (*versionInfoSize > 0)
+				free(*versionInfo);
+			free(sig);
 			return result;
+		}
 		if ((result = obj_policy_validate_auth_oiap(hPolicy, &digest, &privAuth))) {
 			free(pcrDataOut);
 			if (*versionInfoSize > 0)
@@ -201,6 +206,7 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 			antiReplay.nonce);
 	/* 4. add the infoshort TPM_PCR_INFO_SHORT data */
 	Trspi_LoadBlob(&offset,pcrDataOutSize,quoteinfo,pcrDataOut);
+	free(pcrDataOut);
 
 	if (fAddVersion)
 		Trspi_LoadBlob(&offset,*versionInfoSize,quoteinfo,*versionInfo);
@@ -214,8 +220,12 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 	LogDebugData(offset,quoteinfo);
 
 	if (pValidationData == NULL) {
-		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest)))
+		if ((result = Trspi_Hash(TSS_HASH_SHA1, offset, quoteinfo, digest.digest))) {
+			free(sig);
+			if (*versionInfoSize > 0)
+				free(*versionInfo);
 			return result;
+		}
 		if ((result = rsa_verify(hIdentKey,TSS_HASH_SHA1,sizeof(digest.digest),
 					 digest.digest, sigSize, sig))) {
 			free(sig);
@@ -223,10 +233,12 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 				free(*versionInfo);
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 		}
+		free(sig);
 	} else {
 		pValidationData->rgbValidationData = calloc_tspi(tspContext, sigSize);
 		if (pValidationData->rgbValidationData == NULL) {
 			LogError("malloc of %u bytes failed.", sigSize);
+			free(sig);
 			if (*versionInfoSize > 0)
 				free(*versionInfo);
 			return TSPERR(TSS_E_OUTOFMEMORY);
@@ -248,6 +260,26 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 		pValidationData->ulDataLength = (UINT32)offset;
 		memcpy(pValidationData->rgbData, quoteinfo, offset);
 	}
+
+
+	if(*versionInfoSize > 0) {
+		if(fAddVersion) {
+			/* tag versionInfo so that it can be free'd by the app through Tspi_Context_FreeMemory */
+			if ((result = add_mem_entry(tspContext, *versionInfo))) {
+				free_tspi(tspContext, pValidationData->rgbValidationData);
+				pValidationData->rgbValidationData = NULL;
+				pValidationData->ulValidationDataLength = 0;
+				free_tspi(tspContext, pValidationData->rgbData);
+				pValidationData->rgbData = NULL;
+				pValidationData->ulDataLength = 0;
+				free(*versionInfo);
+				return result;
+			}
+		}
+		else {
+			free(*versionInfo);
+		}
+        } 
 
 	LogDebug("Tspi_TPM_Quote2 End");
 	return TSS_SUCCESS;
