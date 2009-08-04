@@ -1,4 +1,29 @@
+* TROUSERS_0_3_2
 
+- Added IMA log parser in conformance with format introduced in linux kernel 2.6.30
+- Fixed memory handling issues in src/tspi/tspi_quote2.c and tspi_tick.c
+- Fixed memory handling issues in tcs/rpc/tcstp/rpc_tick.c
+- Fixed logic when releasing auth handles, now the TPM won't become out of
+resources due too many unreleased auth handles there.
+- Fixed compilation problems when building trousers in Fedora with
+-fstack-protector & gcc 4.4
+- Fixed the legacy usage of a deprecated 1.1 TPM command, now auth sessions
+can be closed fine.
+- Fixed key memory cache when evicting keys, invalid key handles were evicted
+when shouldn't.
+- Fixed authsess_xsap_init call with wrong handle
+- Fixed authsess_callback_hmac return code
+- Fixed validateReturnAuth return value
+- Added consistency to avoid multiple double free() and bound checks to avoid
+SEGV
+- Moved from flock to fcntl since the first isn't supported in multi-thread
+applications
+- Added necessary free() and consistency necessary in tspi/tsp_delegate.c to avoid SEGV 
+- Typecast added in trousers.c in the UNICODE conversion functions
+- Fixed wrong return code in Tspi_NV_ReleaseSpace
+- Fixed digest computation in Tspi_NV_ReleaseSpace
+- Fixed tpm_rsp_parse, it previously checked for an additional TPM_AUTH blob,
+resulting in a incorrect data blog unload.
 - Added #include <limits.h> to remove INT_MAX undeclared error
   during build. Files updated: trspi/crypto/openssl/symmetric.c,
   tspi/tspi_aik.c and tspi/tsp_ps.c
