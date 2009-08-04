@@ -24,6 +24,11 @@ applications
 - Fixed digest computation in Tspi_NV_ReleaseSpace
 - Fixed tpm_rsp_parse, it previously checked for an additional TPM_AUTH blob,
 resulting in a incorrect data blog unload.
+- Added new OpenSSL UI for TSS_SECRET_MODE_POPUP auth mode.
+- Added workaround to fix namespace conflict with SELINUX
+- Set SO_REUSEADDR socket option.
+- Added TSS_SS_RSASSAPKCS1v15_INFO signature scheme definitions and support
+- TDDL can now be compiled apart from the rest of TrouSerS.
 - Added #include <limits.h> to remove INT_MAX undeclared error
   during build. Files updated: trspi/crypto/openssl/symmetric.c,
   tspi/tspi_aik.c and tspi/tsp_ps.c
