@@ -11,10 +11,10 @@
 #ifndef _IMAEM_H_
 #define _IMAEM_H_
 
-int ima_open(void *, int *);
-TSS_RESULT ima_get_entries_by_pcr(int, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
-TSS_RESULT ima_get_entry(int, UINT32, UINT32 *, TSS_PCR_EVENT **);
-int ima_close(int);
+int ima_open(void *, FILE **);
+TSS_RESULT ima_get_entries_by_pcr(FILE *, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT ima_get_entry(FILE *, UINT32, UINT32 *, TSS_PCR_EVENT **);
+int ima_close(FILE *);
 
 extern struct ext_log_source ima_source;
 

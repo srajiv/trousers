@@ -64,14 +64,15 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 			UINT32 *pNumber,		/* in, out */
 			TSS_PCR_EVENT **ppEvent)	/* out */
 {
-	int log_handle;
+	FILE *log_handle;
 	char *source;
 
 	if (tcsd_options.kernel_pcrs & (1 << PcrIndex)) {
 		source = tcsd_options.kernel_log_file;
 
 		if (tcs_event_log->kernel_source != NULL) {
-			if (tcs_event_log->kernel_source->open((void *)source, &log_handle))
+			if (tcs_event_log->kernel_source->open((void *)source,
+							       (FILE **) &log_handle))
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 
 			if (tcs_event_log->kernel_source->get_entry(log_handle, PcrIndex,
@@ -179,7 +180,7 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 				UINT32 *pEventCount,		/* in, out */
 				TSS_PCR_EVENT **ppEvents)	/* out */
 {
-	int log_handle;
+	FILE *log_handle;
 	char *source;
 
 	if (tcsd_options.kernel_pcrs & (1 << PcrIndex)) {

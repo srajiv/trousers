@@ -45,11 +45,11 @@ struct ext_log_source bios_source = {
 };
 
 int
-bios_open(void *source, int *handle)
+bios_open(void *source, FILE **handle)
 {
-	int fd;
+	FILE *fd;
 
-	if ((fd = open((char *)source, O_RDONLY)) < 0) {
+	if ((fd = fopen((char *)source, "r")) == NULL ) {
 		LogError("Error opening BIOS Eventlog file %s: %s", (char *)source,
 			 strerror(errno));
 		return -1;
@@ -61,11 +61,11 @@ bios_open(void *source, int *handle)
 }
 
 TSS_RESULT
-bios_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
+bios_get_entries_by_pcr(FILE *handle, UINT32 pcr_index, UINT32 first,
 			UINT32 *count, TSS_PCR_EVENT **events)
 {
 	char page[BIOS_READ_SIZE];
-	int error_path = 1, bytes_read=0;
+	int error_path = 1;
 	UINT32 seen_indices = 0, copied_events = 0, i;
 	struct event_wrapper *list = calloc(1, sizeof(struct event_wrapper));
 	struct event_wrapper *cur = list;
@@ -85,7 +85,7 @@ bios_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 
 	while (1) {
 		/* read event header from the file */
-		if ((bytes_read = read(handle, page, 32)) <= 0) {
+		if ((fread(page, 32, 1, handle)) <= 0) {
 			goto copy_events;
 		}
 
@@ -121,8 +121,8 @@ bios_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 						result = TSS_E_OUTOFMEMORY;
 						goto free_list;
 					}
-					if ((bytes_read = read(handle, cur->event.rgbEvent,
-							       event->eventDataSize)) <= 0) {
+					if ((fread(cur->event.rgbEvent,
+						   event->eventDataSize, 1, handle)) <= 0) {
 						LogError("read from event source failed: %s",
 							 strerror(errno));
 						return result;
@@ -146,12 +146,12 @@ bios_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
 			} else {
 				/* skip */
 				if (event->eventDataSize > 0)
-					lseek(handle,event->eventDataSize,SEEK_CUR);
+					fseek(handle,event->eventDataSize,SEEK_CUR);
 			}
 			seen_indices++;
 		} else {
 			if (event->eventDataSize > 0)
-				lseek(handle,event->eventDataSize,SEEK_CUR);
+				fseek(handle,event->eventDataSize,SEEK_CUR);
 			}
 		num++;
 	}
@@ -195,9 +195,8 @@ free_list:
 }
 
 TSS_RESULT
-bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent)
+bios_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent)
 {
-	int bytes_read, bytes_left, ptr = 0;
 	char page[BIOS_READ_SIZE];
 	UINT32 seen_indices = 0;
 	TSS_RESULT result = TSS_E_INTERNAL_ERROR;
@@ -205,9 +204,8 @@ bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEven
 	TCG_PCClientPCREventStruc *event = NULL;
 
 	while (1) {
-		bytes_left = bytes_read - ptr;
 		/* read event header from the file */
-		if ((bytes_read = read(handle, page, 32)) <= 0) {
+		if ((fread(page, 32, 1, handle)) == 0) {
 			goto done;
 		}
 
@@ -251,8 +249,9 @@ bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEven
 						e = NULL;
 						break;
 					}
-					if ((bytes_read = read(handle, e->rgbEvent,
-							       event->eventDataSize)) <= 0) {
+					if ((fread(e->rgbEvent,
+						   event->eventDataSize,
+						   1, handle)) <= 0) {
 						LogError("read from event source failed: %s",
 							 strerror(errno));
 						return result;
@@ -266,14 +265,14 @@ bios_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEven
 			} else {
 				/* skip */
 				if (event->eventDataSize > 0) {
-					lseek(handle,event->eventDataSize,SEEK_CUR);
+					fseek(handle,event->eventDataSize,SEEK_CUR);
 				}
 			}
 			seen_indices++;
 		} else {
 			/* skip */
 			if (event->eventDataSize > 0) {
-				lseek(handle,event->eventDataSize,SEEK_CUR);
+				fseek(handle,event->eventDataSize,SEEK_CUR);
 			}
 		}
 	}
@@ -289,9 +288,9 @@ done:
 }
 
 int
-bios_close(int handle)
+bios_close(FILE *handle)
 {
-	close(handle);
+	fclose(handle);
 
 	return 0;
 }

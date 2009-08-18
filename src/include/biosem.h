@@ -11,10 +11,10 @@
 #ifndef _BIOSEM_H_
 #define _BIOSEM_H_
 
-int bios_open(void *, int *);
-TSS_RESULT bios_get_entries_by_pcr(int, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
-TSS_RESULT bios_get_entry(int, UINT32, UINT32 *, TSS_PCR_EVENT **);
-int bios_close(int);
+int bios_open(void *, FILE **);
+TSS_RESULT bios_get_entries_by_pcr(FILE *, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
+TSS_RESULT bios_get_entry(FILE *, UINT32, UINT32 *, TSS_PCR_EVENT **);
+int bios_close(FILE *);
 
 extern struct ext_log_source bios_source;
 

@@ -58,7 +58,7 @@ struct ext_log_source ima_source = {
 };
 
 int
-ima_open(void *source, int *handle)
+ima_open(void *source, FILE **handle)
 {
  	FILE *fd;
 
@@ -68,12 +68,12 @@ ima_open(void *source, int *handle)
 		return -1;
 	}
 
-	*handle = (int) fd;
+	*handle =  fd;
 	return 0;
 }
 
 TSS_RESULT
-ima_get_entries_by_pcr(int handle, UINT32 pcr_index, UINT32 first,
+ima_get_entries_by_pcr(FILE *handle, UINT32 pcr_index, UINT32 first,
 			UINT32 *count, TSS_PCR_EVENT **events)
 {
 	int pcr_value;
@@ -204,7 +204,7 @@ free_list:
 }
 
 TSS_RESULT
-ima_get_entry(int handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent)
+ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEvent)
 {
 	int pcr_value, ptr = 0, len;
 	char page[IMA_READ_SIZE];
@@ -289,7 +289,7 @@ fflush(stdout);
 }
 
 int
-ima_close(int handle)
+ima_close(FILE *handle)
 {
 	fclose((FILE *)handle);
 

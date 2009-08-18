@@ -12,10 +12,10 @@
 #define _TCSEM_H_
 
 struct ext_log_source {
-        int (*open)(void *, int *);
-        TSS_RESULT (*get_entries_by_pcr)(int, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
-        TSS_RESULT (*get_entry)(int, UINT32, UINT32 *, TSS_PCR_EVENT **);
-        int (*close)(int);
+        int (*open)(void *, FILE **);
+        TSS_RESULT (*get_entries_by_pcr)(FILE *, UINT32, UINT32, UINT32 *, TSS_PCR_EVENT **);
+        TSS_RESULT (*get_entry)(FILE *, UINT32, UINT32 *, TSS_PCR_EVENT **);
+        int (*close)(FILE *);
 };
 
 struct event_wrapper {
