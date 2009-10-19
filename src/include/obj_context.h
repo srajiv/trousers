@@ -80,7 +80,7 @@ TSS_RESULT obj_context_get_tpm_version(TSS_HCONTEXT, UINT32 *);
 TSS_RESULT obj_context_get_loadkey_ordinal(TSS_HCONTEXT, TPM_COMMAND_CODE *);
 void       obj_context_close(TSS_HCONTEXT);
 
-struct tcs_api_table *obj_context_get_tcs_api();
+struct tcs_api_table *obj_context_get_tcs_api(TSS_HCONTEXT);
 #define TCS_API(c) obj_context_get_tcs_api(c)
 
 
