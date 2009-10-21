@@ -34,19 +34,8 @@
 int system_ps_fd = -1;
 MUTEX_DECLARE(disk_cache_lock);
 
-static struct flock fl = {
-	0,      /* l_type */
-	0,      /* l_whence */
-	0,      /* l_start */
-	0,      /* l_len */
-#ifdef SOLARIS
-	0,      /* l_sysid */
-	0,      /* l_pid */
-	{0,0,0,0}
-#else
-	0	/* l_pid */
-#endif
-	};
+static struct flock fl;
+
 int
 get_file()
 {
