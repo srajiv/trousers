@@ -202,7 +202,7 @@ done:
 }
 
 void
-hash_free(void *data)
+__tspi_hash_free(void *data)
 {
 	struct tr_hash_obj *hash = (struct tr_hash_obj *)data;
 
@@ -219,7 +219,7 @@ obj_hash_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
 	TSS_RESULT result;
 
-	if ((result = obj_list_remove(&hash_list, &hash_free, hObject, tspContext)))
+	if ((result = obj_list_remove(&hash_list, &__tspi_hash_free, hObject, tspContext)))
 		return result;
 
 	return TSS_SUCCESS;

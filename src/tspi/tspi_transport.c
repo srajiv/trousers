@@ -90,7 +90,7 @@ Tspi_Context_CloseSignTransport(TSS_HCONTEXT    hContext,		/* in */
 	offset = 0;
 	if (pValidationData) {
 		/* tag the returned allocated memory as alloc'd by the TSP */
-		if ((result = add_mem_entry(hContext, sig))) {
+		if ((result = __tspi_add_mem_entry(hContext, sig))) {
 			free(sig);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
@@ -112,7 +112,7 @@ Tspi_Context_CloseSignTransport(TSS_HCONTEXT    hContext,		/* in */
 		offset = 0;
 		Trspi_LoadBlob_SIGN_INFO(&offset, pValidationData->rgbData, &signInfo);
 	} else
-		result = rsa_verify(hSigningKey, TSS_HASH_SHA1, sizeof(TPM_DIGEST), digest.digest,
+		result = __tspi_rsa_verify(hSigningKey, TSS_HASH_SHA1, sizeof(TPM_DIGEST), digest.digest,
 				    sigLen, sig);
 
 	return result;

@@ -21,7 +21,7 @@ UINT32 getData(TCSD_PACKET_TYPE,int,void *,int,struct tcsd_comm_data *);
 void initData(struct tcsd_comm_data *, int);
 TSS_RESULT sendTCSDPacket(struct host_table_entry *);
 TSS_RESULT send_init(struct host_table_entry *);
-TSS_RESULT sendit(struct host_table_entry *);
+TSS_RESULT tcs_sendit(struct host_table_entry *);
 short get_port();
 
 /* Context commands always included */

@@ -314,7 +314,7 @@ Tspi_Data_Unseal(TSS_HENCDATA hEncData,		/* in */
 
 		free(maskedData);
 	} else {
-		if ((result = add_mem_entry(tspContext, unSealedData)))
+		if ((result = __tspi_add_mem_entry(tspContext, unSealedData)))
 			goto error;
 	}
 

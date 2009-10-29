@@ -278,7 +278,7 @@ sendTCSDPacket(struct host_table_entry *hte)
 			return rc;
 		}
 	} else {
-		if ((rc = sendit(hte))) {
+		if ((rc = tcs_sendit(hte))) {
 			LogError("Failed to send packet");
 			return rc;
 		}
@@ -436,7 +436,7 @@ err_exit:
 }
 
 TSS_RESULT
-sendit(struct host_table_entry *hte)
+tcs_sendit(struct host_table_entry *hte)
 {
 	int recv_size;
 	BYTE *buffer;

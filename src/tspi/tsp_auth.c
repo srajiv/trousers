@@ -1084,7 +1084,7 @@ authsess_xsap_verify(struct authsess *sess, TPM_DIGEST *digest)
 }
 
 TSS_RESULT
-free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
+__tspi_free_resource(TSS_HCONTEXT tspContext, UINT32 handle, UINT32 resourceType)
 {
 	TSS_RESULT result = TSS_SUCCESS;
 #ifdef TSS_BUILD_TSS12
@@ -1120,7 +1120,7 @@ authsess_free(struct authsess *xsap)
 {
 	if (xsap) {
 		if (xsap->auth.AuthHandle && xsap->auth.fContinueAuthSession)
-			(void)free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
+			(void)__tspi_free_resource(xsap->tspContext, xsap->auth.AuthHandle, TPM_RT_AUTH);
 
 		free(xsap->entityValue);
 		free(xsap);

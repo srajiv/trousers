@@ -247,7 +247,7 @@ Tspi_SetAttribUint32(TSS_HOBJECT hObject,	/* in */
 				break;
 #ifdef TSS_BUILD_AUDIT
 			case TSS_TSPATTRIB_TPM_ORDINAL_AUDIT_STATUS:
-				result = audit_set_ordinal_audit_status(hObject, attribFlag,
+				result = __tspi_audit_set_ordinal_audit_status(hObject, attribFlag,
 									subFlag, ulAttrib);
 				break;
 #endif

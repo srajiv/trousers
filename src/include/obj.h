@@ -45,7 +45,7 @@ struct obj_list {
 /* prototypes */
 TSS_RESULT	   obj_getTpmObject(UINT32, TSS_HOBJECT *);
 TSS_HOBJECT	   obj_GetPolicyOfObject(UINT32, UINT32);
-void		   obj_list_init();
+void		   __tspi_obj_list_init();
 TSS_HOBJECT	   obj_get_next_handle();
 TSS_RESULT	   obj_list_add(struct obj_list *, UINT32, TSS_FLAG, void *, TSS_HOBJECT *);
 TSS_RESULT	   obj_list_remove(struct obj_list *, void (*)(void *), TSS_HOBJECT, TSS_HCONTEXT);

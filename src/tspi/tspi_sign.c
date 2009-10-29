@@ -92,7 +92,7 @@ Tspi_Hash_Sign(TSS_HHASH hHash,			/* in */
 		}
 	}
 
-	if ((result = add_mem_entry(tspContext, *prgbSignature)))
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbSignature)))
 		free(*prgbSignature);
 
 done:

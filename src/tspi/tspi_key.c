@@ -37,7 +37,7 @@ Tspi_Key_UnloadKey(TSS_HKEY hKey)	/* in */
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &hTcsKey)))
 		return result;
 
-	return free_resource(tspContext, hTcsKey, TPM_RT_KEY);
+	return __tspi_free_resource(tspContext, hTcsKey, TPM_RT_KEY);
 }
 
 TSS_RESULT
@@ -181,7 +181,7 @@ Tspi_Key_GetPubKey(TSS_HKEY hKey,		/* in */
 			goto error;
 	}
 
-	if ((result = add_mem_entry(tspContext, *prgbPubKey)))
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbPubKey)))
 		goto error;
 
 	if (tcsKeyHandle == TPM_KEYHND_SRK)
@@ -599,7 +599,7 @@ Tspi_TPM_OwnerGetSRKPubKey(TSS_HTPM hTPM,		/* in */
 		LogError("Error setting SRK public data, SRK key object may not exist");
 	}
 
-	if ((result = add_mem_entry(tspContext, *prgbPubKey)))
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbPubKey)))
 		goto error;
 
 	return result;

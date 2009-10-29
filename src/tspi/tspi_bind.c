@@ -204,7 +204,7 @@ Tspi_Data_Unbind(TSS_HENCDATA hEncData,		/* in */
 			goto error;
 	}
 
-	if ((result = add_mem_entry(tspContext, *prgbUnboundData)))
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbUnboundData)))
 		goto error;
 
 	return TSS_SUCCESS;

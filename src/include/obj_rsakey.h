@@ -37,7 +37,7 @@ struct tr_rsakey_obj {
 };
 
 /* obj_rsakey.c */
-void       rsakey_free(void *data);
+void       __tspi_rsakey_free(void *data);
 TSS_BOOL   obj_is_rsakey(TSS_HOBJECT);
 TSS_RESULT obj_rsakey_add(TSS_HCONTEXT, TSS_FLAG, TSS_HOBJECT *);
 TSS_RESULT obj_rsakey_add_by_key(TSS_HCONTEXT, TSS_UUID *, BYTE *, TSS_FLAG, TSS_HKEY *);
@@ -112,7 +112,7 @@ TSS_RESULT obj_rsakey_set_srk_pubkey(BYTE *);
 #define RSAKEY_LIST_DECLARE_EXTERN	extern struct obj_list rsakey_list
 #define RSAKEY_LIST_INIT()		list_init(&rsakey_list)
 #define RSAKEY_LIST_CONNECT(a,b)	obj_connectContext_list(&rsakey_list, a, b)
-#define RSAKEY_LIST_CLOSE(a)		obj_list_close(&rsakey_list, &rsakey_free, a)
+#define RSAKEY_LIST_CLOSE(a)		obj_list_close(&rsakey_list, &__tspi_rsakey_free, a)
 
 #else
 

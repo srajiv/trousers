@@ -80,10 +80,10 @@ Tspi_TPM_CreateMaintenanceArchive(TSS_HTPM hTPM,			/* in */
 	if ((result = obj_policy_validate_auth_oiap(hOwnerPolicy, &digest, &ownerAuth)))
 		goto error1;
 
-	if ((result = add_mem_entry(tspContext, *prgbRndNumber)))
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbRndNumber)))
 		goto error1;
 
-	if ((result = add_mem_entry(tspContext, *prgbArchiveData))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbArchiveData))) {
 		free_tspi(tspContext, *prgbRndNumber);
 		goto error2;
 	}

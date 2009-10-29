@@ -61,7 +61,7 @@ obj_context_add(TSS_HOBJECT *phObject)
 
 	/* Add the default policy */
 	if ((result = obj_policy_add(*phObject, TSS_POLICY_USAGE, &context->policy))) {
-		obj_list_remove(&context_list, &obj_context_free, *phObject, *phObject);
+		obj_list_remove(&context_list, &__tspi_obj_context_free, *phObject, *phObject);
 		return result;
 	}
 
@@ -96,7 +96,7 @@ obj_context_get_tcs_api(TSS_HCONTEXT tspContext)
 }
 
 void
-obj_context_free(void *data)
+__tspi_obj_context_free(void *data)
 {
 	struct tr_context_obj *context = (struct tr_context_obj *)data;
 
@@ -763,7 +763,7 @@ obj_context_transport_establish(TSS_HCONTEXT tspContext, struct tr_context_obj *
 
 		/* encrypt the sym key with the wrapping RSA key */
 		encKeyLen = sizeof(encKey);
-		if ((result = rsa_encrypt(context->transKey, secretLen, transAuthBlob, &encKeyLen,
+		if ((result = __tspi_rsa_encrypt(context->transKey, secretLen, transAuthBlob, &encKeyLen,
 					  encKey)))
 			return result;
 

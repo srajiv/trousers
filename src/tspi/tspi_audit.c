@@ -247,7 +247,7 @@ done1:
 						 digest.digest)))
 				goto done2;
 
-			if ((result = rsa_verify(hKey, TSS_HASH_SHA1, sizeof(digest.digest),
+			if ((result = __tspi_rsa_verify(hKey, TSS_HASH_SHA1, sizeof(digest.digest),
 						 digest.digest, sigSize, sig))) {
 				result = TSPERR(TSS_E_VERIFICATION_FAILED);
 				goto done2;

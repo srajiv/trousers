@@ -38,7 +38,7 @@ host_table_init()
 void __attribute__ ((constructor)) my_init(void)
 {
 	host_table_init();
-	obj_list_init();
+	__tspi_obj_list_init();
 }
 
 #if 0
@@ -68,7 +68,7 @@ void __attribute__ ((destructor)) my_fini(void)
 #endif
 
 TSS_RESULT
-add_table_entry(TSS_HCONTEXT tspContext, BYTE *host, int type, struct host_table_entry **ret)
+__tspi_add_table_entry(TSS_HCONTEXT tspContext, BYTE *host, int type, struct host_table_entry **ret)
 {
 	struct host_table_entry *entry, *tmp;
 

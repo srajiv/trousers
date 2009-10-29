@@ -705,7 +705,7 @@ Tspi_TPM_DAA_JoinInit_internal(TSS_HTPM			hTPM,
 #error set all 3 credentials in the daaIdentityProof struct here
 
 	/* set the U data */
-	if ((result = add_mem_entry(tspContext, outputData)))
+	if ((result = __tspi_add_mem_entry(tspContext, outputData)))
 		goto close;
 	*capitalUPrime = outputData;
 	*capitalUPrimeLength = outputSize;

@@ -24,7 +24,7 @@
 
 /* encrypt some data with the RSA public key of 'key', using the padding appropriate for the key */
 TSS_RESULT
-rsa_encrypt(TSS_HKEY key,
+__tspi_rsa_encrypt(TSS_HKEY key,
 	    UINT32   inDataLen,
 	    BYTE*    inData,
 	    UINT32*  outDataLen,
@@ -77,7 +77,7 @@ done:
 }
 
 TSS_RESULT
-rsa_verify(TSS_HKEY key,
+__tspi_rsa_verify(TSS_HKEY key,
 	   UINT32   type,
 	   UINT32   hashLen,
 	   BYTE*    hash,

@@ -129,7 +129,7 @@ create_owner_delegation(TSS_HTPM       hTpm,
 	if (type != TSS_DELEGATIONTYPE_OWNER)
 		return TSPERR(TSS_E_BAD_PARAMETER);
 
-	if ((result = build_delegate_public_info(bLabel, hPcrs, hFamily, hDelegation,
+	if ((result = __tspi_build_delegate_public_info(bLabel, hPcrs, hFamily, hDelegation,
 			&publicInfoSize, &publicInfo)))
 		return result;
 
@@ -216,7 +216,7 @@ create_key_delegation(TSS_HKEY       hKey,
 	if ((result = obj_rsakey_get_tcs_handle(hKey, &tcsKeyHandle)))
 		return result;
 
-	if ((result = build_delegate_public_info(bLabel, hPcrs, hFamily, hDelegation,
+	if ((result = __tspi_build_delegate_public_info(bLabel, hPcrs, hFamily, hDelegation,
 			&publicInfoSize, &publicInfo)))
 		return result;
 
@@ -364,7 +364,7 @@ done:
 }
 
 TSS_RESULT
-build_delegate_public_info(BYTE           bLabel,
+__tspi_build_delegate_public_info(BYTE           bLabel,
 			   TSS_HPCRS      hPcrs,
 			   TSS_HDELFAMILY hFamily,
 			   TSS_HPOLICY    hDelegation,

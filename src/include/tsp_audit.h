@@ -11,6 +11,6 @@
 #ifndef _TSP_AUDIT_H_
 #define _TSP_AUDIT_H_
 
-TSS_RESULT	   audit_set_ordinal_audit_status(TSS_HTPM, TSS_FLAG, TSS_FLAG, UINT32);
+TSS_RESULT	   __tspi_audit_set_ordinal_audit_status(TSS_HTPM, TSS_FLAG, TSS_FLAG, UINT32);
 
 #endif

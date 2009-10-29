@@ -43,7 +43,7 @@ Tspi_TPM_GetRandom(TSS_HTPM hTPM,		/* in */
 						     prgbRandomData)))
 		return result;
 
-	if ((result = add_mem_entry(tspContext, *prgbRandomData))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbRandomData))) {
 		free(*prgbRandomData);
 		*prgbRandomData = NULL;
 		return result;

@@ -139,7 +139,7 @@ Tspi_Key_CertifyKey(TSS_HKEY hKey,			/* in */
 					 digest.digest)))
 			return result;
 
-		if ((result = rsa_verify(hCertifyingKey, TSS_HASH_SHA1, TPM_SHA1_160_HASH_LEN,
+		if ((result = __tspi_rsa_verify(hCertifyingKey, TSS_HASH_SHA1, TPM_SHA1_160_HASH_LEN,
 					 digest.digest, outDataSize, outData)))
 			return TSPERR(TSS_E_VERIFICATION_FAILED);
 	} else {

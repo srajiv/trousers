@@ -1815,7 +1815,7 @@ done:
 }
 
 void
-rsakey_free(void *data)
+__tspi_rsakey_free(void *data)
 {
 	struct tr_rsakey_obj *rsakey = (struct tr_rsakey_obj *)data;
 
@@ -1833,7 +1833,7 @@ obj_rsakey_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
 	TSS_RESULT result;
 
-	if ((result = obj_list_remove(&rsakey_list, &rsakey_free, hObject, tspContext)))
+	if ((result = obj_list_remove(&rsakey_list, &__tspi_rsakey_free, hObject, tspContext)))
 		return result;
 
 	return TSS_SUCCESS;

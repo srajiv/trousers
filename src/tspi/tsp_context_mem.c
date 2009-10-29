@@ -38,7 +38,7 @@ getTable(TSS_HCONTEXT tspContext)
  * @tspContext exists before calling.
  */
 void
-addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
+__tspi_addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
 {
 	struct memTable *tmp = getTable(tspContext);
 	struct memEntry *tmp_entry = tmp->entries;
@@ -59,7 +59,7 @@ addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
 
 /* caller needs to lock memtable lock */
 void
-addTable(struct memTable *new)
+__tspi_addTable(struct memTable *new)
 {
 	struct memTable *tmp = SpiMemoryTable;
 
@@ -79,7 +79,7 @@ addTable(struct memTable *new)
 
 /* caller needs to lock memtable lock */
 TSS_RESULT
-freeTable(TSS_HCONTEXT tspContext)
+__tspi_freeTable(TSS_HCONTEXT tspContext)
 {
 	struct memTable *prev = NULL, *index = NULL, *next = NULL;
 	struct memEntry *entry = NULL, *entry_next = NULL;
@@ -109,7 +109,7 @@ freeTable(TSS_HCONTEXT tspContext)
 }
 
 TSS_RESULT
-freeEntry(struct memTable *table, void *pointer)
+__tspi_freeEntry(struct memTable *table, void *pointer)
 {
 	struct memEntry *index = NULL;
 	struct memEntry *prev = NULL;
@@ -133,7 +133,7 @@ freeEntry(struct memTable *table, void *pointer)
 }
 
 TSS_RESULT
-add_mem_entry(TSS_HCONTEXT tspContext, void *allocd_mem)
+__tspi_add_mem_entry(TSS_HCONTEXT tspContext, void *allocd_mem)
 {
 	struct memEntry *newEntry = calloc(1, sizeof(struct memEntry));
 	if (newEntry == NULL) {
@@ -145,7 +145,7 @@ add_mem_entry(TSS_HCONTEXT tspContext, void *allocd_mem)
 
 	MUTEX_LOCK(memtable_lock);
 
-	addEntry(tspContext, newEntry);
+	__tspi_addEntry(tspContext, newEntry);
 
 	MUTEX_UNLOCK(memtable_lock);
 
@@ -176,7 +176,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 			return NULL;
 		}
 		table->tspContext = tspContext;
-		addTable(table);
+		__tspi_addTable(table);
 	}
 
 	newEntry = calloc(1, sizeof(struct memEntry));
@@ -197,7 +197,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 	/* this call must happen inside the lock or else another thread could
 	 * remove the context mem slot, causing a segfault
 	 */
-	addEntry(tspContext, newEntry);
+	__tspi_addEntry(tspContext, newEntry);
 
 	MUTEX_UNLOCK(memtable_lock);
 
@@ -217,7 +217,7 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 	MUTEX_LOCK(memtable_lock);
 
 	if (memPointer == NULL) {
-		result = freeTable(tspContext);
+		result = __tspi_freeTable(tspContext);
 		MUTEX_UNLOCK(memtable_lock);
 		return result;
 	}
@@ -230,7 +230,7 @@ free_tspi(TSS_HCONTEXT tspContext, void *memPointer)
 	}
 
 	/* just free one entry */
-	result = freeEntry(index, memPointer);
+	result = __tspi_freeEntry(index, memPointer);
 
 	MUTEX_UNLOCK(memtable_lock);
 

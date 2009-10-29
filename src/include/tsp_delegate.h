@@ -18,6 +18,6 @@ TSS_RESULT	create_owner_delegation(TSS_HTPM, BYTE, UINT32, TSS_HPCRS, TSS_HDELFA
 
 TSS_RESULT	update_delfamily_object(TSS_HTPM, UINT32);
 TSS_RESULT	get_delegate_index(TSS_HCONTEXT, UINT32, TPM_DELEGATE_PUBLIC *);
-TSS_RESULT	build_delegate_public_info(BYTE, TSS_HPCRS, TSS_HDELFAMILY, TSS_HPOLICY, UINT32 *, BYTE **);
+TSS_RESULT	__tspi_build_delegate_public_info(BYTE, TSS_HPCRS, TSS_HDELFAMILY, TSS_HPOLICY, UINT32 *, BYTE **);
 
 #endif

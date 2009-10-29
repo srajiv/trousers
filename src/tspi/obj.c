@@ -47,7 +47,7 @@ list_init(struct obj_list *list)
 }
 
 void
-obj_list_init()
+__tspi_obj_list_init()
 {
 	TPM_LIST_INIT();
 	CONTEXT_LIST_INIT();

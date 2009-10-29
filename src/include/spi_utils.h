@@ -46,7 +46,7 @@ MUTEX_DECLARE_EXTERN(mem_cache_lock);
 
 void *calloc_tspi(TSS_HCONTEXT, UINT32);
 TSS_RESULT free_tspi(TSS_HCONTEXT, void *);
-TSS_RESULT add_mem_entry(TSS_HCONTEXT, void *);
+TSS_RESULT __tspi_add_mem_entry(TSS_HCONTEXT, void *);
 
 /* secrets.c */
 
@@ -77,7 +77,7 @@ TSS_RESULT changeauth_encdata(TSS_HCONTEXT, TSS_HOBJECT, TSS_HOBJECT, TSS_HPOLIC
 TSS_RESULT sealx_mask_cb(PVOID, TSS_HKEY, TSS_HENCDATA, TSS_ALGORITHM_ID, UINT32, BYTE *, BYTE *,
 			 BYTE *, BYTE *, UINT32, BYTE *, BYTE *);
 
-TSS_RESULT free_resource(TSS_HCONTEXT, UINT32, UINT32);
+TSS_RESULT __tspi_free_resource(TSS_HCONTEXT, UINT32, UINT32);
 TSS_RESULT owner_get_pubek(TSS_HCONTEXT, TSS_HTPM, TSS_HKEY *);
 
 #define next( x )	x = x->next
@@ -136,8 +136,8 @@ TSS_RESULT get_local_random(TSS_HCONTEXT, TSS_BOOL, UINT32, BYTE **);
 
 extern TSS_VERSION VERSION_1_1;
 
-TSS_RESULT rsa_encrypt(TSS_HKEY, UINT32, BYTE*, UINT32*, BYTE*);
-TSS_RESULT rsa_verify(TSS_HKEY, UINT32, UINT32, BYTE*, UINT32, BYTE*);
+TSS_RESULT __tspi_rsa_encrypt(TSS_HKEY, UINT32, BYTE*, UINT32*, BYTE*);
+TSS_RESULT __tspi_rsa_verify(TSS_HKEY, UINT32, UINT32, BYTE*, UINT32, BYTE*);
 
 TSS_RESULT Init_AuthNonce(TCS_CONTEXT_HANDLE, TSS_BOOL, TPM_AUTH *);
 TSS_BOOL validateReturnAuth(BYTE *, BYTE *, TPM_AUTH *);

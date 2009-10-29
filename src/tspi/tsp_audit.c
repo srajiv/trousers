@@ -22,7 +22,7 @@
 
 
 TSS_RESULT
-audit_set_ordinal_audit_status(TSS_HTPM hTpm,
+__tspi_audit_set_ordinal_audit_status(TSS_HTPM hTpm,
 				TSS_FLAG flag,
 				TSS_FLAG subFlag,
 				UINT32 ulOrdinal)

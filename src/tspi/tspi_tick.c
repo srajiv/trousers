@@ -139,7 +139,7 @@ Tspi_Hash_TickStampBlob(TSS_HHASH       hHash,			/* in */
 	pValidationData->ulDataLength = signInfoLen;
 		
 	/* tag sig so that it can be free'd by the app through Tspi_Context_FreeMemory */
-	if ((result = add_mem_entry(tspContext, sig))) {
+	if ((result = __tspi_add_mem_entry(tspContext, sig))) {
 		free_tspi(tspContext, signInfo);
 		free(sig);
 		return result;

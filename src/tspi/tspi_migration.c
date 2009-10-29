@@ -133,7 +133,7 @@ Tspi_TPM_AuthorizeMigrationTicket(TSS_HTPM hTPM,			/* in */
 		return result;
 	}
 
-	if ((result = add_mem_entry(tspContext, *prgbMigTicket))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbMigTicket))) {
 		*pulMigTicketLength = 0;
 		free(*prgbMigTicket);
 		return result;
@@ -286,7 +286,7 @@ Tspi_Key_CreateMigrationBlob(TSS_HKEY hKeyToMigrate,		/* in */
 	LoadBlob_TSS_KEY(&offset, *prgbMigrationBlob, &tssKey);
 
 	if (randomSize) {
-		if ((result = add_mem_entry(tspContext, random)))
+		if ((result = __tspi_add_mem_entry(tspContext, random)))
 			goto done;
 	}
 	*pulRandomLength = randomSize;

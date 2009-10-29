@@ -195,7 +195,7 @@ Tspi_TPM_GetTestResult(TSS_HTPM hTPM,			/* in */
 							 prgbTestResult)))
 		return result;
 
-	if ((result = add_mem_entry(tspContext, *prgbTestResult))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *prgbTestResult))) {
 		free(*prgbTestResult);
 		*prgbTestResult = NULL;
 		*pulTestResultLength = 0;

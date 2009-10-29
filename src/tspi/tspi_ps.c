@@ -467,7 +467,7 @@ Tspi_Context_GetRegisteredKeysByUUID(TSS_HCONTEXT tspContext,		/* in */
 		free(tspHier);
 	}
 
-	if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *ppKeyHierarchy))) {
 		free(*ppKeyHierarchy);
 		*ppKeyHierarchy = NULL;
 		*pulKeyHierarchySize = 0;
@@ -544,7 +544,7 @@ Tspi_Context_GetRegisteredKeysByUUID2(TSS_HCONTEXT tspContext,		/* in */
 		free(tspHier);
 	}
 
-	if ((result = add_mem_entry(tspContext, *ppKeyHierarchy))) {
+	if ((result = __tspi_add_mem_entry(tspContext, *ppKeyHierarchy))) {
 		free(*ppKeyHierarchy);
 		*ppKeyHierarchy = NULL;
 		*pulKeyHierarchySize = 0;

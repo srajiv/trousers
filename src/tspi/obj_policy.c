@@ -61,7 +61,7 @@ obj_policy_add(TSS_HCONTEXT tsp_context, UINT32 type, TSS_HOBJECT *phObject)
 }
 
 void
-policy_free(void *data)
+__tspi_policy_free(void *data)
 {
 	struct tr_policy_obj *policy = (struct tr_policy_obj *)data;
 
@@ -77,7 +77,7 @@ obj_policy_remove(TSS_HOBJECT hObject, TSS_HCONTEXT tspContext)
 {
 	TSS_RESULT result;
 
-	if ((result = obj_list_remove(&policy_list, &policy_free, hObject, tspContext)))
+	if ((result = obj_list_remove(&policy_list, &__tspi_policy_free, hObject, tspContext)))
 		return result;
 
 	obj_lists_remove_policy_refs(hObject, tspContext);

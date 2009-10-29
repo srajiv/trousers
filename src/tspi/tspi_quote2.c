@@ -226,7 +226,7 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 				free(*versionInfo);
 			return result;
 		}
-		if ((result = rsa_verify(hIdentKey,TSS_HASH_SHA1,sizeof(digest.digest),
+		if ((result = __tspi_rsa_verify(hIdentKey,TSS_HASH_SHA1,sizeof(digest.digest),
 					 digest.digest, sigSize, sig))) {
 			free(sig);
 			if (*versionInfoSize > 0)
@@ -265,7 +265,7 @@ Tspi_TPM_Quote2(TSS_HTPM        hTPM,            // in
 	if(*versionInfoSize > 0) {
 		if(fAddVersion) {
 			/* tag versionInfo so that it can be free'd by the app through Tspi_Context_FreeMemory */
-			if ((result = add_mem_entry(tspContext, *versionInfo))) {
+			if ((result = __tspi_add_mem_entry(tspContext, *versionInfo))) {
 				free_tspi(tspContext, pValidationData->rgbValidationData);
 				pValidationData->rgbValidationData = NULL;
 				pValidationData->ulValidationDataLength = 0;

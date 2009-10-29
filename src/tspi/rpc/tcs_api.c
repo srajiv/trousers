@@ -38,8 +38,8 @@ RPC_OpenContext(TSS_HCONTEXT tspContext, BYTE *hostname, int type)
 	struct host_table_entry *entry;
 	UINT32 tpm_version;
 
-	/* add_table_entry() will make sure an entry doesn't already exist for this tsp context */
-	if ((result = add_table_entry(tspContext, hostname, type, &entry)))
+	/* __tspi_add_table_entry() will make sure an entry doesn't already exist for this tsp context */
+	if ((result = __tspi_add_table_entry(tspContext, hostname, type, &entry)))
 		return result;
 
 	switch (type) {
