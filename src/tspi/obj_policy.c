@@ -882,7 +882,8 @@ obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
 			   TSS_CALLBACK *cb_xor,
 			   TSS_CALLBACK *cb_hmac,
 			   TSS_CALLBACK *cb_sealx,
-			   UINT32 *mode)
+			   UINT32 *mode,
+			   TSS_BOOL new_secret)
 {
 	struct tsp_object *obj;
 	struct tr_policy_obj *policy;
@@ -957,6 +958,15 @@ obj_policy_get_xsap_params(TSS_HPOLICY hPolicy,
 #endif
 	}
 
+	if ((policy->SecretMode == TSS_SECRET_MODE_POPUP) &&
+	    (policy->SecretSet == FALSE)) {
+		if ((result = popup_GetSecret(new_secret,
+					      policy->hashMode,
+					      policy->popupString,
+					      policy->Secret)))
+			goto done;
+			policy->SecretSet = TRUE;
+	}	
 	memcpy(secret, policy->Secret, TPM_SHA1_160_HASH_LEN);
 	*mode = policy->SecretMode;
 done:

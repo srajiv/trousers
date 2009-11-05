@@ -777,6 +777,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	TSS_BOOL authdatausage = FALSE, req_auth = TRUE, get_child_auth = TRUE;
 	BYTE hmacBlob[2 * sizeof(TPM_DIGEST)];
 	UINT64 offset;
+	TSS_BOOL new_secret = TR_SECRET_CTX_NOT_NEW;
 	struct authsess *sess;
 
 	if ((sess = calloc(1, sizeof(struct authsess))) == NULL) {
@@ -843,7 +844,8 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 							 &sess->entity_type, &sess->entityValueSize,
 							 &sess->entityValue,
 							 sess->parentSecret.authdata, &sess->cb_xor,
-							 &sess->cb_hmac, NULL, &sess->parentMode)))
+							 &sess->cb_hmac, NULL, &sess->parentMode, 
+							 new_secret)))
 			goto error;
 	} else
 		sess->parentMode = TSS_SECRET_MODE_NONE;
@@ -869,7 +871,8 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 
 			if ((result = obj_policy_get_xsap_params(sess->hMigChild, 0, NULL, NULL,
 								 NULL, sess->encAuthMig.authdata,
-								 NULL, NULL, NULL, &sess->mMode)))
+								 NULL, NULL, NULL, &sess->mMode,
+								 new_secret)))
 				goto error;
 		}
 
@@ -944,6 +947,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	case TPM_ORD_Delegate_CreateOwnerDelegation:
 	case TPM_ORD_ChangeAuthOwner:
 		sess->hUsageChild = obj_child;
+		new_secret = TR_SECRET_CTX_NEW;
 		break;
 	default:
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
@@ -959,7 +963,8 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	if (get_child_auth) {
 		if ((result = obj_policy_get_xsap_params(sess->hUsageChild, 0, 0, NULL, NULL,
 							 sess->encAuthUse.authdata, NULL, NULL,
-							 &sess->cb_sealx, &sess->uMode)))
+							 &sess->cb_sealx, &sess->uMode,
+							 new_secret)))
 			return result;
 	}
 
