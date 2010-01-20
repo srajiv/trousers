@@ -61,7 +61,7 @@ Transport_CreateMaintenanceArchive(TSS_HCONTEXT tspContext,	/* in */
 
 	Trspi_UnloadBlob_UINT32(&offset, archiveSize, dec);
 	if ((*archive = malloc(*archiveSize)) == NULL) {
-		free(random);
+		free(*random);
 		*random = NULL;
 		*randomSize = 0;
 		free(dec);
