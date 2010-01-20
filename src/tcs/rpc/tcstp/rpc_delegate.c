@@ -345,7 +345,6 @@ tcs_wrap_Delegate_LoadOwnerDelegation(struct tcsd_thread_data *data)
 		initData(&data->comm, 1);
 		if (pAuth) {
 			if (setData(TCSD_PACKET_TYPE_AUTH, 0, pAuth, 0, &data->comm)) {
-				free(blob);
 				return TCSERR(TSS_E_INTERNAL_ERROR);
 			}
 		}
