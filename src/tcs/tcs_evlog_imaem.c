@@ -213,8 +213,6 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 	TSS_PCR_EVENT *event;
 	FILE *fp = (FILE *) handle;
 	char name[255];
-printf("ima_get_entry \n");
-fflush(stdout);
 
 	rewind(fp);
 	while (fread(page, 24, 1, fp)) {
@@ -222,8 +220,6 @@ fflush(stdout);
 		ptr = 0;
 		memcpy(&pcr_value, &page[ptr], sizeof(int));
 
-printf("pcr_index %u\n", (UINT32)pcr_value);
-fflush(stdout);
 		if (pcr_index == (UINT32)pcr_value) {
 			event = calloc(1, sizeof(TSS_PCR_EVENT));
 			event->ulPcrIndex = pcr_value;
@@ -237,6 +233,7 @@ fflush(stdout);
 				event->rgbPcrValue = malloc(event->ulPcrValueLength);
 				if (event->rgbPcrValue == NULL) {
 					LogError("malloc of %d bytes failed.", 20);
+					free(event);
 					result = TCSERR(TSS_E_OUTOFMEMORY);
 					goto done;
 				}
@@ -259,11 +256,10 @@ fflush(stdout);
 				event->rgbEvent = malloc(event->ulEventLength + 1);
 				if (event->rgbEvent == NULL) {
 					free(event->rgbPcrValue);
+					free(event);
 					LogError("malloc of %u bytes failed.",
 							event->ulEventLength);
 					result = TCSERR(TSS_E_OUTOFMEMORY);
-					free(event->rgbPcrValue);
-					event->rgbPcrValue = NULL;
 					goto done;
 				}
 				memset(event->rgbEvent, 0, event->ulEventLength);
@@ -281,7 +277,6 @@ fflush(stdout);
 		printf("%d - index\n", seen_indices);
 	}
 done:
-fflush(stdout);
 	if (ppEvent == NULL)
 		*num = seen_indices;
 
