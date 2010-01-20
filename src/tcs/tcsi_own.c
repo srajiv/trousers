@@ -41,6 +41,7 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 	UINT32 paramSize;
 	TSS_RESULT result;
 	TSS_KEY srkKeyContainer;
+	BYTE fake_pubkey[256] = { 0, }, fake_srk[2048] = { 0, };
 	BYTE oldAuthDataUsage;
 	BYTE txBlob[TSS_TPM_TXBLOB_SIZE];
 
@@ -85,7 +86,6 @@ TCSP_TakeOwnership_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 
 #ifdef TSS_BUILD_PS
 		{
-			BYTE fake_pubkey[256] = { 0, }, fake_srk[2048] = { 0, };
 			BYTE *save;
 
 			/* Once the key file is created, it stays forever. There could be
