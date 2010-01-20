@@ -141,14 +141,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 		if ((result = TCS_API(tspContext)->Seal(tspContext, tcsKeyHandle, &xsap->encAuthUse,
 							pcrDataSize, pcrData, ulDataLength,
 							sealData, xsap->pAuth, &encDataSize,
-							&encData)))
+							&encData))) {
+			free(sealData);
 			return result;
+		}
 	} else if (sealOrdinal == TPM_ORD_Sealx) {
 		result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, &xsap->encAuthUse,
 						    pcrDataSize, pcrData, ulDataLength, sealData,
 						    xsap->pAuth, &encDataSize, &encData);
-		free(sealData);
-
 		if (result != TSS_SUCCESS)
 			goto error;
 	} else {
@@ -183,7 +183,7 @@ error:
 	authsess_free(xsap);
 	free(encData);
 	free(pcrData);
-
+	free(sealData);
 	return result;
 }
 
