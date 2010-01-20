@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <pwd.h>
 #if (defined (__OpenBSD__) || defined (__FreeBSD__))
 #include <netinet/in.h>
 #endif
@@ -40,6 +41,8 @@
 
 struct tcsd_config tcsd_options;
 struct tpm_properties tpm_metrics;
+
+extern char *optarg;
 
 void
 tcsd_shutdown()
@@ -220,6 +223,7 @@ main(int argc, char **argv)
 	int sd, newsd, c, option_index = 0;
 	unsigned client_len;
 	char *hostname = NULL;
+	struct passwd *pwd;
 	struct hostent *client_hostent = NULL;
 	struct option long_options[] = {
 		{"help", 0, NULL, 'h'},
@@ -244,14 +248,6 @@ main(int argc, char **argv)
 	if ((result = tcsd_startup()))
 		return (int)result;
 
-	if (getenv("TCSD_FOREGROUND") == NULL) {
-		if (daemon(0, 0) == -1) {
-			perror("daemon");
-			tcsd_shutdown();
-			return -1;
-		}
-	}
-
 	sd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sd < 0) {
 		LogError("Failed socket: %s", strerror(errno));
@@ -275,11 +271,31 @@ main(int argc, char **argv)
 		LogError("Failed bind: %s", strerror(errno));
 		return -1;
 	}
+	pwd = getpwnam(TSS_USER_NAME);
+	if (pwd == NULL) {
+		if (errno == 0) {
+			LogError("User \"%s\" not found, please add this user"
+					" manually.", TSS_USER_NAME);
+		} else {
+			LogError("getpwnam(%s): %s", TSS_USER_NAME, strerror(errno));
+		}
+		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
+	setuid(pwd->pw_uid);
 	if (listen(sd, TCSD_MAX_SOCKETS_QUEUED) < 0) {
 		LogError("Failed listen: %s", strerror(errno));
 		return -1;
 	}
 	client_len = (unsigned)sizeof(client_addr);
+	
+	if (getenv("TCSD_FOREGROUND") == NULL) {
+		if (daemon(0, 0) == -1) {
+			perror("daemon");
+			tcsd_shutdown();
+			return -1;
+		}
+	}
+
 	LogInfo("%s: TCSD up and running.", PACKAGE_STRING);
 	do {
 		newsd = accept(sd, (struct sockaddr *) &client_addr, &client_len);
