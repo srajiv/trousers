@@ -212,7 +212,7 @@ bios_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEv
 		event = (TCG_PCClientPCREventStruc *)page;
 
 		if (pcr_index == event->pcrIndex) {
-			if (!ppEvent && seen_indices == *num) {
+			if (ppEvent && !*ppEvent && seen_indices == *num) {
 				*ppEvent = calloc(1, sizeof(TSS_PCR_EVENT));
 				if (*ppEvent == NULL) {
 					LogError("malloc of %zd bytes failed.",
