@@ -169,8 +169,10 @@ tcs_wrap_SetCapability(struct tcsd_thread_data *data)
 		}
 	}
 
-	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, &data->comm))
+	if (getData(TCSD_PACKET_TYPE_UINT32, 4, &valueSize, 0, &data->comm)) {
+		free(subCap);
 		return TCSERR(TSS_E_INTERNAL_ERROR);
+	}
 
 	if (valueSize == 0)
 		value = NULL;
