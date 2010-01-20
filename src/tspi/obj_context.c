@@ -963,6 +963,7 @@ do_transport_decryption(TPM_TRANSPORT_PUBLIC *transPub,
 	default:
 		LogDebug("Unknown algorithm for encrypted transport session: 0x%x",
 			 transPub->algId);
+		free(dec);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
@@ -1042,6 +1043,7 @@ do_transport_encryption(TPM_TRANSPORT_PUBLIC *transPub,
 	default:
 		LogDebug("Unknown algorithm for encrypted transport session: 0x%x",
 			 transPub->algId);
+		free(enc);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
