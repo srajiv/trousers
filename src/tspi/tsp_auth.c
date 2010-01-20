@@ -856,7 +856,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 	case TPM_ORD_CMK_CreateKey:
 		if ((result = obj_rsakey_get_policies(obj_child, &sess->hUsageChild,
 						      &sess->hMigChild, &authdatausage)))
-			return result;
+			goto error;
 
 		if (authdatausage && !sess->hUsageChild) {
 			result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
@@ -965,7 +965,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 							 sess->encAuthUse.authdata, NULL, NULL,
 							 &sess->cb_sealx, &sess->uMode,
 							 new_secret)))
-			return result;
+			goto error;
 	}
 
 	if ((result = get_local_random(tspContext, FALSE, sizeof(TPM_NONCE),
@@ -1129,6 +1129,7 @@ authsess_free(struct authsess *xsap)
 
 		free(xsap->entityValue);
 		free(xsap);
+		xsap = NULL;
 	}
 }
 
