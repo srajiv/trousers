@@ -41,11 +41,11 @@
 
 struct tcsd_config tcsd_options;
 struct tpm_properties tpm_metrics;
-
+static volatile int hup = 0, term = 0;
 extern char *optarg;
 
-void
-tcsd_shutdown()
+static void
+tcsd_shutdown(void)
 {
 	/* order is important here:
 	 * allow all threads to complete their current request */
@@ -57,44 +57,27 @@ tcsd_shutdown()
 	EVENT_LOG_final();
 }
 
-void
-tcsd_signal_int(int signal)
+static void
+tcsd_signal_term(int signal)
 {
-	switch (signal) {
-		case SIGINT:
-			LogInfo("Caught SIGINT. Cleaning up and exiting.");
-			break;
-		case SIGHUP:
-			LogInfo("Caught SIGHUP. Cleaning up and exiting.");
-			break;
-		default:
-			LogError("Caught signal %d (which I didn't register for!)."
-					" Ignoring.", signal);
-			break;
-	}
-	tcsd_shutdown();
-	exit(signal);
+	term = 1;
 }
 
 void
-tcsd_signal_chld(int signal)
+tcsd_signal_hup(int signal)
 {
-	/* kill zombies */
-	wait3(NULL, WNOHANG, NULL);
+	hup = 1;
 }
 
-TSS_RESULT
-signals_init()
+static TSS_RESULT
+signals_init(void)
 {
 	int rc;
 	sigset_t sigmask;
+	struct sigaction sa;
 
 	sigemptyset(&sigmask);
-	if ((rc = sigaddset(&sigmask, SIGCHLD))) {
-		LogError("sigaddset: %s", strerror(errno));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-	if ((rc = sigaddset(&sigmask, SIGINT))) {
+	if ((rc = sigaddset(&sigmask, SIGTERM))) {
 		LogError("sigaddset: %s", strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
@@ -108,30 +91,25 @@ signals_init()
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	tcsd_sa_int.sa_handler = tcsd_signal_int;
-	tcsd_sa_chld.sa_handler = tcsd_signal_chld;
-	tcsd_sa_chld.sa_flags = SA_RESTART;
-
-	if ((rc = sigaction(SIGINT, &tcsd_sa_int, NULL))) {
-		LogError("signal SIGINT not registered: %s", strerror(errno));
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = tcsd_signal_term;
+	if ((rc = sigaction(SIGTERM, &sa, NULL))) {
+		LogError("signal SIGTERM not registered: %s", strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
-	if ((rc = sigaction(SIGHUP, &tcsd_sa_int, NULL))) {
+	sa.sa_handler = tcsd_signal_hup;	
+	if ((rc = sigaction(SIGHUP, &sa, NULL))) {
 		LogError("signal SIGHUP not registered: %s", strerror(errno));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
-
-	if ((rc = sigaction(SIGCHLD, &tcsd_sa_chld, NULL))) {
-		LogError("signal SIGCHLD not registered: %s", strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 
 	return TSS_SUCCESS;
 }
 
-TSS_RESULT
-tcsd_startup()
+static TSS_RESULT
+tcsd_startup(void)
 {
 	TSS_RESULT result;
 
@@ -205,6 +183,7 @@ tcsd_startup()
 	return TSS_SUCCESS;
 }
 
+
 void
 usage(void)
 {
@@ -214,6 +193,19 @@ usage(void)
 	fprintf(stderr, "\t-h|--help\tdisplay this help message\n");
 	fprintf(stderr, "\n");
 }
+
+static TSS_RESULT
+reload_config(void)
+{
+	TSS_RESULT result;
+	hup = 0;
+
+	// FIXME: reload the config - work in progress
+	result = TSS_SUCCESS;
+
+	return result;
+}
+
 
 int
 main(int argc, char **argv)
@@ -299,11 +291,22 @@ main(int argc, char **argv)
 	LogInfo("%s: TCSD up and running.", PACKAGE_STRING);
 	do {
 		newsd = accept(sd, (struct sockaddr *) &client_addr, &client_len);
-		LogDebug("accepted socket %i", newsd);
 		if (newsd < 0) {
-			LogError("Failed accept: %s", strerror(errno));
-			break;
+			if (errno == EINTR) {
+				if (term)
+					break;
+				else if (hup) {
+					if (reload_config() != TSS_SUCCESS) {
+						LogError("Failed reloading config");
+						continue;
+					}
+				}
+			} else {
+				LogError("Failed accept: %s", strerror(errno));
+				continue;
+			}
 		}
+		LogDebug("accepted socket %i", newsd);
 
 		if ((client_hostent = gethostbyaddr((char *) &client_addr.sin_addr,
 						    sizeof(client_addr.sin_addr),
@@ -325,6 +328,6 @@ main(int argc, char **argv)
 		hostname = NULL;
 	} while (1);
 
-	/* To close correctly, we must recieve a SIGHUP */
-	return -1;
+	/* To close correctly, we must receive a SIGTERM */
+	return 0;
 }
