@@ -326,7 +326,11 @@ main(int argc, char **argv)
 
 		tcsd_thread_create(newsd, hostname);
 		hostname = NULL;
-	} while (1);
+		if (hup) {
+			if (reload_config() != TSS_SUCCESS)
+				LogError("Failed reloading config");
+		}
+	} while (term ==0);
 
 	/* To close correctly, we must receive a SIGTERM */
 	return 0;
