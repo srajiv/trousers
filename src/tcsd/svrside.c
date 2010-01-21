@@ -296,11 +296,10 @@ main(int argc, char **argv)
 				if (term)
 					break;
 				else if (hup) {
-					if (reload_config() != TSS_SUCCESS) {
+					if (reload_config() != TSS_SUCCESS)
 						LogError("Failed reloading config");
-						continue;
-					}
 				}
+				continue;
 			} else {
 				LogError("Failed accept: %s", strerror(errno));
 				continue;
