@@ -82,7 +82,7 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 			break;
 	}
 
-	if (initFlags != TSS_KEY_EMPTY_KEY)
+	if (initFlags == TSS_KEY_EMPTY_KEY)
 		goto add_key;
 
 	memset(&rsaKeyParms, 0, sizeof(TCPA_RSA_KEY_PARMS));
