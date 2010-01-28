@@ -1,6 +1,7 @@
 noinst_LIBRARIES=libtcs.a
 
-libtcs_a_LIBADD=../tddl/libtddl.a
+CFLAGS+=-I${top_srcdir}/src/include
+libtcs_a_LIBADD=${top_builddir}/src/tddl/libtddl.a
 libtcs_a_CFLAGS=-DAPPID=\"TCSD\ TCS\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
 
 libtcs_a_SOURCES=log.c \

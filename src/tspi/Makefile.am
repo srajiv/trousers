@@ -1,6 +1,6 @@
 lib_LTLIBRARIES=libtspi.la
 
-libtspi_la_LIBADD=../trspi/libtrousers.la
+libtspi_la_LIBADD=${top_builddir}/src/trspi/libtrousers.la
 
 # On setting -version-info, from the libtool manual:
 #
@@ -19,7 +19,7 @@ libtspi_la_LIBADD=../trspi/libtrousers.la
 
 libtspi_la_LDFLAGS=-version-info 2:3:1 -lpthread @CRYPTOLIB@
 
-libtspi_la_CFLAGS=-I../include -DAPPID=\"TSPI\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
+libtspi_la_CFLAGS=-I$(top_srcdir)/src/include -DAPPID=\"TSPI\" -DVAR_PREFIX=\"@localstatedir@\" -DETC_PREFIX=\"@sysconfdir@\"
 
 libtspi_la_SOURCES=log.c \
                    spi_utils.c \
@@ -164,7 +164,7 @@ libtspi_la_SOURCES+=tspi_selftest.c tsp_selftest.c rpc/@RPC@/rpc_selftest.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_SELFTEST
 endif
 if TSS_BUILD_DAA
-libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c obj_daacred.c obj_daaarakey.c obj_daaissuerkey.c \
+libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c \
 		    rpc/@RPC@/rpc_daa.c \
 		    daa/daa_issuer/keypair_generator.c daa/daa_issuer/prime_gen.c \
 		    daa/daa_issuer/key_correctness_proof.c daa/daa_platform/platform.c \
@@ -172,7 +172,7 @@ libtspi_la_SOURCES+=tspi_daa.c tsp_daa.c obj_daacred.c obj_daaarakey.c obj_daais
 		    daa/daa_verifier/verifier_transaction.c daa/daa_verifier/verifier.c \
 		    daa/daa_structs.c daa/daa_parameter.c daa/big_integer/bi_gmp.c \
 		    daa/big_integer/bi_openssl.c daa/daa_anonymityrevocation/csencryption_result.c \
-		    daa/daa_anonymityrevocation/authority.c daa/big_integer/bi.c daa/utils/list.c
+		    daa/big_integer/bi.c daa/utils/list.c
 libtspi_la_CFLAGS+=-DTSS_BUILD_DAA
 endif
 if TSS_BUILD_GET_FLAGS
