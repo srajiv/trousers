@@ -28,7 +28,6 @@
 
 MUTEX_DECLARE_EXTERN(tcsp_lock);
 
-
 /* Note: The after taking the auth_mgr_lock in any of the functions below, the
  * mem_cache_lock cannot be taken without risking a deadlock. So, the auth_mgr
  * functions must be "self-contained" wrt locking */
@@ -80,14 +79,13 @@ auth_mgr_final()
 TSS_RESULT
 auth_mgr_save_ctx(TCS_CONTEXT_HANDLE hContext)
 {
-	TSS_RESULT result;
+       TSS_RESULT result = TSS_SUCCESS;
 	UINT32 i;
 
 	for (i = 0; i < auth_mgr.auth_mapper_size; i++) {
 		if (auth_mgr.auth_mapper[i].full == TRUE &&
 		    auth_mgr.auth_mapper[i].swap == NULL &&
 		    auth_mgr.auth_mapper[i].tcs_ctx != hContext) {
-
 			LogDebug("Calling TPM_SaveAuthContext for TCS CTX %x. Swapping out: TCS %x "
 				 "TPM %x", hContext, auth_mgr.auth_mapper[i].tcs_ctx,
 				 auth_mgr.auth_mapper[i].tpm_handle);
@@ -98,12 +96,11 @@ auth_mgr_save_ctx(TCS_CONTEXT_HANDLE hContext)
 				LogDebug("TPM_SaveAuthContext failed: 0x%x", result);
 				return result;
 			}
-
-			/* XXX should there be a break here? */
+                       break;
 		}
 	}
 
-	return TSS_SUCCESS;
+       return result;
 }
 
 /* if there's a TCS context waiting to get auth, wake it up or swap it in */
@@ -218,8 +215,8 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 
 				/* Ok, probably dealing with a 1.1 TPM */
 				if (result == TPM_E_BAD_ORDINAL)
-				      result = internal_TerminateHandle(
-									auth_mgr.auth_mapper[i].tpm_handle);
+                                       result = internal_TerminateHandle(
+                                           auth_mgr.auth_mapper[i].tpm_handle);
 
 				if (result == TCPA_E_INVALID_AUTHHANDLE) {
 					LogDebug("Tried to close an invalid auth handle: %x",
@@ -228,10 +225,14 @@ auth_mgr_close_context(TCS_CONTEXT_HANDLE tcs_handle)
 					LogDebug("TPM_TerminateHandle returned %d", result);
 				}
 			}
+                       /* clear the slot */
 			auth_mgr.open_auth_sessions--;
 			auth_mgr.auth_mapper[i].full = FALSE;
+                       auth_mgr.auth_mapper[i].tpm_handle = 0;
+                       auth_mgr.auth_mapper[i].tcs_ctx = 0;
 			LogDebug("released auth for TCS %x TPM %x", tcs_handle,
-				 auth_mgr.auth_mapper[i].tpm_handle);
+                               auth_mgr.auth_mapper[i].tpm_handle);
+
 			auth_mgr_swap_in();
 		}
 	}
@@ -264,14 +265,22 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE 
 		    auth_mgr.auth_mapper[i].tpm_handle == tpm_auth_handle &&
 		    auth_mgr.auth_mapper[i].tcs_ctx == tcs_handle) {
 			if (!cont) {
-				/* Only termininate when not in use anymore */
-				result = TCSP_FlushSpecific_Common(auth_mgr.auth_mapper[i].tpm_handle,
-								   TPM_RT_AUTH);
+                               /*
+                                * This function should not be necessary, but
+                                * if the main operation resulted in an error,
+                                * the TPM may still hold the auth handle
+                                * and it must be freed.  Most of the time
+                                * this call will result in TPM_E_INVALID_AUTHHANDLE
+                                * error which can be ignored.
+                                */
+                               result = TCSP_FlushSpecific_Common(
+                                   auth_mgr.auth_mapper[i].tpm_handle,
+                                   TPM_RT_AUTH);
 
 				/* Ok, probably dealing with a 1.1 TPM */
 				if (result == TPM_E_BAD_ORDINAL)
-				      result = internal_TerminateHandle(
-									auth_mgr.auth_mapper[i].tpm_handle);
+                                       result = internal_TerminateHandle(
+                                           auth_mgr.auth_mapper[i].tpm_handle);
 
 				if (result == TCPA_E_INVALID_AUTHHANDLE) {
 					LogDebug("Tried to close an invalid auth handle: %x",
@@ -279,12 +288,22 @@ auth_mgr_release_auth_handle(TCS_AUTHHANDLE tpm_auth_handle, TCS_CONTEXT_HANDLE 
 				} else if (result != TCPA_SUCCESS) {
 					LogDebug("TPM_TerminateHandle returned %d", result);
 				}
+
+                               if (result == TPM_SUCCESS) {
+                                       LogDebug("released auth for TCS %x TPM %x",
+                                                auth_mgr.auth_mapper[i].tcs_ctx, tpm_auth_handle);
+                               }
+                               /*
+                                * Mark it as released, the "cont" flag indicates
+                                * that it is no longer needed.
+                                */
+                               auth_mgr.open_auth_sessions--;
+                               auth_mgr.auth_mapper[i].full = FALSE;
+                               auth_mgr.auth_mapper[i].tpm_handle = 0;
+                               auth_mgr.auth_mapper[i].tcs_ctx = 0;
+                               auth_mgr_swap_in();
 			}
-			auth_mgr.open_auth_sessions--;
-			auth_mgr.auth_mapper[i].full = FALSE;
-			LogDebug("released auth for TCS %x TPM %x",
-				 auth_mgr.auth_mapper[i].tcs_ctx, tpm_auth_handle);
-			auth_mgr_swap_in();
+                       /* If the cont flag is TRUE, we have to keep the handle */
 		}
 	}
 
@@ -563,4 +582,3 @@ TPM_LoadAuthContext(UINT32 size, BYTE *blob, TPM_AUTHHANDLE *handle)
 
 	return result;
 }
-
