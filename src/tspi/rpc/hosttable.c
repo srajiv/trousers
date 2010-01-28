@@ -34,8 +34,12 @@ host_table_init()
 
 	return TSS_SUCCESS;
 }
-
+#ifdef SOLARIS
+#pragma init(_init)
+void _init(void)
+#else
 void __attribute__ ((constructor)) my_init(void)
+#endif
 {
 	host_table_init();
 	__tspi_obj_list_init();
