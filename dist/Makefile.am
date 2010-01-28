@@ -1,4 +1,5 @@
-
+EXTRA_DIST = system.data.auth system.data.noauth \
+       fedora/fedora.initrd.tcsd
 install: install-exec-hook
 	if test ! -e ${DESTDIR}/@sysconfdir@/tcsd.conf; then mkdir -p ${DESTDIR}/@sysconfdir@ && cp tcsd.conf ${DESTDIR}/@sysconfdir@; fi
 	/bin/chown tss:tss ${DESTDIR}/@sysconfdir@/tcsd.conf

@@ -8,15 +8,37 @@
 # processname: tcsd
 # config: /etc/tcsd.conf
 # pidfile: /var/run/tcsd.pid
+#
+# Return values according to LSB for all commands but status:
+# 0 - success
+# 1 - generic or unspecified error
+# 2 - invalid or excess argument(s)
+# 3 - unimplemented feature (e.g. "reload")
+# 4 - insufficient privilege
+# 5 - program is not installed
+# 6 - program is not configured
+# 7 - program is not running
+#
+
+prog="tcsd"
 
 # source function library
 . /etc/rc.d/init.d/functions
 
+# Allow anyone to run status
+if [ "$1" = "status" ] ; then
+	status $prog
+	RETVAL=$?
+	exit $RETVAL
+fi
+
+# Check that we are root ... so non-root users stop here
+test $EUID = 0  ||  exit 4
+
 # pull in sysconfig settings
-[ -f /etc/sysconfig/tcsd ] && . /etc/sysconfig/tcsd
+test -f /etc/sysconfig/tcsd  && . /etc/sysconfig/tcsd
 
 RETVAL=0
-prog="tcsd"
 
 # Some variables to make the below more readable
 TCSD=/usr/sbin/tcsd
@@ -42,6 +64,8 @@ check_drivers()
 
 start()
 {
+	test -x $TCSD || exit 5
+	test -f /etc/tcsd.conf || exit 6
 	check_drivers || load_drivers || failure
 	echo -n $"Starting $prog: "
 	$TCSD $OPTIONS && success || failure
@@ -53,11 +77,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $prog: "
-	if [ -n "`pidfileofproc $TCSD`" ] ; then
-	    killproc $TCSD -HUP
-	else
-	    failure $"Stopping $prog"
-	fi
+	killproc $prog
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f /var/lock/subsys/tcsd
 	echo
@@ -71,23 +91,20 @@ case "$1" in
 		stop
 		;;
 	restart)
+		test -f /etc/tcsd.conf  || exit 6
 		stop
 		start
 		;;
-	reload)
+	reload|force-reload)
 		restart
 		;;
-	condrestart)
+	condrestart|try-restart)
 		if [ -f /var/lock/subsys/tcsd ] ; then
 			restart
 		fi
 		;;
-	status)
-		status $TCSD
-		RETVAL=$?
-		;;
 	*)
-		echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
-		RETVAL=1
+		echo $"Usage: $0 {start|stop|restart|reload|force-reload|condrestart|try-restart|status}"
+		RETVAL=3
 esac
 exit $RETVAL
