@@ -40,10 +40,10 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 			UINT32 * bytesRequested,	/* in, out */
 			BYTE ** randomBytes)	/* out */
 {
-	UINT64 offset = 0;
+	UINT64 offset;
 	TSS_RESULT result;
 	UINT32 paramSize, totalReturned = 0, bytesReturned, retries = 50;
-	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *rnd_tmp = NULL;
+	BYTE txBlob[TSS_TPM_TXBLOB_SIZE], *rnd_tmp = NULL, *rnd_tmp2 = NULL;
 
 	LogDebugFn("%u bytes", *bytesRequested);
 
@@ -51,6 +51,7 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 		return result;
 
 	do {
+		offset = 0;
 		if ((result = tpm_rqu_build(TPM_ORD_GetRandom, &offset, txBlob,
 					    *bytesRequested - totalReturned, NULL)))
 			break;
@@ -78,15 +79,16 @@ TCSP_GetRandom_Internal(TCS_CONTEXT_HANDLE hContext,	/* in */
 						    &bytesReturned, &rnd_tmp, NULL, NULL)))
 				break;
 
-			*randomBytes = realloc(*randomBytes, totalReturned + bytesReturned);
-			if (*randomBytes == NULL) {
+			rnd_tmp2 = realloc(*randomBytes, totalReturned + bytesReturned);
+			if (rnd_tmp2 == NULL) {
 				free(rnd_tmp);
 				rnd_tmp = NULL;
 				LogError("malloc of %u bytes failed.", bytesReturned);
 				result = TCSERR(TSS_E_OUTOFMEMORY);
 				break;
 			}
-			memcpy(*randomBytes, rnd_tmp, bytesReturned);
+			*randomBytes = rnd_tmp2;
+			memcpy(*randomBytes + totalReturned, rnd_tmp, bytesReturned);
 			free(rnd_tmp);
 			rnd_tmp = NULL;
 #endif
