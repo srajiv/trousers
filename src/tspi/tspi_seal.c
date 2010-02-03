@@ -128,8 +128,10 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, ulDataLength);
 	result |= Trspi_HashUpdate(&hashCtx, ulDataLength, sealData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
-		if (sealData != rgbDataToSeal)
+		if (sealData != rgbDataToSeal) {
 			free(sealData);
+			sealData = NULL;
+		}
 		goto error;
 	}
 
@@ -143,6 +145,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 							sealData, xsap->pAuth, &encDataSize,
 							&encData))) {
 			free(sealData);
+			sealData = NULL;
 			return result;
 		}
 	} else if (sealOrdinal == TPM_ORD_Sealx) {
@@ -183,7 +186,8 @@ error:
 	authsess_free(xsap);
 	free(encData);
 	free(pcrData);
-	free(sealData);
+	if (sealData != rgbDataToSeal)
+		free(sealData);
 	return result;
 }
 
