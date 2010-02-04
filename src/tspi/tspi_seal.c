@@ -42,7 +42,7 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HCONTEXT tspContext;
 	Trspi_HashCtx hashCtx;
-	BYTE *sealData;
+	BYTE *sealData = NULL;
 	struct authsess *xsap = NULL;
 #ifdef TSS_BUILD_SEALX
 	UINT32 protectMode;
@@ -91,13 +91,12 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 
 	if ((result = authsess_xsap_init(tspContext, hEncKey, hEncData, TSS_AUTH_POLICY_REQUIRED,
 					 sealOrdinal, TPM_ET_KEYHANDLE, &xsap)))
-		return result;
+		goto error;
 
 #ifdef TSS_BUILD_SEALX
 	if (sealOrdinal == TPM_ORD_Seal)
 		sealData = rgbDataToSeal;
 	else {
-		sealData = NULL;
 		if ((sealData = (BYTE *)calloc(1, ulDataLength)) == NULL) {
 			LogError("malloc of %u bytes failed", ulDataLength);
 			result = TSPERR(TSS_E_OUTOFMEMORY);
@@ -128,10 +127,6 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 	result |= Trspi_Hash_UINT32(&hashCtx, ulDataLength);
 	result |= Trspi_HashUpdate(&hashCtx, ulDataLength, sealData);
 	if ((result |= Trspi_HashFinal(&hashCtx, digest.digest))) {
-		if (sealData != rgbDataToSeal) {
-			free(sealData);
-			sealData = NULL;
-		}
 		goto error;
 	}
 
@@ -144,16 +139,14 @@ Tspi_Data_Seal(TSS_HENCDATA hEncData,	/* in */
 							pcrDataSize, pcrData, ulDataLength,
 							sealData, xsap->pAuth, &encDataSize,
 							&encData))) {
-			free(sealData);
-			sealData = NULL;
-			return result;
+			goto error;
 		}
 	} else if (sealOrdinal == TPM_ORD_Sealx) {
-		result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, &xsap->encAuthUse,
+		if ((result = TCS_API(tspContext)->Sealx(tspContext, tcsKeyHandle, &xsap->encAuthUse,
 						    pcrDataSize, pcrData, ulDataLength, sealData,
-						    xsap->pAuth, &encDataSize, &encData);
-		if (result != TSS_SUCCESS)
+						    xsap->pAuth, &encDataSize, &encData))) {
 			goto error;
+		}
 	} else {
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto error;
