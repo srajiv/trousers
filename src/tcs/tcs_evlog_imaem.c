@@ -127,26 +127,26 @@ ima_get_entries_by_pcr(FILE *handle, UINT32 pcr_index, UINT32 first,
 {
 		char digest[20];
 
-		if (fread(&len, sizeof(len), 1, fp) != (sizeof(len))) {
+		if (fread(&len, 1, sizeof(len), fp) != (sizeof(len))) {
 			LogError("Failed to read event log file");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto free_list;
 		}
 		
 		memset(name, 0, sizeof name);
-		if (fread(name, len, 1, fp) != len) {
+		if (fread(name, 1, len, fp) != len) {
 			LogError("Failed to read event log file");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto free_list;
 		}
-		if (fread(digest, sizeof digest, 1, fp) != (sizeof(digest))) {
+		if (fread(digest, 1, sizeof digest, fp) != (sizeof(digest))) {
 			LogError("Failed to read event log file");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto free_list;
 		}
 }
 		/* Get the template data namelen and data */
-		if (fread(&cur->event.ulEventLength, sizeof(int), 1, fp) != sizeof(int)) {
+		if (fread(&cur->event.ulEventLength, 1, sizeof(int), fp) != sizeof(int)) {
 			LogError("Failed to read event log file");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			goto free_list;
@@ -160,7 +160,7 @@ ima_get_entries_by_pcr(FILE *handle, UINT32 pcr_index, UINT32 first,
 			goto free_list;
 		}
 		memset(cur->event.rgbEvent, 0, cur->event.ulEventLength);
-		if (fread(cur->event.rgbEvent, cur->event.ulEventLength, 1, fp) != cur->event.ulEventLength) {
+		if (fread(cur->event.rgbEvent, 1, cur->event.ulEventLength, fp) != cur->event.ulEventLength) {
 			free(cur->event.rgbPcrValue);
 			LogError("Failed to read event log file");
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
@@ -266,20 +266,20 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 				{
 					char digest[20];
 
-					if (fread(&len, sizeof(len), 1, fp) != sizeof(len)) {
+					if (fread(&len, 1, sizeof(len), fp) != sizeof(len)) {
 						free(event);
 						LogError("Failed to read event log file");
 						result = TCSERR(TSS_E_INTERNAL_ERROR);
 						goto done;
 					}
 					memset(name, 0, sizeof name);
-					if (fread(name, len, 1, fp) != len) {
+					if (fread(name, 1, len, fp) != len) {
 						free(event);
 						LogError("Failed to read event log file");
 						result = TCSERR(TSS_E_INTERNAL_ERROR);
 						goto done;
 					}
-					if (fread(digest, sizeof(digest), 1, fp) != sizeof(digest)) {
+					if (fread(digest, 1, sizeof(digest), fp) != sizeof(digest)) {
 						free(event);
 						LogError("Failed to read event log file");
 						result = TCSERR(TSS_E_INTERNAL_ERROR);
@@ -287,7 +287,7 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 					}
 				}
 				/* Get the template data namelen and data */
-				if (fread(&event->ulEventLength, sizeof(int), 1, fp) != sizeof(int)) {
+				if (fread(&event->ulEventLength, 1, sizeof(int), fp) != sizeof(int)) {
 					free(event);
 					LogError("Failed to read event log file");
 					result = TCSERR(TSS_E_INTERNAL_ERROR);
@@ -303,7 +303,7 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 					goto done;
 				}
 				memset(event->rgbEvent, 0, event->ulEventLength);
-				if (fread(event->rgbEvent, event->ulEventLength, 1, fp) != event->ulEventLength ) {
+				if (fread(event->rgbEvent, 1, event->ulEventLength, fp) != event->ulEventLength ) {
 					free(event->rgbPcrValue);
 					free(event);
 					LogError("Failed to read event log file");
@@ -316,7 +316,7 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 				break;
 			}
 		}
-		if (fread(&len, sizeof(len), 1, fp) != sizeof(len)) {
+		if (fread(&len, 1, sizeof(len), fp) != sizeof(len)) {
 			free(event->rgbPcrValue);
 			free(event);
 			LogError("Failed to read event log file");
@@ -324,7 +324,7 @@ ima_get_entry(FILE *handle, UINT32 pcr_index, UINT32 *num, TSS_PCR_EVENT **ppEve
 			goto done;
 		}
 		fseek(fp, len + 20, SEEK_CUR);
-		if (fread(&len, sizeof(len), 1, fp) != sizeof(len)) {
+		if (fread(&len, 1, sizeof(len), fp) != sizeof(len)) {
 			free(event->rgbPcrValue);
 			free(event);
 			LogError("Failed to read event log file");
