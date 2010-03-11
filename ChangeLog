@@ -1,3 +1,27 @@
+* TROUSERS_0_3_4
+
+- Fixed TrouSerS mishandling of TPM auth sessions
+- Enabled hosttable.c "_init" and "_fini" functions to work on Solaris
+- Included Solaris in BSD_CONST definition conditional
+- Made the init script LSB compliant
+- make distcheck improved
+
+* TROUSERS_0_3_3_2
+
+- Fixed logic when filling up RSA keys objects.
+
+* TROUSERS_0_3_3_1
+
+- TCSD now runs as tss and has a better signal handling
+- Fixed many memory handling issues
+
+* TROUSERS_0_3_3
+
+- Tspi_ChangeAuth fixed for popup secret use case.   
+- Prefixed exported functions with common names.
+- Fixed issues  with accessing the utmp database.
+- Migrated the bios parser file handler from open to fopen.
+
 * TROUSERS_0_3_2
 
 - Added IMA log parser in conformance with format introduced in linux kernel 2.6.30
