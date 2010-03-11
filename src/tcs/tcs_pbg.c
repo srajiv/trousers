@@ -468,6 +468,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 
 		UnloadBlob_UINT32(&offset1, len2, b);
 		if ((*blob2 = malloc(*len2)) == NULL) {
+			free(*blob1);
 			LogError("malloc of %u bytes failed", *len2);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
@@ -549,6 +550,7 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 		UnloadBlob_UINT32(&offset2, len2, b);
 
 		if ((*blob2 = malloc(*len2)) == NULL) {
+			free(*blob1);
 			LogError("malloc of %u bytes failed", *len2);
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
