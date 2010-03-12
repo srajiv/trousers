@@ -45,7 +45,7 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 			if (getenv("TCSD_FOREGROUND") != NULL)
 				fprintf(stdout, "%s %s\n", szDescriptor, temp);
 			else
-				syslog(LOG_DEBUG, temp);
+				syslog(LOG_DEBUG, "%s", temp);
 			memset(temp, 0, sizeof(temp));
 		}
 		snprintf(&temp[(i%16)*3], 4, "%.2X ", blob[i]);
@@ -55,7 +55,7 @@ LogBlobData(char *szDescriptor, unsigned long sizeOfBlob, unsigned char *blob)
 		if (getenv("TCSD_FOREGROUND") != NULL)
 			fprintf(stdout, "%s %s\n", szDescriptor, temp);
 		else
-			syslog(LOG_DEBUG, temp);
+			syslog(LOG_DEBUG, "%s", temp);
 	}
 }
 
