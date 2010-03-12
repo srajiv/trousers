@@ -13,7 +13,7 @@
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <err.h>
-#elif (defined (__linux) || defined (linux))
+#elif (defined (__linux) || defined (linux) || defined(__GLIBC__))
 #include <utmp.h>
 #elif (defined (SOLARIS))
 #include <utmpx.h>
@@ -33,7 +33,7 @@
 #include "tcslog.h"
 
 
-#if (defined (__linux) || defined (linux))
+#if (defined (__linux) || defined (linux) || defined(__GLIBC__))
 MUTEX_DECLARE_INIT(utmp_lock);
 
 char

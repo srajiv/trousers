@@ -339,7 +339,7 @@ main(int argc, char ** argv)
 
 	file_size = stat_buf.st_size;
 
-	PRINT("filename: %s (%" OFF_T_PRINTF " bytes)\n", argv[1], file_size);
+	PRINT("filename: %s (%lld bytes)\n", argv[1], (long long) file_size);
 
 	rc = inspect(f, file_size);
 

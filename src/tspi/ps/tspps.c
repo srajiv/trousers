@@ -44,7 +44,7 @@ get_user_ps_path(char **file)
 	TSS_RESULT result;
 	char *file_name = NULL, *home_dir = NULL;
 	struct passwd *pwp;
-#if (defined (__linux) || defined (linux))
+#if (defined (__linux) || defined (linux) || defined(__GLIBC__))
 	struct passwd pw;
 #endif
 	struct stat stat_buf;
@@ -64,7 +64,7 @@ get_user_ps_path(char **file)
 
 	setpwent();
 	while (1) {
-#if (defined (__linux) || defined (linux))
+#if (defined (__linux) || defined (linux) || defined(__GLIBC__))
 		rc = getpwent_r(&pw, buf, PASSWD_BUFSIZE, &pwp);
 		if (rc) {
 			LogDebugFn("USER PS: Error getting path to home directory: getpwent_r: %s",
