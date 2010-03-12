@@ -15,6 +15,7 @@
  *
  */
 
+#include <limits.h>
 #include <string.h>
 
 #include <openssl/evp.h>
