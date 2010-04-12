@@ -190,6 +190,7 @@ usage(void)
 	fprintf(stderr, "\tusage: tcsd [-f] [-h]\n\n");
 	fprintf(stderr, "\t-f|--foreground\trun in the foreground. Logging goes to stderr "
 			"instead of syslog.\n");
+	fprintf(stderr, "\t-e| attempts to connect to software TPMs over TCP");
 	fprintf(stderr, "\t-h|--help\tdisplay this help message\n");
 	fprintf(stderr, "\n");
 }
@@ -223,13 +224,17 @@ main(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "fh", long_options, &option_index)) != -1) {
+	unsetenv("TCSD_USE_TCP_DEVICE");
+	while ((c = getopt_long(argc, argv, "fhe", long_options, &option_index)) != -1) {
 		switch (c) {
 			case 'f':
 				setenv("TCSD_FOREGROUND", "1", 1);
 				break;
 			case 'h':
 				/* fall through */
+			case 'e':
+				setenv("TCSD_USE_TCP_DEVICE", "1", 1);
+				break;
 			default:
 				usage();
 				return -1;

@@ -12,6 +12,10 @@
 #ifndef _TDDL_H_
 #define _TDDL_H_
 
+#include <threads.h>
+#include "tcsd_wrap.h"
+#include "tcsd.h"
+
 struct tpm_device_node {
 	char *path;
 #define TDDL_TRANSMIT_IOCTL	1

@@ -193,7 +193,20 @@ udev.permissions file (usually in /etc/udev somewhere):
   # modprobe tpm_natl
 
   start the TCS Core Services daemon, by default /usr/local/sbin/tcsd.
-  # startproc -u tss /usr/local/sbin/tcsd
+  # /usr/local/sbin/tcsd
+
+  If you're attempting to make the TCS Core Services daemon communicate with a
+softwware TPM through TCP, you must call it using the -e option. 
+
+  # /usr/local/sbin/tcsd -e
+
+  The default values for hostname, port and UN socket device path are  "localhost", 
+"6545" and "/var/run/tpm/tpmd_socket:0". It will search for the IN socket device,
+then for an UN socket one, and then for the real TPM in this order.
+The default values match with the current open source project required values, if
+for instance case you need to set values of your choice, the environment variables 
+for them are TCSD_TCP_DEVICE_HOSTNAME, TCSD_TCP_DEVICE_PORT if using an IN socket 
+and TCSD_UN_SOCKET_DEVICE_PATH if running an UN socket.
 
 
 DEBUGGING

@@ -32,23 +32,87 @@ struct tpm_device_node tpm_device_nodes[] = {
 struct tpm_device_node *opened_device = NULL;
 
 BYTE txBuffer[TDDL_TXBUF_SIZE];
+TSS_BOOL use_in_socket = FALSE;
+struct tcsd_config *_tcsd_options = NULL;
+
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <fcntl.h>
+
 
 int
-open_device(void)
+open_device()
 {
-	int i;
+	int i = 0, fd, tcp_device_port;
+	char *tcp_device_hostname = NULL;
+	char *un_socket_device_path = NULL;
+	char *tcp_device_port_string = NULL;
+	
+	if (getenv("TCSD_USE_TCP_DEVICE")) {
+		if ((tcp_device_hostname = getenv("TCSD_TCP_DEVICE_HOSTNAME")) == NULL)
+			tcp_device_hostname = "localhost";
+		if ((un_socket_device_path = getenv("TCSD_UN_SOCKET_DEVICE_PATH")) == NULL)
+			un_socket_device_path = "/var/run/tpm/tpmd_socket:0";
+		if ((tcp_device_port_string = getenv("TCSD_TCP_DEVICE_PORT")) != NULL)
+			tcp_device_port = atoi(tcp_device_port_string);
+		else
+			tcp_device_port = 6545;
+	} 
+		
+	if (tcp_device_hostname != NULL) { /* Then it should be through an IN Socket*/
+		use_in_socket = TRUE;
+		fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd > 0) {
+			struct hostent *host = gethostbyname(tcp_device_hostname);
+			if (host != NULL) {   
+				struct sockaddr_in addr;
+				memset(&addr, 0x0, sizeof(addr));
+				addr.sin_family = host->h_addrtype;
+				addr.sin_port   = htons(tcp_device_port);
+				memcpy(&addr.sin_addr,
+						host->h_addr,
+						host->h_length);
+				if (connect(fd,	(struct sockaddr *)&addr,
+					    sizeof(addr)) < 0) {
+					close(fd);
+					fd = -1;
+				}
+			} else {
+				close (fd);
+				fd = -1;
+			}
+		}
+	} else if (un_socket_device_path != NULL) {
+		struct sockaddr_un addr;
 
-	/* tpm_device_paths is filled out in tddl.h */
-	for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
-		errno = 0;
-		if ((tpm_device_nodes[i].fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0)
-			continue;
+		fd = socket(AF_UNIX, SOCK_STREAM, 0);
+		if (fd >= 0) {
+			addr.sun_family = AF_UNIX;
+			strncpy(addr.sun_path, un_socket_device_path,
+					sizeof(addr.sun_path));
+			if (connect(fd, (void *)&addr, sizeof(addr)) < 0) {
+				close(fd);
+				fd = -1;
+			}
+		}
+	} else {
+		/* tpm_device_paths is filled out in tddl.h */
+		for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
+			errno = 0;
+			if ((fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0)
+				continue;
 
-		opened_device = &(tpm_device_nodes[i]);
-		return opened_device->fd;
+		}
 	}
-
-	return -1;
+	
+	if (fd > 0) {
+		opened_device = &(tpm_device_nodes[i]);
+		tpm_device_nodes[i].fd = fd;
+	}
+	return fd;
 }
 
 TSS_RESULT
@@ -103,6 +167,12 @@ Tddli_TransmitData(BYTE * pTransmitBuf, UINT32 TransmitBufLen, BYTE * pReceiveBu
 
 	memcpy(txBuffer, pTransmitBuf, TransmitBufLen);
 	LogDebug("Calling write to driver");
+
+	if (use_in_socket) {
+		Tddli_Close();
+		if (Tddli_Open())
+			return TDDLERR(TDDL_E_IOERROR);
+	}
 
 	switch (opened_device->transmit) {
 		case TDDL_UNDEF:
