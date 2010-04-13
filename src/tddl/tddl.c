@@ -46,7 +46,7 @@ struct tcsd_config *_tcsd_options = NULL;
 int
 open_device()
 {
-	int i = 0, fd, tcp_device_port;
+	int i = 0, fd = -1, tcp_device_port;
 	char *tcp_device_hostname = NULL;
 	char *un_socket_device_path = NULL;
 	char *tcp_device_port_string = NULL;
@@ -60,10 +60,8 @@ open_device()
 			tcp_device_port = atoi(tcp_device_port_string);
 		else
 			tcp_device_port = 6545;
-	} 
+	 
 		
-	if (tcp_device_hostname != NULL) { /* Then it should be through an IN Socket*/
-		use_in_socket = TRUE;
 		fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (fd > 0) {
 			struct hostent *host = gethostbyname(tcp_device_hostname);
@@ -79,33 +77,36 @@ open_device()
 					    sizeof(addr)) < 0) {
 					close(fd);
 					fd = -1;
-				}
+				} else
+					use_in_socket = TRUE;
 			} else {
 				close (fd);
 				fd = -1;
 			}
 		}
-	} else if (un_socket_device_path != NULL) {
-		struct sockaddr_un addr;
+	       
+		if (fd < 0) {
+			struct sockaddr_un addr;
 
-		fd = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (fd >= 0) {
-			addr.sun_family = AF_UNIX;
-			strncpy(addr.sun_path, un_socket_device_path,
-					sizeof(addr.sun_path));
-			if (connect(fd, (void *)&addr, sizeof(addr)) < 0) {
-				close(fd);
-				fd = -1;
+			fd = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (fd >= 0) {
+				addr.sun_family = AF_UNIX;
+				strncpy(addr.sun_path, un_socket_device_path,
+						sizeof(addr.sun_path));
+				if (connect(fd, (void *)&addr, sizeof(addr)) < 0) {
+					close(fd);
+					fd = -1;
+				}
 			}
 		}
-	} else {
+	} 
+	
+	if (fd < 0) {
 		/* tpm_device_paths is filled out in tddl.h */
 		for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
 			errno = 0;
 			if ((fd = open(tpm_device_nodes[i].path, O_RDWR)) >= 0)
 				break;
-			
-
 		}
 	}
 	
