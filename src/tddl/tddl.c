@@ -102,8 +102,9 @@ open_device()
 		/* tpm_device_paths is filled out in tddl.h */
 		for (i = 0; tpm_device_nodes[i].path != NULL; i++) {
 			errno = 0;
-			if ((fd = open(tpm_device_nodes[i].path, O_RDWR)) < 0)
-				continue;
+			if ((fd = open(tpm_device_nodes[i].path, O_RDWR)) >= 0)
+				break;
+			
 
 		}
 	}
