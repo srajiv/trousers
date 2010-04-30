@@ -1,4 +1,3 @@
-
 /*
  * Licensed Materials - Property of IBM
  *
@@ -14,6 +13,18 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#if defined(HAVE_BYTEORDER_H)
+#include <sys/byteorder.h>
+#elif defined(HAVE_ENDIAN_H)
+#include <endian.h>
+#define LE_16 htole16
+#define LE_32 htole32
+#define LE_64 htole64
+#else
+#define LE_16(x) (x)
+#define LE_32(x) (x)
+#define LE_64(x) (x)
+#endif
 #include <fcntl.h>
 #include <string.h>
 #include <limits.h>
@@ -133,6 +144,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 
 	/* read the number of keys */
 	rc = read(fd, &num_keys, sizeof(UINT32));
+	num_keys = LE_32(num_keys);
 	if (rc == -1) {
 		LogError("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return -1;
@@ -160,6 +172,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 			return -1;
 		}
 
+                num_keys = LE_32(num_keys);
 		if ((rc = write_data(fd, &num_keys, sizeof(UINT32)))) {
 			LogError("%s", __FUNCTION__);
 			return rc;
@@ -187,7 +200,7 @@ write_key_init(int fd, UINT32 pub_data_size, UINT32 blob_size, UINT32 vendor_dat
 			LogError("lseek: %s", strerror(errno));
 			return -1;
 		}
-
+                num_keys = LE_32(num_keys);
 		if ((rc = write_data(fd, &num_keys, sizeof(UINT32)))) {
 			LogError("%s", __FUNCTION__);
 			return rc;
@@ -274,6 +287,7 @@ get_num_keys_in_file(int fd)
 	} else if ((unsigned)rc < sizeof(UINT32)) {
 		num_keys = 0;
 	}
+        num_keys = LE_32(num_keys);
 
 	return num_keys;
 }
@@ -403,6 +417,7 @@ init_disk_cache(int fd)
 			LogError("%s", __FUNCTION__);
 			goto err_exit;
 		}
+                tmp->pub_data_size = LE_16(tmp->pub_data_size);
 
 		DBG_ASSERT(tmp->pub_data_size <= 2048 && tmp->pub_data_size > 0);
 
@@ -411,7 +426,7 @@ init_disk_cache(int fd)
 			LogError("%s", __FUNCTION__);
 			goto err_exit;
 		}
-
+                tmp->blob_size = LE_16(tmp->blob_size);
 		DBG_ASSERT(tmp->blob_size <= 4096 && tmp->blob_size > 0);
 
 		/* vendor data size */
@@ -419,12 +434,14 @@ init_disk_cache(int fd)
 			LogError("%s", __FUNCTION__);
 			goto err_exit;
 		}
+                tmp->vendor_data_size = LE_32(tmp->vendor_data_size);
 
 		/* cache flags */
 		if ((rc = read_data(fd, &tmp->flags, sizeof(UINT16)))) {
 			LogError("%s", __FUNCTION__);
 			goto err_exit;
 		}
+                tmp->flags = LE_16(tmp->flags);
 
 #ifdef TSS_DEBUG
 		if (tmp->flags & CACHE_FLAG_VALID)

@@ -17,6 +17,18 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#if defined (HAVE_BYTEORDER_H)
+#include <sys/byteorder.h>
+#elif defined (HAVE_ENDIAN_H)
+#include <endian.h>
+#define LE_16 htole16
+#define LE_32 htole32
+#define LE_64 htole64
+#else
+#define LE_16(x) (x)
+#define LE_32(x) (x)
+#define LE_64(x) (x)
+#endif
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -592,28 +604,40 @@ psfile_write_key(int fd,
 	}
 
 	/* [UINT16   pub_data_size0  ] yes */
+	pub_key_size = LE_16(pub_key_size);
         if ((rc = write_data(fd, &pub_key_size, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
                 goto done;
 	}
+	/* Swap it back for later */
+	pub_key_size = LE_16(pub_key_size);
 
 	/* [UINT16   blob_size0      ] yes */
+	key_blob_size = LE_16(key_blob_size);
         if ((rc = write_data(fd, &key_blob_size, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
                 goto done;
 	}
+	/* Swap it back for later */
+	key_blob_size = LE_16(key_blob_size);
 
 	/* [UINT32   vendor_data_size0 ] yes */
+	vendor_size = LE_32(vendor_size);
         if ((rc = write_data(fd, &vendor_size, sizeof(UINT32)))) {
 		LogError("%s", __FUNCTION__);
                 goto done;
 	}
+	/* Swap it back for later */
+	vendor_size = LE_32(vendor_size);
 
 	/* [UINT16   cache_flags0    ] yes */
+	cache_flags = LE_16(cache_flags);
         if ((rc = write_data(fd, &cache_flags, sizeof(UINT16)))) {
 		LogError("%s", __FUNCTION__);
                 goto done;
 	}
+	/* Swap it back for later */
+	cache_flags = LE_16(cache_flags);
 
 	/* [BYTE[]   pub_data0       ] no */
         if ((rc = write_data(fd, (void *)key.pubKey.key, pub_key_size))) {
@@ -735,6 +759,7 @@ psfile_remove_key(int fd, struct key_disk_cache *c)
 	}
 
 	rc = read(fd, &num_keys, sizeof(UINT32));
+	num_keys = LE_32(num_keys);
 	if (rc != sizeof(UINT32)) {
 		LogError("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -749,6 +774,7 @@ psfile_remove_key(int fd, struct key_disk_cache *c)
 	/* decrement, then write back out to disk */
 	num_keys--;
 
+	num_keys = LE_32(num_keys);
 	if ((result = write_data(fd, (void *)&num_keys, sizeof(UINT32)))) {
 		LogError("%s", __FUNCTION__);
 		return result;

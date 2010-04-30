@@ -19,6 +19,21 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <netdb.h>
+#if defined (HAVE_BYTEORDER_H)
+#include <sys/byteorder.h>
+#elif defined(HAVE_ENDIAN_H)
+#include <endian.h>
+#define LE_16 htole16
+#define LE_32 htole32
+#define LE_64 htole64
+#else
+#define LE_16(x) (x)
+#define LE_32(x) (x)
+#define LE_64(x) (x)
+#endif
 
 #include "trousers/tss.h"
 #include "trousers/trousers.h"
@@ -32,6 +47,17 @@ static int user_ps_fd = -1;
 static MUTEX_DECLARE_INIT(user_ps_lock);
 #if (defined (__FreeBSD__) || defined (__OpenBSD__))
 static MUTEX_DECLARE_INIT(user_ps_path);
+#endif
+#if defined (SOLARIS)
+static struct flock fl = {
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       {0, 0, 0, 0}
+};
 #endif
 
 
@@ -62,6 +88,16 @@ get_user_ps_path(char **file)
 
 	euid = geteuid();
 
+#if defined (SOLARIS)
+	/*
+         * Solaris keeps user PS in a local directory instead of
+         * in the user's home directory, which may be shared
+         * by multiple systems.
+         *
+         * The directory path on Solaris is /var/tpm/userps/[EUID]/
+         */
+        rc = snprintf(buf, sizeof (buf), "%s/%d", TSS_USER_PS_DIR, euid);
+#else
 	setpwent();
 	while (1) {
 #if (defined (__linux) || defined (linux) || defined(__GLIBC__))
@@ -93,8 +129,9 @@ get_user_ps_path(char **file)
 		return TSPERR(TSS_E_OUTOFMEMORY);
 
 	/* Tack on TSS_USER_PS_DIR and see if it exists */
-	rc = snprintf(buf, PASSWD_BUFSIZE, "%s/%s", home_dir, TSS_USER_PS_DIR);
-	if (rc == PASSWD_BUFSIZE) {
+	rc = snprintf(buf, sizeof (buf), "%s/%s", home_dir, TSS_USER_PS_DIR);
+#endif /* SOLARIS */
+	if (rc == sizeof (buf)) {
 		LogDebugFn("USER PS: Path to file too long! (> %d bytes)", PASSWD_BUFSIZE);
 		result = TSPERR(TSS_E_INTERNAL_ERROR);
 		goto done;
@@ -104,7 +141,7 @@ get_user_ps_path(char **file)
 	if ((rc = stat(buf, &stat_buf)) == -1) {
 		if (errno == ENOENT) {
 			errno = 0;
-			/* Create the base directory, $HOME/.trousers */
+			/* Create the user's ps directory if it is not there. */
 			if ((rc = mkdir(buf, 0700)) == -1) {
 				LogDebugFn("USER PS: Error creating dir: %s: %s", buf,
 					   strerror(errno));
@@ -119,10 +156,15 @@ get_user_ps_path(char **file)
 	}
 
 	/* Directory exists or has been created, return the path to the file */
-	rc = snprintf(buf, PASSWD_BUFSIZE, "%s/%s/%s", home_dir, TSS_USER_PS_DIR,
+#if defined (SOLARIS)
+	rc = snprintf(buf, sizeof (buf), "%s/%d/%s", TSS_USER_PS_DIR, euid,
 		      TSS_USER_PS_FILE);
-	if (rc == PASSWD_BUFSIZE) {
-		LogDebugFn("USER PS: Path to file too long! (> %d bytes)", PASSWD_BUFSIZE);
+#else
+	rc = snprintf(buf, sizeof (buf), "%s/%s/%s", home_dir, TSS_USER_PS_DIR,
+		      TSS_USER_PS_FILE);
+#endif
+	if (rc == sizeof (buf)) {
+		LogDebugFn("USER PS: Path to file too long! (> %d bytes)", sizeof (buf));
 	} else
 		*file = strdup(buf);
 
@@ -143,12 +185,16 @@ get_file(int *fd)
 
 	/* check the global file handle first.  If it exists, lock it and return */
 	if (user_ps_fd != -1) {
+#if defined (SOLARIS)
+		fl.l_type = F_WRLCK;
+		if ((rc = fcntl(user_ps_fd, F_SETLKW, &fl))) {
+#else
 		if ((rc = flock(user_ps_fd, LOCK_EX))) {
+#endif /* SOLARIS */
 			LogDebug("USER PS: failed to lock file: %s", strerror(errno));
 			MUTEX_UNLOCK(user_ps_lock);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
 		}
-
 		*fd = user_ps_fd;
 		return TSS_SUCCESS;
 	}
@@ -167,8 +213,12 @@ get_file(int *fd)
 		MUTEX_UNLOCK(user_ps_lock);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-
+#if defined (SOLARIS)
+	fl.l_type = F_WRLCK;
+	if ((rc = fcntl(user_ps_fd, F_SETLKW, &fl))) {
+#else
 	if ((rc = flock(user_ps_fd, LOCK_EX))) {
+#endif /* SOLARIS */
 		LogDebug("USER PS: failed to get lock of %s: %s", file_name, strerror(errno));
 		free(file_name);
 		close(user_ps_fd);
@@ -190,7 +240,12 @@ put_file(int fd)
 	fsync(fd);
 
 	/* release the file lock */
+#if defined (SOLARIS)
+	fl.l_type = F_UNLCK;
+	if ((rc = fcntl(fd, F_SETLKW, &fl))) {
+#else
 	if ((rc = flock(fd, LOCK_UN))) {
+#endif /* SOLARIS */
 		LogDebug("USER PS: failed to unlock file: %s", strerror(errno));
 		rc = -1;
 	}
@@ -365,6 +420,7 @@ psfile_change_num_keys(int fd, BYTE increment)
 		LogDebug("read of %zd bytes: %s", sizeof(UINT32), strerror(errno));
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
+	num_keys = LE_32(num_keys);
 
 	if (increment)
 		num_keys++;
@@ -377,6 +433,7 @@ psfile_change_num_keys(int fd, BYTE increment)
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
 
+	num_keys = LE_32(num_keys);
 	if ((result = write_data(fd, (void *)&num_keys, sizeof(UINT32)))) {
 		LogDebug("%s", __FUNCTION__);
 		return result;
@@ -498,16 +555,20 @@ psfile_write_key(int fd,
 	}
 
 	/* [UINT16   pub_data_size0  ] yes */
+	pub_key_size = LE_16(pub_key_size);
         if ((result = write_data(fd, &pub_key_size, sizeof(UINT16)))) {
 		LogDebug("%s", __FUNCTION__);
 		goto done;
 	}
+	pub_key_size = LE_16(pub_key_size);
 
 	/* [UINT16   blob_size0      ] yes */
+	key_blob_size = LE_16(key_blob_size);
         if ((result = write_data(fd, &key_blob_size, sizeof(UINT16)))) {
 		LogDebug("%s", __FUNCTION__);
 		goto done;
 	}
+	key_blob_size = LE_16(key_blob_size);
 
 	/* [UINT32   vendor_data_size0 ] yes */
         if ((result = write_data(fd, &zero, sizeof(UINT32)))) {
@@ -516,10 +577,12 @@ psfile_write_key(int fd,
 	}
 
 	/* [UINT16   cache_flags0    ] yes */
+	cache_flags = LE_16(cache_flags);
         if ((result = write_data(fd, &cache_flags, sizeof(UINT16)))) {
 		LogDebug("%s", __FUNCTION__);
 		goto done;
 	}
+	cache_flags = LE_16(cache_flags);
 
 	/* [BYTE[]   pub_data0       ] no */
         if ((result = write_data(fd, (void *)key.pubKey.key, pub_key_size))) {
@@ -685,6 +748,7 @@ psfile_get_all_cache_entries(int fd, UINT32 *size, struct key_disk_cache **c)
 			LogDebug("%s", __FUNCTION__);
 			goto err_exit;
 		}
+		tmp[i].pub_data_size = LE_16(tmp[i].pub_data_size);
 
 		DBG_ASSERT(tmp[i].pub_data_size <= 2048);
 
@@ -693,6 +757,7 @@ psfile_get_all_cache_entries(int fd, UINT32 *size, struct key_disk_cache **c)
 			LogDebug("%s", __FUNCTION__);
 			goto err_exit;
 		}
+		tmp[i].blob_size = LE_16(tmp[i].blob_size);
 
 		DBG_ASSERT(tmp[i].blob_size <= 4096);
 
@@ -701,12 +766,14 @@ psfile_get_all_cache_entries(int fd, UINT32 *size, struct key_disk_cache **c)
 			LogDebug("%s", __FUNCTION__);
 			goto err_exit;
 		}
+		tmp[i].vendor_data_size = LE_32(tmp[i].vendor_data_size);
 
 		/* cache flags */
 		if ((result = read_data(fd, &tmp[i].flags, sizeof(UINT16)))) {
 			LogDebug("%s", __FUNCTION__);
 			goto err_exit;
 		}
+		tmp[i].flags = LE_16(tmp[i].flags);
 
 		/* fast forward over the pub key */
 		offset = lseek(fd, tmp[i].pub_data_size, SEEK_CUR);
@@ -1031,6 +1098,8 @@ psfile_get_num_keys(int fd)
 		num_keys = 0;
 	}
 
+	/* The system PS file is written in little-endian */
+	num_keys = LE_32(num_keys);
 	return num_keys;
 }
 
@@ -1109,7 +1178,7 @@ psfile_get_cache_entry_by_uuid(int fd, TSS_UUID *uuid, struct key_disk_cache *c)
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
-
+		c->pub_data_size = LE_16(c->pub_data_size);
 		DBG_ASSERT(c->pub_data_size <= 2048 && c->pub_data_size > 0);
 
 		/* blob size */
@@ -1117,7 +1186,7 @@ psfile_get_cache_entry_by_uuid(int fd, TSS_UUID *uuid, struct key_disk_cache *c)
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
-
+		c->blob_size = LE_16(c->blob_size); 
 		DBG_ASSERT(c->blob_size <= 4096 && c->blob_size > 0);
 
 		/* vendor data size */
@@ -1125,12 +1194,14 @@ psfile_get_cache_entry_by_uuid(int fd, TSS_UUID *uuid, struct key_disk_cache *c)
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
+		c->vendor_data_size = LE_32(c->vendor_data_size); 
 
 		/* cache flags */
 		if ((result = read_data(fd, &c->flags, sizeof(UINT16)))) {
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
+		c->flags = LE_16(c->flags); 
 
 		/* fast forward over the pub key */
 		offset = lseek(fd, c->pub_data_size, SEEK_CUR);
@@ -1198,6 +1269,7 @@ psfile_get_cache_entry_by_pub(int fd, UINT32 pub_size, BYTE *pub, struct key_dis
 			return result;
 		}
 
+		c->pub_data_size = LE_16(c->pub_data_size);
 		DBG_ASSERT(c->pub_data_size <= 2048 && c->pub_data_size > 0);
 
 		/* blob size */
@@ -1206,6 +1278,7 @@ psfile_get_cache_entry_by_pub(int fd, UINT32 pub_size, BYTE *pub, struct key_dis
 			return result;
 		}
 
+		c->blob_size = LE_16(c->blob_size);
 		DBG_ASSERT(c->blob_size <= 4096 && c->blob_size > 0);
 
 		/* vendor data size */
@@ -1213,12 +1286,14 @@ psfile_get_cache_entry_by_pub(int fd, UINT32 pub_size, BYTE *pub, struct key_dis
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
+		c->vendor_data_size = LE_32(c->vendor_data_size);
 
 		/* cache flags */
 		if ((result = read_data(fd, &c->flags, sizeof(UINT16)))) {
 			LogDebug("%s", __FUNCTION__);
 			return result;
 		}
+		c->flags = LE_16(c->flags);
 
 		if (c->pub_data_size == pub_size) {
 			/* read in the pub key */

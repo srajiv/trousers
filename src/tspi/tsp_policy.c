@@ -26,6 +26,10 @@
 #include "tsplog.h"
 #include "obj.h"
 
+#define	PGSIZE sysconf(_SC_PAGESIZE)
+#define PGOFFSET (PGSIZE - 1)
+#define PGMASK (~PGOFFSET)
+
 /*
  *  popup_GetSecret()
  *
@@ -43,7 +47,7 @@ popup_GetSecret(UINT32 new_pin, UINT32 hash_mode, BYTE *popup_str, void *auth_ha
 {
 	BYTE secret[UI_MAX_SECRET_STRING_LENGTH] = { 0 };
 	BYTE *dflt = (BYTE *)"TSS Authentication Dialog";
-	UINT32 secret_len;
+	UINT32 secret_len = 0;
 	TSS_RESULT result;
 
 	if (popup_str == NULL)
@@ -88,6 +92,8 @@ pin_mem(void *addr, size_t len)
 		return 0;
 	}
 
+	len += (uintptr_t)addr & PGOFFSET;
+	addr = (void *)((uintptr_t)addr & PGMASK);
 	if (mlock(addr, len) == -1) {
 		LogError("mlock: %s", strerror(errno));
 		return 1;
@@ -104,6 +110,8 @@ unpin_mem(void *addr, size_t len)
 		return 0;
 	}
 
+	len += (uintptr_t)addr & PGOFFSET;
+	addr = (void *)((uintptr_t)addr & PGMASK);
 	if (munlock(addr, len) == -1) {
 		LogError("mlock: %s", strerror(errno));
 		return 1;
