@@ -21,6 +21,22 @@
 #include "tsplog.h"
 #include "obj.h"
 
+static struct memTable *
+__tspi_createTable()
+{
+	struct memTable *table = NULL;
+	/*
+	 * No table has yet been created to hold the memory allocations of
+	 * this context, so we need to create one
+	 */
+	table = calloc(1, sizeof(struct memTable));
+	if (table == NULL) {
+		LogError("malloc of %zd bytes failed.", sizeof(struct memTable));
+		return NULL;
+	}
+	return (table);
+}
+
 /* caller needs to lock memtable lock */
 struct memTable *
 getTable(TSS_HCONTEXT tspContext)
@@ -34,31 +50,8 @@ getTable(TSS_HCONTEXT tspContext)
 	return NULL;
 }
 
-/* caller needs to lock memtable lock and be sure the context mem slot for
- * @tspContext exists before calling.
- */
-void
-__tspi_addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
-{
-	struct memTable *tmp = getTable(tspContext);
-	struct memEntry *tmp_entry = tmp->entries;
-
-	if (tmp->entries == NULL) {
-		tmp->entries = new;
-		return;
-	}
-
-	/* else tack @new onto the end */
-	for (; tmp_entry; tmp_entry = tmp_entry->nextEntry) {
-		if (tmp_entry->nextEntry == NULL) {
-			tmp_entry->nextEntry = new;
-			break;
-		}
-	}
-}
-
 /* caller needs to lock memtable lock */
-void
+static void
 __tspi_addTable(struct memTable *new)
 {
 	struct memTable *tmp = SpiMemoryTable;
@@ -75,6 +68,38 @@ __tspi_addTable(struct memTable *new)
 			tmp->nextTable = new;
 			break;
 		}
+}
+
+/* caller needs to lock memtable lock and be sure the context mem slot for
+ * @tspContext exists before calling.
+ */
+void
+__tspi_addEntry(TSS_HCONTEXT tspContext, struct memEntry *new)
+{
+	struct memTable *tmp = getTable(tspContext);
+	struct memEntry *tmp_entry;
+
+	if (tmp == NULL) {
+		if ((tmp = __tspi_createTable()) == NULL)
+			return;
+		tmp->tspContext = tspContext;
+		__tspi_addTable(tmp);
+	}
+
+	tmp_entry = tmp->entries;
+
+	if (tmp->entries == NULL) {
+		tmp->entries = new;
+		return;
+	}
+
+	/* else tack @new onto the end */
+	for (; tmp_entry; tmp_entry = tmp_entry->nextEntry) {
+		if (tmp_entry->nextEntry == NULL) {
+			tmp_entry->nextEntry = new;
+			break;
+		}
+	}
 }
 
 /* caller needs to lock memtable lock */
@@ -166,12 +191,7 @@ calloc_tspi(TSS_HCONTEXT tspContext, UINT32 howMuch)
 
 	table = getTable(tspContext);
 	if (table == NULL) {
-		/* no table has yet been created to hold the memory allocations of
-		 * this context, so we need to create one
-		 */
-		table = calloc(1, sizeof(struct memTable));
-		if (table == NULL) {
-			LogError("malloc of %zd bytes failed.", sizeof(struct memTable));
+		if ((table = __tspi_createTable()) == NULL) {
 			MUTEX_UNLOCK(memtable_lock);
 			return NULL;
 		}

@@ -34,6 +34,7 @@ host_table_init()
 
 	return TSS_SUCCESS;
 }
+
 #ifdef SOLARIS
 #pragma init(_init)
 void _init(void)
@@ -45,7 +46,6 @@ void __attribute__ ((constructor)) my_init(void)
 	__tspi_obj_list_init();
 }
 
-#if 0
 void
 host_table_final()
 {
@@ -56,6 +56,10 @@ host_table_final()
 	for (hte = ht->entries; hte; hte = next) {
 		if (hte)
 			next = hte->next;
+		if (hte->hostname)
+			free(hte->hostname);
+		if (hte->comm.buf)
+			free(hte->comm.buf);
 		free(hte);
 	}
 
@@ -65,11 +69,15 @@ host_table_final()
 	ht = NULL;
 }
 
+#ifdef SOLARIS
+#pragma fini(_fini)
+void _fini(void)
+#else
 void __attribute__ ((destructor)) my_fini(void)
+#endif
 {
 	host_table_final();
 }
-#endif
 
 TSS_RESULT
 __tspi_add_table_entry(TSS_HCONTEXT tspContext, BYTE *host, int type, struct host_table_entry **ret)
@@ -100,6 +108,7 @@ __tspi_add_table_entry(TSS_HCONTEXT tspContext, BYTE *host, int type, struct hos
 		if (tmp->tspContext == tspContext) {
 			LogError("Tspi_Context_Connect attempted on an already connected context!");
 			MUTEX_UNLOCK(ht->lock);
+			free(entry->hostname);
 			free(entry->comm.buf);
 			free(entry);
 			return TSPERR(TSS_E_CONNECTION_FAILED);
@@ -133,6 +142,8 @@ remove_table_entry(TSS_HCONTEXT tspContext)
 				prev->next = hte->next;
 			else
 				ht->entries = hte->next;
+			if (hte->hostname)
+				free(hte->hostname);
 			free(hte->comm.buf);
 			free(hte);
 			break;
