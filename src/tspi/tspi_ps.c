@@ -27,6 +27,7 @@
 #include "tcsd.h"
 #include "obj.h"
 
+TSS_UUID owner_evict_uuid = {0, 0, 0, 0, 0, {0, 0, 0, 0, 1, 0}};
 
 TSS_RESULT
 Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
@@ -85,19 +86,26 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 		} else if (result)
 			return result;
 
-		if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
-						       &keyBlob)))
-			return result;
+		/*check if provided UUID has an owner evict key UUID prefix */
+		if (!memcmp(&uuidData, &owner_evict_uuid, sizeof(TSS_UUID)-1)) {
+			if ((result = obj_rsakey_add(tspContext, TSS_RSAKEY_FLAG_OWNEREVICT,
+						      phKey)))
+				return result;
+		} else {
+			if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
+							       &keyBlob)))
+				return result;
 
-		if ((result = obj_rsakey_add_by_key(tspContext, &uuidData, keyBlob,
-						    TSS_OBJ_FLAG_SYSTEM_PS, phKey))) {
+			if ((result = obj_rsakey_add_by_key(tspContext, &uuidData, keyBlob,
+							    TSS_OBJ_FLAG_SYSTEM_PS, phKey))) {
+				free (keyBlob);
+				return result;
+			}
+	
+			result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle);
+
 			free (keyBlob);
-			return result;
 		}
-
-		result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle);
-
-		free (keyBlob);
 #else
 		if ((result = load_from_system_ps(tspContext, &uuidData, phKey)))
 			return result;
