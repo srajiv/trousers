@@ -66,6 +66,8 @@ tcsd_threads_init(void)
 		LogError("malloc of %zd bytes failed.", sizeof(struct tcsd_thread_mgr));
 		return TCSERR(TSS_E_OUTOFMEMORY);
 	}
+	/* initialize mutex */
+	MUTEX_INIT(tm->lock);
 
 	/* set the max threads variable from config */
 	tm->max_threads = tcsd_options.num_threads;
@@ -297,7 +299,7 @@ done:
 	/* if we're not in shutdown mode, then nobody is waiting to join this thread, so
 	 * detach it so that its resources are free at THREAD_EXIT() time. */
 	if (!tm->shutdown) {
-		if ((rc = THREAD_DETACH(data->thread_id))) {
+		if ((rc = THREAD_DETACH(*(data->thread_id)))) {
 			LogError("Thread detach failed (errno %d)."
 				 " Resources may not be properly released.", rc);
 		}
