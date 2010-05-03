@@ -89,25 +89,26 @@ TSS_RESULT
 tcsd_thread_create(int socket, char *hostname)
 {
 	UINT32 thread_num;
+	int rc = TCS_SUCCESS;
 #ifndef TCSD_SINGLE_THREAD_DEBUG
-	int rc;
 	THREAD_ATTR_DECLARE(tcsd_thread_attr);
 
 	/* init the thread attribute */
 	if ((rc = THREAD_ATTR_INIT(tcsd_thread_attr))) {
 		LogError("Initializing thread attribute failed: error=%d: %s", rc, strerror(rc));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		rc = TCSERR(TSS_E_INTERNAL_ERROR);
+		goto out;
 	}
 	/* make all threads joinable */
 	if ((rc = THREAD_ATTR_SETJOINABLE(tcsd_thread_attr))) {
 		LogError("Making thread attribute joinable failed: error=%d: %s", rc, strerror(rc));
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		rc = TCSERR(TSS_E_INTERNAL_ERROR);
+		goto out;
 	}
 
 	MUTEX_LOCK(tm->lock);
 #endif
 	if (tm->num_active_threads == tm->max_threads) {
-		close(socket);
 		if (hostname != NULL) {
 			LogError("max number of connections reached (%d), new connection"
 				 " from %s refused.", tm->max_threads, hostname);
@@ -115,9 +116,12 @@ tcsd_thread_create(int socket, char *hostname)
 			LogError("max number of connections reached (%d), new connection"
 				 " refused.", tm->max_threads);
 		}
-		free(hostname);
-		MUTEX_UNLOCK(tm->lock);
-		return TCSERR(TSS_E_CONNECTION_FAILED);
+		rc = TCSERR(TSS_E_CONNECTION_FAILED);
+#ifndef TCSD_SINGLE_THREAD_DEBUG
+		goto out_unlock;
+#else
+		goto out;
+#endif
 	}
 
 	/* search for an open slot to store the thread data in */
@@ -148,15 +152,25 @@ tcsd_thread_create(int socket, char *hostname)
 				 tcsd_thread_run,
 				 (void *)(&(tm->thread_data[thread_num]))))) {
 		LogError("Thread create failed: %d", rc);
-		MUTEX_UNLOCK(tm->lock);
-		return TCSERR(TSS_E_INTERNAL_ERROR);
+		rc = TCSERR(TSS_E_INTERNAL_ERROR);
+		goto out_unlock;
 	}
 
 	tm->num_active_threads++;
 
+out_unlock:
 	MUTEX_UNLOCK(tm->lock);
 #endif
-	return TSS_SUCCESS;
+out:
+	/* cleanup in case of error */
+	if (rc != TCS_SUCCESS) {
+		if (hostname != NULL) {
+			tm->thread_data[thread_num].hostname = NULL;
+			free(hostname);
+		}
+		close(socket);
+	}
+	return rc;
 }
 
 /* Since we don't want any of the worker threads to catch any signals, we must mask off any
@@ -416,6 +430,10 @@ tcsd_thread_run(void *v)
 		TCS_CloseContext_Internal(data->context);
 		data->context = NULL_TCS_HANDLE;
 	}
+	if(data->hostname != NULL) {
+		free(data->hostname);
+		data->hostname = NULL;
+	}
 
 #ifndef TCSD_SINGLE_THREAD_DEBUG
 	pthread_mutex_lock(&(tm->lock));
@@ -428,8 +446,6 @@ tcsd_thread_run(void *v)
 				 " Resources may not be properly released.", rc);
 		}
 	}
-	free(data->hostname);
-	data->hostname = NULL;
 	free(data->thread_id);
 	data->thread_id = THREAD_NULL;
 	pthread_mutex_unlock(&(tm->lock));
