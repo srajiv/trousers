@@ -31,7 +31,7 @@
 #define COND_SIGNAL(c)		pthread_cond_signal(c)
 
 /* thread abstractions */
-#define THREAD_ID			((size_t)pthread_self())
+#define THREAD_ID			((THREAD_TYPE)pthread_self())
 #define THREAD_TYPE			pthread_t
 #define THREAD_JOIN			pthread_join
 #define THREAD_DETACH			pthread_detach
@@ -41,7 +41,7 @@
 #define THREAD_EXIT			pthread_exit
 #define THREAD_CREATE(a,b,c,d)		pthread_create(a,b,c,d)
 #define THREAD_SET_SIGNAL_MASK		pthread_sigmask
-#define THREAD_NULL			(THREAD_TYPE)0
+#define THREAD_NULL			(THREAD_TYPE *)0
 
 #else
 

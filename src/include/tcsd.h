@@ -134,7 +134,7 @@ struct tcsd_thread_data
 {
 	int sock;
 	UINT32 context;
-	THREAD_TYPE thread_id;
+	THREAD_TYPE *thread_id;
 	char *hostname;
 	struct tcsd_comm_data comm;
 };

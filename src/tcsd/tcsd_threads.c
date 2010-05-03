@@ -45,7 +45,7 @@ tcsd_threads_final()
 	/* wait for all currently running threads to exit */
 	for (i = 0; i < tm->max_threads; i++) {
 		if (tm->thread_data[i].thread_id != THREAD_NULL) {
-			if ((rc = THREAD_JOIN(tm->thread_data[i].thread_id, NULL))) {
+			if ((rc = THREAD_JOIN(*(tm->thread_data[i].thread_id), NULL))) {
 				LogError("Thread join failed: error: %d", rc);
 			}
 		}
@@ -134,7 +134,14 @@ tcsd_thread_create(int socket, char *hostname)
 #ifdef TCSD_SINGLE_THREAD_DEBUG
 	(void)tcsd_thread_run((void *)(&(tm->thread_data[thread_num])));
 #else
-	if ((rc = THREAD_CREATE(&(tm->thread_data[thread_num].thread_id),
+	tm->thread_data[thread_num].thread_id = calloc(1, sizeof(THREAD_TYPE));
+	if (tm->thread_data[thread_num].thread_id == NULL) {
+		rc = TCSERR(TSS_E_OUTOFMEMORY);
+		LogError("malloc of %zd bytes failed.", sizeof(THREAD_TYPE));
+		goto out_unlock;
+	}
+
+	if ((rc = THREAD_CREATE(tm->thread_data[thread_num].thread_id,
 				 &tcsd_thread_attr,
 				 tcsd_thread_run,
 				 (void *)(&(tm->thread_data[thread_num]))))) {
@@ -421,7 +428,8 @@ tcsd_thread_run(void *v)
 	}
 	free(data->hostname);
 	data->hostname = NULL;
-	data->thread_id = (pthread_t)0;
+	free(data->thread_id);
+	data->thread_id = THREAD_NULL;
 	pthread_mutex_unlock(&(tm->lock));
 	pthread_exit(NULL);
 #else
