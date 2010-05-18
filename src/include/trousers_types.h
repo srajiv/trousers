@@ -118,7 +118,7 @@ typedef struct tdTSS_KEY {
 	BYTE *encData;
 } TSS_KEY;
 
-#if (defined (__linux) || defined (linux) || defined (__GLIBC__))
+#if (defined (__linux) || defined (linux) || defined (SOLARIS) || defined (__GLIBC__))
 #define BSD_CONST
 #elif (defined (__OpenBSD__) || defined (__FreeBSD__))
 #define BSD_CONST const
