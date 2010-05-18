@@ -268,6 +268,7 @@ main(int argc, char **argv)
 		LogError("Failed bind: %s", strerror(errno));
 		return -1;
 	}
+#ifndef SOLARIS
 	pwd = getpwnam(TSS_USER_NAME);
 	if (pwd == NULL) {
 		if (errno == 0) {
@@ -279,6 +280,7 @@ main(int argc, char **argv)
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
 	setuid(pwd->pw_uid);
+#endif
 	if (listen(sd, TCSD_MAX_SOCKETS_QUEUED) < 0) {
 		LogError("Failed listen: %s", strerror(errno));
 		return -1;
