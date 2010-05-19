@@ -88,7 +88,7 @@ tcsd_threads_init(void)
 TSS_RESULT
 tcsd_thread_create(int socket, char *hostname)
 {
-	UINT32 thread_num;
+	UINT32 thread_num = -1;
 	int rc = TCS_SUCCESS;
 #ifndef TCSD_SINGLE_THREAD_DEBUG
 	THREAD_ATTR_DECLARE(tcsd_thread_attr);
@@ -185,13 +185,13 @@ thread_signal_init()
 
 	if ((rc = sigfillset(&thread_sigmask))) {
 		LogError("sigfillset failed: error=%d: %s", rc, strerror(rc));
-		LogError("worker thread %zd is exiting prematurely", THREAD_ID);
+		LogError("worker thread %zd is exiting prematurely", (size_t) THREAD_ID);
 		THREAD_EXIT(NULL);
 	}
 
 	if ((rc = THREAD_SET_SIGNAL_MASK(SIG_BLOCK, &thread_sigmask, NULL))) {
 		LogError("Setting thread sigmask failed: error=%d: %s", rc, strerror(rc));
-		LogError("worker thread %zd is exiting prematurely", THREAD_ID);
+		LogError("worker thread %zd is exiting prematurely", (size_t) THREAD_ID);
 		THREAD_EXIT(NULL);
 	}
 }
@@ -441,7 +441,7 @@ tcsd_thread_run(void *v)
 	/* if we're not in shutdown mode, then nobody is waiting to join this thread, so
 	 * detach it so that its resources are free at pthread_exit() time. */
 	if (!tm->shutdown) {
-		if ((rc = pthread_detach(data->thread_id))) {
+		if ((rc = pthread_detach(*(data->thread_id)))) {
 			LogError("pthread_detach failed (errno %d)."
 				 " Resources may not be properly released.", rc);
 		}
