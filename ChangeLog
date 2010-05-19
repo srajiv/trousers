@@ -1,3 +1,27 @@
+* TROUSERS_0_3_5
+
+- Allowed TCD Daemon to run with reduced privileges In Solaris.
+- Fixing previous kfreebsd build patch conflict with the current tree.
+- TCSD error handling improvements.
+- mutex init inclusion.
+- pthread_t portability fix
+- Owner Evict keys load fix.
+- Big- endian issues.
+- Memory leak fix.
+- Adding missing #include <limits.h>.
+- kfreebsd build fixes.
+- Fixed usage of syslog().
+- 64bits clean
+- Fixes the TCP UN and IN socket connection attempt handling
+- Fixes logic on opening a hardware TPM.
+- Added communication through TCP to software TPMs in TrouSerS.
+- Fixed conflicting defines
+- Adds missing free()
+- Fixed fread() return value check.
+- Made the previous fix cleaner and more robust.
+- Added missing check in order to avoid freeing buffer that's out of Tspi_Data_Seal() scope.
+- Fixed Tspi_TPM_GetRandom 4kb output limit.
+
 * TROUSERS_0_3_4
 
 - Fixed TrouSerS mishandling of TPM auth sessions
