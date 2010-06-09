@@ -185,13 +185,13 @@ thread_signal_init()
 
 	if ((rc = sigfillset(&thread_sigmask))) {
 		LogError("sigfillset failed: error=%d: %s", rc, strerror(rc));
-		LogError("worker thread %zd is exiting prematurely", (size_t) THREAD_ID);
+		LogError("worker thread %ld is exiting prematurely", THREAD_ID);
 		THREAD_EXIT(NULL);
 	}
 
 	if ((rc = THREAD_SET_SIGNAL_MASK(SIG_BLOCK, &thread_sigmask, NULL))) {
 		LogError("Setting thread sigmask failed: error=%d: %s", rc, strerror(rc));
-		LogError("worker thread %zd is exiting prematurely", (size_t) THREAD_ID);
+		LogError("worker thread %ld is exiting prematurely", THREAD_ID);
 		THREAD_EXIT(NULL);
 	}
 }
@@ -412,7 +412,7 @@ tcsd_thread_run(void *v)
 
 		/* check for shutdown */
 		if (tm->shutdown) {
-			LogDebug("Thread %zd exiting via shutdown signal!", THREAD_ID);
+			LogDebug("Thread %ld exiting via shutdown signal!", THREAD_ID);
 			break;
 		}
 	}

@@ -56,7 +56,7 @@ tcs_wrap_MakeIdentity(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_ENCAUTH, 1, &identityAuth, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -168,7 +168,7 @@ tcs_wrap_ActivateIdentity(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &idKeyHandle, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -259,7 +259,7 @@ tcs_wrap_GetCredential(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 2, &CredAccessMode, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	result = TCS_GetCredential_Internal(hContext, CredType, CredAccessMode, 
 					    &CredSize, &CredData);

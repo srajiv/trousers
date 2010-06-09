@@ -108,7 +108,7 @@ void
 auth_mgr_swap_in()
 {
 	if (auth_mgr.overflow[auth_mgr.of_tail] != NULL) {
-		LogDebug("waking up thread %zd, auth slot has opened", THREAD_ID);
+		LogDebug("waking up thread %lddd, auth slot has opened", THREAD_ID);
 		/* wake up the next sleeping thread in order and increment tail */
 		COND_SIGNAL(auth_mgr.overflow[auth_mgr.of_tail]);
 		auth_mgr.overflow[auth_mgr.of_tail] = NULL;
@@ -149,7 +149,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 		auth_mgr.overflow[auth_mgr.of_head] = cond;
 		auth_mgr.of_head = (auth_mgr.of_head + 1) % auth_mgr.overflow_size;
 		/* go to sleep */
-		LogDebug("thread %zd going to sleep until auth slot opens", THREAD_ID);
+		LogDebug("thread %lddd going to sleep until auth slot opens", THREAD_ID);
 		auth_mgr.sleeping_threads++;
 		COND_WAIT(cond, &tcsp_lock);
 		auth_mgr.sleeping_threads--;
@@ -180,7 +180,7 @@ auth_mgr_swap_out(TCS_CONTEXT_HANDLE hContext)
 		auth_mgr.of_tail = 0;
 		auth_mgr.overflow[auth_mgr.of_head] = cond;
 		auth_mgr.of_head = (auth_mgr.of_head + 1) % auth_mgr.overflow_size;
-		LogDebug("thread %zd going to sleep until auth slot opens", THREAD_ID);
+		LogDebug("thread %lddd going to sleep until auth slot opens", THREAD_ID);
 		auth_mgr.sleeping_threads++;
 		COND_WAIT(cond, &tcsp_lock);
 		auth_mgr.sleeping_threads--;
@@ -387,7 +387,7 @@ auth_mgr_add(TCS_CONTEXT_HANDLE tcsContext, TCS_AUTHHANDLE tpm_auth_handle)
 	}
 
 
-	LogDebugFn("Thread %zd growing the auth table to %u entries", THREAD_ID,
+	LogDebugFn("Thread %ld growing the auth table to %u entries", THREAD_ID,
 		   auth_mgr.auth_mapper_size + TSS_DEFAULT_AUTH_TABLE_SIZE);
 
 	auth_mgr.auth_mapper = calloc(auth_mgr.auth_mapper_size +

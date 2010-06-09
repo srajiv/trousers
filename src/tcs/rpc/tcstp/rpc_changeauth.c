@@ -48,7 +48,7 @@ tcs_wrap_ChangeAuth(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &parentHandle, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -127,7 +127,7 @@ tcs_wrap_ChangeAuthOwner(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT16, 1, &protocolID, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);

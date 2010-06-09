@@ -39,7 +39,7 @@ tcs_wrap_GetPcrEvent(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -98,7 +98,7 @@ tcs_wrap_GetPcrEventsByPcr(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &pcrIndex, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -153,7 +153,7 @@ tcs_wrap_GetPcrEventLog(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	result = TCS_GetPcrEventLog_Internal(hContext, &eventCount, &ppEvents);
 
@@ -199,7 +199,7 @@ tcs_wrap_LogPcrEvent(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_PCR_EVENT , 1, &event, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);

@@ -42,7 +42,7 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UUID, 1, &WrappingKeyUUID, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -103,7 +103,7 @@ tcs_wrap_UnregisterKey(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -128,7 +128,7 @@ tcs_wrap_GetRegisteredKeyBlob(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -166,7 +166,7 @@ tcs_wrap_LoadKeyByUUID(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UUID, 1, &uuid, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
@@ -219,7 +219,7 @@ tcs_wrap_EnumRegisteredKeys(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
@@ -272,7 +272,7 @@ tcs_wrap_EnumRegisteredKeys2(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	result = getData(TCSD_PACKET_TYPE_UUID , 1, &uuid, 0, &data->comm);
 	if (result == TSS_TCP_RPC_BAD_PACKET_TYPE)
@@ -322,7 +322,7 @@ tcs_wrap_GetRegisteredKeyByPublicInfo(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_UINT32, 1, &algId, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);

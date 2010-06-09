@@ -37,7 +37,7 @@ tcs_wrap_SetOperatorAuth(struct tcsd_thread_data *data)
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
-	LogDebugFn("thread %zd context %x", THREAD_ID, hContext);
+	LogDebugFn("thread %ld context %x", THREAD_ID, hContext);
 
 	if (getData(TCSD_PACKET_TYPE_SECRET, 1, &operatorAuth, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
