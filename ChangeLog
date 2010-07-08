@@ -1,3 +1,9 @@
+* TROUNSERS_0_3_6
+
+- Fixed a number of warnings during a build with --debug regarding THREAD ID
+  definition
+- Removed htole() dependency, which was included only in glibc 2.9
+
 * TROUSERS_0_3_5
 
 - Allowed TCD Daemon to run with reduced privileges In Solaris.
