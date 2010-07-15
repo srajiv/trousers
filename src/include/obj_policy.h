@@ -152,6 +152,7 @@ TSS_RESULT obj_policy_set_hash_mode(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_xsap_params(TSS_HPOLICY, TPM_COMMAND_CODE, TPM_ENTITY_TYPE *, UINT32 *,
 				      BYTE **, BYTE *, TSS_CALLBACK *, TSS_CALLBACK *,
 				      TSS_CALLBACK *, UINT32 *, TSS_BOOL);
+TSS_RESULT obj_policy_is_secret_set(TSS_HPOLICY, TSS_BOOL *);
 #ifdef TSS_BUILD_DELEGATION
 TSS_RESULT obj_policy_set_delegation_type(TSS_HPOLICY, UINT32);
 TSS_RESULT obj_policy_get_delegation_type(TSS_HPOLICY, UINT32 *);

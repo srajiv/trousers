@@ -130,9 +130,12 @@ Tspi_NV_DefineSpace(TSS_HNVSTORE hNvstore,	/* in */
 	free_tspi(tspContext, pWritePCR);
 
 	if ((result = authsess_xsap_init(tspContext, hTpm, hNvstore, need_authdata,
-					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap)))
+					 TPM_ORD_NV_DefineSpace, TPM_ET_OWNER, &xsap))) {
+		if (result == TSPERR(TSS_E_TSP_AUTHREQUIRED))
+			result = TSS_ERROR_CODE(TSS_E_BAD_PARAMETER);
 		return result;
-
+	}
+	
 	result = Trspi_HashInit(&hashCtx, TSS_HASH_SHA1);
 	result |= Trspi_Hash_UINT32(&hashCtx, TPM_ORD_NV_DefineSpace);
 	result |= Trspi_HashUpdate(&hashCtx, NVPublic_DataSize, NVPublicData);

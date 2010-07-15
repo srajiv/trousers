@@ -774,7 +774,7 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 		   struct authsess  **xsess)
 {
 	TSS_RESULT result;
-	TSS_BOOL authdatausage = FALSE, req_auth = TRUE, get_child_auth = TRUE;
+	TSS_BOOL authdatausage = FALSE, req_auth = TRUE, get_child_auth = TRUE, secret_set = FALSE;
 	BYTE hmacBlob[2 * sizeof(TPM_DIGEST)];
 	UINT64 offset;
 	TSS_BOOL new_secret = TR_SECRET_CTX_NOT_NEW;
@@ -921,7 +921,10 @@ authsess_xsap_init(TSS_HCONTEXT     tspContext,
 					goto error;
 			}
 
-			if (!sess->hUsageChild) {
+			if ((result = obj_policy_is_secret_set(sess->hUsageChild, &secret_set)))
+				goto error;
+
+			if (!secret_set) {
 				result = TSPERR(TSS_E_TSP_AUTHREQUIRED);
 				goto error;
 			}
