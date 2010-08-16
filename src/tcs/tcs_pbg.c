@@ -916,6 +916,7 @@ TSS_RESULT
 tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 {
 	TSS_RESULT result = TSS_SUCCESS;
+	UINT64 blob_size;
 	va_list ap;
 
 	DBG_ASSERT(ordinal);
@@ -1448,6 +1449,13 @@ tpm_rqu_build(TPM_COMMAND_CODE ordinal, UINT64 *outOffset, BYTE *out_blob, ...)
 		TPM_AUTH *auth1 = va_arg(ap, TPM_AUTH *);
 		va_end(ap);
 
+		blob_size = in_len1 + in_len2 + TPM_DIGEST_SIZE + sizeof(TPM_AUTH);
+		if (blob_size > TSS_TPM_TXBLOB_SIZE) {
+			result = TCSERR(TSS_E_BAD_PARAMETER);
+			LogError("Oversized input when building ordinal 0x%x", ordinal);
+			break;
+		}
+				
 		if (!keySlot1 || !in_blob2 || !auth1) {
 			result = TCSERR(TSS_E_INTERNAL_ERROR);
 			LogError("Internal error for ordinal 0x%x", ordinal);
