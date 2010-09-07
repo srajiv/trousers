@@ -450,9 +450,8 @@ tcsd_thread_run(void *v)
 	data->thread_id = THREAD_NULL;
 	pthread_mutex_unlock(&(tm->lock));
 	pthread_exit(NULL);
-#else
-	return NULL;
 #endif
+	return NULL;
 }
 
 #endif
