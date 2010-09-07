@@ -164,7 +164,7 @@ get_user_ps_path(char **file)
 		      TSS_USER_PS_FILE);
 #endif
 	if (rc == sizeof (buf)) {
-		LogDebugFn("USER PS: Path to file too long! (> %d bytes)", sizeof (buf));
+		LogDebugFn("USER PS: Path to file too long! (> %zd bytes)", sizeof (buf));
 	} else
 		*file = strdup(buf);
 
