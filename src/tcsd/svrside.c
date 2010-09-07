@@ -43,6 +43,7 @@ struct tcsd_config tcsd_options;
 struct tpm_properties tpm_metrics;
 static volatile int hup = 0, term = 0;
 extern char *optarg;
+int sd;
 
 static void
 tcsd_shutdown(void)
@@ -61,6 +62,7 @@ static void
 tcsd_signal_term(int signal)
 {
 	term = 1;
+	close(sd);
 }
 
 void
@@ -213,7 +215,7 @@ main(int argc, char **argv)
 {
 	struct sockaddr_in serv_addr, client_addr;
 	TSS_RESULT result;
-	int sd, newsd, c, option_index = 0;
+	int newsd, c, option_index = 0;
 	unsigned client_len;
 	char *hostname = NULL;
 	struct passwd *pwd;
@@ -339,5 +341,6 @@ main(int argc, char **argv)
 	} while (term ==0);
 
 	/* To close correctly, we must receive a SIGTERM */
+	tcsd_shutdown();
 	return 0;
 }
