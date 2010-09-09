@@ -48,7 +48,6 @@ static MUTEX_DECLARE_INIT(user_ps_lock);
 #if (defined (__FreeBSD__) || defined (__OpenBSD__))
 static MUTEX_DECLARE_INIT(user_ps_path);
 #endif
-#if defined (SOLARIS)
 static struct flock fl = {
        0,
        0,
@@ -58,7 +57,6 @@ static struct flock fl = {
        0,
        {0, 0, 0, 0}
 };
-#endif
 
 
 /*
@@ -185,12 +183,8 @@ get_file(int *fd)
 
 	/* check the global file handle first.  If it exists, lock it and return */
 	if (user_ps_fd != -1) {
-#if defined (SOLARIS)
 		fl.l_type = F_WRLCK;
 		if ((rc = fcntl(user_ps_fd, F_SETLKW, &fl))) {
-#else
-		if ((rc = flock(user_ps_fd, LOCK_EX))) {
-#endif /* SOLARIS */
 			LogDebug("USER PS: failed to lock file: %s", strerror(errno));
 			MUTEX_UNLOCK(user_ps_lock);
 			return TSPERR(TSS_E_INTERNAL_ERROR);
@@ -213,12 +207,8 @@ get_file(int *fd)
 		MUTEX_UNLOCK(user_ps_lock);
 		return TSPERR(TSS_E_INTERNAL_ERROR);
 	}
-#if defined (SOLARIS)
 	fl.l_type = F_WRLCK;
 	if ((rc = fcntl(user_ps_fd, F_SETLKW, &fl))) {
-#else
-	if ((rc = flock(user_ps_fd, LOCK_EX))) {
-#endif /* SOLARIS */
 		LogDebug("USER PS: failed to get lock of %s: %s", file_name, strerror(errno));
 		free(file_name);
 		close(user_ps_fd);
@@ -240,12 +230,8 @@ put_file(int fd)
 	fsync(fd);
 
 	/* release the file lock */
-#if defined (SOLARIS)
 	fl.l_type = F_UNLCK;
 	if ((rc = fcntl(fd, F_SETLKW, &fl))) {
-#else
-	if ((rc = flock(fd, LOCK_UN))) {
-#endif /* SOLARIS */
 		LogDebug("USER PS: failed to unlock file: %s", strerror(errno));
 		rc = -1;
 	}
