@@ -48,15 +48,7 @@ static MUTEX_DECLARE_INIT(user_ps_lock);
 #if (defined (__FreeBSD__) || defined (__OpenBSD__))
 static MUTEX_DECLARE_INIT(user_ps_path);
 #endif
-static struct flock fl = {
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       {0, 0, 0, 0}
-};
+static struct flock fl;
 
 
 /*
