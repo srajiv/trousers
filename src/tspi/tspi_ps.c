@@ -91,6 +91,9 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 			if ((result = obj_rsakey_add(tspContext, TSS_RSAKEY_FLAG_OWNEREVICT,
 						      phKey)))
 				return result;
+			if ((result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle)))
+				return result;
+			
 		} else {
 			if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 							       &keyBlob)))
