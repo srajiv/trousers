@@ -42,6 +42,8 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 	TCS_KEY_HANDLE tcsKeyHandle;
 	TSS_HKEY parentTspHandle;
 	TCS_LOADKEY_INFO info;
+	UINT32		ulPubKeyLength;
+	BYTE		*rgbPubKey;
 
 	if (phKey == NULL)
 		return TSPERR(TSS_E_BAD_PARAMETER);
@@ -93,7 +95,17 @@ Tspi_Context_LoadKeyByUUID(TSS_HCONTEXT tspContext,		/* in */
 				return result;
 			if ((result = obj_rsakey_set_tcs_handle(*phKey, tcsKeyHandle)))
 				return result;
-			
+
+			//The cached public key portion of the owner evict key is used 
+			//further by TPM_KEY_CONTROLOWNER command for sanity check
+			if ((result = Tspi_Key_GetPubKey(*phKey, &ulPubKeyLength, &rgbPubKey)))
+				return result;
+
+			result = obj_rsakey_set_pubkey(*phKey, FALSE, rgbPubKey);
+
+			free(rgbPubKey);		
+			if (result != TSS_SUCCESS)
+				return result;
 		} else {
 			if ((result = RPC_GetRegisteredKeyBlob(tspContext, uuidData, &keyBlobSize,
 							       &keyBlob)))
