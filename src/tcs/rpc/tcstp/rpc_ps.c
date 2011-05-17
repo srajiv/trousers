@@ -13,8 +13,6 @@
 #include <syslog.h>
 #include <string.h>
 #include <netdb.h>
-//#include <sys/ucred.h>
-#include <errno.h>
 
 #include "trousers/tss.h"
 #include "trousers_types.h"
@@ -28,29 +26,6 @@
 #include "tcs_utils.h"
 #include "rpc_tcstp_tcs.h"
 
-#ifdef SOLARIS
-#include <ucred.h>
-#include <errno.h>
-
-static TSS_RESULT
-verify_peer(struct tcsd_thread_data *data)
-{
-	ucred_t *uc = NULL;
-	if (getpeerucred(data->sock, &uc)) {
-		LogError("Failed to get peer credential (%s)",
-			 strerror(errno));
-		return TCSERR(TSS_E_TSP_AUTHFAIL);
-	}
-	if (ucred_geteuid(uc) != 0) {
-		LogError("Unauthorized attempt to modify a system key",
-				strerror(errno));
-		ucred_free(uc);
-		return TCSERR(TSS_E_TSP_AUTHFAIL);
-	}
-	ucred_free(uc);
-	return (TSS_SUCCESS);
-}
-#endif
 
 TSS_RESULT
 tcs_wrap_RegisterKey(struct tcsd_thread_data *data)
@@ -64,10 +39,6 @@ tcs_wrap_RegisterKey(struct tcsd_thread_data *data)
 	BYTE *gbVendorData;
 	TSS_RESULT result;
 
-#ifdef SOLARIS
-	if ( (result = verify_peer(data)) != TSS_SUCCESS)
-		return (result);
-#endif
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
@@ -129,10 +100,6 @@ tcs_wrap_UnregisterKey(struct tcsd_thread_data *data)
 	TSS_UUID uuid;
 	TSS_RESULT result;
 
-#ifdef SOLARIS
-	if ( (result = verify_peer(data)) != TSS_SUCCESS)
-		return (result);
-#endif
 	if (getData(TCSD_PACKET_TYPE_UINT32, 0, &hContext, 0, &data->comm))
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 
