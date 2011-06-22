@@ -28,6 +28,7 @@ tcsd \- daemon that manages Trusted Computing resources
 .hy 0
 .B tcsd
 .RB [ \-f ]
+.RB [ \-c\ <configfile>\ ]
 
 .SH "DESCRIPTION"
 .PP
@@ -45,6 +46,10 @@ resources and handles requests from TSP's both local and remote.
 .TP
 \fB\-f\fR
 run the daemon in the foreground
+
+.TP
+\fB\-c <configfile>\fR
+use the provided configuration file rather than the default configuration file
 
 .SH "ACCESS CONTROL"
 .PP

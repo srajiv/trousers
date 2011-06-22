@@ -85,7 +85,7 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 		} else {
 			LogError("No source for externel kernel events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
-					TCSD_CONFIG_FILE);
+					tcsd_config_file);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else if (tcsd_options.firmware_pcrs & (1 << PcrIndex)) {
@@ -105,7 +105,7 @@ TCS_GetExternalPcrEvent(UINT32 PcrIndex,		/* in */
 		} else {
 			LogError("No source for externel firmware events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
-					TCSD_CONFIG_FILE);
+					tcsd_config_file);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {
@@ -200,7 +200,7 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 		} else {
 			LogError("No source for externel kernel events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
-					TCSD_CONFIG_FILE);
+					tcsd_config_file);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else if (tcsd_options.firmware_pcrs & (1 << PcrIndex)) {
@@ -220,7 +220,7 @@ TCS_GetExternalPcrEventsByPcr(UINT32 PcrIndex,		/* in */
 		} else {
 			LogError("No source for externel firmware events was compiled in, but "
 					"the tcsd is configured to use one! (see %s)",
-					TCSD_CONFIG_FILE);
+					tcsd_config_file);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
 	} else {

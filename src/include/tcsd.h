@@ -48,7 +48,8 @@ struct tcsd_config
 							of this TCS System */
 };
 
-#define TCSD_CONFIG_FILE	ETC_PREFIX "/tcsd.conf"
+#define TCSD_DEFAULT_CONFIG_FILE	ETC_PREFIX "/tcsd.conf"
+extern char *tcsd_config_file;
 
 #define TSS_USER_NAME		"tss"
 #define TSS_GROUP_NAME		"tss"

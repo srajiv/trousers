@@ -44,6 +44,7 @@ struct tpm_properties tpm_metrics;
 static volatile int hup = 0, term = 0;
 extern char *optarg;
 int sd;
+char *tcsd_config_file;
 
 static void
 tcsd_shutdown(void)
@@ -189,10 +190,11 @@ tcsd_startup(void)
 void
 usage(void)
 {
-	fprintf(stderr, "\tusage: tcsd [-f] [-h]\n\n");
+	fprintf(stderr, "\tusage: tcsd [-f] [-e] [-c <config file> [-h]\n\n");
 	fprintf(stderr, "\t-f|--foreground\trun in the foreground. Logging goes to stderr "
 			"instead of syslog.\n");
-	fprintf(stderr, "\t-e| attempts to connect to software TPMs over TCP");
+	fprintf(stderr, "\t-e| attempts to connect to software TPMs over TCP\n");
+	fprintf(stderr, "\t-c|--config\tpath to configuration file\n");
 	fprintf(stderr, "\t-h|--help\tdisplay this help message\n");
 	fprintf(stderr, "\n");
 }
@@ -223,26 +225,33 @@ main(int argc, char **argv)
 	struct option long_options[] = {
 		{"help", 0, NULL, 'h'},
 		{"foreground", 0, NULL, 'f'},
+		{"config", 1, NULL, 'c'},
 		{0, 0, 0, 0}
 	};
 
 	unsetenv("TCSD_USE_TCP_DEVICE");
-	while ((c = getopt_long(argc, argv, "fhe", long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "fhec:", long_options, &option_index)) != -1) {
 		switch (c) {
 			case 'f':
 				setenv("TCSD_FOREGROUND", "1", 1);
 				break;
-			case 'h':
-				/* fall through */
+			case 'c':
+				tcsd_config_file = optarg;
+				break;
 			case 'e':
 				setenv("TCSD_USE_TCP_DEVICE", "1", 1);
 				break;
+			case 'h':
+				/* fall through */
 			default:
 				usage();
 				return -1;
 				break;
 		}
 	}
+
+	if (!tcsd_config_file)
+		tcsd_config_file = TCSD_DEFAULT_CONFIG_FILE;
 
 	if ((result = tcsd_startup()))
 		return (int)result;
