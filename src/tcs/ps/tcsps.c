@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #if defined (HAVE_BYTEORDER_H)
 #include <sys/byteorder.h>
-#elif defined (HAVE_ENDIAN_H)
+#elif defined (HTOLE_DEFINED)
 #include <endian.h>
 #define LE_16 htole16
 #define LE_32 htole32
