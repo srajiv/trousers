@@ -44,7 +44,7 @@ struct tpm_properties tpm_metrics;
 static volatile int hup = 0, term = 0;
 extern char *optarg;
 int sd;
-char *tcsd_config_file;
+char *tcsd_config_file = NULL;
 
 static void
 tcsd_shutdown(void)
