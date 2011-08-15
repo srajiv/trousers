@@ -44,6 +44,7 @@ applications.
 
 %build
 autoreconf
+%configure --disable-static --prefix=/usr --libdir=%{_libdir}
 make %{?_smp_mflags}
 
 %clean
