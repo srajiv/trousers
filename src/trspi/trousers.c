@@ -1445,6 +1445,8 @@ Trspi_Error_String(TSS_RESULT r)
 			case TSS_E_INVALID_KEYUSAGE:		return "Invalid usage of key";
 			case TSS_E_VERIFICATION_FAILED:		return "Internal validation of data failed";
 			case TSS_E_HASH_NO_IDENTIFIER:		return "Hash algorithm identifier not set";
+			case TSS_E_NV_AREA_EXIST:		return "NVRAM area already exists";
+			case TSS_E_NV_AREA_NOT_EXIST:		return "NVRAM area does not exist";
 			default:				return "Unknown";
 		}
 	}
