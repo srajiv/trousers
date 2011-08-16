@@ -2737,3 +2737,63 @@ Trspi_UnloadBlob_CAP_VERSION_INFO(UINT64 *offset, BYTE *blob, TPM_CAP_VERSION_IN
 
 	return TSS_SUCCESS;
 }
+
+TSS_RESULT
+Trspi_UnloadBlob_NV_INDEX(UINT64 *offset, BYTE *blob, TPM_NV_INDEX *v)
+{
+	if (!v) {
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+
+		return TSS_SUCCESS;
+	}
+
+	Trspi_UnloadBlob_UINT32(offset, v, blob);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_NV_ATTRIBUTES(UINT64 *offset, BYTE *blob, TPM_NV_ATTRIBUTES *v)
+{
+	if (!v) {
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+
+		return TSS_SUCCESS;
+	}
+
+	Trspi_UnloadBlob_UINT16(offset, &v->tag, blob);
+	Trspi_UnloadBlob_UINT32(offset, &v->attributes, blob);
+
+	return TSS_SUCCESS;
+}
+
+TSS_RESULT
+Trspi_UnloadBlob_NV_DATA_PUBLIC(UINT64 *offset, BYTE *blob, TPM_NV_DATA_PUBLIC *v)
+{
+	if (!v) {
+		Trspi_UnloadBlob_UINT16(offset, NULL, blob);
+		Trspi_UnloadBlob_NV_INDEX(offset, blob, NULL);
+		Trspi_UnloadBlob_PCR_INFO_SHORT(offset, blob, NULL);
+		Trspi_UnloadBlob_PCR_INFO_SHORT(offset, blob, NULL);
+		Trspi_UnloadBlob_NV_ATTRIBUTES(offset, blob, NULL);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_BYTE(offset, NULL, blob);
+		Trspi_UnloadBlob_UINT32(offset, NULL, blob);
+
+		return TSS_SUCCESS;
+	}
+
+	Trspi_UnloadBlob_UINT16(offset, &v->tag, blob);
+	Trspi_UnloadBlob_NV_INDEX(offset, blob, &v->nvIndex);
+	Trspi_UnloadBlob_PCR_INFO_SHORT(offset, blob, &v->pcrInfoRead);
+	Trspi_UnloadBlob_PCR_INFO_SHORT(offset, blob, &v->pcrInfoWrite);
+	Trspi_UnloadBlob_NV_ATTRIBUTES(offset, blob, &v->permission);
+	Trspi_UnloadBlob_BYTE(offset, &v->bReadSTClear, blob);
+	Trspi_UnloadBlob_BYTE(offset, &v->bWriteSTClear, blob);
+	Trspi_UnloadBlob_BYTE(offset, &v->bWriteDefine, blob);
+	Trspi_UnloadBlob_UINT32(offset, &v->dataSize, blob);
+
+	return TSS_SUCCESS;
+}
