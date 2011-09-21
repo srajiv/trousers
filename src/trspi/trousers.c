@@ -2182,7 +2182,16 @@ Trspi_UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TPM_CERTIFY_INFO *c)
 	Trspi_UnloadBlob_NONCE(offset, blob, &c->data);
 	Trspi_UnloadBlob_BOOL(offset, (TSS_BOOL *)&c->parentPCRStatus, blob);
 	Trspi_UnloadBlob_UINT32(offset, &c->PCRInfoSize, blob);
-	Trspi_UnloadBlob(offset, c->PCRInfoSize, blob, c->PCRInfo);
+        if (c->PCRInfoSize != 0) {
+                c->PCRInfo = malloc(sizeof(TPM_PCR_INFO));
+                if (c->PCRInfo == NULL) {
+                        LogError("malloc of %lu bytes failed.", sizeof(TPM_PCR_INFO));
+                        return TSPERR(TSS_E_OUTOFMEMORY);
+                }
+        } else {
+                c->PCRInfo = NULL;
+        }
+        Trspi_UnloadBlob_PCR_INFO(offset, blob, (TPM_PCR_INFO *)c->PCRInfo);
 
 	return TSS_SUCCESS;
 }
