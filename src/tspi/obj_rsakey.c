@@ -69,12 +69,14 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 			rsakey->key.hdr.key11.ver = ver;
 			rsakey->type = TSS_KEY_STRUCT_KEY;
 			rsakey->pcrInfoType = TSS_PCRS_STRUCT_INFO;
+			rsakey->key.keyFlags = 0;
 			break;
 		case TSS_KEY_STRUCT_KEY12:
 			rsakey->key.hdr.key12.tag = TPM_TAG_KEY12;
 			rsakey->key.hdr.key12.fill = 0;
 			rsakey->type = TSS_KEY_STRUCT_KEY12;
 			rsakey->pcrInfoType = TSS_PCRS_STRUCT_INFO_LONG;
+			rsakey->key.keyFlags = TPM_PCRIGNOREDONREAD;
 			break;
 		default:
 			free(rsakey);
@@ -98,7 +100,6 @@ obj_rsakey_add(TSS_HCONTEXT tspContext, TSS_FLAG initFlags, TSS_HOBJECT *phObjec
 	}
 	rsaKeyParms.exponentSize = 0;
 	rsaKeyParms.numPrimes = 2;
-	memset(&rsakey->key.keyFlags, 0, sizeof(TCPA_KEY_FLAGS));
 
 	rsakey->key.pubKey.keyLength = 0;
 	rsakey->key.encSize = 0;
