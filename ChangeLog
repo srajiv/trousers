@@ -1,3 +1,34 @@
+* TROUSERS_0_3_8
+
+- Fix ssl_ui.c overflow
+- Handling of TPM_CERTIFY_INFO2 structure special case
+- Fix possible obfuscation of obj_migdata.c errors.
+- Make 1.2 keys respect the TPM_PCRIGNOREDONREAD flag.
+- PCRInfo member allocation in Trspi_Unload_CERTIFY_INFO.
+- Add functions for deserializing NVRAM related data structures
+- Add NVRAM specific error messages
+- Fix spec file so one can build an rpm
+- Initialize the tcsd_config_file with NULL.
+- support for -c <configfile> command line option
+- Establish a .gitignore file
+- ENDIAN_H and htole definition fix
+
+* TROUSERS_0_3_7
+
+- __tspi_freeTable wrong call
+- Owner Evict pubkey setup fix
+- The "HAVE_ENDIAN_H" check is missing from configure.in, but it appears to be needed in a couple of the source files.
+- tspi_context.c fix (memleak)
+- Added the missing setup of a tcs handle for owner evict keys.
+- No need to initialize the flock structure.
+- flock to fcntl change
+- Fixed cleanup code in svrside.c
+- Avoid warning of missing return in tcsd_thread_run()
+- printf() warning fix
+- Moved hDAA debug message after initialization
+- Additional length check
+- Tspi_NV_DefineSpace secret check fix
+
 * TROUNSERS_0_3_6
 
 - Fixed a number of warnings during a build with --debug regarding THREAD ID
