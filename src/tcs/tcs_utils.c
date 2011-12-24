@@ -395,9 +395,10 @@ UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify)
 	TSS_RESULT rc;
 
 	if (!certify) {
+		TPM_VERSION version;
 		UINT32 size;
 
-		UnloadBlob_VERSION(offset, blob, NULL);
+		UnloadBlob_VERSION(offset, blob, &version);
 		UnloadBlob_UINT16(offset, NULL, blob);
 		UnloadBlob_KEY_FLAGS(offset, blob, NULL);
 		UnloadBlob_BOOL(offset, NULL, blob);
@@ -412,6 +413,14 @@ UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify)
 
 		if (size > 0)
 			UnloadBlob(offset, size, blob, NULL);
+
+		if (Decode_UINT16((BYTE *) &version) == TPM_TAG_CERTIFY_INFO2){
+			/* This is a TPM_CERTIFY_INFO2 structure. */
+			/* Read migrationAuthority. */
+			UnloadBlob_UINT32(offset, &size, blob);
+			if (size > 0)
+				UnloadBlob(offset, size, blob, NULL);
+		}
 
 		return TSS_SUCCESS;
 	}
@@ -442,6 +451,15 @@ UnloadBlob_CERTIFY_INFO(UINT64 *offset, BYTE *blob, TCPA_CERTIFY_INFO *certify)
 		UnloadBlob(offset, certify->PCRInfoSize, blob, certify->PCRInfo);
 	} else {
 		certify->PCRInfo = NULL;
+	}
+
+	if (Decode_UINT16((BYTE *) &certify->version) == TPM_TAG_CERTIFY_INFO2){
+		/* This is a TPM_CERTIFY_INFO2 structure. */
+		/* Read migrationAuthority. */
+		UINT32 size;
+		UnloadBlob_UINT32(offset, &size, blob);
+		if (size > 0)
+			UnloadBlob(offset, size, blob, NULL);
 	}
 
 	return TSS_SUCCESS;
