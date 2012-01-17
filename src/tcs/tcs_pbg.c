@@ -710,6 +710,9 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 			return TCSERR(TSS_E_OUTOFMEMORY);
 		}
 
+		if ((offset1 + offset2) > TSS_TPM_TXBLOB_SIZE)
+			return TCSERR(TSS_E_INTERNAL_ERROR);
+
 		memcpy(*data, &b[offset1], offset2);
 		*data_len = offset2;
 		break;
@@ -727,6 +730,9 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 			LogError("Internal error for ordinal 0x%x", ordinal);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
+
+		if ((offset2 + TPM_DIGEST_SIZE) > TSS_TPM_TXBLOB_SIZE)
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 
 		if (digest1) {
 			offset1 = offset2 = len - TPM_DIGEST_SIZE;
@@ -760,6 +766,9 @@ tpm_rsp_parse(TPM_COMMAND_CODE ordinal, BYTE *b, UINT32 len, ...)
 			LogError("Internal error for ordinal 0x%x", ordinal);
 			return TCSERR(TSS_E_INTERNAL_ERROR);
 		}
+
+		if (len > TSS_TPM_TXBLOB_SIZE)
+			return TCSERR(TSS_E_INTERNAL_ERROR);
 
 		offset2 = len - TPM_DIGEST_SIZE;
 		memcpy(digest2, &b[offset2], TPM_DIGEST_SIZE);

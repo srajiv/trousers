@@ -360,7 +360,7 @@ tcsd_thread_run(void *v)
 			break;
 		}
 
-		if (recv_size > data->comm.buf_size ) {
+		if (recv_size > (int) data->comm.buf_size ) {
 			BYTE *new_buffer;
 
 			LogDebug("Increasing communication buffer to %d bytes.", recv_size);

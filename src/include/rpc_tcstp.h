@@ -31,7 +31,7 @@ struct tcsd_packet_hdr {
 
 struct tcsd_comm_data {
 	BYTE *buf;
-	int buf_size;
+	UINT32 buf_size;
 	struct tcsd_packet_hdr hdr;
 } STRUCTURE_PACKING_ATTRIBUTE;
 

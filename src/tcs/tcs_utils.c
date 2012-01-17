@@ -203,7 +203,7 @@ UnloadBlob_BOOL(UINT64 *offset, TSS_BOOL *dataOut, BYTE * blob)
 void
 LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
-	if (size == 0)
+	if ((size == 0) || ((*offset + size) > TSS_TPM_TXBLOB_SIZE))
 		return;
 
 	if (container)
@@ -214,7 +214,7 @@ LoadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 void
 UnloadBlob(UINT64 *offset, UINT32 size, BYTE *container, BYTE *object)
 {
-	if (size == 0)
+	if ((size == 0) || ((*offset + size) > TSS_TPM_TXBLOB_SIZE))
 		return;
 
 	if (object)
