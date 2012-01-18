@@ -9,8 +9,8 @@
 
 static TSS_RESULT do_ui(BYTE *string, UINT32 *string_len, BYTE *popup, int verify)
 {
-	char pin_buf[UI_MAX_SECRET_STRING_LENGTH];
-	char verify_buf[UI_MAX_SECRET_STRING_LENGTH];
+	char pin_buf[UI_MAX_SECRET_STRING_LENGTH + 1];
+	char verify_buf[UI_MAX_SECRET_STRING_LENGTH + 1];
 	char *popup_nl;
 	UI *ui;
 	BYTE *unicode;
@@ -30,6 +30,8 @@ static TSS_RESULT do_ui(BYTE *string, UINT32 *string_len, BYTE *popup, int verif
 		goto out;
 	}
 
+	/* UI_add_input_string() doesn't count for the null terminator in its last */
+	/* parameter, that's why we statically allocated 1 more byte to pin_buf	   */
 	if (!UI_add_input_string(ui, "Enter PIN:", 0, pin_buf, 1, UI_MAX_SECRET_STRING_LENGTH)) {
 		printf("add input fail\n");
 		goto out;

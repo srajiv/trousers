@@ -181,7 +181,7 @@ loadData(UINT64 *offset, TCSD_PACKET_TYPE data_type, void *data, int data_size, 
 
 int
 setData(TCSD_PACKET_TYPE dataType,
-	int index,
+	unsigned int index,
 	void *theData,
 	int theDataSize,
 	struct tcsd_comm_data *comm)
@@ -194,11 +194,11 @@ setData(TCSD_PACKET_TYPE dataType,
 	offset = 0;
 	if ((result = loadData(&offset, dataType, theData, theDataSize, NULL)) != TSS_SUCCESS)
 		return result;
-	if (((int)comm->hdr.packet_size + (int)offset) < 0) {
+	if ((comm->hdr.packet_size + offset) > TSS_TPM_TXBLOB_SIZE) {
 		LogError("Too much data to be transmitted!");
 		return TCSERR(TSS_E_INTERNAL_ERROR);
 	}
-	if (((int)comm->hdr.packet_size + (int)offset) > comm->buf_size) {
+	if ((comm->hdr.packet_size + offset) > comm->buf_size) {
 		/* reallocate the buffer */
 		BYTE *buffer;
 		int buffer_size = comm->hdr.packet_size + offset;
@@ -229,13 +229,18 @@ setData(TCSD_PACKET_TYPE dataType,
 
 UINT32
 getData(TCSD_PACKET_TYPE dataType,
-	int index,
+	unsigned int index,
 	void *theData,
 	int theDataSize,
 	struct tcsd_comm_data *comm)
 {
 	UINT64 old_offset, offset;
-	TCSD_PACKET_TYPE *type = (TCSD_PACKET_TYPE *)(comm->buf + comm->hdr.type_offset) + index;
+	TCSD_PACKET_TYPE *type;
+
+	if ((comm->hdr.type_offset + index) > comm->buf_size)
+		return TSS_TCP_RPC_BAD_PACKET_TYPE;
+
+	type = (comm->buf + comm->hdr.type_offset) + index;
 
 	if ((UINT32)index >= comm->hdr.num_parms || dataType != *type) {
 		LogDebug("Data type of TCS packet element %d doesn't match.", index);
