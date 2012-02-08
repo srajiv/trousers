@@ -194,10 +194,7 @@ setData(TCSD_PACKET_TYPE dataType,
 	offset = 0;
 	if ((result = loadData(&offset, dataType, theData, theDataSize, NULL)) != TSS_SUCCESS)
 		return result;
-	if ((comm->hdr.packet_size + offset) > TSS_TPM_TXBLOB_SIZE) {
-		LogError("Too much data to be transmitted!");
-		return TCSERR(TSS_E_INTERNAL_ERROR);
-	}
+
 	if ((comm->hdr.packet_size + offset) > comm->buf_size) {
 		/* reallocate the buffer */
 		BYTE *buffer;
