@@ -123,11 +123,11 @@ setData(TCSD_PACKET_TYPE dataType,
         offset = 0;
         if ((result = loadData(&offset, dataType, theData, theDataSize, NULL)))
                 return result;
-        if (((int)comm->hdr.packet_size + (int)offset) < 0) {
+        if ((comm->hdr.packet_size + offset) > TSS_TPM_TXBLOB_SIZE) {
                 LogError("Too much data to be transmitted!");
                 return TSPERR(TSS_E_INTERNAL_ERROR);
         }
-        if (((int)comm->hdr.packet_size + (int)offset) > comm->buf_size) {
+        if ((comm->hdr.packet_size + offset) > comm->buf_size) {
                 /* reallocate the buffer */
                 BYTE *buffer;
                 int buffer_size = comm->hdr.packet_size + offset;
@@ -389,7 +389,7 @@ send_init(struct host_table_entry *hte)
 
 	buffer = hte->comm.buf;
 	recv_size = sizeof(struct tcsd_packet_hdr);
-	if ((recv_size = recv_from_socket(sd, buffer, recv_size)) < 0) {
+	if (recv_from_socket(sd, buffer, recv_size) < 0) {
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
@@ -404,7 +404,7 @@ send_init(struct host_table_entry *hte)
 		goto err_exit;
 	}
 
-	if (recv_size > hte->comm.buf_size ) {
+	if (recv_size > (int) hte->comm.buf_size ) {
 		BYTE *new_buffer;
 
 		LogDebug("Increasing communication buffer to %d bytes.", recv_size);
@@ -421,7 +421,7 @@ send_init(struct host_table_entry *hte)
 
 	/* get the rest of the packet */
 	recv_size -= sizeof(struct tcsd_packet_hdr);    /* already received the header */
-	if ((recv_size = recv_from_socket(sd, buffer, recv_size)) < 0) {
+	if (recv_from_socket(sd, buffer, recv_size) < 0) {
 		result = TSPERR(TSS_E_COMM_FAILURE);
 		goto err_exit;
 	}
@@ -464,7 +464,7 @@ tcs_sendit(struct host_table_entry *hte)
 		goto err_exit;
 	}
 
-	if (recv_size > hte->comm.buf_size ) {
+	if (recv_size > (int) hte->comm.buf_size ) {
 		BYTE *new_buffer;
 
 		LogDebug("Increasing communication buffer to %d bytes.", recv_size);
