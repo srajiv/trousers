@@ -2,7 +2,7 @@
 # configure.in for the trousers project
 #
 
-AC_INIT(trousers, 0.3.8, trousers-tech@lists.sf.net)
+AC_INIT(trousers, 0.3.9, trousers-tech@lists.sf.net)
 
 TSS_SPEC_MAJOR=1
 TSS_SPEC_MINOR=2
@@ -32,6 +32,9 @@ else
 		CFLAGS="${CFLAGS} -O0 -g -DTSS_DEBUG -Wreturn-type"
 	fi
 fi
+
+#FIXME: can't reproduce the unused variable issues, placing this workaround for now.
+CFLAGS="${CFLAGS} -Wno-unused-but-set-variable
 
 # Arch specific stuff
 case $target in
